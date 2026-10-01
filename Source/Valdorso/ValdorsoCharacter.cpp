@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
+// Modificato per Valdorso: componente di movimento con la corsa.
 
 #include "ValdorsoCharacter.h"
+#include "ValdorsoMovementComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -12,11 +14,12 @@
 #include "InputActionValue.h"
 #include "Valdorso.h"
 
-AValdorsoCharacter::AValdorsoCharacter()
+AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UValdorsoMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-		
+
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -26,11 +29,10 @@ AValdorsoCharacter::AValdorsoCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 
-	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
-	// instead of recompiling to adjust them
+	// Le velocità di camminata e corsa stanno nel componente di movimento di Valdorso
+	// (VelocitaCamminata e VelocitaCorsa, regolabili anche nel Blueprint del personaggio).
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -54,7 +56,7 @@ void AValdorsoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
-		
+
 		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
@@ -65,6 +67,13 @@ void AValdorsoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AValdorsoCharacter::Look);
+
+		// Corsa: si collega solo se nel Blueprint è stata scelta l'azione (IA_Sprint)
+		if (SprintAction)
+		{
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AValdorsoCharacter::DoCorsaInizio);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AValdorsoCharacter::DoCorsaFine);
+		}
 	}
 	else
 	{
@@ -130,4 +139,20 @@ void AValdorsoCharacter::DoJumpEnd()
 {
 	// signal the character to stop jumping
 	StopJumping();
+}
+
+void AValdorsoCharacter::DoCorsaInizio()
+{
+	if (UValdorsoMovementComponent* Movimento = Cast<UValdorsoMovementComponent>(GetCharacterMovement()))
+	{
+		Movimento->ImpostaCorsa(true);
+	}
+}
+
+void AValdorsoCharacter::DoCorsaFine()
+{
+	if (UValdorsoMovementComponent* Movimento = Cast<UValdorsoMovementComponent>(GetCharacterMovement()))
+	{
+		Movimento->ImpostaCorsa(false);
+	}
 }
