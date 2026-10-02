@@ -108,6 +108,35 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita")
 	UAnimMontage* MontaggioSchivata;
 
+	/**
+	 * La capriola: quale pezzo del montaggio della schivata si usa, in fotogrammi (a 30 al secondo).
+	 * Se l'ultimo non è più grande del primo, la schivata usa il montaggio intero e la spinta di serie.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita|Capriola")
+	int32 CapriolaPrimoFotogramma = 10;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita|Capriola")
+	int32 CapriolaUltimoFotogramma = 55;
+
+	/** Velocità della capriola (1 = come l'animazione, 1,5 = più svelta). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita|Capriola", meta = (ClampMin = "0.5", ClampMax = "3.0"))
+	float CapriolaVelocita = 1.5f;
+
+	/**
+	 * Spazio libero che serve davanti per la capriola, in centimetri. Se c'è un muro più vicino,
+	 * al posto della capriola parte lo scatto corto (così testa e braccia non entrano nei muri).
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita|Capriola", meta = (ClampMin = "0"))
+	float CapriolaSpazioMinimo = 180.f;
+
+	/** Lo scatto corto da usare quando davanti non c'è spazio per la capriola (di serie AM_Schivata). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita|Capriola")
+	UAnimMontage* MontaggioScattoCorto;
+
+	/** Quanta strada fa la capriola, in centimetri (solo se la capriola non ha il suo spostamento). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita|Capriola", meta = (ClampMin = "0"))
+	float CapriolaDistanza = 400.f;
+
 	/** L'animazione del pugno (montaggio sulla corsia UpperBody), scelta nel Blueprint del personaggio */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita")
 	UAnimMontage* MontaggioPugno;

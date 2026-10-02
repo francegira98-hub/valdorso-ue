@@ -22,3 +22,5 @@ __pycache__/
 *.pyc
 # Contenuti di Fab: mai su GitHub (licenza)
 Content/Fab/
+# Contenuti Mixamo (file .fbx e animazioni importate): mai su GitHub (licenza)
+Content/Mixamo/
