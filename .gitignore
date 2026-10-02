@@ -20,3 +20,5 @@ Thumbs.db
 desktop.ini
 __pycache__/
 *.pyc
+# Contenuti di Fab: mai su GitHub (licenza)
+Content/Fab/

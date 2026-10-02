@@ -17,6 +17,16 @@ public:
 	UValdorsoGE_CostoSchivata();
 };
 
+/** Costo dello scavalcare e del salire sopra: toglie 10 di stamina, una volta. */
+UCLASS()
+class VALDORSO_API UValdorsoGE_CostoScavalca : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UValdorsoGE_CostoScavalca();
+};
+
 /** Recupero della stamina: per sempre, ogni 0,25 secondi ridà 2,5 di stamina (10 al secondo). */
 UCLASS()
 class VALDORSO_API UValdorsoGE_RecuperoStamina : public UGameplayEffect

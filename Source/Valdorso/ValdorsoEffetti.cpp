@@ -14,6 +14,17 @@ UValdorsoGE_CostoSchivata::UValdorsoGE_CostoSchivata()
 	Modifiers.Add(Costo);
 }
 
+UValdorsoGE_CostoScavalca::UValdorsoGE_CostoScavalca()
+{
+	DurationPolicy = EGameplayEffectDurationType::Instant;
+
+	FGameplayModifierInfo Costo;
+	Costo.Attribute = UValdorsoAttributeSet::GetStaminaAttribute();
+	Costo.ModifierOp = EGameplayModOp::Additive;
+	Costo.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(-10.f));
+	Modifiers.Add(Costo);
+}
+
 UValdorsoGE_RecuperoStamina::UValdorsoGE_RecuperoStamina()
 {
 	DurationPolicy = EGameplayEffectDurationType::Infinite;

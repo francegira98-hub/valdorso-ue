@@ -22,7 +22,8 @@ public class Valdorso : ModuleRules
             "Slate",
             "GameplayAbilities",
             "GameplayTags",
-            "GameplayTasks"
+            "GameplayTasks",
+            "MotionWarping"
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });

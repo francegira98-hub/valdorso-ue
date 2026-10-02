@@ -6,6 +6,8 @@
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoEffetti.h"
 #include "ValdorsoAbilitaSchivata.h"
+#include "ValdorsoAbilitaScavalca.h"
+#include "MotionWarpingComponent.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
@@ -62,6 +64,10 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	// Le statistiche (salute, stamina, mana), che il contenitore trova da solo.
 	Attributi = CreateDefaultSubobject<UValdorsoAttributeSet>(TEXT("Attributi"));
 
+	// Motion Warping, per scavalcare e salire sopra gli ostacoli.
+	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
+	AbilitaScavalca = UValdorsoAbilitaScavalca::StaticClass();
+
 	// Di serie: la schivata di Valdorso e il recupero della stamina.
 	AbilitaSchivata = UValdorsoAbilitaSchivata::StaticClass();
 	EffettiIniziali.Add(UValdorsoGE_RecuperoStamina::StaticClass());
@@ -96,6 +102,13 @@ void AValdorsoCharacter::PossessedBy(AController* NewController)
 			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilitaSchivata, 1, INDEX_NONE, this));
 		}
 
+
+		if (AbilitaScavalca)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilitaScavalca, 1, INDEX_NONE, this));
+		}
+
+
 		FGameplayEffectContextHandle Contesto = AbilitySystemComponent->MakeEffectContext();
 		Contesto.AddSourceObject(this);
 		for (const TSubclassOf<UGameplayEffect>& Effetto : EffettiIniziali)
@@ -124,7 +137,7 @@ void AValdorsoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AValdorsoCharacter::DoJumpStart);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
@@ -203,7 +216,11 @@ void AValdorsoCharacter::DoLook(float Yaw, float Pitch)
 
 void AValdorsoCharacter::DoJumpStart()
 {
-	// signal the character to jump
+	// Prima prova a scavalcare o salire su un ostacolo; se non c'è, salta come sempre.
+	if (ProvaScavalcare())
+	{
+		return;
+	}
 	Jump();
 }
 
@@ -235,4 +252,35 @@ void AValdorsoCharacter::DoSchivata()
 	{
 		AbilitySystemComponent->TryActivateAbilityByClass(AbilitaSchivata);
 	}
+}
+
+bool AValdorsoCharacter::ProvaScavalcare()
+{
+	if (AbilitySystemComponent == nullptr || AbilitaScavalca == nullptr || !GetCharacterMovement()->IsMovingOnGround())
+	{
+		return false;
+	}
+
+	FValdorsoOstacolo Ostacolo;
+	if (!UValdorsoAbilitaScavalca::TrovaOstacolo(this, Ostacolo) || ScegliMontaggioScavalca(Ostacolo.bSaliSopra) == nullptr)
+	{
+		return false;
+	}
+
+	return AbilitySystemComponent->TryActivateAbilityByClass(AbilitaScavalca);
+}
+
+UAnimMontage* AValdorsoCharacter::ScegliMontaggioScavalca(bool bSaliSopra) const
+{
+	const float Velocita = GetVelocity().Size2D();
+	UAnimMontage* Fermo = bSaliSopra ? SaliDaFermo : ScavalcaDaFermo;
+	UAnimMontage* Cammina = bSaliSopra ? SaliCamminando : ScavalcaCamminando;
+	UAnimMontage* Corsa = bSaliSopra ? SaliCorrendo : ScavalcaCorrendo;
+
+	UAnimMontage* Scelto = Velocita < 60.f ? Fermo : (Velocita < 400.f ? Cammina : Corsa);
+	if (Scelto == nullptr)
+	{
+		Scelto = Fermo ? Fermo : (Cammina ? Cammina : Corsa);
+	}
+	return Scelto;
 }
