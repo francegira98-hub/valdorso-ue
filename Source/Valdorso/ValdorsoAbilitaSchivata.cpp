@@ -3,6 +3,7 @@
 #include "ValdorsoAbilitaSchivata.h"
 #include "ValdorsoCharacter.h"
 #include "ValdorsoEffetti.h"
+#include "ValdorsoEtichette.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
@@ -15,6 +16,9 @@ UValdorsoAbilitaSchivata::UValdorsoAbilitaSchivata()
 
 	// Il costo: se non ci sono 20 di stamina, la schivata non parte.
 	CostGameplayEffectClass = UValdorsoGE_CostoSchivata::StaticClass();
+
+	// Mentre dura, il personaggio porta l'etichetta "sta schivando" (il pugno non parte).
+	ActivationOwnedTags.AddTag(ValdorsoEtichette::Stato_Schivata);
 }
 
 void UValdorsoAbilitaSchivata::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

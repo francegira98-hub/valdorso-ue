@@ -27,6 +27,26 @@ public:
 	UValdorsoGE_CostoScavalca();
 };
 
+/** Costo del pugno: toglie 10 di stamina, una volta. */
+UCLASS()
+class VALDORSO_API UValdorsoGE_CostoPugno : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UValdorsoGE_CostoPugno();
+};
+
+/** Danno del pugno: toglie salute, una volta. Quanta lo dice l'abilità al momento del colpo (Valdorso.Dato.Danno). */
+UCLASS()
+class VALDORSO_API UValdorsoGE_DannoPugno : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UValdorsoGE_DannoPugno();
+};
+
 /** Recupero della stamina: per sempre, ogni 0,25 secondi ridà 2,5 di stamina (10 al secondo). */
 UCLASS()
 class VALDORSO_API UValdorsoGE_RecuperoStamina : public UGameplayEffect

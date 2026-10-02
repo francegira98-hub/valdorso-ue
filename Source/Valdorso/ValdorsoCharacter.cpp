@@ -1,5 +1,5 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-// Modificato per Valdorso: corsa nel componente di movimento, Gameplay Ability System (statistiche e abilità), schivata.
+// Modificato per Valdorso: corsa nel componente di movimento, Gameplay Ability System (statistiche e abilità), schivata, pugno.
 
 #include "ValdorsoCharacter.h"
 #include "ValdorsoMovementComponent.h"
@@ -7,6 +7,7 @@
 #include "ValdorsoEffetti.h"
 #include "ValdorsoAbilitaSchivata.h"
 #include "ValdorsoAbilitaScavalca.h"
+#include "ValdorsoAbilitaPugno.h"
 #include "MotionWarpingComponent.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
@@ -70,6 +71,7 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 
 	// Di serie: la schivata di Valdorso e il recupero della stamina.
 	AbilitaSchivata = UValdorsoAbilitaSchivata::StaticClass();
+	AbilitaPugno = UValdorsoAbilitaPugno::StaticClass();
 	EffettiIniziali.Add(UValdorsoGE_RecuperoStamina::StaticClass());
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
@@ -106,6 +108,11 @@ void AValdorsoCharacter::PossessedBy(AController* NewController)
 		if (AbilitaScavalca)
 		{
 			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilitaScavalca, 1, INDEX_NONE, this));
+		}
+
+		if (AbilitaPugno)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilitaPugno, 1, INDEX_NONE, this));
 		}
 
 
@@ -158,6 +165,12 @@ void AValdorsoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		if (DodgeAction)
 		{
 			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &AValdorsoCharacter::DoSchivata);
+		}
+
+		// Pugno: si collega solo se nel Blueprint è stata scelta l'azione (IA_Pugno)
+		if (PugnoAction)
+		{
+			EnhancedInputComponent->BindAction(PugnoAction, ETriggerEvent::Started, this, &AValdorsoCharacter::DoPugno);
 		}
 	}
 	else
@@ -251,6 +264,14 @@ void AValdorsoCharacter::DoSchivata()
 	if (AbilitySystemComponent && AbilitaSchivata)
 	{
 		AbilitySystemComponent->TryActivateAbilityByClass(AbilitaSchivata);
+	}
+}
+
+void AValdorsoCharacter::DoPugno()
+{
+	if (AbilitySystemComponent && AbilitaPugno)
+	{
+		AbilitySystemComponent->TryActivateAbilityByClass(AbilitaPugno);
 	}
 }
 

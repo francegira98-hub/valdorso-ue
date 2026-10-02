@@ -1,5 +1,5 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-// Modificato per Valdorso: corsa nel componente di movimento, Gameplay Ability System (statistiche e abilità), schivata.
+// Modificato per Valdorso: corsa nel componente di movimento, Gameplay Ability System (statistiche e abilità), schivata, pugno.
 
 #pragma once
 
@@ -81,6 +81,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* DodgeAction;
 
+	/** Pugno: premendo il tasto (clic sinistro) parte l'abilità del pugno */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* PugnoAction;
+
 	/** L'abilità della schivata (di serie quella di Valdorso in C++) */
 	UPROPERTY(EditDefaultsOnly, Category = "Abilita")
 	TSubclassOf<UGameplayAbility> AbilitaSchivata;
@@ -89,6 +93,10 @@ protected:
 	/** L'abilità dello scavalcare e del salire sopra (di serie quella di Valdorso in C++) */
 	UPROPERTY(EditDefaultsOnly, Category = "Abilita")
 	TSubclassOf<UGameplayAbility> AbilitaScavalca;
+
+	/** L'abilità del pugno (di serie quella di Valdorso in C++) */
+	UPROPERTY(EditDefaultsOnly, Category = "Abilita")
+	TSubclassOf<UGameplayAbility> AbilitaPugno;
 
 	/** Effetti dati al personaggio quando nasce (di serie: il recupero della stamina) */
 	UPROPERTY(EditDefaultsOnly, Category = "Abilita")
@@ -99,6 +107,10 @@ public:
 	/** L'animazione della schivata (montaggio), scelta nel Blueprint del personaggio */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita")
 	UAnimMontage* MontaggioSchivata;
+
+	/** L'animazione del pugno (montaggio sulla corsia UpperBody), scelta nel Blueprint del personaggio */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilita")
+	UAnimMontage* MontaggioPugno;
 
 
 	/** Animazioni dello scavalcare (Vault) e del salire sopra (Mantle), da ferma, camminando, correndo */
@@ -193,6 +205,10 @@ public:
 	/** Prova a fare la schivata (parte solo se c'è abbastanza stamina) */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoSchivata();
+
+	/** Prova a tirare un pugno (parte solo a terra e con abbastanza stamina) */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoPugno();
 
 public:
 

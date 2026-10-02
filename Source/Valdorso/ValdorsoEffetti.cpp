@@ -2,6 +2,7 @@
 
 #include "ValdorsoEffetti.h"
 #include "ValdorsoAttributeSet.h"
+#include "ValdorsoEtichette.h"
 
 UValdorsoGE_CostoSchivata::UValdorsoGE_CostoSchivata()
 {
@@ -23,6 +24,32 @@ UValdorsoGE_CostoScavalca::UValdorsoGE_CostoScavalca()
 	Costo.ModifierOp = EGameplayModOp::Additive;
 	Costo.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(-10.f));
 	Modifiers.Add(Costo);
+}
+
+UValdorsoGE_CostoPugno::UValdorsoGE_CostoPugno()
+{
+	DurationPolicy = EGameplayEffectDurationType::Instant;
+
+	FGameplayModifierInfo Costo;
+	Costo.Attribute = UValdorsoAttributeSet::GetStaminaAttribute();
+	Costo.ModifierOp = EGameplayModOp::Additive;
+	Costo.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(-10.f));
+	Modifiers.Add(Costo);
+}
+
+UValdorsoGE_DannoPugno::UValdorsoGE_DannoPugno()
+{
+	DurationPolicy = EGameplayEffectDurationType::Instant;
+
+	// Il numero lo mette l'abilità al momento del colpo (già negativo: è salute tolta).
+	FSetByCallerFloat DaChiChiama;
+	DaChiChiama.DataTag = ValdorsoEtichette::Dato_Danno;
+
+	FGameplayModifierInfo Danno;
+	Danno.Attribute = UValdorsoAttributeSet::GetSaluteAttribute();
+	Danno.ModifierOp = EGameplayModOp::Additive;
+	Danno.ModifierMagnitude = FGameplayEffectModifierMagnitude(DaChiChiama);
+	Modifiers.Add(Danno);
 }
 
 UValdorsoGE_RecuperoStamina::UValdorsoGE_RecuperoStamina()
