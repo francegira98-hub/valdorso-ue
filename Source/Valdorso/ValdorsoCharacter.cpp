@@ -1,8 +1,13 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-// Modificato per Valdorso: componente di movimento con la corsa.
+// Modificato per Valdorso: corsa nel componente di movimento, Gameplay Ability System (statistiche e abilità), schivata.
 
 #include "ValdorsoCharacter.h"
 #include "ValdorsoMovementComponent.h"
+#include "ValdorsoAttributeSet.h"
+#include "ValdorsoEffetti.h"
+#include "ValdorsoAbilitaSchivata.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -48,8 +53,69 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	// Gameplay Ability System: il contenitore delle abilità viaggia in rete;
+	// "Mixed" = il giocatore riceve tutti i dettagli dei suoi effetti, gli altri solo l'essenziale.
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// Le statistiche (salute, stamina, mana), che il contenitore trova da solo.
+	Attributi = CreateDefaultSubobject<UValdorsoAttributeSet>(TEXT("Attributi"));
+
+	// Di serie: la schivata di Valdorso e il recupero della stamina.
+	AbilitaSchivata = UValdorsoAbilitaSchivata::StaticClass();
+	EffettiIniziali.Add(UValdorsoGE_RecuperoStamina::StaticClass());
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+}
+
+UAbilitySystemComponent* AValdorsoCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+void AValdorsoCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	if (AbilitySystemComponent == nullptr)
+	{
+		return;
+	}
+
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+	// Solo il server dà le abilità e gli effetti iniziali, e una volta sola.
+	if (HasAuthority() && !bAbilitaDate)
+	{
+		bAbilitaDate = true;
+
+		if (AbilitaSchivata)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilitaSchivata, 1, INDEX_NONE, this));
+		}
+
+		FGameplayEffectContextHandle Contesto = AbilitySystemComponent->MakeEffectContext();
+		Contesto.AddSourceObject(this);
+		for (const TSubclassOf<UGameplayEffect>& Effetto : EffettiIniziali)
+		{
+			if (Effetto)
+			{
+				AbilitySystemComponent->ApplyGameplayEffectToSelf(Effetto->GetDefaultObject<UGameplayEffect>(), 1.f, Contesto);
+			}
+		}
+	}
+}
+
+void AValdorsoCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
 }
 
 void AValdorsoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -73,6 +139,12 @@ void AValdorsoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		{
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AValdorsoCharacter::DoCorsaInizio);
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AValdorsoCharacter::DoCorsaFine);
+		}
+
+		// Schivata: si collega solo se nel Blueprint è stata scelta l'azione (IA_Schivata)
+		if (DodgeAction)
+		{
+			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &AValdorsoCharacter::DoSchivata);
 		}
 	}
 	else
@@ -154,5 +226,13 @@ void AValdorsoCharacter::DoCorsaFine()
 	if (UValdorsoMovementComponent* Movimento = Cast<UValdorsoMovementComponent>(GetCharacterMovement()))
 	{
 		Movimento->ImpostaCorsa(false);
+	}
+}
+
+void AValdorsoCharacter::DoSchivata()
+{
+	if (AbilitySystemComponent && AbilitaSchivata)
+	{
+		AbilitySystemComponent->TryActivateAbilityByClass(AbilitaSchivata);
 	}
 }
