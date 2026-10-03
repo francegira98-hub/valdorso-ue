@@ -1,0 +1,13 @@
+Orso della scena del menu di Valdorso
+
+Modello: "Animated Bear 3D Model"
+Autore: AnimalMesh 3D
+Fonte: Sketchfab (https://sketchfab.com)
+Licenza: Creative Commons Attribuzione 4.0 Internazionale (CC BY 4.0)
+Testo della licenza: https://creativecommons.org/licenses/by/4.0/legalcode.it
+
+Modifiche fatte per Valdorso: materiali rifatti (M_Orso, M_OrsoPelo), orso ingrandito a circa 6 metri,
+usato nella scena del menu principale con la camminata lenta.
+
+Il modello non e' nel repository GitHub di Valdorso: l'originale e' sul PC di sviluppo
+in V:\Mixamo\Orso e si importa con Content/Python/scena_v3.py.

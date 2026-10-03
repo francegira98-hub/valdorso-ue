@@ -24,3 +24,9 @@ __pycache__/
 Content/Fab/
 # Contenuti Mixamo (file .fbx e animazioni importate): mai su GitHub (licenza)
 Content/Mixamo/
+# Asset pesanti del menu: fuori da GitHub per risparmiare spazio LFS (decisa da Fra, 03/10).
+# Gli originali sono sul PC: V:\Mixamo\Orso, V:\Texture. Elenco e provenienza nel documento di sviluppo.
+Content/Menu/Orso/
+Content/Menu/Texture/
+Content/Menu/Montagne/
+Content/Menu/Montagne2/

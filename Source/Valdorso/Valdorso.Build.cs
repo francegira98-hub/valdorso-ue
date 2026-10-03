@@ -1,5 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-// Modificato per Valdorso: aggiunto il Gameplay Ability System (GameplayAbilities, GameplayTags, GameplayTasks).
+// Modificato per Valdorso: aggiunto il Gameplay Ability System (GameplayAbilities, GameplayTags, GameplayTasks),
+// il Motion Warping e SlateCore (per il menu scritto in C++).
 
 using UnrealBuildTool;
 
@@ -20,6 +21,7 @@ public class Valdorso : ModuleRules
             "GameplayStateTreeModule",
             "UMG",
             "Slate",
+            "SlateCore",
             "GameplayAbilities",
             "GameplayTags",
             "GameplayTasks",
@@ -53,4 +55,4 @@ public class Valdorso : ModuleRules
 
         // To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
     }
-}
+}
