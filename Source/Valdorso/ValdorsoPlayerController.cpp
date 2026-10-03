@@ -9,6 +9,8 @@
 #include "Valdorso.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 #include "ValdorsoGameInstance.h"
+#include "SValdorsoAccesso.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/Engine.h"
 #include "Engine/NetConnection.h"
 #include "Engine/NetDriver.h"
@@ -64,7 +66,7 @@ void AValdorsoPlayerController::BeginPlay()
 				ConsoleCommand(TEXT("disconnect"));
 				return;
 			}
-			MostraSulloSchermo(TEXT("Il Cuore ti sta riconoscendo..."), FColor(232, 196, 120));
+			MostraAnticamera();
 			if (Richiesta.Modo == EValdorsoModoAccesso::PrimoIngresso)
 			{
 				ServerPrimoIngresso(Richiesta.CodiceInvito, Richiesta.Nome, Richiesta.Password);
@@ -372,6 +374,14 @@ void AValdorsoPlayerController::Espelli(const FString& Motivo)
 
 void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (Anticamera.IsValid())
+	{
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(Anticamera.ToSharedRef());
+		}
+		Anticamera.Reset();
+	}
 	if (GetWorld())
 	{
 		GetWorldTimerManager().ClearTimer(TimerAnticamera);
@@ -385,16 +395,69 @@ void AValdorsoPlayerController::ClientEsitoAccesso_Implementation(const FValdors
 	switch (Esito.Esito)
 	{
 	case EValdorsoEsitoAccount::Ok:
+		// Il personaggio sta nascendo: via l'anticamera, mouse e tastiera al gioco.
+		ChiudiAnticamera();
 		MostraSulloSchermo(Esito.Messaggio, FColor(232, 196, 120));
 		break;
+
 	case EValdorsoEsitoAccount::OkDeveCambiarePassword:
-		// La finestra per cambiarla arriva con la schermata "Prima di entrare" (passo 2.2).
-		MostraSulloSchermo(Esito.Messaggio + TEXT("  Per ora dalla console: Valdorso.CambiaPassword <attuale> <nuova>"), FColor::Yellow);
+	case EValdorsoEsitoAccount::PasswordDebole:
+	case EValdorsoEsitoAccount::CredenzialiSbagliate:
+		MostraAnticamera();
+		if (Anticamera.IsValid())
+		{
+			Anticamera->MostraCambioPassword(FText::FromString(Esito.Messaggio), Esito.Esito != EValdorsoEsitoAccount::OkDeveCambiarePassword);
+			FInputModeUIOnly Modo;
+			Modo.SetWidgetToFocus(Anticamera->CampoIniziale());
+			SetInputMode(Modo);
+			bShowMouseCursor = true;
+		}
 		break;
+
 	default:
-		MostraSulloSchermo(Esito.Messaggio, FColor(255, 140, 60));
+		if (Anticamera.IsValid())
+		{
+			Anticamera->MostraAttesa(FText::FromString(Esito.Messaggio));
+		}
 		break;
 	}
+}
+
+void AValdorsoPlayerController::MostraAnticamera()
+{
+	if (Anticamera.IsValid())
+	{
+		return;
+	}
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	SAssignNew(Anticamera, SValdorsoAnticamera)
+		.OnCambia(FValdorsoSuCambioPassword::CreateLambda([Debole](const FString& Attuale, const FString& Nuova)
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ServerCambiaPassword(Attuale, Nuova);
+			}
+		}));
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->AddViewportWidgetContent(Anticamera.ToSharedRef(), 50);
+	}
+	SetInputMode(FInputModeUIOnly());
+}
+
+void AValdorsoPlayerController::ChiudiAnticamera()
+{
+	if (!Anticamera.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(Anticamera.ToSharedRef());
+	}
+	Anticamera.Reset();
+	SetInputMode(FInputModeGameOnly());
+	bShowMouseCursor = false;
 }
 
 void AValdorsoPlayerController::ClientWasKicked_Implementation(const FText& KickReason)

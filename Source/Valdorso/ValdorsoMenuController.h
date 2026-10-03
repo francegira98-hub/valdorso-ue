@@ -8,6 +8,8 @@
 #include "ValdorsoMenuController.generated.h"
 
 class SValdorsoMenuPrincipale;
+class SValdorsoPrimaDiEntrare;
+struct FValdorsoRichiestaAccesso;
 
 UCLASS()
 class VALDORSO_API AValdorsoMenuController : public APlayerController
@@ -36,6 +38,18 @@ public:
 private:
 	void EntraNellaValle();
 	void Esci();
+
+	// "Prima di entrare" (v0.1.2, passo 2.2): il pannello dell'accesso sopra il menu.
+	void MostraAccesso(const FText& Messaggio);
+	void ChiudiAccesso();
+	void SuRichiestaAccesso(const FValdorsoRichiestaAccesso& Richiesta);
+	void ProvaLocale();
+	void Arriva();
+
+	TSharedPtr<SValdorsoPrimaDiEntrare> Accesso;
+
+	/** Vero: alla fine del volo ci si collega al server; falso: si apre la mappa di prova in locale. */
+	bool bVersoIlServer = false;
 
 	TSharedPtr<SValdorsoMenuPrincipale> Menu;
 	TWeakObjectPtr<AActor> Telecamera;

@@ -11,6 +11,7 @@
 #include "ValdorsoPlayerController.generated.h"
 
 class UInputMappingContext;
+class SValdorsoAnticamera;
 class UUserWidget;
 
 /**
@@ -99,6 +100,11 @@ private:
 	void FaiEntrare(const FValdorsoEsitoAccount& Esito);
 	void TempoScaduto();
 	void MostraSulloSchermo(const FString& Testo, const FColor& Colore) const;
+
+	/** Client: la schermata dell'anticamera (attesa e password nuova), finché il personaggio non nasce. */
+	void MostraAnticamera();
+	void ChiudiAnticamera();
+	TSharedPtr<SValdorsoAnticamera> Anticamera;
 
 	/** Vero per chi gioca in locale; falso per chi arriva da fuori finché non entra (lo decide Accogli). */
 	bool bAutenticato = true;

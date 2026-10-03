@@ -4,6 +4,7 @@
 #include "SValdorsoMenuPrincipale.h"
 #include "ValdorsoScenaMenu.h"
 #include "ValdorsoGameInstance.h"
+#include "SValdorsoAccesso.h"
 #include "Engine/Engine.h"
 #include "Camera/CameraActor.h"
 #include "Camera/PlayerCameraManager.h"
@@ -54,7 +55,7 @@ void AValdorsoMenuController::BeginPlay()
 
 	// Il menu, sopra la scena.
 	SAssignNew(Menu, SValdorsoMenuPrincipale)
-		.OnEntra(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::EntraNellaValle))
+		.OnEntra(FSimpleDelegate::CreateWeakLambda(this, [this]() { MostraAccesso(FText::GetEmpty()); }))
 		.OnEsci(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::Esci));
 
 	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
@@ -62,30 +63,113 @@ void AValdorsoMenuController::BeginPlay()
 		Viewport->AddViewportWidgetContent(Menu.ToSharedRef(), 10);
 	}
 
-	// Tornando dal server (password sbagliata, espulsione, connessione persa) si mostra il motivo.
-	// Dal passo 2.2 lo mostrerà la schermata "Prima di entrare".
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(Menu->GetPrimoPulsante());
+	Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+
+	// Tornando dal server (password sbagliata, espulsione, server spento) si riapre "Prima di entrare" con il motivo.
 	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
 	{
 		const FString Messaggio = Istanza->PrendiMessaggio();
 		if (!Messaggio.IsEmpty())
 		{
 			UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: %s"), *Messaggio);
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 12.f, FColor(255, 140, 60), Messaggio);
-			}
+			MostraAccesso(FText::FromString(Messaggio));
 		}
+	}
+}
+
+void AValdorsoMenuController::MostraAccesso(const FText& Messaggio)
+{
+	if (bInTransizione)
+	{
+		return;
+	}
+	ChiudiAccesso();
+
+	const UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
+	SAssignNew(Accesso, SValdorsoPrimaDiEntrare)
+		.NomeIniziale(Istanza ? Istanza->UltimoNome : FString())
+		.Messaggio(Messaggio)
+		.OnRichiesta(FValdorsoSuRichiestaAccesso::CreateUObject(this, &AValdorsoMenuController::SuRichiestaAccesso))
+		.OnIndietro(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ChiudiAccesso))
+		.OnProvaLocale(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ProvaLocale));
+
+	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
+	{
+		Viewport->AddViewportWidgetContent(Accesso.ToSharedRef(), 20);
+	}
+	if (Menu.IsValid())
+	{
+		Menu->SetEnabled(false);
 	}
 
 	FInputModeUIOnly Modo;
-	Modo.SetWidgetToFocus(Menu->GetPrimoPulsante());
+	Modo.SetWidgetToFocus(Accesso->CampoIniziale());
 	Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	SetInputMode(Modo);
-	bShowMouseCursor = true;
+}
+
+void AValdorsoMenuController::ChiudiAccesso()
+{
+	if (Accesso.IsValid())
+	{
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(Accesso.ToSharedRef());
+		}
+		Accesso.Reset();
+	}
+	if (Menu.IsValid() && !bInTransizione)
+	{
+		Menu->SetEnabled(true);
+		FInputModeUIOnly Modo;
+		Modo.SetWidgetToFocus(Menu->GetPrimoPulsante());
+		Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(Modo);
+	}
+}
+
+void AValdorsoMenuController::SuRichiestaAccesso(const FValdorsoRichiestaAccesso& Richiesta)
+{
+	UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
+	FString Errore;
+	if (!Istanza || !Istanza->Collegati(Richiesta, Errore))
+	{
+		if (Accesso.IsValid())
+		{
+			Accesso->MostraMessaggio(FText::FromString(Errore.IsEmpty() ? TEXT("Il gioco non è pronto: riprova.") : Errore), true);
+		}
+		return;
+	}
+	// Il collegamento è partito: mentre Unreal apre la strada verso il server, la telecamera vola verso il frammento.
+	bVersoIlServer = true;
+	ChiudiAccesso();
+	EntraNellaValle();
+}
+
+void AValdorsoMenuController::ProvaLocale()
+{
+	bVersoIlServer = false;
+	ChiudiAccesso();
+	EntraNellaValle();
+}
+
+void AValdorsoMenuController::Arriva()
+{
+	bLivelloAperto = true;
+	// Verso il server il viaggio è già partito (Collegati): il livello lo manda il server.
+	if (!bVersoIlServer)
+	{
+		UGameplayStatics::OpenLevel(this, LivelloValle);
+	}
 }
 
 void AValdorsoMenuController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	ChiudiAccesso();
 	if (Menu.IsValid())
 	{
 		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
@@ -146,8 +230,7 @@ void AValdorsoMenuController::EntraNellaValle()
 
 	if (!Telecamera.IsValid())
 	{
-		bLivelloAperto = true;
-		UGameplayStatics::OpenLevel(this, LivelloValle);
+		Arriva();
 		return;
 	}
 	Partenza = Telecamera->GetActorLocation();
@@ -189,8 +272,7 @@ void AValdorsoMenuController::AvanzaTransizione(float DeltaSeconds)
 
 	if (!bLivelloAperto && A >= 1.f)
 	{
-		bLivelloAperto = true;
-		UGameplayStatics::OpenLevel(this, LivelloValle);
+		Arriva();
 	}
 }
 
