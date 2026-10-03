@@ -2,7 +2,11 @@ Binaries/
 Intermediate/
 Saved/
 DerivedDataCache/
-Build/
+# Build: si ignora tutto tranne l'icona del gioco
+Build/*
+!Build/Windows/
+Build/Windows/*
+!Build/Windows/Application.ico
 .vs/
 .idea/
 Plugins/**/Binaries/
