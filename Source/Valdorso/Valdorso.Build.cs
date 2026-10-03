@@ -1,6 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 // Modificato per Valdorso: aggiunto il Gameplay Ability System (GameplayAbilities, GameplayTags, GameplayTasks),
-// il Motion Warping e SlateCore (per il menu scritto in C++).
+// il Motion Warping e SlateCore (per il menu scritto in C++); Json, JsonUtilities e OpenSSL per l'archivista degli account.
 
 using UnrealBuildTool;
 
@@ -28,7 +28,9 @@ public class Valdorso : ModuleRules
             "MotionWarping"
         });
 
-        PrivateDependencyModuleNames.AddRange(new string[] { });
+        // Archivista degli account (v0.1.2): file JSON e OpenSSL per le impronte delle password.
+        PrivateDependencyModuleNames.AddRange(new string[] { "Json", "JsonUtilities" });
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
         PublicIncludePaths.AddRange(new string[] {
             "Valdorso",
@@ -55,4 +57,4 @@ public class Valdorso : ModuleRules
 
         // To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
     }
-}
+}
