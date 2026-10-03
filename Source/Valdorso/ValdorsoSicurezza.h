@@ -38,4 +38,22 @@ namespace ValdorsoSicurezza
 
 	/** Un testo casuale con i caratteri dell'alfabeto dato, senza preferenze tra un carattere e l'altro. Vuoto se il generatore non risponde. */
 	VALDORSO_API FString TestoCasuale(const TCHAR* Alfabeto, int32 Quanti);
+
+	// --- La chiave del server (passo 2.3) ----------------------------------------------------------
+	// Il server ha una coppia di chiavi RSA da 3072 bit. La privata resta sul server (Saved/Server/Chiavi);
+	// la pubblica viaggia con il gioco. Il client inventa una chiave di sessione, la chiude con la pubblica
+	// (RSA-OAEP con SHA-256) e la manda: solo il server la può aprire.
+
+	/** Crea una coppia di chiavi nuova, in formato PEM. */
+	VALDORSO_API bool CreaCoppiaChiavi(FString& OutPrivataPem, FString& OutPubblicaPem);
+
+	/** Chiude Dati con la chiave pubblica del server. */
+	VALDORSO_API bool CifraConPubblica(const FString& PubblicaPem, const TArray<uint8>& Dati, TArray<uint8>& Out);
+
+	/** Apre con la chiave privata del server quello che il client ha chiuso. */
+	VALDORSO_API bool DecifraConPrivata(const FString& PrivataPem, const TArray<uint8>& Cifrati, TArray<uint8>& Out);
+
+	/** Base64 senza + / = (si può mettere in un indirizzo). */
+	VALDORSO_API FString Base64PerIndirizzo(const TArray<uint8>& Dati);
+	VALDORSO_API bool DaBase64PerIndirizzo(const FString& Testo, TArray<uint8>& Out);
 }

@@ -3,6 +3,8 @@
 #include "ValdorsoMenuController.h"
 #include "SValdorsoMenuPrincipale.h"
 #include "ValdorsoScenaMenu.h"
+#include "ValdorsoGameInstance.h"
+#include "Engine/Engine.h"
 #include "Camera/CameraActor.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/GameViewportClient.h"
@@ -58,6 +60,21 @@ void AValdorsoMenuController::BeginPlay()
 	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
 	{
 		Viewport->AddViewportWidgetContent(Menu.ToSharedRef(), 10);
+	}
+
+	// Tornando dal server (password sbagliata, espulsione, connessione persa) si mostra il motivo.
+	// Dal passo 2.2 lo mostrerà la schermata "Prima di entrare".
+	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+	{
+		const FString Messaggio = Istanza->PrendiMessaggio();
+		if (!Messaggio.IsEmpty())
+		{
+			UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: %s"), *Messaggio);
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 12.f, FColor(255, 140, 60), Messaggio);
+			}
+		}
 	}
 
 	FInputModeUIOnly Modo;

@@ -21,6 +21,7 @@
 // Attenzione: la console ricorda i comandi scritti, quindi nei comandi di prova si usano solo password di prova.
 
 #include "ValdorsoArchivista.h"
+#include "ValdorsoPlayerController.h"
 #include "Valdorso.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -69,6 +70,25 @@ namespace
 		for (const FString& Riga : Righe)
 		{
 			Uscita.Log(Riga);
+		}
+	}
+
+	/** Se l'account è collegato, lo scollega con il motivo. */
+	void ScollegaSeCollegato(UWorld* Mondo, UValdorsoArchivista* Archivista, const FString& Nome, const FString& Motivo, FOutputDevice& Uscita)
+	{
+		const FString Id = Archivista->IdDi(Nome);
+		if (Id.IsEmpty() || !Mondo)
+		{
+			return;
+		}
+		for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It; ++It)
+		{
+			AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(It->Get());
+			if (Controllore && Controllore->GetAccountId() == Id)
+			{
+				Controllore->Espelli(Motivo);
+				Uscita.Logf(TEXT("%s era collegato: scollegato."), *Nome);
+			}
 		}
 	}
 
@@ -148,7 +168,12 @@ namespace
 	{
 		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 2, TEXT("Valdorso.Account.Sospendi <nome> <ore> <motivo>"), Uscita))
 		{
-			Scrivi(Uscita, A->Sospendi(Argomenti[0], FCString::Atoi(*Argomenti[1]), Unisci(Argomenti, 2), AutoreConsole));
+			const FString Risultato = A->Sospendi(Argomenti[0], FCString::Atoi(*Argomenti[1]), Unisci(Argomenti, 2), AutoreConsole);
+			Scrivi(Uscita, Risultato);
+			if (Risultato.Contains(TEXT("sospeso fino")))
+			{
+				ScollegaSeCollegato(Mondo, A, Argomenti[0], Risultato, Uscita);
+			}
 		}
 	}
 
@@ -156,7 +181,12 @@ namespace
 	{
 		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Account.Banna <nome> <motivo>"), Uscita))
 		{
-			Scrivi(Uscita, A->Banna(Argomenti[0], Unisci(Argomenti, 1), AutoreConsole));
+			const FString Risultato = A->Banna(Argomenti[0], Unisci(Argomenti, 1), AutoreConsole);
+			Scrivi(Uscita, Risultato);
+			if (Risultato.Contains(TEXT("bandito")))
+			{
+				ScollegaSeCollegato(Mondo, A, Argomenti[0], TEXT("Sei stato bandito dalla valle."), Uscita);
+			}
 		}
 	}
 

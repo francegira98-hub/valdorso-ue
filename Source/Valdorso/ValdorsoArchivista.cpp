@@ -544,6 +544,12 @@ const FValdorsoAccount* UValdorsoArchivista::TrovaAccount(const FString& Nome) c
 	return Account.Find(Chiave(Nome));
 }
 
+FString UValdorsoArchivista::IdDi(const FString& Nome) const
+{
+	const FValdorsoAccount* Dati = TrovaAccount(Nome);
+	return Dati ? Dati->Id : FString();
+}
+
 // ------------------------------------------------------------------------------------------------
 // Accesso
 // ------------------------------------------------------------------------------------------------
@@ -1176,8 +1182,7 @@ FString UValdorsoArchivista::Sospendi(const FString& Nome, int32 Ore, const FStr
 	Dati->MotivoStato = Motivo.IsEmpty() ? TEXT("non indicato") : Motivo;
 	SalvaAccount(*Dati);
 	Annota(FString::Printf(TEXT("SOSPESO | %s | %d ore | %s | da %s"), *Dati->Nome, Ore, *Dati->MotivoStato, *Autore));
-	return FString::Printf(TEXT("%s sospeso fino al %s. Se è collegato, resta dentro fino al passo 2.3 (allora verrà scollegato)."),
-		*Dati->Nome, *Data(Dati->SospesoFino));
+	return FString::Printf(TEXT("%s sospeso fino al %s."), *Dati->Nome, *Data(Dati->SospesoFino));
 }
 
 FString UValdorsoArchivista::Banna(const FString& Nome, const FString& Motivo, const FString& Autore)

@@ -274,6 +274,9 @@ public:
 
 	int32 NumeroAccount() const { return Account.Num(); }
 
+	/** L'Id dell'account con questo nome (vuoto se non c'è). */
+	FString IdDi(const FString& Nome) const;
+
 private:
 	/** Un calcolo lento da fare fuori dal filo principale; restituisce il seguito da eseguire sul filo principale. */
 	using FCalcolo = TFunction<TFunction<void()>()>;

@@ -29,7 +29,7 @@ public class Valdorso : ModuleRules
         });
 
         // Archivista degli account (v0.1.2): file JSON e OpenSSL per le impronte delle password.
-        PrivateDependencyModuleNames.AddRange(new string[] { "Json", "JsonUtilities" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "Json", "JsonUtilities", "NetCore" });
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
         PublicIncludePaths.AddRange(new string[] {
