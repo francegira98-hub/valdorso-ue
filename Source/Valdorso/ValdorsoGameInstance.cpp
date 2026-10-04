@@ -182,21 +182,37 @@ bool UValdorsoGameInstance::ChiavePubblica(FString& OutPem) const
 	return false;
 }
 
-bool UValdorsoGameInstance::Collegati(const FValdorsoRichiestaAccesso& Richiesta, FString& OutErrore, const FString& Indirizzo)
+bool UValdorsoGameInstance::PuoiCollegarti(FString& OutErrore, const FString& Indirizzo) const
 {
-	APlayerController* Controllore = GetFirstLocalPlayerController();
-	if (!Controllore)
+	if (!GetFirstLocalPlayerController())
 	{
 		OutErrore = TEXT("Il gioco non è pronto: riprova tra un attimo.");
 		return false;
 	}
-
+	if (Indirizzo.IsEmpty() && IndirizzoServer.TrimStartAndEnd().IsEmpty())
+	{
+		OutErrore = TEXT("Manca l'indirizzo del server: aggiorna il gioco.");
+		return false;
+	}
 	FString Pem;
 	if (!ChiavePubblica(Pem))
 	{
 		OutErrore = TEXT("Manca la chiave del server: avvia prima il server una volta (la crea lui) oppure aggiorna il gioco.");
 		return false;
 	}
+	return true;
+}
+
+bool UValdorsoGameInstance::Collegati(const FValdorsoRichiestaAccesso& Richiesta, FString& OutErrore, const FString& Indirizzo)
+{
+	if (!PuoiCollegarti(OutErrore, Indirizzo))
+	{
+		return false;
+	}
+	APlayerController* Controllore = GetFirstLocalPlayerController();
+
+	FString Pem;
+	ChiavePubblica(Pem);
 
 	TArray<uint8> Cifrati;
 	if (!ValdorsoSicurezza::BytesCasuali(ChiaveSessione, ByteChiaveSessione)

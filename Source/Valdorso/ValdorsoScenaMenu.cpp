@@ -324,13 +324,25 @@ void AValdorsoCerchioRune::BeginPlay()
 	}
 }
 
+void AValdorsoCerchioRune::Risveglia()
+{
+	bRisveglio = true;
+}
+
 void AValdorsoCerchioRune::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (bRisveglio)
+	{
+		Risveglio = FMath::Min(Risveglio + DeltaSeconds / 1.5f, 1.f);
+	}
 	if (RuneVive)
 	{
 		const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds() - Ritardo);
-		RuneVive->SetScalarParameterValue(ParametroIntensita, FMath::Lerp(RuneQuiete, RuneColpo, Colpo));
+		// Risvegliate, le rune non si spengono più del tutto e a ogni colpo brillano il triplo.
+		const float Quiete = FMath::Lerp(RuneQuiete, RuneColpo * 0.6f, Risveglio);
+		const float Picco = RuneColpo * (1.f + 2.f * Risveglio);
+		RuneVive->SetScalarParameterValue(ParametroIntensita, FMath::Lerp(Quiete, Picco, Colpo));
 	}
 }
 

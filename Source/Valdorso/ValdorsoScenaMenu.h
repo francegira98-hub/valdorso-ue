@@ -178,6 +178,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Valdorso|Rune")
 	float Ritardo = 0.08f;
 
+	/** Al primo ingresso il Cuore batte più forte e le rune rispondono più accese (v0.1.2, passo 2.5). */
+	void Risveglia();
+
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -185,6 +188,9 @@ public:
 private:
 	UPROPERTY()
 	UMaterialInstanceDynamic* RuneVive = nullptr;
+
+	bool bRisveglio = false;
+	float Risveglio = 0.f;
 };
 
 /** Il pulviscolo che galleggia nella luce e qualche lucciola che si accende e si spegne. */

@@ -61,6 +61,12 @@ public:
 
 	// --- Client ------------------------------------------------------------------------------------
 
+	/**
+	 * Controlla, senza collegarsi, che il viaggio verso il server possa partire (gioco pronto, chiave pubblica presente).
+	 * Il menu lo chiede prima del volo (passo 2.5), così un errore si vede subito e non dopo il nero.
+	 */
+	bool PuoiCollegarti(FString& OutErrore, const FString& Indirizzo = FString()) const;
+
 	/** Si collega al server con la connessione cifrata e porta con sé la richiesta. Falso (con il motivo) se non può partire. */
 	bool Collegati(const FValdorsoRichiestaAccesso& Richiesta, FString& OutErrore, const FString& Indirizzo = FString());
 

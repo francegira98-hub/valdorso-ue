@@ -45,7 +45,7 @@ namespace
 	}
 
 	/** Le stesse regole del server, per avvisare subito (il server ricontrolla comunque). */
-	FText ProblemaPassword(const FString& Password, const FString& Nome)
+	FText ProblemaPasswordSchermata(const FString& Password, const FString& Nome)
 	{
 		if (Password.Len() < 10)
 		{
@@ -553,7 +553,7 @@ bool SValdorsoPrimaDiEntrare::Controlla(FValdorsoRichiestaAccesso& Out, FText& O
 		OutErrore = LOCTEXT("NomeForma", "Il nome deve avere da 3 a 20 caratteri (lettere senza accenti, numeri, punto, trattino o trattino basso) e cominciare con una lettera.");
 		return false;
 	}
-	const FText Problema = ProblemaPassword(Out.Password, Out.Nome);
+	const FText Problema = ProblemaPasswordSchermata(Out.Password, Out.Nome);
 	if (!Problema.IsEmpty())
 	{
 		OutErrore = Problema;
@@ -735,7 +735,7 @@ void SValdorsoAnticamera::Invia()
 		MostraCambioPassword(LOCTEXT("ScriviTemp", "Scrivi la password temporanea che ti ha dato l'Amministratrice."), true);
 		return;
 	}
-	const FText Problema = ProblemaPassword(PwNuova, FString());
+	const FText Problema = ProblemaPasswordSchermata(PwNuova, FString());
 	if (!Problema.IsEmpty())
 	{
 		MostraCambioPassword(Problema, true);
