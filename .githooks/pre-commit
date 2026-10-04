@@ -1,0 +1,24 @@
+#!/bin/sh
+# Valdorso - Prima di ogni commit parte il controllo (Tools/Controlli/prima_del_commit.py).
+# Si attiva una volta sola con Tools/Attiva controlli Git.cmd (git config core.hooksPath .githooks).
+# Usa il Python di Unreal, così non serve installare niente; se manca, prova quello di Windows.
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+SCRIPT="Tools/Controlli/prima_del_commit.py"
+
+for PY in "/v/UE_5.8/Engine/Binaries/ThirdParty/Python3/Win64/python.exe" \
+          "V:/UE_5.8/Engine/Binaries/ThirdParty/Python3/Win64/python.exe"; do
+    if [ -x "$PY" ]; then
+        exec "$PY" "$SCRIPT"
+    fi
+done
+for PY in py python3 python; do
+    if command -v "$PY" >/dev/null 2>&1 && "$PY" -c "import sys; sys.exit(0 if sys.version_info >= (3, 7) else 1)" >/dev/null 2>&1; then
+        exec "$PY" "$SCRIPT"
+    fi
+done
+
+echo "[Valdorso] Non trovo Python per il controllo prima del commit: il commit è fermato."
+echo "Controlla che esista V:/UE_5.8/Engine/Binaries/ThirdParty/Python3/Win64/python.exe"
+echo "(in caso di vera necessità: git commit --no-verify)."
+exit 1
