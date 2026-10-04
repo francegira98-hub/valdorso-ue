@@ -10,6 +10,12 @@
 #include "Widgets/Input/SVirtualJoystick.h"
 #include "ValdorsoGameInstance.h"
 #include "SValdorsoAccesso.h"
+#include "SValdorsoPersonaggi.h"
+#include "ValdorsoRegole.h"
+#include "ValdorsoAttributeSet.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/Engine.h"
 #include "Engine/NetConnection.h"
@@ -147,6 +153,7 @@ void AValdorsoPlayerController::Accogli()
 	if (IsLocalController())
 	{
 		bAutenticato = true;
+		bSenzaPersonaggio = true;
 		NomeAccount = TEXT("Locale");
 		return;
 	}
@@ -161,6 +168,7 @@ void AValdorsoPlayerController::Accogli()
 		{
 			static int32 Contatore = 0;
 			bAutenticato = true;
+			bSenzaPersonaggio = true;
 			NomeAccount = FString::Printf(TEXT("Prova%d"), ++Contatore);
 			AccountId = TEXT("prova-") + NomeAccount;
 			Ruolo = EValdorsoRuolo::Amministratore;
@@ -186,7 +194,7 @@ void AValdorsoPlayerController::Accogli()
 
 bool AValdorsoPlayerController::CanRestartPlayer()
 {
-	return bAutenticato && !bAttendeCodici && Super::CanRestartPlayer();
+	return bAutenticato && !bAttendeCodici && (bPersonaggioScelto || bSenzaPersonaggio) && Super::CanRestartPlayer();
 }
 
 void AValdorsoPlayerController::ServerCodiciScritti_Implementation()
@@ -200,11 +208,7 @@ void AValdorsoPlayerController::ServerCodiciScritti_Implementation()
 	{
 		Archivista->ConfermaCodiciRecupero(AccountId);
 	}
-	AGameModeBase* Modalita = GetWorld() ? GetWorld()->GetAuthGameMode() : nullptr;
-	if (Modalita && Modalita->PlayerCanRestart(this))
-	{
-		Modalita->RestartPlayer(this);
-	}
+	InviaSceltaPersonaggio();
 }
 
 bool AValdorsoPlayerController::PuoChiedere(const FString& Nome, const FString& Segreto)
@@ -302,6 +306,7 @@ void AValdorsoPlayerController::ServerRientra_Implementation(const FString& Bigl
 		return;
 	}
 	bRichiestaInCorso = true;
+	bRientro = true;
 	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
 	UValdorsoArchivista::Di(this)->RientraConBiglietto(Biglietto, Indirizzo(), [Debole](const FValdorsoEsitoAccount& Esito)
 	{
@@ -333,6 +338,10 @@ void AValdorsoPlayerController::ServerCambiaPassword_Implementation(const FStrin
 void AValdorsoPlayerController::RispostaArchivista(const FValdorsoEsitoAccount& Esito)
 {
 	bRichiestaInCorso = false;
+	if (!Esito.Riuscito())
+	{
+		bRientro = false;
+	}
 	if (!IsValid(this) || IsActorBeingDestroyed())
 	{
 		return;
@@ -381,6 +390,9 @@ void AValdorsoPlayerController::FaiEntrare(const FValdorsoEsitoAccount& Esito)
 			AValdorsoPlayerController* Altro = Cast<AValdorsoPlayerController>(It->Get());
 			if (Altro && Altro != this && Altro->AccountId == Esito.AccountId)
 			{
+				// Prima si salva dov'era il personaggio del collegamento vecchio (al rientro è il caso normale).
+				Altro->SalvaPersonaggio();
+				Altro->bPersonaggioScelto = false;
 				Altro->bAutenticato = false;
 				Altro->AccountId.Empty();
 				Altro->Espelli(TEXT("Il tuo account è entrato da un altro posto."));
@@ -398,10 +410,6 @@ void AValdorsoPlayerController::FaiEntrare(const FValdorsoEsitoAccount& Esito)
 	NomeAccount = Esito.Nome;
 	Ruolo = Esito.Ruolo;
 	GetWorldTimerManager().ClearTimer(TimerAnticamera);
-	if (PlayerState)
-	{
-		PlayerState->SetPlayerName(Esito.Nome);
-	}
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Anticamera: %s è entrato nella valle"), *Esito.Nome);
 
 	ClientEsitoAccesso(Esito);
@@ -416,13 +424,195 @@ void AValdorsoPlayerController::FaiEntrare(const FValdorsoEsitoAccount& Esito)
 		}
 	}
 
-	if (AGameModeBase* Modalita = Mondo ? Mondo->GetAuthGameMode() : nullptr)
+	// Poi la scelta del personaggio (dopo i codici di recupero, se ce ne sono di nuovi da scrivere).
+	if (!bAttendeCodici)
 	{
-		if (Modalita->PlayerCanRestart(this))
+		InviaSceltaPersonaggio();
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// La scelta del personaggio (v0.1.2, passo 3)
+// ------------------------------------------------------------------------------------------------
+
+void AValdorsoPlayerController::InviaSceltaPersonaggio(const FString& Messaggio, bool bErrore)
+{
+	UValdorsoArchivista* Archivista = UValdorsoArchivista::Di(this);
+	if (!Archivista || !bAutenticato || bPersonaggioScelto)
+	{
+		return;
+	}
+	// Al rientro senza password si torna subito con l'ultimo personaggio.
+	if (bRientro)
+	{
+		bRientro = false;
+		const FString Ultimo = Archivista->UltimoPersonaggio(AccountId);
+		if (!Ultimo.IsEmpty())
+		{
+			FaiNascere(Ultimo);
+			return;
+		}
+	}
+	ClientSceltaPersonaggio(Archivista->ElencoPersonaggi(AccountId), Messaggio, bErrore);
+}
+
+bool AValdorsoPlayerController::PuoChiederePersonaggi()
+{
+	if (!bAutenticato || bPersonaggioScelto || bAttendeCodici || !UValdorsoArchivista::Di(this))
+	{
+		return false;
+	}
+	if (++RichiestePersonaggi > 40)
+	{
+		Espelli(TEXT("Troppe richieste: ricollegati."));
+		return false;
+	}
+	return true;
+}
+
+void AValdorsoPlayerController::ServerScegliPersonaggio_Implementation(const FString& Id)
+{
+	if (Id.Len() > 64 || !PuoChiederePersonaggi())
+	{
+		return;
+	}
+	FaiNascere(Id);
+}
+
+void AValdorsoPlayerController::ServerCreaPersonaggio_Implementation(const FString& Nome)
+{
+	if (Nome.Len() > 64 || !PuoChiederePersonaggi())
+	{
+		return;
+	}
+	FString NuovoId;
+	const FString Problema = UValdorsoArchivista::Di(this)->CreaPersonaggio(AccountId, Nome, NuovoId);
+	if (!Problema.IsEmpty())
+	{
+		InviaSceltaPersonaggio(Problema, true);
+		return;
+	}
+	InviaSceltaPersonaggio(FString::Printf(TEXT("%s è scritto nel registro."), *ValdorsoRegole::NormalizzaNomePersonaggio(Nome)), false);
+}
+
+void AValdorsoPlayerController::ServerCancellaPersonaggio_Implementation(const FString& Id, const FString& Conferma)
+{
+	if (Id.Len() > 64 || Conferma.Len() > 64 || !PuoChiederePersonaggi())
+	{
+		return;
+	}
+	const FString Problema = UValdorsoArchivista::Di(this)->CancellaPersonaggio(AccountId, Id, Conferma, NomeAccount);
+	InviaSceltaPersonaggio(Problema.IsEmpty() ? FString(TEXT("Il personaggio è stato cancellato.")) : Problema, !Problema.IsEmpty());
+}
+
+void AValdorsoPlayerController::FaiNascere(const FString& Id)
+{
+	UValdorsoArchivista* Archivista = UValdorsoArchivista::Di(this);
+	FValdorsoPersonaggio* Dati = Archivista ? Archivista->TrovaPersonaggio(AccountId, Id) : nullptr;
+	if (!Dati)
+	{
+		InviaSceltaPersonaggio(TEXT("Questo personaggio non c'è più."), true);
+		return;
+	}
+
+	PersonaggioId = Dati->Id;
+	bPersonaggioScelto = true;
+	UltimoSalvataggio = FPlatformTime::Seconds();
+	Dati->UltimoGioco = FDateTime::UtcNow().ToUnixTimestamp();
+	Archivista->SalvaPersonaggio(*Dati);
+	if (PlayerState)
+	{
+		// Gli altri vedono il nome del personaggio, mai quello dell'account.
+		PlayerState->SetPlayerName(Dati->Nome);
+	}
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] %s entra come %s"), *NomeAccount, *Dati->Nome);
+
+	// Dove era rimasto (solo se è la stessa mappa e il punto è sensato), altrimenti al punto di partenza.
+	UWorld* Mondo = GetWorld();
+	AGameModeBase* Modalita = Mondo ? Mondo->GetAuthGameMode() : nullptr;
+	const FString MappaQui = UGameplayStatics::GetCurrentLevelName(this, true);
+	const bool bDovEra = Dati->bHaPosizione && Dati->Mappa == MappaQui && Dati->Posizione.Z > -50000.f && !Dati->Posizione.ContainsNaN();
+	if (Modalita && Modalita->PlayerCanRestart(this))
+	{
+		if (bDovEra)
+		{
+			Modalita->RestartPlayerAtTransform(this, FTransform(FRotator(0.f, Dati->Direzione, 0.f), Dati->Posizione));
+		}
+		if (!GetPawn())
 		{
 			Modalita->RestartPlayer(this);
 		}
 	}
+	if (!GetPawn())
+	{
+		// Non è nato: si torna alla scelta invece di restare senza corpo.
+		bPersonaggioScelto = false;
+		PersonaggioId.Empty();
+		InviaSceltaPersonaggio(TEXT("Il personaggio non è riuscito a entrare nella valle: riprova."), true);
+		return;
+	}
+
+	// Le statistiche com'erano (le prime volte restano quelle di partenza).
+	IAbilitySystemInterface* ConAbilita = Cast<IAbilitySystemInterface>(GetPawn());
+	UAbilitySystemComponent* Abilita = ConAbilita ? ConAbilita->GetAbilitySystemComponent() : nullptr;
+	if (Abilita)
+	{
+		if (Dati->Salute > 0.f)
+		{
+			Abilita->SetNumericAttributeBase(UValdorsoAttributeSet::GetSaluteAttribute(), Dati->Salute);
+		}
+		if (Dati->Stamina >= 0.f)
+		{
+			Abilita->SetNumericAttributeBase(UValdorsoAttributeSet::GetStaminaAttribute(), Dati->Stamina);
+		}
+		if (Dati->Mana >= 0.f)
+		{
+			Abilita->SetNumericAttributeBase(UValdorsoAttributeSet::GetManaAttribute(), Dati->Mana);
+		}
+	}
+
+	ClientPersonaggioScelto(Dati->Nome);
+	GetWorldTimerManager().SetTimer(TimerSalvataggio, this, &AValdorsoPlayerController::SalvaPersonaggio, 60.f, true);
+}
+
+void AValdorsoPlayerController::SalvaPersonaggio()
+{
+	if (!HasAuthority() || !bPersonaggioScelto)
+	{
+		return;
+	}
+	UValdorsoArchivista* Archivista = UValdorsoArchivista::Di(this);
+	FValdorsoPersonaggio* Dati = Archivista ? Archivista->TrovaPersonaggio(AccountId, PersonaggioId) : nullptr;
+	if (!Dati)
+	{
+		return;
+	}
+	const double Ora = FPlatformTime::Seconds();
+	Dati->TempoDiGioco += static_cast<int64>(FMath::Max(0.0, Ora - UltimoSalvataggio));
+	UltimoSalvataggio = Ora;
+	Dati->UltimoGioco = FDateTime::UtcNow().ToUnixTimestamp();
+
+	if (APawn* Corpo = GetPawn())
+	{
+		Dati->Mappa = UGameplayStatics::GetCurrentLevelName(this, true);
+		Dati->Posizione = Corpo->GetActorLocation();
+		Dati->Direzione = Corpo->GetActorRotation().Yaw;
+		Dati->bHaPosizione = true;
+		IAbilitySystemInterface* ConAbilita = Cast<IAbilitySystemInterface>(Corpo);
+		if (UAbilitySystemComponent* Abilita = ConAbilita ? ConAbilita->GetAbilitySystemComponent() : nullptr)
+		{
+			Dati->Salute = Abilita->GetNumericAttributeBase(UValdorsoAttributeSet::GetSaluteAttribute());
+			Dati->Stamina = Abilita->GetNumericAttributeBase(UValdorsoAttributeSet::GetStaminaAttribute());
+			Dati->Mana = Abilita->GetNumericAttributeBase(UValdorsoAttributeSet::GetManaAttribute());
+		}
+	}
+	Archivista->SalvaPersonaggio(*Dati);
+}
+
+void AValdorsoPlayerController::PawnLeavingGame()
+{
+	SalvaPersonaggio();
+	Super::PawnLeavingGame();
 }
 
 void AValdorsoPlayerController::TempoScaduto()
@@ -461,9 +651,13 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 		Anticamera.Reset();
 	}
 	ChiudiCodiciRecupero();
+	ChiudiSceltaPersonaggio();
+	// Server che si spegne o cambia mappa: l'ultimo minuto non va perso.
+	SalvaPersonaggio();
 	if (GetWorld())
 	{
 		GetWorldTimerManager().ClearTimer(TimerAnticamera);
+		GetWorldTimerManager().ClearTimer(TimerSalvataggio);
 	}
 	Super::EndPlay(EndPlayReason);
 }
@@ -588,6 +782,91 @@ void AValdorsoPlayerController::ChiudiCodiciRecupero()
 		SetInputMode(FInputModeGameOnly());
 		bShowMouseCursor = false;
 	}
+}
+
+void AValdorsoPlayerController::ClientSceltaPersonaggio_Implementation(const TArray<FValdorsoPersonaggioBreve>& Elenco, const FString& Messaggio, bool bErrore)
+{
+	ChiudiAnticamera();
+	MostraSceltaPersonaggio();
+	if (SceltaPersonaggio.IsValid())
+	{
+		SceltaPersonaggio->Aggiorna(Elenco, FText::FromString(Messaggio), bErrore);
+		FInputModeUIOnly Modo;
+		Modo.SetWidgetToFocus(SceltaPersonaggio->FuocoIniziale());
+		SetInputMode(Modo);
+		bShowMouseCursor = true;
+	}
+}
+
+void AValdorsoPlayerController::ClientPersonaggioScelto_Implementation(const FString& Nome)
+{
+	ChiudiSceltaPersonaggio();
+	SetInputMode(FInputModeGameOnly());
+	bShowMouseCursor = false;
+	MostraSulloSchermo(FString::Printf(TEXT("%s entra nella valle."), *Nome), FColor(232, 196, 120));
+}
+
+void AValdorsoPlayerController::MostraSceltaPersonaggio()
+{
+	if (SceltaPersonaggio.IsValid())
+	{
+		return;
+	}
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	SAssignNew(SceltaPersonaggio, SValdorsoSceltaPersonaggio)
+		.OnScegli(FValdorsoSuPersonaggio::CreateLambda([Debole](const FString& Id)
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->SceltaPersonaggio->Attendi(NSLOCTEXT("ValdorsoPersonaggi", "Entrando", "Il Cuore ti riconosce..."));
+				Controllore->ServerScegliPersonaggio(Id);
+			}
+		}))
+		.OnCrea(FValdorsoSuPersonaggio::CreateLambda([Debole](const FString& Nome)
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->SceltaPersonaggio->Attendi(NSLOCTEXT("ValdorsoPersonaggi", "Scrivendo", "Il sacerdote scrive nel registro..."));
+				Controllore->ServerCreaPersonaggio(Nome);
+			}
+		}))
+		.OnCancella(FValdorsoSuCancellaPersonaggio::CreateLambda([Debole](const FString& Id, const FString& Conferma)
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->SceltaPersonaggio->Attendi(NSLOCTEXT("ValdorsoPersonaggi", "Cancellando", "Il sacerdote cancella il nome..."));
+				Controllore->ServerCancellaPersonaggio(Id, Conferma);
+			}
+		}))
+		.OnEsci(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				// Uscita voluta: niente rientro automatico.
+				if (UValdorsoGameInstance* Istanza = Controllore->GetGameInstance<UValdorsoGameInstance>())
+				{
+					Istanza->DimenticaBiglietto();
+				}
+				Controllore->ConsoleCommand(TEXT("disconnect"));
+			}
+		}));
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->AddViewportWidgetContent(SceltaPersonaggio.ToSharedRef(), 55);
+	}
+}
+
+void AValdorsoPlayerController::ChiudiSceltaPersonaggio()
+{
+	if (!SceltaPersonaggio.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(SceltaPersonaggio.ToSharedRef());
+	}
+	SceltaPersonaggio.Reset();
 }
 
 void AValdorsoPlayerController::ClientBiglietto_Implementation(const FString& Biglietto, const FString& Nome)

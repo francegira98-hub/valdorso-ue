@@ -21,7 +21,12 @@ void AValdorsoGameMode::PostLogin(APlayerController* NewPlayer)
 
 void AValdorsoGameMode::Logout(AController* Exiting)
 {
-	const AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(Exiting);
+	AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(Exiting);
+	if (Controllore)
+	{
+		// Il personaggio si salva dov'era (se il corpo c'è ancora; il luogo è già stato salvato all'uscita del corpo).
+		Controllore->SalvaPersonaggio();
+	}
 	if (Controllore && Controllore->EAutenticato() && !Controllore->GetAccountId().IsEmpty())
 	{
 		if (UValdorsoArchivista* Archivista = UValdorsoArchivista::Di(this))

@@ -39,6 +39,36 @@ namespace ValdorsoRegole
 	inline constexpr int32 NumeroCodiciRecupero = 8;
 	inline constexpr int32 LunghezzaCodiceRecupero = 16;
 
+	// --- Personaggi (v0.1.2, passo 3) -------------------------------------------------------------
+
+	/** Personaggi per account. */
+	inline constexpr int32 PersonaggiPerAccount = 3;
+
+	/** Il nome di un personaggio cancellato resta riservato per 30 giorni (nessun altro lo può prendere). */
+	inline constexpr int32 GiorniNomeRiservato = 30;
+
+	/**
+	 * Il nome come lo salva il gioco: spazi in più tolti, iniziale di ogni parola maiuscola
+	 * ("  gaspare  d'orso " -> "Gaspare D'orso"; le particelle restano come le scrive il giocatore dopo la prima lettera).
+	 */
+	VALDORSO_API FString NormalizzaNomePersonaggio(const FString& Nome);
+
+	/**
+	 * Vuoto se il nome va bene, altrimenti il motivo. Regole: 3-20 caratteri; lettere (anche accentate), al massimo
+	 * due spazi, apostrofo o trattino solo tra due lettere; niente tre lettere uguali di fila; niente parole vietate
+	 * né parole dello staff. L'unicità e la somiglianza con lo staff le controlla l'archivista.
+	 */
+	VALDORSO_API FString ProblemaNomePersonaggio(const FString& Nome);
+
+	/**
+	 * Lo "scheletro" di un nome: minuscolo, senza accenti e separatori, con le lettere che si confondono unificate
+	 * (l e I -> i, rn -> m, vv -> w, 0 -> o, 1 -> i). Due nomi con lo stesso scheletro sono lo stesso nome.
+	 */
+	VALDORSO_API FString ScheletroNome(const FString& Nome);
+
+	/** Vero se lo scheletro contiene una parola vietata (insulti) o una parola dello staff. */
+	VALDORSO_API bool ContieneParolaVietata(const FString& Scheletro);
+
 	/** Nome dell'account: 3-20 caratteri, lettere, cifre, . - _; inizia con una lettera. */
 	VALDORSO_API bool NomeValido(const FString& Nome);
 

@@ -15,6 +15,7 @@
 //   Valdorso.Account.Sblocca <nome>               toglie il blocco per troppi tentativi
 //   Valdorso.Account.Nota <nome> <testo>          nota dello staff, i giocatori non la vedono
 //   Valdorso.Account.Cancella <nome> <nome>       cancella l'account per sempre (il nome due volte, per conferma)
+//   Valdorso.Account.Personaggi <nome>            i personaggi dell'account
 // Solo nelle versioni di sviluppo (mai nel gioco pubblicato), per provare senza schermata:
 //   Valdorso.Prova.Crea <codice> <nome> <password>
 //   Valdorso.Prova.Entra <nome> <password>
@@ -229,6 +230,14 @@ namespace
 		}
 	}
 
+	void AccountPersonaggi(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
+	{
+		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Account.Personaggi <nome>"), Uscita))
+		{
+			Scrivi(Uscita, A->ElencoPersonaggiTesto(Argomenti[0]));
+		}
+	}
+
 	void AccountNota(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
 	{
 		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 2, TEXT("Valdorso.Account.Nota <nome> <testo>"), Uscita))
@@ -273,6 +282,9 @@ namespace
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountCancella(TEXT("Valdorso.Account.Cancella"),
 		TEXT("Cancella un account per sempre. Valdorso.Account.Cancella <nome> <nome di nuovo>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountCancella));
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountPersonaggi(TEXT("Valdorso.Account.Personaggi"),
+		TEXT("I personaggi di un account. Valdorso.Account.Personaggi <nome>"),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountPersonaggi));
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountNota(TEXT("Valdorso.Account.Nota"),
 		TEXT("Aggiunge una nota dello staff. Valdorso.Account.Nota <nome> <testo>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountNota));

@@ -133,6 +133,161 @@ namespace ValdorsoRegole
 		return ValdorsoSicurezza::Sha256Esadecimale(Sale + TEXT(":") + NormalizzaCodiceRecupero(Codice));
 	}
 
+	namespace
+	{
+		/** Lettera accentata italiana -> lettera semplice (minuscola). Zero se non è una lettera accentata ammessa. */
+		TCHAR SenzaAccento(TCHAR C)
+		{
+			switch (C)
+			{
+			case 0x00E0: case 0x00C0: case 0x00E1: case 0x00C1: return TEXT('a');
+			case 0x00E8: case 0x00C8: case 0x00E9: case 0x00C9: return TEXT('e');
+			case 0x00EC: case 0x00CC: case 0x00ED: case 0x00CD: return TEXT('i');
+			case 0x00F2: case 0x00D2: case 0x00F3: case 0x00D3: return TEXT('o');
+			case 0x00F9: case 0x00D9: case 0x00FA: case 0x00DA: return TEXT('u');
+			default: return 0;
+			}
+		}
+
+		bool LetteraNome(TCHAR C)
+		{
+			return (C >= TEXT('a') && C <= TEXT('z')) || (C >= TEXT('A') && C <= TEXT('Z')) || SenzaAccento(C) != 0;
+		}
+
+		bool SeparatoreNome(TCHAR C)
+		{
+			return C == TEXT(' ') || C == TEXT('\'') || C == TEXT('-');
+		}
+
+		/** Insulti e parole che non stanno bene in un nome (si cercano dentro lo scheletro). */
+		const TCHAR* const ParoleVietate[] = {
+			// Scritte come scheletri (la l diventa i): così valgono anche con le lettere scambiate.
+			// Niente parole corte che stanno dentro nomi veri (per esempio "nazi" in Nazario).
+			TEXT("cazz"), TEXT("merd"), TEXT("stronz"), TEXT("puttan"), TEXT("troia"), TEXT("vaffan"), TEXT("cogiion"),
+			TEXT("minchi"), TEXT("froci"), TEXT("finocchi"), TEXT("nigg"), TEXT("nazist"), TEXT("hitier"),
+			TEXT("mussoiini"), TEXT("fuck"), TEXT("shit"), TEXT("bitch"), TEXT("cunt"), TEXT("whore"),
+			TEXT("porcodio"), TEXT("diocan"), TEXT("madonnapu"), TEXT("bastard"), TEXT("stupr"), TEXT("pedofi"),
+			TEXT("ritardat"), TEXT("mongoioid")
+		};
+
+		/** Parole dello staff: nessun personaggio può fingersi staff. */
+		const TCHAR* const ParoleStaff[] = {
+			TEXT("admin"), TEXT("amministrat"), TEXT("moderat"), TEXT("staff"), TEXT("narrator"), TEXT("sistema"),
+			TEXT("system"), TEXT("server"), TEXT("vaidorso"), TEXT("supporto"), TEXT("support"), TEXT("gamemaster")
+		};
+	}
+
+	FString NormalizzaNomePersonaggio(const FString& Nome)
+	{
+		FString Pulito;
+		bool bInizioParola = true;
+		for (const TCHAR C : Nome.TrimStartAndEnd())
+		{
+			if (C == TEXT(' '))
+			{
+				if (!Pulito.EndsWith(TEXT(" ")))
+				{
+					Pulito.AppendChar(C);
+				}
+				bInizioParola = true;
+				continue;
+			}
+			Pulito.AppendChar(bInizioParola ? FChar::ToUpper(C) : C);
+			bInizioParola = false;
+		}
+		return Pulito;
+	}
+
+	FString ScheletroNome(const FString& Nome)
+	{
+		FString Base;
+		for (const TCHAR C : Nome)
+		{
+			if (const TCHAR Semplice = SenzaAccento(C))
+			{
+				Base.AppendChar(Semplice);
+			}
+			else if (C == TEXT('0'))
+			{
+				Base.AppendChar(TEXT('o'));
+			}
+			else if (C == TEXT('1') || C == TEXT('l') || C == TEXT('L') || C == TEXT('|'))
+			{
+				Base.AppendChar(TEXT('i'));
+			}
+			else if (FChar::IsAlpha(C))
+			{
+				Base.AppendChar(FChar::ToLower(C));
+			}
+		}
+		Base.ReplaceInline(TEXT("rn"), TEXT("m"));
+		Base.ReplaceInline(TEXT("vv"), TEXT("w"));
+		return Base;
+	}
+
+	bool ContieneParolaVietata(const FString& Scheletro)
+	{
+		for (const TCHAR* Parola : ParoleVietate)
+		{
+			if (Scheletro.Contains(Parola))
+			{
+				return true;
+			}
+		}
+		for (const TCHAR* Parola : ParoleStaff)
+		{
+			if (Scheletro.Contains(Parola))
+			{
+				return true;
+			}
+		}
+		// Parole corte dello staff: solo se sono tutto il nome.
+		return Scheletro == TEXT("gm") || Scheletro == TEXT("dio") || Scheletro == TEXT("root");
+	}
+
+	FString ProblemaNomePersonaggio(const FString& Nome)
+	{
+		if (Nome.Len() < 3 || Nome.Len() > 20)
+		{
+			return TEXT("Il nome deve avere da 3 a 20 caratteri.");
+		}
+		int32 Spazi = 0;
+		int32 Uguali = 1;
+		for (int32 i = 0; i < Nome.Len(); ++i)
+		{
+			const TCHAR C = Nome[i];
+			if (SeparatoreNome(C))
+			{
+				const bool bTraLettere = i > 0 && i < Nome.Len() - 1 && LetteraNome(Nome[i - 1]) && LetteraNome(Nome[i + 1]);
+				if (!bTraLettere)
+				{
+					return TEXT("Spazi, apostrofi e trattini vanno solo tra due lettere.");
+				}
+				Spazi += C == TEXT(' ') ? 1 : 0;
+				Uguali = 1;
+				continue;
+			}
+			if (!LetteraNome(C))
+			{
+				return TEXT("Nel nome vanno solo lettere (anche accentate), spazi, apostrofi e trattini.");
+			}
+			Uguali = (i > 0 && FChar::ToLower(Nome[i - 1]) == FChar::ToLower(C)) ? Uguali + 1 : 1;
+			if (Uguali >= 3)
+			{
+				return TEXT("Il nome non può avere tre lettere uguali di fila.");
+			}
+		}
+		if (Spazi > 2)
+		{
+			return TEXT("Il nome può avere al massimo tre parole.");
+		}
+		if (ContieneParolaVietata(ScheletroNome(Nome)))
+		{
+			return TEXT("Questo nome non si può usare nella valle: scegline un altro.");
+		}
+		return FString();
+	}
+
 	int64 DurataBlocco(int32 BlocchiDiFila)
 	{
 		return FMath::Min<int64>(BloccoBaseSecondi << FMath::Clamp(BlocchiDiFila - 1, 0, 10), BloccoMassimoSecondi);

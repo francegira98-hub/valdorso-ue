@@ -158,6 +158,9 @@ void UValdorsoArchivista::Initialize(FSubsystemCollectionBase& Collection)
 
 	Cartella = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("Server/Archivio"));
 	CartellaAccount = Cartella / TEXT("Account");
+	CartellaPersonaggi = Cartella / TEXT("Personaggi");
+	FileNomiRiservati = Cartella / TEXT("NomiRiservati.json");
+	IFileManager::Get().MakeDirectory(*CartellaPersonaggi, true);
 	FileInviti = Cartella / TEXT("Inviti.json");
 	FileRegistro = Cartella / TEXT("Registro_accessi.log");
 	IFileManager::Get().MakeDirectory(*CartellaAccount, true);
@@ -234,6 +237,38 @@ void UValdorsoArchivista::CaricaTutto()
 	{
 		UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a leggere Inviti.json (né le copie)"));
 	}
+
+	// I personaggi (passo 3).
+	Personaggi.Empty();
+	NomiPersonaggi.Empty();
+	TArray<FString> FilePersonaggi;
+	IFileManager::Get().FindFiles(FilePersonaggi, *(CartellaPersonaggi / TEXT("*.json")), true, false);
+	for (const FString& Nome : FilePersonaggi)
+	{
+		FValdorsoPersonaggio Dati;
+		if (!LeggiFile(CartellaPersonaggi / Nome, Dati) || Dati.Id.IsEmpty() || Dati.AccountId.IsEmpty())
+		{
+			UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a leggere il personaggio %s (né le copie)"), *Nome);
+			continue;
+		}
+		if (!AccountPerId(Dati.AccountId))
+		{
+			UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Archivista: il personaggio %s è di un account che non c'è più, lo salto"), *Nome);
+			continue;
+		}
+		const FString Scheletro = ValdorsoRegole::ScheletroNome(Dati.Nome);
+		if (NomiPersonaggi.Contains(Scheletro))
+		{
+			UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: due personaggi con lo stesso nome (%s): tengo il primo"), *Dati.Nome);
+			continue;
+		}
+		NomiPersonaggi.Add(Scheletro, Dati.Id);
+		Personaggi.Add(Dati.Id, MoveTemp(Dati));
+	}
+	if (IFileManager::Get().FileExists(*FileNomiRiservati) && !LeggiFile(FileNomiRiservati, NomiRiservati))
+	{
+		UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a leggere NomiRiservati.json (né le copie)"));
+	}
 }
 
 void UValdorsoArchivista::SalvaAccount(FValdorsoAccount& Dati)
@@ -246,6 +281,38 @@ void UValdorsoArchivista::SalvaAccount(FValdorsoAccount& Dati)
 		return;
 	}
 	Scrivi(CartellaAccount / (Dati.Id + TEXT(".json")), Testo);
+}
+
+void UValdorsoArchivista::SalvaNomiRiservati()
+{
+	++NomiRiservati.Versione;
+	FString Testo;
+	if (FJsonObjectConverter::UStructToJsonObjectString(NomiRiservati, Testo))
+	{
+		Scrivi(FileNomiRiservati, Testo);
+	}
+}
+
+void UValdorsoArchivista::SalvaPersonaggio(FValdorsoPersonaggio& Dati, bool bGiocato)
+{
+	++Dati.Versione;
+	FString Testo;
+	if (!FJsonObjectConverter::UStructToJsonObjectString(Dati, Testo))
+	{
+		UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a preparare il file del personaggio %s"), *Dati.Nome);
+		return;
+	}
+	Scrivi(CartellaPersonaggi / (Dati.Id + TEXT(".json")), Testo);
+
+	FValdorsoAccount* Proprietario = bGiocato ? AccountPerId(Dati.AccountId) : nullptr;
+	if (Proprietario)
+	{
+		if (Proprietario->UltimoPersonaggio != Dati.Id)
+		{
+			Proprietario->UltimoPersonaggio = Dati.Id;
+			SalvaAccount(*Proprietario);
+		}
+	}
 }
 
 void UValdorsoArchivista::SalvaInviti()
@@ -1332,6 +1399,39 @@ FString UValdorsoArchivista::CancellaAccount(const FString& Nome, const FString&
 	const FString NomeChiave = Dati->NomeChiave;
 	const FString Al = TEXT("[account cancellato]");
 
+	// I suoi personaggi: via i file, i nomi restano riservati 30 giorni (nessuno si spaccia per loro).
+	TArray<FString> IdPersonaggi;
+	for (const TPair<FString, FValdorsoPersonaggio>& Coppia : Personaggi)
+	{
+		if (Coppia.Value.AccountId == Id)
+		{
+			IdPersonaggi.Add(Coppia.Key);
+		}
+	}
+	for (const FString& IdPersonaggio : IdPersonaggi)
+	{
+		FValdorsoPersonaggio Tolto;
+		Personaggi.RemoveAndCopyValue(IdPersonaggio, Tolto);
+		const FString Scheletro = ValdorsoRegole::ScheletroNome(Tolto.Nome);
+		NomiPersonaggi.Remove(Scheletro);
+		FValdorsoNomeRiservato Riservato;
+		Riservato.Scheletro = Scheletro;
+		Riservato.Fino = Adesso() + static_cast<int64>(ValdorsoRegole::GiorniNomeRiservato) * 24 * 60 * 60;
+		NomiRiservati.Nomi.Add(Riservato);
+		if (Scrittore.IsValid())
+		{
+			const FString FilePersonaggio = CartellaPersonaggi / (IdPersonaggio + TEXT(".json"));
+			UltimaScrittura = Scrittore->Launch(TEXT("CancellaPersonaggio"), [FilePersonaggio]()
+			{
+				ValdorsoArchivioFile::CancellaConCopie(FilePersonaggio);
+			});
+		}
+	}
+	if (IdPersonaggi.Num() > 0)
+	{
+		SalvaNomiRiservati();
+	}
+
 	// Via dall'archivio in memoria.
 	AnnullaBiglietto(Id);
 	CodiciInAttesa.Remove(Id);
@@ -1587,4 +1687,214 @@ void UValdorsoArchivista::RecuperaConCodice(const FString& Nome, const FString& 
 		Dati->CodiciRecupero.Insert(CodiceUsato, Trovato);
 		Risposta(ServerOccupato());
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// Personaggi (v0.1.2, passo 3)
+// ------------------------------------------------------------------------------------------------
+
+const FValdorsoAccount* UValdorsoArchivista::AccountPerId(const FString& AccountId) const
+{
+	for (const TPair<FString, FValdorsoAccount>& Coppia : Account)
+	{
+		if (Coppia.Value.Id == AccountId)
+		{
+			return &Coppia.Value;
+		}
+	}
+	return nullptr;
+}
+
+FValdorsoAccount* UValdorsoArchivista::AccountPerId(const FString& AccountId)
+{
+	return const_cast<FValdorsoAccount*>(static_cast<const UValdorsoArchivista*>(this)->AccountPerId(AccountId));
+}
+
+bool UValdorsoArchivista::SomigliaAlloStaff(const FString& Scheletro, const FString& AccountId) const
+{
+	for (const TPair<FString, FValdorsoAccount>& Coppia : Account)
+	{
+		const FValdorsoAccount& Membro = Coppia.Value;
+		if (Membro.Ruolo == EValdorsoRuolo::Giocatore || Membro.Id == AccountId)
+		{
+			continue;
+		}
+		if (ValdorsoRegole::ScheletroNome(Membro.Nome) == Scheletro)
+		{
+			return true;
+		}
+		for (const FString& IdPersonaggio : Membro.Personaggi)
+		{
+			const FValdorsoPersonaggio* DelloStaff = Personaggi.Find(IdPersonaggio);
+			if (DelloStaff && ValdorsoRegole::ScheletroNome(DelloStaff->Nome) == Scheletro)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+TArray<FValdorsoPersonaggioBreve> UValdorsoArchivista::ElencoPersonaggi(const FString& AccountId) const
+{
+	TArray<FValdorsoPersonaggioBreve> Elenco;
+	const FValdorsoAccount* Proprietario = AccountPerId(AccountId);
+	if (!Proprietario)
+	{
+		return Elenco;
+	}
+	for (const FString& IdPersonaggio : Proprietario->Personaggi)
+	{
+		if (const FValdorsoPersonaggio* Dati = Personaggi.Find(IdPersonaggio))
+		{
+			FValdorsoPersonaggioBreve Breve;
+			Breve.Id = Dati->Id;
+			Breve.Nome = Dati->Nome;
+			Breve.UltimoGioco = Dati->UltimoGioco;
+			Breve.TempoDiGioco = Dati->TempoDiGioco;
+			Elenco.Add(Breve);
+		}
+	}
+	return Elenco;
+}
+
+FString UValdorsoArchivista::CreaPersonaggio(const FString& AccountId, const FString& NomeScritto, FString& OutId)
+{
+	check(IsInGameThread());
+	FValdorsoAccount* Proprietario = AccountPerId(AccountId);
+	if (!Proprietario)
+	{
+		return TEXT("Account non trovato: ricollegati.");
+	}
+	// Si contano solo i personaggi che esistono davvero (un Id rimasto senza file non occupa un posto).
+	Proprietario->Personaggi.RemoveAll([this](const FString& IdPersonaggio) { return !Personaggi.Contains(IdPersonaggio); });
+	if (Proprietario->Personaggi.Num() >= ValdorsoRegole::PersonaggiPerAccount)
+	{
+		return FString::Printf(TEXT("Hai già %d personaggi: per crearne un altro devi prima cancellarne uno."), ValdorsoRegole::PersonaggiPerAccount);
+	}
+
+	const FString NomeNuovo = ValdorsoRegole::NormalizzaNomePersonaggio(NomeScritto);
+	const FString Problema = ValdorsoRegole::ProblemaNomePersonaggio(NomeNuovo);
+	if (!Problema.IsEmpty())
+	{
+		return Problema;
+	}
+	const FString Scheletro = ValdorsoRegole::ScheletroNome(NomeNuovo);
+	if (NomiPersonaggi.Contains(Scheletro))
+	{
+		return TEXT("Nella valle c'è già qualcuno con questo nome (o uno che gli somiglia troppo): scegline un altro.");
+	}
+	const int64 Ora = Adesso();
+	bool bRiservatiCambiati = false;
+	for (int32 i = NomiRiservati.Nomi.Num() - 1; i >= 0; --i)
+	{
+		if (NomiRiservati.Nomi[i].Fino <= Ora)
+		{
+			NomiRiservati.Nomi.RemoveAt(i);
+			bRiservatiCambiati = true;
+		}
+		else if (NomiRiservati.Nomi[i].Scheletro == Scheletro)
+		{
+			return TEXT("Questo nome è stato usato da poco da un personaggio che non c'è più: per ora è riservato, scegline un altro.");
+		}
+	}
+	if (bRiservatiCambiati)
+	{
+		SalvaNomiRiservati();
+	}
+	if (SomigliaAlloStaff(Scheletro, AccountId))
+	{
+		return TEXT("Questo nome somiglia troppo a quello di un membro dello staff: scegline un altro.");
+	}
+
+	FValdorsoPersonaggio Nuovo;
+	Nuovo.Id = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	Nuovo.AccountId = AccountId;
+	Nuovo.Nome = NomeNuovo;
+	Nuovo.CreatoIl = Ora;
+	OutId = Nuovo.Id;
+
+	FValdorsoPersonaggio& Salvato = Personaggi.Add(Nuovo.Id, MoveTemp(Nuovo));
+	NomiPersonaggi.Add(Scheletro, Salvato.Id);
+	Proprietario->Personaggi.Add(Salvato.Id);
+	SalvaAccount(*Proprietario);
+	SalvaPersonaggio(Salvato, false);
+	Annota(FString::Printf(TEXT("PERSONAGGIO_CREATO | %s | %s"), *Proprietario->Nome, *Salvato.Nome));
+	return FString();
+}
+
+FString UValdorsoArchivista::CancellaPersonaggio(const FString& AccountId, const FString& PersonaggioId, const FString& Conferma, const FString& Autore)
+{
+	check(IsInGameThread());
+	FValdorsoAccount* Proprietario = AccountPerId(AccountId);
+	const FValdorsoPersonaggio* Dati = Personaggi.Find(PersonaggioId);
+	if (!Proprietario || !Dati || Dati->AccountId != AccountId)
+	{
+		return TEXT("Personaggio non trovato.");
+	}
+	if (!Conferma.TrimStartAndEnd().Equals(Dati->Nome, ESearchCase::IgnoreCase))
+	{
+		return FString::Printf(TEXT("Per cancellare %s scrivi il suo nome esatto."), *Dati->Nome);
+	}
+
+	const FString NomeTolto = Dati->Nome;
+	const FString Scheletro = ValdorsoRegole::ScheletroNome(NomeTolto);
+	Personaggi.Remove(PersonaggioId);
+	Dati = nullptr;
+	NomiPersonaggi.Remove(Scheletro);
+	Proprietario->Personaggi.Remove(PersonaggioId);
+	if (Proprietario->UltimoPersonaggio == PersonaggioId)
+	{
+		Proprietario->UltimoPersonaggio.Empty();
+	}
+	SalvaAccount(*Proprietario);
+
+	FValdorsoNomeRiservato Riservato;
+	Riservato.Scheletro = Scheletro;
+	Riservato.Fino = Adesso() + static_cast<int64>(ValdorsoRegole::GiorniNomeRiservato) * 24 * 60 * 60;
+	NomiRiservati.Nomi.Add(Riservato);
+	SalvaNomiRiservati();
+
+	if (Scrittore.IsValid())
+	{
+		const FString FilePersonaggio = CartellaPersonaggi / (PersonaggioId + TEXT(".json"));
+		UltimaScrittura = Scrittore->Launch(TEXT("CancellaPersonaggio"), [FilePersonaggio]()
+		{
+			ValdorsoArchivioFile::CancellaConCopie(FilePersonaggio);
+		});
+	}
+	Annota(FString::Printf(TEXT("PERSONAGGIO_CANCELLATO | %s | %s | da %s"), *Proprietario->Nome, *NomeTolto, *Autore));
+	return FString();
+}
+
+FValdorsoPersonaggio* UValdorsoArchivista::TrovaPersonaggio(const FString& AccountId, const FString& PersonaggioId)
+{
+	FValdorsoPersonaggio* Dati = Personaggi.Find(PersonaggioId);
+	return Dati && Dati->AccountId == AccountId ? Dati : nullptr;
+}
+
+FString UValdorsoArchivista::UltimoPersonaggio(const FString& AccountId) const
+{
+	const FValdorsoAccount* Proprietario = AccountPerId(AccountId);
+	if (!Proprietario || !Personaggi.Contains(Proprietario->UltimoPersonaggio))
+	{
+		return FString();
+	}
+	return Proprietario->UltimoPersonaggio;
+}
+
+FString UValdorsoArchivista::ElencoPersonaggiTesto(const FString& NomeAccount) const
+{
+	const FValdorsoAccount* Proprietario = TrovaAccount(NomeAccount);
+	if (!Proprietario)
+	{
+		return FString::Printf(TEXT("Nessun account di nome %s."), *NomeAccount);
+	}
+	FString Testo = FString::Printf(TEXT("Personaggi di %s (%d su %d):\n"), *Proprietario->Nome, Proprietario->Personaggi.Num(), ValdorsoRegole::PersonaggiPerAccount);
+	for (const FValdorsoPersonaggioBreve& Breve : ElencoPersonaggi(Proprietario->Id))
+	{
+		Testo += FString::Printf(TEXT("  %s | creato %s | ultimo gioco %s | %lld minuti di gioco\n"),
+			*Breve.Nome, *Data(Personaggi.FindChecked(Breve.Id).CreatoIl), *Data(Breve.UltimoGioco), Breve.TempoDiGioco / 60);
+	}
+	return Testo;
 }

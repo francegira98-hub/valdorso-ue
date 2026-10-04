@@ -399,4 +399,40 @@ bool FValdorsoTestCodiciRecupero::RunTest(const FString& Parameters)
 	return true;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Nomi dei personaggi
+// ------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestNomiPersonaggi, "Valdorso.Regole.NomiPersonaggi", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestNomiPersonaggi::RunTest(const FString& Parameters)
+{
+	auto Va = [](const TCHAR* Nome) { return ValdorsoRegole::ProblemaNomePersonaggio(ValdorsoRegole::NormalizzaNomePersonaggio(Nome)).IsEmpty(); };
+
+	// Nomi buoni, anche con accenti, apostrofi, trattini e fino a tre parole.
+	for (const TCHAR* Buono : { TEXT("Aldo"), TEXT("Niccolò"), TEXT("Gaspare d'Orso"), TEXT("Anna-Maria"), TEXT("Livia della Rocca"),
+		TEXT("Nazario"), TEXT("Figaro"), TEXT("Penelope") })
+	{
+		TestTrue(FString(TEXT("valido: ")) + Buono, Va(Buono));
+	}
+	// Nomi da rifiutare.
+	for (const TCHAR* Cattivo : { TEXT("Al"), TEXT("Abcdefghijklmnopqrstu"), TEXT("Aldo2"), TEXT("'Aldo"), TEXT("Aldo-"),
+		TEXT("Al  -do"), TEXT("Aaaldo"), TEXT("Un Due Tre Quattro"), TEXT("Admin"), TEXT("Lo Staff"), TEXT("Stronzo"),
+		TEXT("Va1dorso"), TEXT("Dio"), TEXT("Al_do") })
+	{
+		TestFalse(FString(TEXT("non valido: ")) + Cattivo, Va(Cattivo));
+	}
+
+	// Normalizzazione: spazi in più tolti, iniziali maiuscole.
+	TestEqual(TEXT("normalizzato"), ValdorsoRegole::NormalizzaNomePersonaggio(TEXT("  gaspare   d'orso ")), FString(TEXT("Gaspare D'orso")));
+
+	// Scheletri: lettere che si confondono e accenti danno lo stesso nome.
+	TestEqual(TEXT("l e I"), ValdorsoRegole::ScheletroNome(TEXT("Igor")), ValdorsoRegole::ScheletroNome(TEXT("lgor")));
+	TestEqual(TEXT("rn e m"), ValdorsoRegole::ScheletroNome(TEXT("Mara")), ValdorsoRegole::ScheletroNome(TEXT("Rnara")));
+	TestEqual(TEXT("accenti"), ValdorsoRegole::ScheletroNome(TEXT("Niccolò")), ValdorsoRegole::ScheletroNome(TEXT("Niccolo")));
+	TestEqual(TEXT("maiuscole e apostrofi"), ValdorsoRegole::ScheletroNome(TEXT("Gaspare d'Orso")), ValdorsoRegole::ScheletroNome(TEXT("GASPARE DORSO")));
+	TestNotEqual(TEXT("nomi diversi restano diversi"), ValdorsoRegole::ScheletroNome(TEXT("Aldo")), ValdorsoRegole::ScheletroNome(TEXT("Alda")));
+	TestEqual(TEXT("3 personaggi per account"), ValdorsoRegole::PersonaggiPerAccount, 3);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

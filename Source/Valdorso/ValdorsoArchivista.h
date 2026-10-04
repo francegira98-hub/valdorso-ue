@@ -162,9 +162,120 @@ struct FValdorsoAccount
 	UPROPERTY()
 	TArray<FString> Personaggi;
 
+	/** L'ultimo personaggio giocato: il rientro senza password torna con lui. */
+	UPROPERTY()
+	FString UltimoPersonaggio;
+
 	/** Note dello staff, con data e autore. I giocatori non le vedono. */
 	UPROPERTY()
 	TArray<FString> NoteStaff;
+};
+
+/**
+ * Un personaggio, così come sta nel suo file (Saved/Server/Archivio/Personaggi/<Id>.json).
+ * Passo 3 della v0.1.2: nome, luogo e statistiche. Il Registro di Val d'Orso (passo 4) aggiungerà aspetto,
+ * fede, età e le risposte al sacerdote: i campi nuovi arriveranno con VersioneSchema 2.
+ */
+USTRUCT()
+struct FValdorsoPersonaggio
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	int32 VersioneSchema = 1;
+
+	UPROPERTY()
+	int64 Versione = 0;
+
+	UPROPERTY()
+	FString Id;
+
+	UPROPERTY()
+	FString AccountId;
+
+	UPROPERTY()
+	FString Nome;
+
+	UPROPERTY()
+	int64 CreatoIl = 0;
+
+	UPROPERTY()
+	int64 UltimoGioco = 0;
+
+	/** Secondi di gioco in tutto. */
+	UPROPERTY()
+	int64 TempoDiGioco = 0;
+
+	/** Dove si trova: la mappa (per ora sempre quella del server) e il punto. Vuoto = al punto di partenza. */
+	UPROPERTY()
+	FString Mappa;
+
+	UPROPERTY()
+	bool bHaPosizione = false;
+
+	UPROPERTY()
+	FVector Posizione = FVector::ZeroVector;
+
+	UPROPERTY()
+	float Direzione = 0.f;
+
+	/** Le statistiche al momento del salvataggio (negative = non ancora salvate: valori di partenza). */
+	UPROPERTY()
+	float Salute = -1.f;
+
+	UPROPERTY()
+	float Stamina = -1.f;
+
+	UPROPERTY()
+	float Mana = -1.f;
+};
+
+/** Quello che il giocatore vede nella scelta del personaggio (viaggia dal server al client). */
+USTRUCT(BlueprintType)
+struct FValdorsoPersonaggioBreve
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	FString Id;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	FString Nome;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	int64 UltimoGioco = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	int64 TempoDiGioco = 0;
+};
+
+/** Un nome di personaggio cancellato, riservato fino a una data. */
+USTRUCT()
+struct FValdorsoNomeRiservato
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Scheletro;
+
+	UPROPERTY()
+	int64 Fino = 0;
+};
+
+/** Il file NomiRiservati.json. */
+USTRUCT()
+struct FValdorsoNomiRiservati
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	int32 VersioneSchema = 1;
+
+	UPROPERTY()
+	int64 Versione = 0;
+
+	UPROPERTY()
+	TArray<FValdorsoNomeRiservato> Nomi;
 };
 
 /** Un codice d'invito. Il codice vero non si salva: solo la sua impronta e l'inizio (l'indizio). */
@@ -326,6 +437,29 @@ public:
 	FString Sblocca(const FString& Nome, const FString& Autore);
 	FString AggiungiNota(const FString& Nome, const FString& Nota, const FString& Autore);
 
+	// --- Personaggi (v0.1.2, passo 3) ---------------------------------------------------------------
+
+	/** I personaggi dell'account, in ordine di creazione. */
+	TArray<FValdorsoPersonaggioBreve> ElencoPersonaggi(const FString& AccountId) const;
+
+	/** Crea un personaggio. Vuoto se riuscito (OutId = il nuovo Id), altrimenti il motivo da mostrare. */
+	FString CreaPersonaggio(const FString& AccountId, const FString& Nome, FString& OutId);
+
+	/** Cancella un personaggio dell'account (Conferma = il suo nome riscritto). Il nome resta riservato 30 giorni. */
+	FString CancellaPersonaggio(const FString& AccountId, const FString& PersonaggioId, const FString& Conferma, const FString& Autore);
+
+	/** Il personaggio, solo se è dell'account. */
+	FValdorsoPersonaggio* TrovaPersonaggio(const FString& AccountId, const FString& PersonaggioId);
+
+	/** Salva il personaggio (luogo, statistiche, tempo di gioco); se bGiocato, lo segna come ultimo giocato. */
+	void SalvaPersonaggio(FValdorsoPersonaggio& Dati, bool bGiocato = true);
+
+	/** L'ultimo personaggio giocato dall'account (vuoto se nessuno o non esiste più). */
+	FString UltimoPersonaggio(const FString& AccountId) const;
+
+	/** Per la console: l'elenco dei personaggi di un account, per nome dell'account. */
+	FString ElencoPersonaggiTesto(const FString& NomeAccount) const;
+
 	// --- Privacy (v0.1.2) ---------------------------------------------------------------------------
 
 	/**
@@ -396,6 +530,22 @@ private:
 
 	FString Cartella;
 	FString CartellaAccount;
+	FString CartellaPersonaggi;
+	FString FileNomiRiservati;
+
+	/** I personaggi, per Id. */
+	TMap<FString, FValdorsoPersonaggio> Personaggi;
+
+	/** I nomi dei personaggi, per scheletro (-> Id del personaggio). */
+	TMap<FString, FString> NomiPersonaggi;
+
+	FValdorsoNomiRiservati NomiRiservati;
+
+	void SalvaNomiRiservati();
+	const FValdorsoAccount* AccountPerId(const FString& AccountId) const;
+	FValdorsoAccount* AccountPerId(const FString& AccountId);
+	/** Vero se lo scheletro è quello di un membro dello staff (nome dell'account o di un suo personaggio). */
+	bool SomigliaAlloStaff(const FString& Scheletro, const FString& AccountId) const;
 	FString FileInviti;
 	FString FileRegistro;
 
