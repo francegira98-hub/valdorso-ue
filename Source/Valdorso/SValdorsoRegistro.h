@@ -8,6 +8,9 @@
 // A ogni cambio di pagina le risposte partono verso il server come bozza: se il gioco si chiude a metà, restano.
 // Dopo la firma, nel nero: "Il frammento batte più forte, per un istante. La valle ti ha sentito."
 //
+// Ritocchi del 05/10 (approvati da Fra): sotto ogni risposta cosa porterà nella valle, il colore dell'elemento accanto a
+// ogni fede, il racconto nella pagina della firma, il rombo della pagina che batte col Cuore.
+//
 // La parte bella (palco con il ritratto, pergamena vera, calligrafia, suoni, ceralacca, luce) è il passo 4.2b:
 // per ora a destra c'è solo il frammento che batte.
 //
@@ -86,7 +89,9 @@ private:
 	TSharedRef<SWidget> PaginaCarattere();
 	TSharedRef<SWidget> PaginaTesto(bool bRacconto);
 	TSharedRef<SWidget> PaginaFirma();
-	TSharedRef<SButton> PulsanteVoce(const FText& Scritta, TFunction<bool()> Scelta, TFunction<void()> Azione, float Dimensione);
+	/** Una risposta: rombo e testo. Simbolo trasparente = rombo d'oro; altrimenti il colore del simbolo (le fedi). */
+	TSharedRef<SButton> PulsanteVoce(const FText& Scritta, TFunction<bool()> Scelta, TFunction<void()> Azione, float Dimensione,
+		const FText& Aiuto = FText::GetEmpty(), FLinearColor Simbolo = FLinearColor::Transparent);
 	void CambiaEta(int32 Di);
 	void MostraMessaggio(const FText& Scritta, bool bComeErrore);
 

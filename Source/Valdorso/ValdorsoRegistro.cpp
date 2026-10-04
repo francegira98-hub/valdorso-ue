@@ -406,6 +406,98 @@ namespace ValdorsoRegistro
 			&& A.Storia.Equals(B.Storia, ESearchCase::CaseSensitive);
 	}
 
+	const TCHAR* Vantaggio(EDomanda Quale, const FString& Scelta)
+	{
+		struct FRigaVantaggio
+		{
+			const TCHAR* Chiave;
+			const TCHAR* Frase;
+		};
+		static const FRigaVantaggio VantaggiOrigine[] = {
+			{ TEXT("lago"), TEXT("Si nuota con meno fatica, e i pescatori ti trattano da uno di loro.") },
+			{ TEXT("minatori"), TEXT("Nel buio delle grotte vedi un poco meglio, e riconosci i filoni.") },
+			{ TEXT("capitale"), TEXT("Riconosci borsaioli e truffatori; ricettatori e gente di strada si fidano di te.") },
+			{ TEXT("sud"), TEXT("Fame e fatica dei campi pesano meno.") },
+			{ TEXT("confine"), TEXT("Conosci una runa degli Antichi.") },
+			{ TEXT("dimenticato"), TEXT("Nessun vantaggio, ma una storia nascosta da scoprire: la memoria perduta.") },
+		};
+		static const FRigaVantaggio VantaggiMestiere[] = {
+			{ TEXT("contadino"), TEXT("5 punti nell'arte di coltivare, e un attrezzo del vecchio mestiere.") },
+			{ TEXT("pastore"), TEXT("5 punti nell'arte di allevare, e un attrezzo del vecchio mestiere.") },
+			{ TEXT("apprendista"), TEXT("5 punti nel lavoro di bottega, e un attrezzo del vecchio mestiere.") },
+			{ TEXT("soldato"), TEXT("5 punti nel combattere, e qualcosa del vecchio equipaggiamento.") },
+			{ TEXT("servo"), TEXT("5 punti nel trattare con i nobili, e qualcosa della vecchia casa.") },
+			{ TEXT("allievo"), TEXT("5 punti nello studio, e un quaderno di appunti dell'accademia.") },
+			{ TEXT("orfano"), TEXT("5 punti nella preghiera, e un ricordo del tempio.") },
+			{ TEXT("mercante"), TEXT("5 punti nel commercio, e una bilancia da mercante.") },
+			{ TEXT("cacciatore"), TEXT("5 punti nella caccia, e un attrezzo del vecchio mestiere.") },
+			{ TEXT("marinaio"), TEXT("5 punti nella pesca e nei nodi, e un attrezzo del vecchio mestiere.") },
+		};
+		static const FRigaVantaggio VantaggiMotivo[] = {
+			{ TEXT("terra"), TEXT("L'aiuto del balivo e il diritto a un pezzo di terra.") },
+			{ TEXT("fuga"), TEXT("La fama, buona o cattiva, cresce più piano. Ma qualcuno ti cerca.") },
+			{ TEXT("scomparso"), TEXT("Una storia nascosta: la persona che cerchi.") },
+			{ TEXT("sogno"), TEXT("Sogni che anticipano fatti veri della valle, legati all'Orso.") },
+			{ TEXT("debito"), TEXT("Più Aureus all'inizio, ma un creditore verrà a riscuotere.") },
+			{ TEXT("fede"), TEXT("Un po' di favore della tua divinità.") },
+			{ TEXT("avventura"), TEXT("Scoprire luoghi nuovi ti dà di più.") },
+		};
+		static const FRigaVantaggio VantaggiRicordo[] = {
+			{ TEXT("anello"), TEXT("Si può dare in pegno per un prestito, e poi riscattare. Non si perde morendo.") },
+			{ TEXT("lettera"), TEXT("Una storia nascosta, quando troverai il coraggio di aprirla. Non si perde morendo.") },
+			{ TEXT("spada"), TEXT("Un fabbro può riforgiarla in un'arma con una storia. Non si perde morendo.") },
+			{ TEXT("amuleto"), TEXT("Una volta al giorno aiuta contro la paura. Non si perde morendo.") },
+			{ TEXT("mappa"), TEXT("Indica un luogo nascosto della valle; l'altra metà è da trovare. Non si perde morendo.") },
+			{ TEXT("libro"), TEXT("Si prega meglio, ed è il primo tomo della magia della luce. Non si perde morendo.") },
+		};
+		static const FRigaVantaggio VantaggiPaura[] = {
+			{ TEXT("fuoco"), TEXT("Davanti al fuoco, all'inizio, esiti. Si vince affrontandolo, e vale un titolo.") },
+			{ TEXT("acqua"), TEXT("All'inizio nuoti più lentamente. Si vince affrontandola, e vale un titolo.") },
+			{ TEXT("buio"), TEXT("Nel buio, all'inizio, ti muovi incerto. Si vince affrontandolo, e vale un titolo.") },
+			{ TEXT("solitudine"), TEXT("In solitudine, all'inizio, ti stanchi prima. Si vince affrontandola, e vale un titolo.") },
+			{ TEXT("morti"), TEXT("I non morti, all'inizio, ti spaventano di più. Si vince affrontandoli, e vale un titolo.") },
+			{ TEXT("magia"), TEXT("La magia, all'inizio, ti mette a disagio. Si vince affrontandola, e vale un titolo.") },
+		};
+		static const FRigaVantaggio VantaggiCarattere[] = {
+			{ TEXT("onesto"), TEXT("Gli abitanti ti credono più facilmente.") },
+			{ TEXT("furbo"), TEXT("Mercanteggi e inganni meglio.") },
+			{ TEXT("coraggioso"), TEXT("Le minacce ti fanno meno effetto.") },
+			{ TEXT("prudente"), TEXT("Noti prima trappole e pericoli.") },
+			{ TEXT("devoto"), TEXT("Il favore divino cresce prima.") },
+			{ TEXT("scettico"), TEXT("Illusioni e inganni magici fanno meno presa.") },
+			{ TEXT("gentile"), TEXT("Animali e abitanti timidi si avvicinano.") },
+			{ TEXT("duro"), TEXT("Intimidisci meglio.") },
+		};
+		static const FRigaVantaggio VantaggiMagia[] = {
+			{ TEXT("si"), TEXT("5 punti di Concentrazione e, un giorno, una lettera dall'accademia.") },
+			{ TEXT("no"), TEXT("Non perdi niente: la magia si può sempre studiare.") },
+		};
+
+		TArrayView<const FRigaVantaggio> Elenco;
+		switch (Quale)
+		{
+		case EDomanda::Origine: Elenco = VantaggiOrigine; break;
+		case EDomanda::Mestiere: Elenco = VantaggiMestiere; break;
+		case EDomanda::Motivo: Elenco = VantaggiMotivo; break;
+		case EDomanda::Ricordo: Elenco = VantaggiRicordo; break;
+		case EDomanda::Paura: Elenco = VantaggiPaura; break;
+		case EDomanda::Onesta:
+		case EDomanda::Coraggio:
+		case EDomanda::Devozione:
+		case EDomanda::Animo: Elenco = VantaggiCarattere; break;
+		case EDomanda::RichiamoMagia: Elenco = VantaggiMagia; break;
+		default: break;
+		}
+		for (const FRigaVantaggio& Voce : Elenco)
+		{
+			if (Scelta == Voce.Chiave)
+			{
+				return Voce.Frase;
+			}
+		}
+		return TEXT("");
+	}
+
 	EDomanda PrimaMancante(const FValdorsoRegistro& Registro)
 	{
 		if (Registro.Eta < EtaMinima || Registro.Eta > EtaMassima)

@@ -891,10 +891,11 @@ void SValdorsoCodiciRecupero::Construct(const FArguments& InArgs)
 	Codici = InArgs._Codici;
 	OnFatto = InArgs._OnFatto;
 
-	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(34.f, TEXT("Bold"));
-	FontTitolo.LetterSpacing = 50;
-	FSlateFontInfo FontCodice = Stile->Caratteri->Titolo(22.f, TEXT("Bold"));
-	FontCodice.LetterSpacing = 120;
+	// (05/10) Titolo e codici erano troppo larghi per il pannello: caratteri un poco più piccoli e pannello più largo.
+	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(30.f, TEXT("Bold"));
+	FontTitolo.LetterSpacing = 30;
+	FSlateFontInfo FontCodice = Stile->Caratteri->Titolo(21.f, TEXT("Bold"));
+	FontCodice.LetterSpacing = 60;
 
 	// Due colonne di codici.
 	TSharedRef<SHorizontalBox> Colonne = SNew(SHorizontalBox);
@@ -919,7 +920,7 @@ void SValdorsoCodiciRecupero::Construct(const FArguments& InArgs)
 				]
 			];
 		}
-		Colonne->AddSlot().AutoWidth().Padding(FMargin(Colonna == 0 ? 0.f : 46.f, 0.f, 0.f, 0.f)) [ Elenco ];
+		Colonne->AddSlot().AutoWidth().Padding(FMargin(Colonna == 0 ? 0.f : 40.f, 0.f, 0.f, 0.f)) [ Elenco ];
 	}
 
 	TSharedRef<SButton> PulsanteFatto = Stile->Pulsante(LOCTEXT("CodiciFatto", "Entra nella valle"),
@@ -957,7 +958,7 @@ void SValdorsoCodiciRecupero::Construct(const FArguments& InArgs)
 			.BorderImage(&Stile->SfondoPannello)
 			.Padding(FMargin(54.f, 40.f))
 			[
-				SNew(SBox).WidthOverride(640.f)
+				SNew(SBox).WidthOverride(820.f)
 				[
 					SNew(SVerticalBox)
 					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)

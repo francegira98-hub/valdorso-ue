@@ -69,6 +69,18 @@ namespace
 		}
 	}
 
+	/** Il colore dell'elemento di ogni fede (luce, fuoco, acqua, terra, aria; i Vecchi Dei verdi del bosco). */
+	FLinearColor RegSchermoColoreFede(const FString& Chiave)
+	{
+		if (Chiave == TEXT("solara")) { return ValdorsoTema::OroChiaro(); }
+		if (Chiave == TEXT("ignar")) { return ValdorsoTema::Brace(); }
+		if (Chiave == TEXT("nereia")) { return ValdorsoTema::BluArcano(); }
+		if (Chiave == TEXT("torvald")) { return ValdorsoTema::Hex(TEXT("8B6B3E")); }
+		if (Chiave == TEXT("zefira")) { return ValdorsoTema::Hex(TEXT("A9CBDD")); }
+		if (Chiave == TEXT("vecchidei")) { return ValdorsoTema::VerdeVita(); }
+		return ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.5f);
+	}
+
 	/** Le quattro coppie del carattere, nell'ordine della pagina. */
 	const ValdorsoRegistro::EDomanda RegSchermoCarattere[] = {
 		ValdorsoRegistro::EDomanda::Onesta, ValdorsoRegistro::EDomanda::Coraggio,
@@ -122,7 +134,9 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			{
 				if (Questa == Pagina)
 				{
-					return FSlateColor(ValdorsoTema::OroChiaro());
+					// La pagina di adesso batte con il Cuore, come il frammento.
+					const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds());
+					return FSlateColor(FMath::Lerp(ValdorsoTema::Oro(), ValdorsoTema::OroChiaro(), 0.4f + 0.6f * Colpo));
 				}
 				return FSlateColor(PaginaCompleta(Questa) ? ValdorsoTema::Oro() : ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.3f));
 			}))
@@ -314,9 +328,13 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 									FSimpleDelegate::CreateSP(this, &SValdorsoRegistroColono::Indietro), 18.f,
 									TAttribute<bool>::CreateLambda([this]() { return Pagina != EPagina::ChiSei && !bInFirma && !bFinale && !bInUscita; }))
 							]
+							// (Dentro un SBox: quando i dadi spariscono lo spazio resta, e Firma resta a destra.)
 							+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
 							[
-								DadiPagina
+								SNew(SBox)
+								[
+									DadiPagina
+								]
 							]
 							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 							[
@@ -579,13 +597,16 @@ TSharedRef<SWidget> SValdorsoRegistroColono::ContenutoPagina()
 // I pezzi delle pagine
 // ------------------------------------------------------------------------------------------------
 
-TSharedRef<SButton> SValdorsoRegistroColono::PulsanteVoce(const FText& Scritta, TFunction<bool()> Scelta, TFunction<void()> Azione, float Dimensione)
+TSharedRef<SButton> SValdorsoRegistroColono::PulsanteVoce(const FText& Scritta, TFunction<bool()> Scelta, TFunction<void()> Azione, float Dimensione,
+	const FText& Aiuto, FLinearColor Simbolo)
 {
+	const bool bConSimbolo = Simbolo.A > 0.f;
 	// La risposta scelta ha il bordo d'oro pieno: a ogni scelta la pagina si ridisegna (e il fuoco torna sulla scelta).
 	return SNew(SButton)
 		.ButtonStyle(Scelta() ? &StileVoceScelta : &StileVoce)
 		.IsFocusable(true)
 		.HAlign(HAlign_Left)
+		.ToolTipText(Aiuto)
 		.IsEnabled_Lambda([this]() { return !bInFirma && !bFinale && !bInUscita; })
 		.OnClicked_Lambda([this, Azione]()
 		{
@@ -602,8 +623,12 @@ TSharedRef<SButton> SValdorsoRegistroColono::PulsanteVoce(const FText& Scritta, 
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(0.f, 0.f, 12.f, 0.f))
 			[
-				Stile->Diamante(8.f, TAttribute<FSlateColor>::CreateLambda([Scelta]()
+				Stile->Diamante(bConSimbolo ? 11.f : 8.f, TAttribute<FSlateColor>::CreateLambda([Scelta, bConSimbolo, Simbolo]()
 				{
+					if (bConSimbolo)
+					{
+						return FSlateColor(Scelta() ? Simbolo : Simbolo.CopyWithNewOpacity(Simbolo.A * 0.45f));
+					}
 					return FSlateColor(Scelta() ? ValdorsoTema::OroChiaro() : ValdorsoTema::Oro().CopyWithNewOpacity(0.18f));
 				}))
 			]
@@ -632,10 +657,13 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Scelte(ValdorsoRegistro::EDomanda Q
 	{
 		const FString Chiave = Possibili[i].Chiave;
 		const FText Scritta = FText::FromString(ValdorsoRegistro::Testo(Quale, Chiave, Bozza.Sesso));
+		const FString PortaVoce = ValdorsoRegistro::Vantaggio(Quale, Chiave);
 		TSharedRef<SButton> Voce = PulsanteVoce(Scritta,
 			[this, Quale, Chiave]() { return ValdorsoRegistro::Risposta(Bozza, Quale) == Chiave; },
 			[this, Quale, Chiave]() { ValdorsoRegistro::Risposta(Bozza, Quale) = Chiave; },
-			bCompatte ? 20.f : 21.f);
+			bCompatte ? 20.f : 21.f,
+			FText::FromString(PortaVoce),
+			Quale == ValdorsoRegistro::EDomanda::Fede ? RegSchermoColoreFede(Chiave) : FLinearColor::Transparent);
 
 		// Il fuoco va sulla risposta scelta, o sulla prima.
 		if (ValdorsoRegistro::Risposta(Bozza, Quale) == Chiave || (!PrimoFuoco.IsValid() && i == 0))
@@ -652,11 +680,31 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Scelte(ValdorsoRegistro::EDomanda Q
 			Colonna->AddSlot().AutoHeight().Padding(FMargin(0.f, 0.f, 0.f, 8.f)) [ Voce ];
 		}
 	}
-	if (bDueColonne)
-	{
-		return Griglia;
-	}
-	return Colonna;
+	// Sotto le risposte: cosa porterà nella valle quella scelta (passando sopra le altre, lo dice il suggerimento).
+	TSharedRef<SWidget> Porta = SNew(STextBlock)
+		.Text_Lambda([this, Quale]()
+		{
+			const FString Riga = ValdorsoRegistro::Vantaggio(Quale, ValdorsoRegistro::Risposta(Bozza, Quale));
+			return Riga.IsEmpty() ? FText::GetEmpty() : FText::Format(LOCTEXT("NellaValle", "Nella valle: {0}"), FText::FromString(Riga));
+		})
+		.Visibility_Lambda([this, Quale]()
+		{
+			return FCString::Strlen(ValdorsoRegistro::Vantaggio(Quale, ValdorsoRegistro::Risposta(Bozza, Quale))) > 0
+				? EVisibility::Visible : EVisibility::Collapsed;
+		})
+		.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
+		.ColorAndOpacity(ValdorsoTema::Oro().CopyWithNewOpacity(0.85f))
+		.AutoWrapText(true);
+
+	return SNew(SVerticalBox)
+		+ SVerticalBox::Slot().AutoHeight()
+		[
+			bDueColonne ? StaticCastSharedRef<SWidget>(Griglia) : StaticCastSharedRef<SWidget>(Colonna)
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(4.f, 6.f, 4.f, 0.f))
+		[
+			Porta
+		];
 }
 
 TSharedRef<SWidget> SValdorsoRegistroColono::PaginaChiSei()
@@ -893,9 +941,14 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 	TArray<FString> Tratti;
 	for (const ValdorsoRegistro::EDomanda Coppia : RegSchermoCarattere)
 	{
-		const FString Tratto = Scelta(Coppia);
+		FString Tratto = Scelta(Coppia);
 		if (!Tratto.IsEmpty())
 		{
+			// Maiuscola solo la prima: "Onesto, coraggioso, scettico, gentile".
+			if (Tratti.Num() > 0)
+			{
+				Tratto[0] = FChar::ToLower(Tratto[0]);
+			}
 			Tratti.Add(Tratto);
 		}
 	}
@@ -908,6 +961,26 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 		+ SVerticalBox::Slot().AutoHeight()
 		[
 			Righe
+		]
+		// Il racconto del sacerdote, da rileggere prima di firmare (un clic riporta alla sua pagina).
+		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 12.f, 0.f, 8.f))
+		[
+			Stile->Separatore(200.f)
+		]
+		+ SVerticalBox::Slot().AutoHeight()
+		[
+			SNew(SButton)
+			.ButtonStyle(&FCoreStyle::Get(), "NoBorder")
+			.ToolTipText(LOCTEXT("RitoccaRacconto", "Torna alla pagina del racconto per ritoccarlo."))
+			.IsEnabled_Lambda([this]() { return !bInFirma && !bFinale && !bInUscita; })
+			.OnClicked_Lambda([this]() { VaiA(EPagina::Racconto); return FReply::Handled(); })
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(PerLaFirma().Racconto))
+				.Font(Stile->Caratteri->Testo(18.f, TEXT("Italic")))
+				.ColorAndOpacity(ValdorsoTema::Pergamena())
+				.AutoWrapText(true)
+			]
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 14.f, 0.f, 0.f))
 		[

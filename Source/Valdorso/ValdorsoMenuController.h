@@ -88,6 +88,8 @@ private:
 
 	/** "Entra nella valle": la telecamera vola verso il frammento, il menu sfuma, tutto diventa nero. */
 	void AvanzaTransizione(float DeltaSeconds);
+	/** Menu e, se c'è ancora, il pannello "Prima di entrare" sfumano insieme all'inizio del volo (ritocco del 05/10). */
+	void SfumaSopra(float Opacita);
 
 	/** Il volo lungo del primo ingresso, lungo la curva. */
 	void AvanzaVoloLungo(float DeltaSeconds);

@@ -129,4 +129,11 @@ namespace ValdorsoRegistro
 
 	/** La prima domanda ancora senza risposta (l'età conta come Sesso, sulla stessa pagina); Numero se non manca niente. */
 	VALDORSO_API EDomanda PrimaMancante(const FValdorsoRegistro& Registro);
+
+	/**
+	 * Cosa porterà una risposta nella valle (documento, "I vantaggi delle risposte", approvati il 28/09), in una riga
+	 * da mostrare nel Registro (passo 4.2a, ritocchi del 05/10). Vuoto se la risposta non ha un vantaggio da dire
+	 * (sesso e fede). I vantaggi si accendono con i sistemi che li usano: qui sono solo parole.
+	 */
+	VALDORSO_API const TCHAR* Vantaggio(EDomanda Quale, const FString& Scelta);
 }

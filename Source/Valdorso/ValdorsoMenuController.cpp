@@ -196,7 +196,16 @@ void AValdorsoMenuController::SuRichiestaAccesso(const FValdorsoRichiestaAccesso
 	RichiestaDaMandare = Richiesta;
 	bVersoIlServer = true;
 	bVoloLungo = Richiesta.Modo == EValdorsoModoAccesso::PrimoIngresso || VoloLungoSempre();
-	ChiudiAccesso();
+	// (05/10) Il pannello non si chiude di colpo: chiudendolo, per mezzo secondo si rivedeva il menu dietro
+	// ("Entra nella valle", "Impostazioni"). Ora il menu sparisce subito e il pannello sfuma con il volo.
+	if (Menu.IsValid())
+	{
+		Menu->SetVisibility(EVisibility::Collapsed);
+	}
+	if (Accesso.IsValid())
+	{
+		Accesso->SetVisibility(EVisibility::HitTestInvisible);
+	}
 	EntraNellaValle();
 }
 
@@ -205,7 +214,15 @@ void AValdorsoMenuController::ProvaLocale()
 	RichiestaDaMandare.Reset();
 	bVersoIlServer = false;
 	bVoloLungo = VoloLungoSempre();
-	ChiudiAccesso();
+	// Come per l'accesso vero: niente menu che ricompare per un attimo.
+	if (Menu.IsValid())
+	{
+		Menu->SetVisibility(EVisibility::Collapsed);
+	}
+	if (Accesso.IsValid())
+	{
+		Accesso->SetVisibility(EVisibility::HitTestInvisible);
+	}
 	EntraNellaValle();
 }
 
@@ -216,6 +233,8 @@ void AValdorsoMenuController::Arriva()
 		return;
 	}
 	bLivelloAperto = true;
+	// Sul nero non deve restare niente del menu o del pannello (anche se il volo è stato saltato subito).
+	SfumaSopra(0.f);
 
 	if (!bVersoIlServer)
 	{
@@ -401,7 +420,7 @@ void AValdorsoMenuController::EntraNellaValle()
 	// Il menu non risponde più e sfuma; sopra arrivano le scritte del volo, che ascoltano tastiera e controller
 	// (Esc salta il volo lungo; tutto il resto si ferma lì).
 	bShowMouseCursor = false;
-	if (Menu.IsValid())
+	if (Menu.IsValid() && Menu->GetVisibility() != EVisibility::Collapsed)
 	{
 		Menu->SetVisibility(EVisibility::HitTestInvisible);
 	}
@@ -466,10 +485,7 @@ void AValdorsoMenuController::AvanzaTransizione(float DeltaSeconds)
 	}
 
 	// Il menu sfuma nel primo mezzo secondo.
-	if (Menu.IsValid())
-	{
-		Menu->SetRenderOpacity(1.f - FMath::Clamp(TempoTransizione / 0.5f, 0.f, 1.f));
-	}
+	SfumaSopra(1.f - FMath::Clamp(TempoTransizione / 0.5f, 0.f, 1.f));
 
 	// Dopo un po' tutto diventa nero.
 	if (!bBuio && A >= 0.45f)
@@ -484,6 +500,18 @@ void AValdorsoMenuController::AvanzaTransizione(float DeltaSeconds)
 	if (!bLivelloAperto && A >= 1.f)
 	{
 		Arriva();
+	}
+}
+
+void AValdorsoMenuController::SfumaSopra(float Opacita)
+{
+	if (Menu.IsValid())
+	{
+		Menu->SetRenderOpacity(Opacita);
+	}
+	if (Accesso.IsValid())
+	{
+		Accesso->SetRenderOpacity(Opacita);
 	}
 }
 
@@ -547,10 +575,7 @@ void AValdorsoMenuController::AvanzaVoloLungo(float DeltaSeconds)
 	}
 
 	// Il menu sfuma nel primo mezzo secondo; "La valle ti accoglie" compare dopo un secondo e mezzo.
-	if (Menu.IsValid())
-	{
-		Menu->SetRenderOpacity(1.f - FMath::Clamp(TempoTransizione / 0.5f, 0.f, 1.f));
-	}
+	SfumaSopra(1.f - FMath::Clamp(TempoTransizione / 0.5f, 0.f, 1.f));
 	if (Scritte.IsValid())
 	{
 		Scritte->ImpostaTitolo(MorbidoVolo((TempoTransizione - 1.5f) / 1.2f));

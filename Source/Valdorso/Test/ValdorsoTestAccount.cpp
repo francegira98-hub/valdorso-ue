@@ -548,6 +548,19 @@ bool FValdorsoTestRegistroPagine::RunTest(const FString& Parameters)
 	Copia = Pieno;
 	Copia.Fede = Pieno.Fede == TEXT("solara") ? TEXT("ignar") : TEXT("solara");
 	TestFalse(TEXT("fede diversa"), ValdorsoRegistro::StesseRisposte(Pieno, Copia));
+
+	// Ritocchi del 05/10: ogni risposta (tranne sesso e fede) dice cosa porterà nella valle.
+	for (int32 i = 0; i < static_cast<int32>(EDomanda::Numero); ++i)
+	{
+		const EDomanda Quale = static_cast<EDomanda>(i);
+		for (const FValdorsoVoceRegistro& Voce : ValdorsoRegistro::Voci(Quale))
+		{
+			const bool bHa = FCString::Strlen(ValdorsoRegistro::Vantaggio(Quale, Voce.Chiave)) > 0;
+			const bool bDeveAvere = Quale != EDomanda::Sesso && Quale != EDomanda::Fede;
+			TestEqual(FString::Printf(TEXT("vantaggio di %s"), Voce.Chiave), bHa, bDeveAvere);
+		}
+	}
+	TestTrue(TEXT("nessun vantaggio per una chiave sconosciuta"), FCString::Strlen(ValdorsoRegistro::Vantaggio(EDomanda::Paura, TEXT("ragni"))) == 0);
 	return true;
 }
 
