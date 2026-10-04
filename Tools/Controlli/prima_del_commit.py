@@ -116,11 +116,15 @@ def attributo_lfs(percorsi):
     return risultato
 
 
-def dimensione(percorso):
-    try:
-        return int(git("cat-file", "-s", ":" + percorso).strip())
-    except RuntimeError:
-        return 0
+def dimensioni(percorsi):
+    """I pesi di tutti i file in una sola chiamata a Git (su Windows ogni chiamata costa tempo)."""
+    risultato = {}
+    richiesta = "".join(":" + p + "\n" for p in percorsi).encode("utf-8")
+    uscita = subprocess.run(["git", "cat-file", "--batch-check=%(objectsize)"], input=richiesta,
+                            capture_output=True).stdout.decode("utf-8", "replace").splitlines()
+    for percorso, riga in zip(percorsi, uscita):
+        risultato[percorso] = int(riga) if riga.strip().isdigit() else 0
+    return risultato
 
 
 def contenuto(percorso):
@@ -237,7 +241,9 @@ def controlla(tutto):
         print("[Valdorso] Controllo prima del commit: nessun file da controllare.")
         return 0
 
+    print("[Valdorso] Controllo prima del commit: guardo " + str(len(percorsi)) + " file...", flush=True)
     lfs = attributo_lfs(percorsi)
+    pesi = dimensioni(percorsi)
 
     for percorso in percorsi:
         basso = percorso.lower()
@@ -267,7 +273,7 @@ def controlla(tutto):
 
         # 3. LFS.
         in_lfs = lfs.get(percorso, False)
-        peso = dimensione(percorso)
+        peso = pesi.get(percorso, 0)
         if est in SEMPRE_LFS and not in_lfs:
             errori.append(percorso + ": i file " + est + " vanno in Git LFS, ma questo no. "
                           "Aggiungi la riga \"*" + est + " filter=lfs diff=lfs merge=lfs -text\" a .gitattributes, "
@@ -303,7 +309,6 @@ def controlla(tutto):
         controlla_nomi_doppi(errori)
 
     # Risultato.
-    print("[Valdorso] Controllo prima del commit: " + str(len(percorsi)) + " file guardati.")
     for a in avvisi:
         print("  avviso: " + a)
     if errori:
