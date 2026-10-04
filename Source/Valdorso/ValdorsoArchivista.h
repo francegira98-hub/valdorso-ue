@@ -22,6 +22,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Tasks/Pipe.h"
 #include "Tasks/Task.h"
+#include "Containers/Ticker.h"
 #include "ValdorsoArchivista.generated.h"
 
 UENUM(BlueprintType)
@@ -290,6 +291,18 @@ public:
 	FString Sblocca(const FString& Nome, const FString& Autore);
 	FString AggiungiNota(const FString& Nome, const FString& Nota, const FString& Autore);
 
+	// --- Privacy (v0.1.2) ---------------------------------------------------------------------------
+
+	/**
+	 * Cancella un account per sempre: il suo file con le copie, il biglietto del rientro; negli inviti, negli
+	 * altri account e nel registro il nome diventa "[account cancellato]". Conferma = il nome riscritto.
+	 * Un Amministratore non si cancella (prima si cambia il ruolo). Chi chiama scollega prima il giocatore.
+	 */
+	FString CancellaAccount(const FString& Nome, const FString& Conferma, const FString& Autore);
+
+	/** Oscura gli indirizzi IP più vecchi di 30 giorni nel registro (all'avvio e poi ogni 6 ore, da solo). */
+	void PulisciRegistro();
+
 	int32 NumeroAccount() const { return Account.Num(); }
 
 	/** L'Id dell'account con questo nome (vuoto se non c'è). */
@@ -368,4 +381,7 @@ private:
 
 	/** Sale per i calcoli finti sui nomi che non esistono. */
 	TArray<uint8> SaleFinto;
+
+	/** Il richiamo ogni 6 ore per PulisciRegistro. */
+	FTSTicker::FDelegateHandle ManigliaPulizia;
 };

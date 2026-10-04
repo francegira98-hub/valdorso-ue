@@ -178,10 +178,23 @@ void UValdorsoArchivista::Initialize(FSubsystemCollectionBase& Collection)
 	}
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Archivista pronto: %d account, %d inviti attivi, cartella %s"),
 		Account.Num(), InvitiAttivi, *Cartella);
+
+	// Privacy: gli indirizzi IP vecchi si oscurano subito e poi ogni 6 ore.
+	PulisciRegistro();
+	ManigliaPulizia = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateWeakLambda(this, [this](float)
+	{
+		PulisciRegistro();
+		return true;
+	}), 6.f * 60.f * 60.f);
 }
 
 void UValdorsoArchivista::Deinitialize()
 {
+	if (ManigliaPulizia.IsValid())
+	{
+		FTSTicker::GetCoreTicker().RemoveTicker(ManigliaPulizia);
+		ManigliaPulizia.Reset();
+	}
 	// Prima di chiudere si aspetta che tutte le scritture siano finite.
 	if (UltimaScrittura.IsValid())
 	{
@@ -1256,4 +1269,127 @@ FString UValdorsoArchivista::AggiungiNota(const FString& Nome, const FString& No
 	SalvaAccount(*Dati);
 	Annota(FString::Printf(TEXT("NOTA | %s | da %s"), *Dati->Nome, *Autore));
 	return FString::Printf(TEXT("Nota aggiunta a %s."), *Dati->Nome);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Privacy
+// ------------------------------------------------------------------------------------------------
+
+void UValdorsoArchivista::PulisciRegistro()
+{
+	if (!Scrittore.IsValid())
+	{
+		return;
+	}
+	// Sul filo delle scritture, così non si mescola con le righe nuove del registro.
+	const FString Percorso = FileRegistro;
+	UltimaScrittura = Scrittore->Launch(TEXT("PuliziaRegistro"), [Percorso]()
+	{
+		FString Testo;
+		if (!IFileManager::Get().FileExists(*Percorso) || !FFileHelper::LoadFileToString(Testo, *Percorso))
+		{
+			return;
+		}
+		int32 Cambiate = 0;
+		const FString Pulito = ValdorsoArchivioFile::OscuraIndirizziVecchi(Testo, FDateTime::UtcNow(), ValdorsoRegole::GiorniIndirizzi, Cambiate);
+		if (Cambiate > 0)
+		{
+			ValdorsoArchivioFile::SostituisciSenzaCopie(Percorso, Pulito);
+			UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Archivista: oscurati gli indirizzi IP vecchi in %d righe del registro"), Cambiate);
+		}
+	});
+}
+
+FString UValdorsoArchivista::CancellaAccount(const FString& Nome, const FString& Conferma, const FString& Autore)
+{
+	check(IsInGameThread());
+	const FValdorsoAccount* Dati = TrovaAccount(Nome);
+	if (!Dati)
+	{
+		return FString::Printf(TEXT("Nessun account di nome %s."), *Nome);
+	}
+	if (!Conferma.TrimStartAndEnd().Equals(Dati->Nome, ESearchCase::IgnoreCase))
+	{
+		return FString::Printf(TEXT("Per confermare riscrivi il nome: Valdorso.Account.Cancella %s %s"), *Dati->Nome, *Dati->Nome);
+	}
+	if (Dati->Ruolo == EValdorsoRuolo::Amministratore)
+	{
+		return TEXT("Un Amministratore non si può cancellare: prima cambiagli il ruolo.");
+	}
+
+	const FString Id = Dati->Id;
+	const FString NomeVero = Dati->Nome;
+	const FString NomeChiave = Dati->NomeChiave;
+	const FString Al = TEXT("[account cancellato]");
+
+	// Via dall'archivio in memoria.
+	AnnullaBiglietto(Id);
+	Collegati.Remove(Id);
+	NomiInCreazione.Remove(NomeChiave);
+	Account.Remove(NomeChiave);
+	Dati = nullptr;
+
+	// Negli inviti e negli altri account il nome non resta. Si riscrivono senza le copie vecchie, che lo conterrebbero.
+	auto SenzaCopieVecchie = [this](const FString& Percorso)
+	{
+		if (Scrittore.IsValid())
+		{
+			UltimaScrittura = Scrittore->Launch(TEXT("CopieVecchie"), [Percorso]()
+			{
+				IFileManager::Get().Delete(*(Percorso + TEXT(".bak1")), false, true, true);
+				IFileManager::Get().Delete(*(Percorso + TEXT(".bak2")), false, true, true);
+			});
+		}
+	};
+	bool bInviti = false;
+	for (FValdorsoInvito& Invito : Inviti.Inviti)
+	{
+		if (Invito.UsatoDa.Equals(NomeVero, ESearchCase::IgnoreCase))
+		{
+			Invito.UsatoDa = Al;
+			bInviti = true;
+		}
+		if (Invito.CreatoDa.Equals(NomeVero, ESearchCase::IgnoreCase))
+		{
+			Invito.CreatoDa = Al;
+			bInviti = true;
+		}
+	}
+	if (bInviti)
+	{
+		SalvaInviti();
+		SenzaCopieVecchie(FileInviti);
+	}
+	for (TPair<FString, FValdorsoAccount>& Coppia : Account)
+	{
+		if (Coppia.Value.InvitatoDa.Equals(NomeVero, ESearchCase::IgnoreCase))
+		{
+			Coppia.Value.InvitatoDa = Al;
+			SalvaAccount(Coppia.Value);
+			SenzaCopieVecchie(CartellaAccount / (Coppia.Value.Id + TEXT(".json")));
+		}
+	}
+
+	// Il file dell'account con le copie, e il nome nel registro.
+	if (Scrittore.IsValid())
+	{
+		const FString FileAccount = CartellaAccount / (Id + TEXT(".json"));
+		const FString Registro = FileRegistro;
+		UltimaScrittura = Scrittore->Launch(TEXT("CancellaAccount"), [FileAccount, Registro, NomeVero, Al]()
+		{
+			ValdorsoArchivioFile::CancellaConCopie(FileAccount);
+			FString Testo;
+			if (FFileHelper::LoadFileToString(Testo, *Registro))
+			{
+				int32 Cambiate = 0;
+				const FString Pulito = ValdorsoArchivioFile::SostituisciNome(Testo, NomeVero, Al, Cambiate);
+				if (Cambiate > 0)
+				{
+					ValdorsoArchivioFile::SostituisciSenzaCopie(Registro, Pulito);
+				}
+			}
+		});
+	}
+	Annota(FString::Printf(TEXT("ACCOUNT_CANCELLATO | id %s | da %s"), *Id, *Autore));
+	return FString::Printf(TEXT("Account %s cancellato per sempre (file, copie, biglietto; nel registro e negli inviti il nome è stato tolto)."), *NomeVero);
 }

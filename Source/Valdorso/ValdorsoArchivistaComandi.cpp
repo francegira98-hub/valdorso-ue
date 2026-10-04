@@ -14,6 +14,7 @@
 //   Valdorso.Account.Riattiva <nome>
 //   Valdorso.Account.Sblocca <nome>               toglie il blocco per troppi tentativi
 //   Valdorso.Account.Nota <nome> <testo>          nota dello staff, i giocatori non la vedono
+//   Valdorso.Account.Cancella <nome> <nome>       cancella l'account per sempre (il nome due volte, per conferma)
 // Solo nelle versioni di sviluppo (mai nel gioco pubblicato), per provare senza schermata:
 //   Valdorso.Prova.Crea <codice> <nome> <password>
 //   Valdorso.Prova.Entra <nome> <password>
@@ -206,6 +207,28 @@ namespace
 		}
 	}
 
+	void AccountCancella(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
+	{
+		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Account.Cancella <nome> <nome di nuovo>"), Uscita))
+		{
+			const FString Id = A->IdDi(Argomenti[0]);
+			const FString Risultato = A->CancellaAccount(Argomenti[0], Argomenti.Num() > 1 ? Argomenti[1] : FString(), AutoreConsole);
+			Scrivi(Uscita, Risultato);
+			if (Risultato.Contains(TEXT("cancellato per sempre")) && !Id.IsEmpty() && Mondo)
+			{
+				for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It; ++It)
+				{
+					AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(It->Get());
+					if (Controllore && Controllore->GetAccountId() == Id)
+					{
+						Controllore->Espelli(TEXT("Il tuo account è stato cancellato."));
+						Uscita.Log(TEXT("Era collegato: scollegato."));
+					}
+				}
+			}
+		}
+	}
+
 	void AccountNota(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
 	{
 		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 2, TEXT("Valdorso.Account.Nota <nome> <testo>"), Uscita))
@@ -247,6 +270,9 @@ namespace
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountSblocca(TEXT("Valdorso.Account.Sblocca"),
 		TEXT("Toglie il blocco per troppi tentativi. Valdorso.Account.Sblocca <nome>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountSblocca));
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountCancella(TEXT("Valdorso.Account.Cancella"),
+		TEXT("Cancella un account per sempre. Valdorso.Account.Cancella <nome> <nome di nuovo>"),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountCancella));
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountNota(TEXT("Valdorso.Account.Nota"),
 		TEXT("Aggiunge una nota dello staff. Valdorso.Account.Nota <nome> <testo>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountNota));

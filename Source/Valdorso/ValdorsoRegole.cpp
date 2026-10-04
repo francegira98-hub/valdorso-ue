@@ -133,4 +133,147 @@ namespace ValdorsoArchivioFile
 			UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a sostituire %s (resta il .tmp)"), *Percorso);
 		}
 	}
+
+	void SostituisciSenzaCopie(const FString& Percorso, const FString& Testo)
+	{
+		IFileManager& File = IFileManager::Get();
+		const FString Temporaneo = Percorso + TEXT(".tmp");
+		if (!FFileHelper::SaveStringToFile(Testo, *Temporaneo, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)
+			|| !File.Move(*Percorso, *Temporaneo, true, true))
+		{
+			UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a riscrivere %s"), *Percorso);
+		}
+	}
+
+	void CancellaConCopie(const FString& Percorso)
+	{
+		IFileManager& File = IFileManager::Get();
+		for (const TCHAR* Fine : { TEXT(""), TEXT(".bak1"), TEXT(".bak2"), TEXT(".tmp") })
+		{
+			const FString Uno = Percorso + Fine;
+			if (File.FileExists(*Uno) && !File.Delete(*Uno, false, true, true))
+			{
+				UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a cancellare %s"), *Uno);
+			}
+		}
+	}
+
+	namespace
+	{
+		/** La data all'inizio di una riga del registro ("2026-10-04 22:35:24 UTC | ..."). */
+		bool DataDellaRiga(const FString& Riga, FDateTime& Out)
+		{
+			if (Riga.Len() < 19)
+			{
+				return false;
+			}
+			const auto Numero = [&Riga](int32 Da, int32 Quanti) { return FCString::Atoi(*Riga.Mid(Da, Quanti)); };
+			const int32 Anno = Numero(0, 4), Mese = Numero(5, 2), Giorno = Numero(8, 2);
+			const int32 Ore = Numero(11, 2), Minuti = Numero(14, 2), Secondi = Numero(17, 2);
+			if (Riga[4] != TEXT('-') || Riga[7] != TEXT('-') || !FDateTime::Validate(Anno, Mese, Giorno, Ore, Minuti, Secondi, 0))
+			{
+				return false;
+			}
+			Out = FDateTime(Anno, Mese, Giorno, Ore, Minuti, Secondi);
+			return true;
+		}
+
+		/** Applica Cambia a ogni riga (tenendo gli a capo come sono) e conta quelle cambiate. */
+		FString PerOgniRiga(const FString& Testo, int32& OutCambiate, TFunctionRef<bool(FString&)> Cambia)
+		{
+			OutCambiate = 0;
+			FString Risultato;
+			Risultato.Reserve(Testo.Len());
+			int32 Inizio = 0;
+			while (Inizio < Testo.Len())
+			{
+				int32 Fine = Testo.Find(TEXT("\n"), ESearchCase::CaseSensitive, ESearchDir::FromStart, Inizio);
+				const bool bACapo = Fine != INDEX_NONE;
+				if (!bACapo)
+				{
+					Fine = Testo.Len();
+				}
+				FString Riga = Testo.Mid(Inizio, Fine - Inizio);
+				if (Cambia(Riga))
+				{
+					++OutCambiate;
+				}
+				Risultato += Riga;
+				if (bACapo)
+				{
+					Risultato += TEXT("\n");
+				}
+				Inizio = Fine + 1;
+			}
+			return Risultato;
+		}
+	}
+
+	FString OscuraIndirizziVecchi(const FString& Testo, const FDateTime& Ora, int32 Giorni, int32& OutCambiate)
+	{
+		const FDateTime Limite = Ora - FTimespan::FromDays(Giorni);
+		return PerOgniRiga(Testo, OutCambiate, [&Limite](FString& Riga)
+		{
+			FDateTime Quando;
+			if (!DataDellaRiga(Riga, Quando) || Quando >= Limite)
+			{
+				return false;
+			}
+			bool bCambiata = false;
+			int32 Da = 0;
+			for (;;)
+			{
+				const int32 Pos = Riga.Find(TEXT("| ip "), ESearchCase::CaseSensitive, ESearchDir::FromStart, Da);
+				if (Pos == INDEX_NONE)
+				{
+					break;
+				}
+				const int32 InizioIp = Pos + 5;
+				int32 FineIp = InizioIp;
+				while (FineIp < Riga.Len() && Riga[FineIp] != TEXT(' ') && Riga[FineIp] != TEXT('|') && Riga[FineIp] != TEXT('\r'))
+				{
+					++FineIp;
+				}
+				const FString Indirizzo = Riga.Mid(InizioIp, FineIp - InizioIp);
+				if (!Indirizzo.IsEmpty() && Indirizzo != TEXT("[rimosso]"))
+				{
+					Riga = Riga.Left(InizioIp) + TEXT("[rimosso]") + Riga.Mid(FineIp);
+					bCambiata = true;
+				}
+				Da = InizioIp;
+			}
+			return bCambiata;
+		});
+	}
+
+	FString SostituisciNome(const FString& Testo, const FString& Nome, const FString& Con, int32& OutCambiate)
+	{
+		const FString Cercato = Nome.TrimStartAndEnd();
+		if (Cercato.IsEmpty())
+		{
+			OutCambiate = 0;
+			return Testo;
+		}
+		return PerOgniRiga(Testo, OutCambiate, [&Cercato, &Con](FString& Riga)
+		{
+			const bool bRitorno = Riga.EndsWith(TEXT("\r"));
+			TArray<FString> Campi;
+			(bRitorno ? Riga.LeftChop(1) : Riga).ParseIntoArray(Campi, TEXT(" | "), false);
+			// Il campo 0 è la data e l'1 è l'evento (ACCESSO, BANDITO...): un nome come "Accesso" non li tocca.
+			bool bCambiata = false;
+			for (int32 i = 2; i < Campi.Num(); ++i)
+			{
+				if (Campi[i].TrimStartAndEnd().Equals(Cercato, ESearchCase::IgnoreCase))
+				{
+					Campi[i] = Con;
+					bCambiata = true;
+				}
+			}
+			if (bCambiata)
+			{
+				Riga = FString::Join(Campi, TEXT(" | ")) + (bRitorno ? TEXT("\r") : TEXT(""));
+			}
+			return bCambiata;
+		});
+	}
 }

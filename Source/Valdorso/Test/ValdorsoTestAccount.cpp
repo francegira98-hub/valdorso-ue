@@ -329,4 +329,48 @@ bool FValdorsoTestRientro::RunTest(const FString& Parameters)
 	return true;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Privacy del registro
+// ------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestPrivacyRegistro, "Valdorso.Privacy.Registro", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestPrivacyRegistro::RunTest(const FString& Parameters)
+{
+	const FDateTime Ora(2026, 10, 4, 22, 0, 0);
+	const FString Registro =
+		TEXT("2026-08-01 10:00:00 UTC | ACCESSO | Fra | ip 93.41.7.12\r\n")                     // vecchia: l'IP sparisce
+		TEXT("2026-09-03 21:59:59 UTC | INDIRIZZO_BLOCCATO | ip 5.6.7.8 | 30 minuti\r\n")      // 31 giorni fa: sparisce
+		TEXT("2026-09-05 08:00:00 UTC | ACCESSO_SBAGLIATO | gaspare | ip 10.0.0.2\r\n")        // 29 giorni: resta
+		TEXT("2026-10-04 21:00:00 UTC | ACCESSO | Gaspare | ip 127.0.0.1\r\n")                 // di oggi: resta
+		TEXT("2026-07-01 09:00:00 UTC | PASSWORD_REIMPOSTATA | Fra | da console del server\r\n") // vecchia ma senza IP
+		TEXT("riga senza data | ip 1.1.1.1\r\n");                                              // senza data: non si tocca
+
+	int32 Cambiate = 0;
+	const FString Pulito = ValdorsoArchivioFile::OscuraIndirizziVecchi(Registro, Ora, 30, Cambiate);
+	TestEqual(TEXT("righe cambiate"), Cambiate, 2);
+	TestTrue(TEXT("IP vecchio tolto"), Pulito.Contains(TEXT("| ACCESSO | Fra | ip [rimosso]\r\n")));
+	TestTrue(TEXT("IP di 31 giorni tolto, il resto della riga resta"), Pulito.Contains(TEXT("| ip [rimosso] | 30 minuti")));
+	TestTrue(TEXT("IP di 29 giorni resta"), Pulito.Contains(TEXT("ip 10.0.0.2")));
+	TestTrue(TEXT("IP di oggi resta"), Pulito.Contains(TEXT("ip 127.0.0.1")));
+	TestTrue(TEXT("riga senza data intatta"), Pulito.Contains(TEXT("riga senza data | ip 1.1.1.1")));
+	TestFalse(TEXT("nessun IP vecchio rimasto"), Pulito.Contains(TEXT("93.41.7.12")) || Pulito.Contains(TEXT("5.6.7.8")));
+	TestEqual(TEXT("stesse righe di prima"), Pulito.Len() - Pulito.Replace(TEXT("\n"), TEXT("")).Len(), 6);
+
+	int32 DiNuovo = 0;
+	ValdorsoArchivioFile::OscuraIndirizziVecchi(Pulito, Ora, 30, DiNuovo);
+	TestEqual(TEXT("una seconda pulizia non cambia niente"), DiNuovo, 0);
+
+	// Cancellazione di un account: il nome (maiuscole o no) sparisce dal registro, gli altri restano.
+	int32 Nomi = 0;
+	const FString SenzaGaspare = ValdorsoArchivioFile::SostituisciNome(Registro, TEXT("Gaspare"), TEXT("[account cancellato]"), Nomi);
+	TestEqual(TEXT("due righe con Gaspare"), Nomi, 2);
+	TestFalse(TEXT("Gaspare non c'è più"), SenzaGaspare.Contains(TEXT("aspare")));
+	TestTrue(TEXT("Fra resta"), SenzaGaspare.Contains(TEXT("| ACCESSO | Fra |")));
+	int32 Eventi = 0;
+	const FString SenzaAccesso = ValdorsoArchivioFile::SostituisciNome(Registro, TEXT("Accesso"), TEXT("[account cancellato]"), Eventi);
+	TestEqual(TEXT("un account di nome Accesso non tocca l'evento ACCESSO"), Eventi, 0);
+	TestTrue(TEXT("a capo intatti"), SenzaGaspare.Contains(TEXT("| [account cancellato] | ip 127.0.0.1\r\n")));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
