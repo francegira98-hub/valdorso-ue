@@ -2,6 +2,7 @@
 
 #include "ValdorsoArchivista.h"
 #include "ValdorsoSicurezza.h"
+#include "ValdorsoRegole.h"
 #include "Valdorso.h"
 #include "Async/Async.h"
 #include "Engine/GameInstance.h"
@@ -15,16 +16,22 @@
 
 namespace
 {
-	constexpr int32 TentativiPrimaDelBlocco = 5;
-	constexpr int64 BloccoBaseSecondi = 15 * 60;
-	constexpr int64 BloccoMassimoSecondi = 24 * 60 * 60;
+	// Regole e file dell'archivio: ora in ValdorsoRegole.h (così i test automatici li controllano).
+	using ValdorsoRegole::TentativiPrimaDelBlocco;
+	using ValdorsoRegole::LunghezzaCodice;
+	using ValdorsoRegole::NomeValido;
+	using ValdorsoRegole::NomeRiservato;
+	using ValdorsoRegole::ProblemaPassword;
+	using ValdorsoRegole::NormalizzaCodice;
+	using ValdorsoArchivioFile::ScriviAtomico;
+	using ValdorsoArchivioFile::LeggiFile;
+
 	constexpr int32 ErroriIndirizzoMassimi = 20;
 	constexpr int64 FinestraIndirizzoSecondi = 10 * 60;
 	constexpr int64 BloccoIndirizzoSecondi = 30 * 60;
 	constexpr int32 CalcoliInsieme = 4;
 	constexpr int32 CodaMassima = 64;
 	constexpr int32 GiorniInvitoPredefiniti = 14;
-	constexpr int32 LunghezzaCodice = 12;
 
 	// Senza caratteri che si confondono (0/O, 1/I/L).
 	const TCHAR* const AlfabetoCodici = TEXT("23456789ABCDEFGHJKMNPQRSTUVWXYZ");
@@ -48,101 +55,6 @@ namespace
 	int32 Minuti(int64 Secondi)
 	{
 		return static_cast<int32>(FMath::Max<int64>(1, (Secondi + 59) / 60));
-	}
-
-	bool NomeValido(const FString& Nome)
-	{
-		if (Nome.Len() < 3 || Nome.Len() > 20)
-		{
-			return false;
-		}
-		for (int32 i = 0; i < Nome.Len(); ++i)
-		{
-			const TCHAR C = Nome[i];
-			const bool bLettera = (C >= TEXT('a') && C <= TEXT('z')) || (C >= TEXT('A') && C <= TEXT('Z'));
-			const bool bCifra = C >= TEXT('0') && C <= TEXT('9');
-			const bool bSegno = C == TEXT('.') || C == TEXT('-') || C == TEXT('_');
-			if ((i == 0 && !bLettera) || (!bLettera && !bCifra && !bSegno))
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	bool NomeRiservato(const FString& NomeChiave)
-	{
-		static const TCHAR* const Riservati[] = {
-			TEXT("admin"), TEXT("administrator"), TEXT("amministratore"), TEXT("amministratrice"), TEXT("staff"),
-			TEXT("gm"), TEXT("moderatore"), TEXT("narratore"), TEXT("valdorso"), TEXT("sistema"), TEXT("system"),
-			TEXT("server"), TEXT("root"), TEXT("console"), TEXT("supporto"), TEXT("support") };
-		for (const TCHAR* Riservato : Riservati)
-		{
-			if (NomeChiave == Riservato)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/** Vuoto se la password va bene, altrimenti il motivo da mostrare al giocatore. */
-	FString ProblemaPassword(const FString& Password, const FString& Nome)
-	{
-		if (Password.Len() < 10)
-		{
-			return TEXT("La password deve avere almeno 10 caratteri.");
-		}
-		if (Password.Len() > 128)
-		{
-			return TEXT("La password può avere al massimo 128 caratteri.");
-		}
-		const FString Minuscola = Password.ToLower();
-		const FString NomeChiave = Chiave(Nome);
-		if (NomeChiave.Len() >= 3 && Minuscola.Contains(NomeChiave))
-		{
-			return TEXT("La password non può contenere il nome dell'account.");
-		}
-		static const TCHAR* const Comuni[] = {
-			TEXT("1234567890"), TEXT("12345678910"), TEXT("0123456789"), TEXT("password123"), TEXT("password1234"),
-			TEXT("passwordpassword"), TEXT("qwertyuiop"), TEXT("qwertyuiop1"), TEXT("asdfghjkl1"), TEXT("1q2w3e4r5t"),
-			TEXT("iloveyou123"), TEXT("valdorso123"), TEXT("valdorso2026"), TEXT("ciaociao123"), TEXT("forzainter"),
-			TEXT("forzamilan"), TEXT("forzajuve1"), TEXT("forzaroma1"), TEXT("napoli1926"), TEXT("dragon12345") };
-		for (const TCHAR* Comune : Comuni)
-		{
-			if (Minuscola == Comune)
-			{
-				return TEXT("Questa password è troppo comune: scegline un'altra.");
-			}
-		}
-		TSet<TCHAR> Diversi;
-		for (const TCHAR C : Password)
-		{
-			Diversi.Add(C);
-		}
-		if (Diversi.Num() < 5)
-		{
-			return TEXT("La password ha troppi caratteri ripetuti.");
-		}
-		return FString();
-	}
-
-	/** Toglie trattini, spazi e "VALD" davanti; tutto maiuscolo. */
-	FString NormalizzaCodice(const FString& Codice)
-	{
-		FString Pulito;
-		for (const TCHAR C : Codice)
-		{
-			if (FChar::IsAlnum(C))
-			{
-				Pulito.AppendChar(FChar::ToUpper(C));
-			}
-		}
-		if (Pulito.Len() == LunghezzaCodice + 4 && Pulito.StartsWith(TEXT("VALD")))
-		{
-			Pulito.RightChopInline(4);
-		}
-		return Pulito;
 	}
 
 	struct FImprontaNuova
@@ -218,53 +130,6 @@ namespace
 		}
 	}
 
-	/** Scrive il file in modo che non resti mai a metà: prima un .tmp, poi le copie, poi la sostituzione. Gira sul filo delle scritture. */
-	void ScriviAtomico(const FString& Percorso, const FString& Testo)
-	{
-		IFileManager& File = IFileManager::Get();
-		const FString Temporaneo = Percorso + TEXT(".tmp");
-		if (!FFileHelper::SaveStringToFile(Testo, *Temporaneo, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
-		{
-			UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a scrivere %s"), *Temporaneo);
-			return;
-		}
-		if (File.FileExists(*Percorso))
-		{
-			const FString Copia1 = Percorso + TEXT(".bak1");
-			const FString Copia2 = Percorso + TEXT(".bak2");
-			if (File.FileExists(*Copia1))
-			{
-				File.Copy(*Copia2, *Copia1, true, true);
-			}
-			File.Copy(*Copia1, *Percorso, true, true);
-		}
-		if (!File.Move(*Percorso, *Temporaneo, true, true))
-		{
-			UE_LOG(LogValdorso, Error, TEXT("[Valdorso] Archivista: non riesco a sostituire %s (resta il .tmp)"), *Percorso);
-		}
-	}
-
-	/** Legge un file dell'archivio; se è rovinato prova le due copie precedenti. */
-	template <typename TipoDati>
-	bool LeggiFile(const FString& Percorso, TipoDati& Out)
-	{
-		const TArray<FString> Prove = { Percorso, Percorso + TEXT(".bak1"), Percorso + TEXT(".bak2") };
-		for (const FString& Prova : Prove)
-		{
-			FString Testo;
-			TipoDati Letto;
-			if (FFileHelper::LoadFileToString(Testo, *Prova) && FJsonObjectConverter::JsonObjectStringToUStruct(Testo, &Letto, 0, 0))
-			{
-				if (Prova != Percorso)
-				{
-					UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Archivista: %s era rovinato, letto dalla copia %s"), *Percorso, *Prova);
-				}
-				Out = MoveTemp(Letto);
-				return true;
-			}
-		}
-		return false;
-	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -509,7 +374,7 @@ void UValdorsoArchivista::ErroreSullAccount(FValdorsoAccount& Dati, const FStrin
 	if (++Dati.TentativiFalliti >= TentativiPrimaDelBlocco)
 	{
 		++Dati.BlocchiDiFila;
-		const int64 Durata = FMath::Min<int64>(BloccoBaseSecondi << FMath::Clamp(Dati.BlocchiDiFila - 1, 0, 10), BloccoMassimoSecondi);
+		const int64 Durata = ValdorsoRegole::DurataBlocco(Dati.BlocchiDiFila);
 		Dati.BloccatoFino = Ora + Durata;
 		Dati.TentativiFalliti = 0;
 		Annota(FString::Printf(TEXT("ACCOUNT_BLOCCATO | %s | %d minuti | ip %s"), *Dati.Nome, Minuti(Durata), *Indirizzo));
@@ -948,6 +813,145 @@ bool UValdorsoArchivista::SegnaCollegato(const FString& AccountId)
 void UValdorsoArchivista::SegnaScollegato(const FString& AccountId)
 {
 	Collegati.Remove(AccountId);
+
+	// Da adesso il biglietto del rientro ha 15 minuti di vita.
+	const int64 Scadenza = Adesso() + ValdorsoRegole::DurataRientroSecondi;
+	for (TPair<FString, FBiglietto>& Coppia : Biglietti)
+	{
+		if (Coppia.Value.AccountId == AccountId && Coppia.Value.ScadeIl == 0)
+		{
+			Coppia.Value.ScadeIl = Scadenza;
+		}
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// Rientro senza password
+// ------------------------------------------------------------------------------------------------
+
+FString UValdorsoArchivista::CreaBiglietto(const FString& AccountId)
+{
+	check(IsInGameThread());
+	if (AccountId.IsEmpty())
+	{
+		return FString();
+	}
+	AnnullaBiglietto(AccountId);
+
+	// Pulizia: via i biglietti scaduti.
+	const int64 Ora = Adesso();
+	for (auto It = Biglietti.CreateIterator(); It; ++It)
+	{
+		if (It->Value.ScadeIl != 0 && It->Value.ScadeIl <= Ora)
+		{
+			It.RemoveCurrent();
+		}
+	}
+
+	TArray<uint8> Casuali;
+	if (!ValdorsoSicurezza::BytesCasuali(Casuali, 32))
+	{
+		return FString();
+	}
+	const FString Biglietto = ValdorsoSicurezza::Base64PerIndirizzo(Casuali);
+	FMemory::Memzero(Casuali.GetData(), Casuali.Num());
+
+	FBiglietto Nuovo;
+	Nuovo.AccountId = AccountId;
+	Nuovo.ScadeIl = 0;
+	Biglietti.Add(ValdorsoSicurezza::Sha256Esadecimale(Biglietto), Nuovo);
+	return Biglietto;
+}
+
+void UValdorsoArchivista::AnnullaBiglietto(const FString& AccountId)
+{
+	for (auto It = Biglietti.CreateIterator(); It; ++It)
+	{
+		if (It->Value.AccountId == AccountId)
+		{
+			It.RemoveCurrent();
+		}
+	}
+}
+
+void UValdorsoArchivista::RientraConBiglietto(const FString& Biglietto, const FString& Indirizzo, FRisposta Risposta)
+{
+	check(IsInGameThread());
+	const int64 Ora = Adesso();
+	int64 Rimasti = 0;
+	if (IndirizzoBloccato(Indirizzo, Ora, Rimasti))
+	{
+		Risposta(TroppiTentativi(Rimasti));
+		return;
+	}
+
+	const FValdorsoEsitoAccount NonValido = Esito(EValdorsoEsitoAccount::RientroNonValido,
+		TEXT("Il rientro rapido non vale più: scrivi la password."));
+
+	// Il biglietto vale una volta: si toglie subito, che vada bene o no.
+	FBiglietto Trovato;
+	const FString Impronta = Biglietto.IsEmpty() ? FString() : ValdorsoSicurezza::Sha256Esadecimale(Biglietto);
+	if (Impronta.IsEmpty() || !Biglietti.RemoveAndCopyValue(Impronta, Trovato) || (Trovato.ScadeIl != 0 && Trovato.ScadeIl <= Ora))
+	{
+		ErroreDaIndirizzo(Indirizzo, Ora);
+		Annota(FString::Printf(TEXT("RIENTRO_RIFIUTATO | biglietto non valido | ip %s"), *Indirizzo));
+		Risposta(NonValido);
+		return;
+	}
+
+	FValdorsoAccount* Dati = nullptr;
+	for (TPair<FString, FValdorsoAccount>& Coppia : Account)
+	{
+		if (Coppia.Value.Id == Trovato.AccountId)
+		{
+			Dati = &Coppia.Value;
+			break;
+		}
+	}
+	if (!Dati)
+	{
+		Risposta(NonValido);
+		return;
+	}
+
+	// Le stesse regole dell'accesso con la password.
+	if (Dati->Stato == EValdorsoStatoAccount::Sospeso && Dati->SospesoFino <= Ora)
+	{
+		Dati->Stato = EValdorsoStatoAccount::Attivo;
+		Dati->MotivoStato.Empty();
+		Annota(FString::Printf(TEXT("SOSPENSIONE_FINITA | %s"), *Dati->Nome));
+	}
+	if (Dati->Stato == EValdorsoStatoAccount::Bandito)
+	{
+		Annota(FString::Printf(TEXT("RIENTRO_RIFIUTATO | %s | bandito | ip %s"), *Dati->Nome, *Indirizzo));
+		Risposta(Esito(EValdorsoEsitoAccount::AccountBandito,
+			FString::Printf(TEXT("Questo account è stato bandito dalla valle. Motivo: %s"), *Dati->MotivoStato)));
+		return;
+	}
+	if (Dati->Stato == EValdorsoStatoAccount::Sospeso)
+	{
+		Annota(FString::Printf(TEXT("RIENTRO_RIFIUTATO | %s | sospeso | ip %s"), *Dati->Nome, *Indirizzo));
+		Risposta(Esito(EValdorsoEsitoAccount::AccountSospeso,
+			FString::Printf(TEXT("Questo account è sospeso fino al %s. Motivo: %s"), *Data(Dati->SospesoFino), *Dati->MotivoStato)));
+		return;
+	}
+	if (Dati->bDeveCambiarePassword || Dati->BloccatoFino > Ora)
+	{
+		Risposta(NonValido);
+		return;
+	}
+
+	Dati->UltimoAccesso = Ora;
+	SalvaAccount(*Dati);
+	Annota(FString::Printf(TEXT("RIENTRO | %s | ip %s"), *Dati->Nome, *Indirizzo));
+
+	FValdorsoEsitoAccount Risultato;
+	Risultato.Esito = EValdorsoEsitoAccount::Ok;
+	Risultato.AccountId = Dati->Id;
+	Risultato.Nome = Dati->Nome;
+	Risultato.Ruolo = Dati->Ruolo;
+	Risultato.Messaggio = FString::Printf(TEXT("Bentornato nella valle, %s."), *Dati->Nome);
+	Risposta(Risultato);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1151,6 +1155,7 @@ FString UValdorsoArchivista::ReimpostaPassword(const FString& Nome, const FStrin
 			Trovato->Impronta = Nuova.Impronta;
 			Trovato->Iterazioni = Nuova.Iterazioni;
 			Trovato->bDeveCambiarePassword = true;
+			AnnullaBiglietto(Trovato->Id);
 			Trovato->TentativiFalliti = 0;
 			Trovato->BlocchiDiFila = 0;
 			Trovato->BloccatoFino = 0;
@@ -1178,6 +1183,7 @@ FString UValdorsoArchivista::Sospendi(const FString& Nome, int32 Ore, const FStr
 		return TEXT("Scrivi per quante ore sospendere (per esempio 24).");
 	}
 	Dati->Stato = EValdorsoStatoAccount::Sospeso;
+	AnnullaBiglietto(Dati->Id);
 	Dati->SospesoFino = Adesso() + static_cast<int64>(Ore) * 60 * 60;
 	Dati->MotivoStato = Motivo.IsEmpty() ? TEXT("non indicato") : Motivo;
 	SalvaAccount(*Dati);
@@ -1197,6 +1203,7 @@ FString UValdorsoArchivista::Banna(const FString& Nome, const FString& Motivo, c
 		return TEXT("Un Amministratore non si può bandire: prima cambiagli il ruolo.");
 	}
 	Dati->Stato = EValdorsoStatoAccount::Bandito;
+	AnnullaBiglietto(Dati->Id);
 	Dati->SospesoFino = 0;
 	Dati->MotivoStato = Motivo.IsEmpty() ? TEXT("non indicato") : Motivo;
 	SalvaAccount(*Dati);

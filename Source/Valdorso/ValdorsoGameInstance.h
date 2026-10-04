@@ -25,7 +25,9 @@ class UNetDriver;
 enum class EValdorsoModoAccesso : uint8
 {
 	Entra,
-	PrimoIngresso
+	PrimoIngresso,
+	/** Rientro senza password dopo un collegamento interrotto (con il biglietto del server). */
+	Rientro
 };
 
 struct FValdorsoRichiestaAccesso
@@ -34,6 +36,7 @@ struct FValdorsoRichiestaAccesso
 	FString Nome;
 	FString Password;
 	FString CodiceInvito;
+	FString Biglietto;
 };
 
 UCLASS(Config = Game)
@@ -80,6 +83,26 @@ public:
 	/** L'ultimo nome usato, per non doverlo riscrivere. */
 	FString UltimoNome;
 
+	// --- Rientro senza password (v0.1.2) -----------------------------------------------------------
+
+	/** Il server ha dato il biglietto del rientro (solo in memoria: chiudendo il gioco sparisce). */
+	void RicordaBiglietto(const FString& Biglietto, const FString& Nome);
+
+	/** Via il biglietto (espulsione, uscita voluta, rientro rifiutato). */
+	void DimenticaBiglietto();
+
+	/**
+	 * Il menu chiede se rientrare da solo: vero se c'è un biglietto, se il collegamento si è interrotto
+	 * (non un'espulsione) e se non si è già provato 3 volte di fila. Ogni chiamata vera conta un tentativo.
+	 */
+	bool PrendiRientro(FValdorsoRichiestaAccesso& Out);
+
+	/** Il nome di chi può rientrare (per le scritte), vuoto se nessuno. */
+	FString NomeRientro() const { return Biglietto.IsEmpty() ? FString() : NomeBiglietto; }
+
+	/** Chiamata quando si è entrati davvero: i tentativi di rientro ripartono da zero. */
+	void Entrato() { TentativiRientro = 0; bCollegamentoInterrotto = false; }
+
 	// --- Server ------------------------------------------------------------------------------------
 
 	/** Carica la chiave privata del server; se non c'è, crea la coppia e la salva. */
@@ -89,6 +112,11 @@ private:
 	FString CartellaChiavi() const;
 	bool ChiavePubblica(FString& OutPem) const;
 	void SuErroreDiRete(UWorld* Mondo, UNetDriver* Driver, ENetworkFailure::Type Tipo, const FString& Errore);
+
+	FString Biglietto;
+	FString NomeBiglietto;
+	int32 TentativiRientro = 0;
+	bool bCollegamentoInterrotto = false;
 
 	TArray<uint8> ChiaveSessione;
 	TOptional<FValdorsoRichiestaAccesso> RichiestaInSospeso;

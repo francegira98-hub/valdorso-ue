@@ -75,6 +75,7 @@ void UValdorsoGameInstance::Shutdown()
 	FMemory::Memzero(ChiaveSessione.GetData(), ChiaveSessione.Num());
 	ChiaveSessione.Reset();
 	RichiestaInSospeso.Reset();
+	DimenticaBiglietto();
 	Super::Shutdown();
 }
 
@@ -272,9 +273,39 @@ FString UValdorsoGameInstance::PrendiMessaggio()
 	return Messaggio;
 }
 
+void UValdorsoGameInstance::RicordaBiglietto(const FString& NuovoBiglietto, const FString& Nome)
+{
+	Biglietto = NuovoBiglietto;
+	NomeBiglietto = Nome;
+}
+
+void UValdorsoGameInstance::DimenticaBiglietto()
+{
+	Biglietto.Empty();
+	NomeBiglietto.Empty();
+	TentativiRientro = 0;
+	bCollegamentoInterrotto = false;
+}
+
+bool UValdorsoGameInstance::PrendiRientro(FValdorsoRichiestaAccesso& Out)
+{
+	if (Biglietto.IsEmpty() || !bCollegamentoInterrotto || TentativiRientro >= 3)
+	{
+		return false;
+	}
+	++TentativiRientro;
+	Out = FValdorsoRichiestaAccesso();
+	Out.Modo = EValdorsoModoAccesso::Rientro;
+	Out.Nome = NomeBiglietto;
+	Out.Biglietto = Biglietto;
+	return true;
+}
+
 void UValdorsoGameInstance::SuErroreDiRete(UWorld* Mondo, UNetDriver* Driver, ENetworkFailure::Type Tipo, const FString& Errore)
 {
 	RichiestaInSospeso.Reset();
+	// Collegamento interrotto (non un gioco di versione diversa): se c'è il biglietto, il menu proverà a rientrare da solo.
+	bCollegamentoInterrotto = Tipo != ENetworkFailure::OutdatedClient && Tipo != ENetworkFailure::OutdatedServer;
 	UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Errore di rete: %s"), *Errore);
 	switch (Tipo)
 	{

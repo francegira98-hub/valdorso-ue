@@ -71,6 +71,10 @@ void AValdorsoPlayerController::BeginPlay()
 			{
 				ServerPrimoIngresso(Richiesta.CodiceInvito, Richiesta.Nome, Richiesta.Password);
 			}
+			else if (Richiesta.Modo == EValdorsoModoAccesso::Rientro)
+			{
+				ServerRientra(Richiesta.Biglietto);
+			}
 			else
 			{
 				ServerAccedi(Richiesta.Nome, Richiesta.Password);
@@ -246,6 +250,23 @@ void AValdorsoPlayerController::ServerPrimoIngresso_Implementation(const FString
 	});
 }
 
+void AValdorsoPlayerController::ServerRientra_Implementation(const FString& Biglietto)
+{
+	if (Biglietto.Len() > 128 || !PuoChiedere(FString(), Biglietto))
+	{
+		return;
+	}
+	bRichiestaInCorso = true;
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	UValdorsoArchivista::Di(this)->RientraConBiglietto(Biglietto, Indirizzo(), [Debole](const FValdorsoEsitoAccount& Esito)
+	{
+		if (AValdorsoPlayerController* Controllore = Debole.Get())
+		{
+			Controllore->RispostaArchivista(Esito);
+		}
+	});
+}
+
 void AValdorsoPlayerController::ServerCambiaPassword_Implementation(const FString& Attuale, const FString& Nuova)
 {
 	// Si cambia qui solo la password temporanea, prima di entrare (il cambio normale arriverà nelle Impostazioni).
@@ -338,6 +359,16 @@ void AValdorsoPlayerController::FaiEntrare(const FValdorsoEsitoAccount& Esito)
 
 	ClientEsitoAccesso(Esito);
 
+	// Il biglietto per rientrare senza password se il collegamento si interrompe.
+	if (Archivista)
+	{
+		const FString Biglietto = Archivista->CreaBiglietto(AccountId);
+		if (!Biglietto.IsEmpty())
+		{
+			ClientBiglietto(Biglietto, NomeAccount);
+		}
+	}
+
 	if (AGameModeBase* Modalita = Mondo ? Mondo->GetAuthGameMode() : nullptr)
 	{
 		if (Modalita->PlayerCanRestart(this))
@@ -396,6 +427,10 @@ void AValdorsoPlayerController::ClientEsitoAccesso_Implementation(const FValdors
 	{
 	case EValdorsoEsitoAccount::Ok:
 		// Il personaggio sta nascendo: via l'anticamera, mouse e tastiera al gioco.
+		if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+		{
+			Istanza->Entrato();
+		}
 		ChiudiAnticamera();
 		MostraSulloSchermo(Esito.Messaggio, FColor(232, 196, 120));
 		break;
@@ -460,11 +495,21 @@ void AValdorsoPlayerController::ChiudiAnticamera()
 	bShowMouseCursor = false;
 }
 
+void AValdorsoPlayerController::ClientBiglietto_Implementation(const FString& Biglietto, const FString& Nome)
+{
+	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+	{
+		Istanza->RicordaBiglietto(Biglietto, Nome);
+	}
+}
+
 void AValdorsoPlayerController::ClientWasKicked_Implementation(const FText& KickReason)
 {
 	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
 	{
 		Istanza->RicordaMessaggio(KickReason.ToString());
+		// Espulsi dal server: niente rientro automatico (si torna dalla schermata, con la password).
+		Istanza->DimenticaBiglietto();
 	}
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Scollegato dal server: %s"), *KickReason.ToString());
 	Super::ClientWasKicked_Implementation(KickReason);

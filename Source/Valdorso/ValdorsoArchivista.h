@@ -40,7 +40,8 @@ enum class EValdorsoStatoAccount : uint8
 	Bandito
 };
 
-UENUM(BlueprintType)
+// ScriptName: per Python il nome deve essere diverso da quello di FValdorsoEsitoAccount (avviso di LogPython).
+UENUM(BlueprintType, meta = (ScriptName = "ValdorsoTipoEsitoAccount"))
 enum class EValdorsoEsitoAccount : uint8
 {
 	Ok,
@@ -54,7 +55,9 @@ enum class EValdorsoEsitoAccount : uint8
 	NomeGiaUsato,
 	PasswordDebole,
 	ServerOccupato,
-	ErroreInterno
+	ErroreInterno,
+	/** Il biglietto del rientro senza password non vale (scaduto, già usato, server riavviato): serve la password. */
+	RientroNonValido
 };
 
 /** Un account, così come sta nel suo file. Le date sono secondi Unix (UTC). */
@@ -249,6 +252,21 @@ public:
 	/** Cambio della password (anche quella temporanea dopo un reset). */
 	void CambiaPassword(const FString& Nome, const FString& Attuale, const FString& Nuova, const FString& Indirizzo, FRisposta Risposta);
 
+	// --- Rientro senza password (v0.1.2) -----------------------------------------------------------
+	// Chi è entrato riceve un biglietto: 32 byte casuali, che il gioco tiene solo in memoria. Se il collegamento
+	// si interrompe, entro 15 minuti il gioco rientra da solo mostrando il biglietto. Il server tiene solo
+	// l'impronta del biglietto, e solo in memoria: un riavvio del server li annulla tutti (si rientra con la password).
+	// Un biglietto vale una volta; a ogni rientro se ne dà uno nuovo. Un account ha al massimo un biglietto.
+
+	/** Un biglietto nuovo per l'account (annulla quello vecchio). Vale finché si è collegati, poi 15 minuti. Vuoto se non riesce. */
+	FString CreaBiglietto(const FString& AccountId);
+
+	/** Rientro con il biglietto: risponde subito (niente calcoli lenti). */
+	void RientraConBiglietto(const FString& Biglietto, const FString& Indirizzo, FRisposta Risposta);
+
+	/** Annulla il biglietto dell'account (password reimpostata, sospensione, bando). */
+	void AnnullaBiglietto(const FString& AccountId);
+
 	// --- Collegamenti (un solo collegamento per account, usato dal passo 2.3) ----------------------
 
 	/** Segna l'account come collegato. Falso se lo era già. */
@@ -332,6 +350,14 @@ private:
 
 	TMap<FString, FContoIndirizzo> ContiIndirizzi;
 	TSet<FString> Collegati;
+
+	/** I biglietti del rientro: impronta SHA-256 del biglietto -> account e scadenza (0 = finché è collegato). */
+	struct FBiglietto
+	{
+		FString AccountId;
+		int64 ScadeIl = 0;
+	};
+	TMap<FString, FBiglietto> Biglietti;
 
 	TArray<FCalcolo> InAttesa;
 	int32 InCorso = 0;

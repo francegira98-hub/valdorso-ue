@@ -110,10 +110,16 @@ void AValdorsoMenuController::BeginPlay()
 	bShowMouseCursor = true;
 
 	// Tornando dal server (password sbagliata, espulsione, server spento) si riapre "Prima di entrare" con il motivo.
+	// Se invece il collegamento si è solo interrotto e c'è il biglietto, si rientra da soli (fino a 3 volte).
 	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
 	{
 		const FString Messaggio = Istanza->PrendiMessaggio();
-		if (!Messaggio.IsEmpty())
+		FValdorsoRichiestaAccesso Rientro;
+		if (Istanza->PrendiRientro(Rientro))
+		{
+			PreparaRientro(Rientro, Messaggio);
+		}
+		else if (!Messaggio.IsEmpty())
 		{
 			UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: %s"), *Messaggio);
 			MostraAccesso(FText::FromString(Messaggio));
@@ -231,6 +237,86 @@ void AValdorsoMenuController::Arriva()
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: volo finito, mi collego al server"));
 }
 
+void AValdorsoMenuController::PreparaRientro(const FValdorsoRichiestaAccesso& Rientro, const FString& Messaggio)
+{
+	RientroInAttesa = Rientro;
+	MessaggioRientro = Messaggio;
+	AttesaRientro = 2.5f;
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: collegamento interrotto (%s), rientro di %s tra poco"), *Messaggio, *Rientro.Nome);
+
+	if (Menu.IsValid())
+	{
+		Menu->SetEnabled(false);
+	}
+	SAssignNew(Scritte, SValdorsoVolo)
+		.OnSalta(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::AnnullaRientro));
+	Scritte->ImpostaRiga(FText::Format(LOCTEXT("Rientro", "Il collegamento si è interrotto. Rientro nella valle come {0}..."),
+		FText::FromString(Rientro.Nome)), 1.f);
+	Scritte->ImpostaAiuto(LOCTEXT("Annulla", "ESC  ANNULLA"));
+	Scritte->ImpostaSaltabile(true);
+	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
+	{
+		Viewport->AddViewportWidgetContent(Scritte.ToSharedRef(), 30);
+	}
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(Scritte);
+	Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Modo);
+}
+
+void AValdorsoMenuController::AvanzaRientro(float DeltaSeconds)
+{
+	AttesaRientro -= DeltaSeconds;
+	if (AttesaRientro > 0.f)
+	{
+		return;
+	}
+	const FValdorsoRichiestaAccesso Rientro = RientroInAttesa.GetValue();
+	RientroInAttesa.Reset();
+	TogliScritte();
+
+	UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
+	FString Errore;
+	if (!Istanza || !Istanza->PuoiCollegarti(Errore))
+	{
+		MostraAccesso(FText::FromString(Errore.IsEmpty() ? MessaggioRientro : Errore));
+		return;
+	}
+	// Come "Entra": il volo corto, il nero, poi il collegamento con il biglietto.
+	RichiestaDaMandare = Rientro;
+	bVersoIlServer = true;
+	bVoloLungo = false;
+	EntraNellaValle();
+}
+
+void AValdorsoMenuController::AnnullaRientro()
+{
+	if (!RientroInAttesa.IsSet())
+	{
+		return;
+	}
+	RientroInAttesa.Reset();
+	TogliScritte();
+	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+	{
+		Istanza->DimenticaBiglietto();
+	}
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: rientro annullato"));
+	MostraAccesso(FText::FromString(MessaggioRientro));
+}
+
+void AValdorsoMenuController::TogliScritte()
+{
+	if (Scritte.IsValid())
+	{
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(Scritte.ToSharedRef());
+		}
+		Scritte.Reset();
+	}
+}
+
 void AValdorsoMenuController::TornaAlMenu(const FString& Motivo)
 {
 	// Il modo più pulito: si riapre il livello del menu, che all'avvio mostra "Prima di entrare" con il motivo.
@@ -269,6 +355,12 @@ void AValdorsoMenuController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AValdorsoMenuController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if (RientroInAttesa.IsSet())
+	{
+		AvanzaRientro(DeltaSeconds);
+		return;
+	}
 
 	if (bInTransizione)
 	{

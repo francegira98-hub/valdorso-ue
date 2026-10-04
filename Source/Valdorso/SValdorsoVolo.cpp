@@ -13,6 +13,7 @@
 void SValdorsoVolo::Construct(const FArguments& InArgs)
 {
 	OnSalta = InArgs._OnSalta;
+	Aiuto = LOCTEXT("Salta", "ESC  SALTA");
 	Caratteri = MakeShared<FValdorsoCaratteri>();
 
 	FSlateFontInfo FontTitolo = Caratteri->Titolo(58.f, TEXT("Regular"));
@@ -69,7 +70,7 @@ void SValdorsoVolo::Construct(const FArguments& InArgs)
 		.Padding(FMargin(0.f, 0.f, 60.f, 48.f))
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("Salta", "ESC  SALTA"))
+			.Text_Lambda([this]() { return Aiuto; })
 			.Font(FontAiuto)
 			.ColorAndOpacity_Lambda([this]()
 			{

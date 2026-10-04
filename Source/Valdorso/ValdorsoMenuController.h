@@ -60,6 +60,15 @@ private:
 	void ProvaLocale();
 	void Arriva();
 
+	/** Rientro senza password (v0.1.2): dopo un collegamento interrotto, il menu riparte da solo verso il server. */
+	void PreparaRientro(const FValdorsoRichiestaAccesso& Rientro, const FString& Messaggio);
+	void AvanzaRientro(float DeltaSeconds);
+	void AnnullaRientro();
+	void TogliScritte();
+	TOptional<FValdorsoRichiestaAccesso> RientroInAttesa;
+	FString MessaggioRientro;
+	float AttesaRientro = 0.f;
+
 	/** Se il collegamento non può partire (dopo il nero): si riapre il menu con il motivo. */
 	void TornaAlMenu(const FString& Motivo);
 

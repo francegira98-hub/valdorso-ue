@@ -63,6 +63,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerPrimoIngresso(const FString& CodiceInvito, const FString& Nome, const FString& Password);
 
+	/** Rientro senza password dopo un collegamento interrotto, con il biglietto avuto dal server. */
+	UFUNCTION(Server, Reliable)
+	void ServerRientra(const FString& Biglietto);
+
 	/** Dopo un reset dell'Amministratrice: la password temporanea va cambiata prima di entrare. */
 	UFUNCTION(Server, Reliable)
 	void ServerCambiaPassword(const FString& Attuale, const FString& Nuova);
@@ -71,6 +75,10 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void ClientEsitoAccesso(const FValdorsoEsitoAccount& Esito);
+
+	/** Il biglietto per rientrare senza password se il collegamento si interrompe (il gioco lo tiene solo in memoria). */
+	UFUNCTION(Client, Reliable)
+	void ClientBiglietto(const FString& Biglietto, const FString& Nome);
 
 	virtual void ClientWasKicked_Implementation(const FText& KickReason) override;
 

@@ -29,6 +29,9 @@ public:
 	/** Se vero, Esc (o B / Start sul controller) salta il volo e si mostra l'aiuto in basso. */
 	void ImpostaSaltabile(bool bSi) { bSaltabile = bSi; }
 
+	/** Il testo dell'aiuto in basso a destra (di serie "ESC  SALTA"). */
+	void ImpostaAiuto(const FText& Testo) { Aiuto = Testo; }
+
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual bool SupportsKeyboardFocus() const override { return true; }
 
@@ -39,6 +42,7 @@ private:
 	float OpacitaTitolo = 0.f;
 	float OpacitaRiga = 0.f;
 	FText Riga;
+	FText Aiuto;
 	bool bSaltabile = false;
 	double InizioAiuto = -1.0;
 };
