@@ -27,7 +27,9 @@ enum class EValdorsoModoAccesso : uint8
 	Entra,
 	PrimoIngresso,
 	/** Rientro senza password dopo un collegamento interrotto (con il biglietto del server). */
-	Rientro
+	Rientro,
+	/** Password dimenticata: nome, codice di recupero e password nuova. */
+	Recupero
 };
 
 struct FValdorsoRichiestaAccesso
@@ -37,6 +39,7 @@ struct FValdorsoRichiestaAccesso
 	FString Password;
 	FString CodiceInvito;
 	FString Biglietto;
+	FString CodiceRecupero;
 };
 
 UCLASS(Config = Game)

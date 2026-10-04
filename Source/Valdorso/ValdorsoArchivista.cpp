@@ -562,6 +562,12 @@ void UValdorsoArchivista::ConcludiAccesso(const FString& NomeChiave, const FStri
 	{
 		Risultato.Esito = EValdorsoEsitoAccount::Ok;
 		Risultato.Messaggio = FString::Printf(TEXT("Bentornato nella valle, %s."), *Dati->Nome);
+
+		// Chi non ha ancora i codici di recupero (account di prima del 04/10, o codici finiti) li riceve ora.
+		if (Dati->CodiciRecupero.Num() == 0)
+		{
+			Risultato.CodiciRecupero = CreaCodiciRecupero(*Dati);
+		}
 	}
 	Risposta(Risultato);
 }
@@ -678,7 +684,8 @@ void UValdorsoArchivista::ConcludiCreazione(const FString& Nome, const FString& 
 	const FString Indizio = Invito->Indizio;
 
 	FValdorsoAccount& Salvato = Account.Add(NomeChiave, MoveTemp(Nuovo));
-	SalvaAccount(Salvato);
+	const TArray<FString> Codici = CreaCodiciRecupero(Salvato);
+	SalvaAccount(Salvato);  // i codici si salvano dopo, quando il giocatore conferma di averli scritti
 	SalvaInviti();
 
 	Annota(FString::Printf(TEXT("ACCOUNT_CREATO | %s | invito %s | ip %s"), *Salvato.Nome, *Indizio, *Indirizzo));
@@ -693,6 +700,7 @@ void UValdorsoArchivista::ConcludiCreazione(const FString& Nome, const FString& 
 	Risultato.AccountId = Salvato.Id;
 	Risultato.Nome = Salvato.Nome;
 	Risultato.Ruolo = Salvato.Ruolo;
+	Risultato.CodiciRecupero = Codici;
 	Risposta(Risultato);
 }
 
@@ -1096,6 +1104,8 @@ FString UValdorsoArchivista::InfoAccount(const FString& Nome) const
 		Dati->bDeveCambiarePassword ? TEXT(" | password temporanea") : TEXT(""));
 	Testo += FString::Printf(TEXT("  Tentativi sbagliati: %d%s\n"), Dati->TentativiFalliti,
 		Dati->BloccatoFino > Ora ? *FString::Printf(TEXT(" | bloccato ancora %d minuti"), Minuti(Dati->BloccatoFino - Ora)) : TEXT(""));
+	Testo += FString::Printf(TEXT("  Codici di recupero: %d rimasti su %d (creati il %s)\n"),
+		Dati->CodiciRecupero.Num(), ValdorsoRegole::NumeroCodiciRecupero, *Data(Dati->CodiciCreatiIl));
 	Testo += FString::Printf(TEXT("  Personaggi: %d | Impronta: %s, %d giri | file scritto %lld volte\n"),
 		Dati->Personaggi.Num(), *Dati->Algoritmo, Dati->Iterazioni, Dati->Versione);
 	for (const FString& Nota : Dati->NoteStaff)
@@ -1324,6 +1334,7 @@ FString UValdorsoArchivista::CancellaAccount(const FString& Nome, const FString&
 
 	// Via dall'archivio in memoria.
 	AnnullaBiglietto(Id);
+	CodiciInAttesa.Remove(Id);
 	Collegati.Remove(Id);
 	NomiInCreazione.Remove(NomeChiave);
 	Account.Remove(NomeChiave);
@@ -1392,4 +1403,188 @@ FString UValdorsoArchivista::CancellaAccount(const FString& Nome, const FString&
 	}
 	Annota(FString::Printf(TEXT("ACCOUNT_CANCELLATO | id %s | da %s"), *Id, *Autore));
 	return FString::Printf(TEXT("Account %s cancellato per sempre (file, copie, biglietto; nel registro e negli inviti il nome è stato tolto)."), *NomeVero);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Codici di recupero
+// ------------------------------------------------------------------------------------------------
+
+TArray<FString> UValdorsoArchivista::CreaCodiciRecupero(const FValdorsoAccount& Dati)
+{
+	TArray<FString> DaMostrare;
+	TArray<uint8> Sale;
+	if (!ValdorsoSicurezza::BytesCasuali(Sale, ValdorsoSicurezza::LunghezzaSale))
+	{
+		return DaMostrare;
+	}
+	const FString SaleTesto = FBase64::Encode(Sale);
+	TArray<FString> Impronte;
+	for (int32 i = 0; i < ValdorsoRegole::NumeroCodiciRecupero; ++i)
+	{
+		const FString Grezzo = ValdorsoSicurezza::TestoCasuale(AlfabetoCodici, ValdorsoRegole::LunghezzaCodiceRecupero);
+		if (Grezzo.Len() != ValdorsoRegole::LunghezzaCodiceRecupero)
+		{
+			return TArray<FString>();
+		}
+		Impronte.Add(ValdorsoRegole::ImprontaCodiceRecupero(Grezzo, SaleTesto));
+		DaMostrare.Add(ValdorsoRegole::FormaCodiceRecupero(Grezzo));
+	}
+	FCodiciInAttesa& DaConfermare = CodiciInAttesa.FindOrAdd(Dati.Id);
+	DaConfermare.Sale = SaleTesto;
+	DaConfermare.Impronte = MoveTemp(Impronte);
+	return DaMostrare;
+}
+
+void UValdorsoArchivista::ConfermaCodiciRecupero(const FString& AccountId)
+{
+	check(IsInGameThread());
+	FCodiciInAttesa DaConfermare;
+	if (!CodiciInAttesa.RemoveAndCopyValue(AccountId, DaConfermare))
+	{
+		return;
+	}
+	for (TPair<FString, FValdorsoAccount>& Coppia : Account)
+	{
+		if (Coppia.Value.Id == AccountId)
+		{
+			Coppia.Value.SaleRecupero = DaConfermare.Sale;
+			Coppia.Value.CodiciRecupero = MoveTemp(DaConfermare.Impronte);
+			Coppia.Value.CodiciCreatiIl = Adesso();
+			SalvaAccount(Coppia.Value);
+			Annota(FString::Printf(TEXT("CODICI_RECUPERO_CREATI | %s"), *Coppia.Value.Nome));
+			return;
+		}
+	}
+}
+
+void UValdorsoArchivista::RecuperaConCodice(const FString& Nome, const FString& Codice, const FString& Nuova, const FString& Indirizzo, FRisposta Risposta)
+{
+	check(IsInGameThread());
+	const int64 Ora = Adesso();
+	int64 Rimasti = 0;
+	if (IndirizzoBloccato(Indirizzo, Ora, Rimasti))
+	{
+		Risposta(TroppiTentativi(Rimasti));
+		return;
+	}
+
+	const FString NomeChiave = Chiave(Nome).Left(32);
+	FValdorsoAccount* Dati = Account.Find(NomeChiave);
+	if (Dati && Dati->BloccatoFino > Ora)
+	{
+		Risposta(TroppiTentativi(Dati->BloccatoFino - Ora));
+		return;
+	}
+	const FString Problema = ProblemaPassword(Nuova, Nome);
+	if (!Problema.IsEmpty())
+	{
+		Risposta(Esito(EValdorsoEsitoAccount::PasswordDebole, Problema));
+		return;
+	}
+
+	// Si cerca il codice tra tutti, confrontandoli tutti (lo stesso tempo, che ci sia o no).
+	int32 Trovato = INDEX_NONE;
+	// Anche per un nome che non esiste si calcola un'impronta: la risposta arriva negli stessi tempi.
+	const FString Cercata = ValdorsoRegole::ImprontaCodiceRecupero(Codice, Dati && !Dati->SaleRecupero.IsEmpty() ? Dati->SaleRecupero : FBase64::Encode(SaleFinto));
+	if (Dati && !Dati->SaleRecupero.IsEmpty())
+	{
+		const FTCHARToUTF8 CercataUtf8(*Cercata);
+		const TArray<uint8> CercataByte(reinterpret_cast<const uint8*>(CercataUtf8.Get()), CercataUtf8.Length());
+		for (int32 i = 0; i < Dati->CodiciRecupero.Num(); ++i)
+		{
+			const FTCHARToUTF8 Utf8(*Dati->CodiciRecupero[i]);
+			const TArray<uint8> Byte(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+			if (ValdorsoSicurezza::UgualiTempoCostante(Byte, CercataByte) && Trovato == INDEX_NONE)
+			{
+				Trovato = i;
+			}
+		}
+	}
+	if (Trovato == INDEX_NONE)
+	{
+		ErroreDaIndirizzo(Indirizzo, Ora);
+		if (Dati)
+		{
+			ErroreSullAccount(*Dati, Indirizzo, Ora);
+		}
+		Annota(FString::Printf(TEXT("RECUPERO_SBAGLIATO | %s | ip %s"), *NomeChiave, *Indirizzo));
+		Risposta(Esito(EValdorsoEsitoAccount::CredenzialiSbagliate, TEXT("Nome o codice di recupero sbagliati.")));
+		return;
+	}
+	if (Dati->Stato == EValdorsoStatoAccount::Bandito)
+	{
+		Risposta(Esito(EValdorsoEsitoAccount::AccountBandito,
+			FString::Printf(TEXT("Questo account è stato bandito dalla valle. Motivo: %s"), *Dati->MotivoStato)));
+		return;
+	}
+	if (Dati->Stato == EValdorsoStatoAccount::Sospeso && Dati->SospesoFino > Ora)
+	{
+		Risposta(Esito(EValdorsoEsitoAccount::AccountSospeso,
+			FString::Printf(TEXT("Questo account è sospeso fino al %s. Motivo: %s"), *Data(Dati->SospesoFino), *Dati->MotivoStato)));
+		return;
+	}
+
+	// Il codice si consuma subito (così non si usa due volte nello stesso istante); se il calcolo fallisce, torna al suo posto.
+	const FString CodiceUsato = Dati->CodiciRecupero[Trovato];
+	Dati->CodiciRecupero.RemoveAt(Trovato);
+
+	const bool bAccodato = Accoda([this, NomeChiave, Nuova, Indirizzo, Risposta, CodiceUsato]() -> TFunction<void()>
+	{
+		const FImprontaNuova NuovaImpronta = CreaImpronta(Nuova);
+		return [this, NomeChiave, Indirizzo, Risposta, CodiceUsato, NuovaImpronta]()
+		{
+			FValdorsoAccount* Aggiornato = Account.Find(NomeChiave);
+			if (!Aggiornato)
+			{
+				Risposta(ErroreInterno());
+				return;
+			}
+			if (!NuovaImpronta.bOk)
+			{
+				Aggiornato->CodiciRecupero.Add(CodiceUsato);
+				SalvaAccount(*Aggiornato);
+				Risposta(ErroreInterno());
+				return;
+			}
+			const int64 Adesso_ = Adesso();
+			Aggiornato->Algoritmo = ValdorsoSicurezza::Algoritmo;
+			Aggiornato->Sale = NuovaImpronta.Sale;
+			Aggiornato->Impronta = NuovaImpronta.Impronta;
+			Aggiornato->Iterazioni = NuovaImpronta.Iterazioni;
+			Aggiornato->bDeveCambiarePassword = false;
+			Aggiornato->TentativiFalliti = 0;
+			Aggiornato->BlocchiDiFila = 0;
+			Aggiornato->BloccatoFino = 0;
+			Aggiornato->PasswordCambiataIl = Adesso_;
+			Aggiornato->UltimoAccesso = Adesso_;
+			if (Aggiornato->Stato == EValdorsoStatoAccount::Sospeso && Aggiornato->SospesoFino <= Adesso_)
+			{
+				Aggiornato->Stato = EValdorsoStatoAccount::Attivo;
+				Aggiornato->MotivoStato.Empty();
+			}
+			AnnullaBiglietto(Aggiornato->Id);
+
+			FValdorsoEsitoAccount Risultato;
+			Risultato.Esito = EValdorsoEsitoAccount::Ok;
+			Risultato.AccountId = Aggiornato->Id;
+			Risultato.Nome = Aggiornato->Nome;
+			Risultato.Ruolo = Aggiornato->Ruolo;
+			Risultato.CodiciRimasti = Aggiornato->CodiciRecupero.Num();
+			if (Aggiornato->CodiciRecupero.Num() == 0)
+			{
+				// Finiti: subito 8 nuovi, da scrivere (valgono quando il giocatore conferma).
+				Risultato.CodiciRecupero = CreaCodiciRecupero(*Aggiornato);
+			}
+			SalvaAccount(*Aggiornato);
+			Annota(FString::Printf(TEXT("RECUPERO | %s | %d codici rimasti | ip %s"), *Aggiornato->Nome, Aggiornato->CodiciRecupero.Num(), *Indirizzo));
+			Risultato.Messaggio = FString::Printf(TEXT("Password cambiata. Bentornato nella valle, %s. Codici di recupero rimasti: %d."),
+				*Aggiornato->Nome, Aggiornato->CodiciRecupero.Num());
+			Risposta(Risultato);
+		};
+	});
+	if (!bAccodato)
+	{
+		Dati->CodiciRecupero.Insert(CodiceUsato, Trovato);
+		Risposta(ServerOccupato());
+	}
 }

@@ -7,6 +7,8 @@
 //                            quando si torna dal server (password sbagliata, espulsione, server spento).
 //   SValdorsoAnticamera      sul server, prima di avere il personaggio: "Il Cuore ti sta riconoscendo..."
 //                            e, dopo un reset dell'Amministratrice, la scelta della password nuova.
+//   SValdorsoCodiciRecupero  (04/10) gli 8 codici di recupero appena nati, da scrivere: si vedono una volta sola.
+//   In "Prima di entrare", sotto Entra, "Ho perso la password": nome, codice di recupero e password nuova.
 //
 // Tastiera: Invio conferma, Esc torna indietro, Tab passa al campo dopo. Controller: frecce e croce.
 
@@ -77,6 +79,7 @@ public:
 private:
 	void Invia();
 	void ScegliScheda(bool bPrimo);
+	void ScegliRecupero(bool bSi);
 	bool Controlla(FValdorsoRichiestaAccesso& Out, FText& OutErrore) const;
 	void SuInvio(const FText& Testo, ETextCommit::Type Tipo);
 	TSharedRef<SWidget> Scheda(const FText& Testo, bool bPrimo);
@@ -93,8 +96,13 @@ private:
 	TSharedPtr<SEditableTextBox> NomeNuovo;
 	TSharedPtr<SEditableTextBox> PasswordNuova;
 	TSharedPtr<SEditableTextBox> PasswordRipetuta;
+	TSharedPtr<SEditableTextBox> NomeRecupero;
+	TSharedPtr<SEditableTextBox> CodiceRecupero;
+	TSharedPtr<SEditableTextBox> PasswordRecupero;
+	TSharedPtr<SEditableTextBox> PasswordRecuperoRipetuta;
 
 	bool bPrimoIngresso = false;
+	bool bRecupero = false;
 	bool bMostraPassword = false;
 	bool bRicordaNome = true;
 	bool bInAttesa = false;
@@ -132,4 +140,29 @@ private:
 	bool bInAttesa = true;
 	bool bErrore = false;
 	FText Messaggio;
+};
+
+/** I codici di recupero appena nati: da scrivere su carta. Si chiude solo dopo aver detto di averli scritti. */
+class VALDORSO_API SValdorsoCodiciRecupero : public SCompoundWidget
+{
+public:
+	SLATE_BEGIN_ARGS(SValdorsoCodiciRecupero) {}
+		SLATE_ARGUMENT(TArray<FString>, Codici)
+		SLATE_EVENT(FSimpleDelegate, OnFatto)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& InArgs);
+
+	/** Il primo pulsante, per dargli il fuoco. */
+	TSharedPtr<SWidget> PulsanteIniziale() const { return Conferma; }
+
+	virtual bool SupportsKeyboardFocus() const override { return true; }
+
+private:
+	TSharedPtr<FValdorsoStileAccesso> Stile;
+	TArray<FString> Codici;
+	FSimpleDelegate OnFatto;
+	TSharedPtr<SWidget> Conferma;
+	bool bScritti = false;
+	bool bCopiati = false;
 };

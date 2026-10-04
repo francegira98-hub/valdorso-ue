@@ -373,4 +373,30 @@ bool FValdorsoTestPrivacyRegistro::RunTest(const FString& Parameters)
 	return true;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Codici di recupero
+// ------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestCodiciRecupero, "Valdorso.Regole.CodiciRecupero", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestCodiciRecupero::RunTest(const FString& Parameters)
+{
+	TestEqual(TEXT("8 codici"), ValdorsoRegole::NumeroCodiciRecupero, 8);
+	TestEqual(TEXT("16 caratteri"), ValdorsoRegole::LunghezzaCodiceRecupero, 16);
+
+	const FString Grezzo = ValdorsoSicurezza::TestoCasuale(TEXT("23456789ABCDEFGHJKMNPQRSTUVWXYZ"), 16);
+	const FString Forma = ValdorsoRegole::FormaCodiceRecupero(Grezzo);
+	TestEqual(TEXT("forma XXXX-XXXX-XXXX-XXXX"), Forma.Len(), 19);
+	TestTrue(TEXT("trattini al posto giusto"), Forma[4] == TEXT('-') && Forma[9] == TEXT('-') && Forma[14] == TEXT('-'));
+	TestEqual(TEXT("dalla forma si torna al grezzo"), ValdorsoRegole::NormalizzaCodiceRecupero(Forma), Grezzo);
+	TestEqual(TEXT("minuscole e spazi"), ValdorsoRegole::NormalizzaCodiceRecupero(TEXT(" abcd efgh-jkmn pqrs ")), FString(TEXT("ABCDEFGHJKMNPQRS")));
+
+	// L'impronta non dipende da come lo si scrive, ma dipende dal sale dell'account.
+	const FString A = ValdorsoRegole::ImprontaCodiceRecupero(Forma, TEXT("sale1"));
+	TestEqual(TEXT("stessa impronta scritto in minuscolo"), ValdorsoRegole::ImprontaCodiceRecupero(Forma.ToLower(), TEXT("sale1")), A);
+	TestEqual(TEXT("stessa impronta senza trattini"), ValdorsoRegole::ImprontaCodiceRecupero(Grezzo, TEXT("sale1")), A);
+	TestNotEqual(TEXT("sale diverso, impronta diversa"), ValdorsoRegole::ImprontaCodiceRecupero(Forma, TEXT("sale2")), A);
+	TestFalse(TEXT("l'impronta non contiene il codice"), A.Contains(Grezzo));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

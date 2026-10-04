@@ -63,6 +63,14 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerPrimoIngresso(const FString& CodiceInvito, const FString& Nome, const FString& Password);
 
+	/** Il giocatore ha scritto i codici di recupero: valgono, e il personaggio nasce. */
+	UFUNCTION(Server, Reliable)
+	void ServerCodiciScritti();
+
+	/** Password dimenticata: un codice di recupero e la password nuova. */
+	UFUNCTION(Server, Reliable)
+	void ServerRecupera(const FString& Nome, const FString& Codice, const FString& Nuova);
+
 	/** Rientro senza password dopo un collegamento interrotto, con il biglietto avuto dal server. */
 	UFUNCTION(Server, Reliable)
 	void ServerRientra(const FString& Biglietto);
@@ -114,10 +122,17 @@ private:
 	void ChiudiAnticamera();
 	TSharedPtr<SValdorsoAnticamera> Anticamera;
 
+	/** Client: i codici di recupero appena nati, da scrivere (si mostrano una volta sola). */
+	void MostraCodiciRecupero(const TArray<FString>& Codici);
+	void ChiudiCodiciRecupero();
+	TSharedPtr<SWidget> SchermataCodici;
+
 	/** Vero per chi gioca in locale; falso per chi arriva da fuori finché non entra (lo decide Accogli). */
 	bool bAutenticato = true;
 	bool bRichiestaInCorso = false;
 	bool bDeveCambiarePassword = false;
+	/** Server: si aspetta che il giocatore scriva i codici di recupero prima di far nascere il personaggio. */
+	bool bAttendeCodici = false;
 	int32 RichiesteFatte = 0;
 	FString AccountId;
 	FString NomeAccount;

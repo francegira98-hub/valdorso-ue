@@ -1,6 +1,7 @@
 // Valdorso - Le regole degli account e i file dell'archivio (vedi il .h).
 
 #include "ValdorsoRegole.h"
+#include "ValdorsoSicurezza.h"
 #include "HAL/FileManager.h"
 
 namespace ValdorsoRegole
@@ -98,6 +99,38 @@ namespace ValdorsoRegole
 			Pulito.RightChopInline(4);
 		}
 		return Pulito;
+	}
+
+	FString NormalizzaCodiceRecupero(const FString& Codice)
+	{
+		FString Pulito;
+		for (const TCHAR C : Codice)
+		{
+			if (FChar::IsAlnum(C))
+			{
+				Pulito.AppendChar(FChar::ToUpper(C));
+			}
+		}
+		return Pulito;
+	}
+
+	FString FormaCodiceRecupero(const FString& Grezzo)
+	{
+		FString Forma;
+		for (int32 i = 0; i < Grezzo.Len(); ++i)
+		{
+			if (i > 0 && i % 4 == 0)
+			{
+				Forma.AppendChar(TEXT('-'));
+			}
+			Forma.AppendChar(Grezzo[i]);
+		}
+		return Forma;
+	}
+
+	FString ImprontaCodiceRecupero(const FString& Codice, const FString& Sale)
+	{
+		return ValdorsoSicurezza::Sha256Esadecimale(Sale + TEXT(":") + NormalizzaCodiceRecupero(Codice));
 	}
 
 	int64 DurataBlocco(int32 BlocchiDiFila)

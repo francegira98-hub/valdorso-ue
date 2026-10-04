@@ -6,6 +6,7 @@
 #include "Brushes/SlateNoResource.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "Framework/Application/SlateApplication.h"
+#include "HAL/PlatformApplicationMisc.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Styling/CoreStyle.h"
@@ -232,12 +233,21 @@ void SValdorsoPrimaDiEntrare::Construct(const FArguments& InArgs)
 	NomeNuovo = Stile->Campo(LOCTEXT("SugNomeNuovo", "Da 3 a 20 caratteri, comincia con una lettera"), false, Invio);
 	PasswordNuova = Stile->Campo(LOCTEXT("SugPwNuova", "Almeno 10 caratteri"), Nascosta, Invio);
 	PasswordRipetuta = Stile->Campo(LOCTEXT("SugPwRipeti", "La stessa password, di nuovo"), Nascosta, Invio);
+	NomeRecupero = Stile->Campo(LOCTEXT("SugNomeRec", "Il nome del tuo account"), false, Invio);
+	CodiceRecupero = Stile->Campo(LOCTEXT("SugCodiceRec", "XXXX-XXXX-XXXX-XXXX"), false, Invio);
+	PasswordRecupero = Stile->Campo(LOCTEXT("SugPwRec", "Almeno 10 caratteri"), Nascosta, Invio);
+	PasswordRecuperoRipetuta = Stile->Campo(LOCTEXT("SugPwRecRipeti", "La stessa password, di nuovo"), Nascosta, Invio);
 	NomeEntra->SetText(FText::FromString(NomeRicordato));
+	NomeRecupero->SetText(FText::FromString(NomeRicordato));
 	NomeNuovo->SetText(FText::FromString(NomeRicordato));
 
 	const TAttribute<EVisibility> VisibileEntra = TAttribute<EVisibility>::CreateLambda([this]()
 	{
-		return bPrimoIngresso ? EVisibility::Collapsed : EVisibility::Visible;
+		return bPrimoIngresso || bRecupero ? EVisibility::Collapsed : EVisibility::Visible;
+	});
+	const TAttribute<EVisibility> VisibileRecupero = TAttribute<EVisibility>::CreateLambda([this]()
+	{
+		return !bPrimoIngresso && bRecupero ? EVisibility::Visible : EVisibility::Collapsed;
 	});
 	const TAttribute<EVisibility> VisibilePrimo = TAttribute<EVisibility>::CreateLambda([this]()
 	{
@@ -308,6 +318,50 @@ void SValdorsoPrimaDiEntrare::Construct(const FArguments& InArgs)
 						.IsEnabled(Libero)
 						+ SVerticalBox::Slot().AutoHeight() [ Riga(LOCTEXT("EtNome", "NOME"), NomeEntra.ToSharedRef()) ]
 						+ SVerticalBox::Slot().AutoHeight() [ Riga(LOCTEXT("EtPassword", "PASSWORD"), PasswordEntra.ToSharedRef()) ]
+						+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(FMargin(0.f, -6.f, 0.f, 6.f))
+						[
+							SNew(SButton)
+							.ButtonStyle(&FCoreStyle::Get(), "NoBorder")
+							.OnClicked_Lambda([this]() { ScegliRecupero(true); return FReply::Handled(); })
+							[
+								SNew(STextBlock)
+								.Text(LOCTEXT("Persa", "Ho perso la password"))
+								.Font(Stile->Caratteri->Testo(18.f, TEXT("Italic")))
+								.ColorAndOpacity(ValdorsoTema::Oro().CopyWithNewOpacity(0.8f))
+							]
+						]
+					]
+
+					// Password dimenticata.
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(SVerticalBox)
+						.Visibility(VisibileRecupero)
+						.IsEnabled(Libero)
+						+ SVerticalBox::Slot().AutoHeight()
+						[
+							SNew(STextBlock)
+							.Text(LOCTEXT("SpiegaRecupero", "Scrivi il nome e uno dei codici di recupero che hai ricevuto al primo ingresso: vale una volta sola. Poi scegli una password nuova."))
+							.Font(Stile->Caratteri->Testo(19.f, TEXT("Italic")))
+							.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+							.AutoWrapText(true)
+						]
+						+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 10.f, 0.f, 0.f)) [ Riga(LOCTEXT("EtNomeRec", "NOME"), NomeRecupero.ToSharedRef()) ]
+						+ SVerticalBox::Slot().AutoHeight() [ Riga(LOCTEXT("EtCodiceRec", "CODICE DI RECUPERO"), CodiceRecupero.ToSharedRef()) ]
+						+ SVerticalBox::Slot().AutoHeight() [ Riga(LOCTEXT("EtPwRec", "PASSWORD NUOVA"), PasswordRecupero.ToSharedRef()) ]
+						+ SVerticalBox::Slot().AutoHeight() [ Riga(LOCTEXT("EtPwRecRipeti", "RIPETI LA PASSWORD NUOVA"), PasswordRecuperoRipetuta.ToSharedRef()) ]
+						+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(FMargin(0.f, -6.f, 0.f, 6.f))
+						[
+							SNew(SButton)
+							.ButtonStyle(&FCoreStyle::Get(), "NoBorder")
+							.OnClicked_Lambda([this]() { ScegliRecupero(false); return FReply::Handled(); })
+							[
+								SNew(STextBlock)
+								.Text(LOCTEXT("Ricordata", "Me la ricordo: torna a Entra"))
+								.Font(Stile->Caratteri->Testo(18.f, TEXT("Italic")))
+								.ColorAndOpacity(ValdorsoTema::Oro().CopyWithNewOpacity(0.8f))
+							]
+						]
 					]
 
 					// Primo ingresso.
@@ -422,7 +476,11 @@ void SValdorsoPrimaDiEntrare::Construct(const FArguments& InArgs)
 							Stile->Pulsante(
 								TAttribute<FText>::CreateLambda([this]()
 								{
-									return bPrimoIngresso ? LOCTEXT("Crea", "Crea l'account") : LOCTEXT("EntraOra", "Entra nella valle");
+									if (bPrimoIngresso)
+									{
+										return LOCTEXT("Crea", "Crea l'account");
+									}
+									return bRecupero ? LOCTEXT("CambiaEntra", "Cambia la password ed entra") : LOCTEXT("EntraOra", "Entra nella valle");
 								}),
 								FSimpleDelegate::CreateSP(this, &SValdorsoPrimaDiEntrare::Invia), 22.f, Libero)
 						]
@@ -492,9 +550,24 @@ TSharedRef<SWidget> SValdorsoPrimaDiEntrare::Riga(const FText& Titolo, const TSh
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 0.f, 0.f, 14.f)) [ Contenuto ];
 }
 
+void SValdorsoPrimaDiEntrare::ScegliRecupero(bool bSi)
+{
+	bRecupero = bSi;
+	Messaggio = FText::GetEmpty();
+	if (bSi && NomeRecupero->GetText().IsEmpty())
+	{
+		NomeRecupero->SetText(NomeEntra->GetText());
+	}
+	if (TSharedPtr<SWidget> Campo = CampoIniziale())
+	{
+		FSlateApplication::Get().SetAllUserFocus(Campo, EFocusCause::SetDirectly);
+	}
+}
+
 void SValdorsoPrimaDiEntrare::ScegliScheda(bool bPrimo)
 {
 	bPrimoIngresso = bPrimo;
+	bRecupero = false;
 	Messaggio = FText::GetEmpty();
 	if (TSharedPtr<SWidget> Campo = CampoIniziale())
 	{
@@ -507,6 +580,10 @@ TSharedPtr<SWidget> SValdorsoPrimaDiEntrare::CampoIniziale() const
 	if (bPrimoIngresso)
 	{
 		return Codice;
+	}
+	if (bRecupero)
+	{
+		return NomeRecupero->GetText().IsEmpty() ? NomeRecupero : CodiceRecupero;
 	}
 	return NomeEntra->GetText().IsEmpty() ? NomeEntra : PasswordEntra;
 }
@@ -526,6 +603,41 @@ void SValdorsoPrimaDiEntrare::Attendi(const FText& Testo)
 
 bool SValdorsoPrimaDiEntrare::Controlla(FValdorsoRichiestaAccesso& Out, FText& OutErrore) const
 {
+	if (!bPrimoIngresso && bRecupero)
+	{
+		Out.Modo = EValdorsoModoAccesso::Recupero;
+		Out.Nome = NomeRecupero->GetText().ToString().TrimStartAndEnd();
+		Out.CodiceRecupero = CodiceRecupero->GetText().ToString().TrimStartAndEnd();
+		Out.Password = PasswordRecupero->GetText().ToString();
+		int32 Caratteri = 0;
+		for (const TCHAR C : Out.CodiceRecupero)
+		{
+			Caratteri += FChar::IsAlnum(C) ? 1 : 0;
+		}
+		if (Out.Nome.IsEmpty())
+		{
+			OutErrore = LOCTEXT("RecNome", "Scrivi il nome dell'account.");
+			return false;
+		}
+		if (Caratteri != 16)
+		{
+			OutErrore = LOCTEXT("RecForma", "Il codice di recupero ha questa forma: XXXX-XXXX-XXXX-XXXX.");
+			return false;
+		}
+		const FText Problema = ProblemaPasswordSchermata(Out.Password, Out.Nome);
+		if (!Problema.IsEmpty())
+		{
+			OutErrore = Problema;
+			return false;
+		}
+		if (Out.Password != PasswordRecuperoRipetuta->GetText().ToString())
+		{
+			OutErrore = LOCTEXT("RecDiverse", "Le due password nuove non sono uguali.");
+			return false;
+		}
+		return true;
+	}
+
 	if (!bPrimoIngresso)
 	{
 		Out.Modo = EValdorsoModoAccesso::Entra;
@@ -592,6 +704,9 @@ void SValdorsoPrimaDiEntrare::Invia()
 	PasswordEntra->SetText(FText::GetEmpty());
 	PasswordNuova->SetText(FText::GetEmpty());
 	PasswordRipetuta->SetText(FText::GetEmpty());
+	CodiceRecupero->SetText(FText::GetEmpty());
+	PasswordRecupero->SetText(FText::GetEmpty());
+	PasswordRecuperoRipetuta->SetText(FText::GetEmpty());
 
 	Attendi(LOCTEXT("InCammino", "In cammino verso la valle..."));
 	OnRichiesta.ExecuteIfBound(Richiesta);
@@ -610,6 +725,11 @@ FReply SValdorsoPrimaDiEntrare::OnKeyDown(const FGeometry& MyGeometry, const FKe
 	const FKey Tasto = InKeyEvent.GetKey();
 	if ((Tasto == EKeys::Escape || Tasto == EKeys::Gamepad_FaceButton_Right) && !bInAttesa)
 	{
+		if (bRecupero && !bPrimoIngresso)
+		{
+			ScegliRecupero(false);
+			return FReply::Handled();
+		}
 		OnIndietro.ExecuteIfBound();
 		return FReply::Handled();
 	}
@@ -759,6 +879,126 @@ void SValdorsoAnticamera::SuInvio(const FText& Testo, ETextCommit::Type Tipo)
 	{
 		Invia();
 	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// I codici di recupero
+// ------------------------------------------------------------------------------------------------
+
+void SValdorsoCodiciRecupero::Construct(const FArguments& InArgs)
+{
+	Stile = MakeShared<FValdorsoStileAccesso>();
+	Codici = InArgs._Codici;
+	OnFatto = InArgs._OnFatto;
+
+	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(34.f, TEXT("Bold"));
+	FontTitolo.LetterSpacing = 50;
+	FSlateFontInfo FontCodice = Stile->Caratteri->Titolo(22.f, TEXT("Bold"));
+	FontCodice.LetterSpacing = 120;
+
+	// Due colonne di codici.
+	TSharedRef<SHorizontalBox> Colonne = SNew(SHorizontalBox);
+	for (int32 Colonna = 0; Colonna < 2; ++Colonna)
+	{
+		TSharedRef<SVerticalBox> Elenco = SNew(SVerticalBox);
+		for (int32 i = Colonna; i < Codici.Num(); i += 2)
+		{
+			Elenco->AddSlot().AutoHeight().Padding(FMargin(0.f, 5.f))
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(0.f, 0.f, 12.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text(FText::AsNumber(i + 1))
+					.Font(Stile->Caratteri->Testo(18.f))
+					.ColorAndOpacity(ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.7f))
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+				[
+					SNew(STextBlock).Text(FText::FromString(Codici[i])).Font(FontCodice).ColorAndOpacity(ValdorsoTema::Pergamena())
+				]
+			];
+		}
+		Colonne->AddSlot().AutoWidth().Padding(FMargin(Colonna == 0 ? 0.f : 46.f, 0.f, 0.f, 0.f)) [ Elenco ];
+	}
+
+	TSharedRef<SButton> PulsanteFatto = Stile->Pulsante(LOCTEXT("CodiciFatto", "Entra nella valle"),
+		FSimpleDelegate::CreateLambda([this]() { if (bScritti) { OnFatto.ExecuteIfBound(); } }), 22.f,
+		TAttribute<bool>::CreateLambda([this]() { return bScritti; }));
+
+	TSharedRef<SButton> Spunta = SNew(SButton)
+		.ButtonStyle(&FCoreStyle::Get(), "NoBorder")
+		.IsFocusable(true)
+		.OnClicked_Lambda([this]() { bScritti = !bScritti; return FReply::Handled(); })
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(2.f, 0.f, 10.f, 0.f))
+			[
+				Stile->Diamante(10.f, TAttribute<FSlateColor>::CreateLambda([this]()
+				{
+					return FSlateColor(bScritti ? ValdorsoTema::Brace() : ValdorsoTema::Oro().CopyWithNewOpacity(0.3f));
+				}))
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(STextBlock).Text(LOCTEXT("CodiciScritti", "Li ho scritti e li tengo in un posto sicuro"))
+				.Font(Stile->Caratteri->Testo(20.f)).ColorAndOpacity(ValdorsoTema::Pergamena())
+			]
+		];
+	Conferma = Spunta;
+
+	ChildSlot
+	[
+		SNew(SOverlay)
+		+ SOverlay::Slot() [ SNew(SImage).Image(&Stile->Pieno).ColorAndOpacity(ValdorsoTema::Fondo().CopyWithNewOpacity(0.92f)) ]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
+		[
+			SNew(SBorder)
+			.BorderImage(&Stile->SfondoPannello)
+			.Padding(FMargin(54.f, 40.f))
+			[
+				SNew(SBox).WidthOverride(640.f)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[
+						SNew(STextBlock).Text(LOCTEXT("CodiciTitolo", "I tuoi codici di recupero")).Font(FontTitolo).ColorAndOpacity(ValdorsoTema::Oro())
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 12.f, 0.f, 16.f))
+					[
+						Stile->Separatore(300.f)
+					]
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("CodiciSpiega", "Se un giorno dimentichi la password, con il tuo nome e uno di questi codici ne scegli una nuova. Ognuno vale una volta sola. Scrivili su carta e tienili al sicuro: dopo questa schermata non li vedrai più, e nessuno, nemmeno l'Amministratrice, li può rileggere."))
+						.Font(Stile->Caratteri->Testo(20.f, TEXT("Italic")))
+						.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+						.AutoWrapText(true)
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 22.f))
+					[
+						Colonne
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 0.f, 0.f, 18.f))
+					[
+						Stile->Pulsante(
+							TAttribute<FText>::CreateLambda([this]()
+							{
+								return bCopiati ? LOCTEXT("CodiciCopiati", "Copiati: incollali in un posto sicuro, poi copia altro") : LOCTEXT("CodiciCopia", "Copia i codici");
+							}),
+							FSimpleDelegate::CreateLambda([this]()
+							{
+								FPlatformApplicationMisc::ClipboardCopy(*FString::Join(Codici, LINE_TERMINATOR));
+								bCopiati = true;
+							}), 18.f)
+					]
+					+ SVerticalBox::Slot().AutoHeight() [ Spunta ]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(FMargin(0.f, 22.f, 0.f, 0.f)) [ PulsanteFatto ]
+				]
+			]
+		]
+	];
 }
 
 #undef LOCTEXT_NAMESPACE

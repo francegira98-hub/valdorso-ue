@@ -30,6 +30,15 @@ namespace ValdorsoRegole
 	/** Caratteri casuali di un codice d'invito (VALD-XXXX-XXXX-XXXX). */
 	inline constexpr int32 LunghezzaCodice = 12;
 
+	/**
+	 * Codici di recupero (v0.1.2): 8 per account, ognuno vale una volta, forma XXXX-XXXX-XXXX-XXXX con 16 caratteri
+	 * casuali senza quelli che si confondono (circa 79 bit: impossibili da indovinare). Il server tiene solo l'impronta
+	 * SHA-256 con un sale dell'account. Servono a scegliere una password nuova senza email.
+	 * Più avanti (roadmap) arriverà anche la registrazione con l'email: i codici resteranno come seconda strada.
+	 */
+	inline constexpr int32 NumeroCodiciRecupero = 8;
+	inline constexpr int32 LunghezzaCodiceRecupero = 16;
+
 	/** Nome dell'account: 3-20 caratteri, lettere, cifre, . - _; inizia con una lettera. */
 	VALDORSO_API bool NomeValido(const FString& Nome);
 
@@ -41,6 +50,15 @@ namespace ValdorsoRegole
 
 	/** Toglie trattini, spazi e "VALD" davanti; tutto maiuscolo. */
 	VALDORSO_API FString NormalizzaCodice(const FString& Codice);
+
+	/** Un codice di recupero come lo scrive il giocatore -> solo lettere e cifre, maiuscole (senza trattini e spazi). */
+	VALDORSO_API FString NormalizzaCodiceRecupero(const FString& Codice);
+
+	/** Il codice grezzo (16 caratteri) nella forma da mostrare: XXXX-XXXX-XXXX-XXXX. */
+	VALDORSO_API FString FormaCodiceRecupero(const FString& Grezzo);
+
+	/** L'impronta di un codice di recupero con il sale dell'account (esadecimale). */
+	VALDORSO_API FString ImprontaCodiceRecupero(const FString& Codice, const FString& Sale);
 
 	/** Quanto dura il blocco numero BlocchiDiFila (1 = il primo), in secondi. */
 	VALDORSO_API int64 DurataBlocco(int32 BlocchiDiFila);

@@ -75,6 +75,10 @@ void AValdorsoPlayerController::BeginPlay()
 			{
 				ServerRientra(Richiesta.Biglietto);
 			}
+			else if (Richiesta.Modo == EValdorsoModoAccesso::Recupero)
+			{
+				ServerRecupera(Richiesta.Nome, Richiesta.CodiceRecupero, Richiesta.Password);
+			}
 			else
 			{
 				ServerAccedi(Richiesta.Nome, Richiesta.Password);
@@ -182,7 +186,25 @@ void AValdorsoPlayerController::Accogli()
 
 bool AValdorsoPlayerController::CanRestartPlayer()
 {
-	return bAutenticato && Super::CanRestartPlayer();
+	return bAutenticato && !bAttendeCodici && Super::CanRestartPlayer();
+}
+
+void AValdorsoPlayerController::ServerCodiciScritti_Implementation()
+{
+	if (!bAttendeCodici || !bAutenticato)
+	{
+		return;
+	}
+	bAttendeCodici = false;
+	if (UValdorsoArchivista* Archivista = UValdorsoArchivista::Di(this))
+	{
+		Archivista->ConfermaCodiciRecupero(AccountId);
+	}
+	AGameModeBase* Modalita = GetWorld() ? GetWorld()->GetAuthGameMode() : nullptr;
+	if (Modalita && Modalita->PlayerCanRestart(this))
+	{
+		Modalita->RestartPlayer(this);
+	}
 }
 
 bool AValdorsoPlayerController::PuoChiedere(const FString& Nome, const FString& Segreto)
@@ -242,6 +264,29 @@ void AValdorsoPlayerController::ServerPrimoIngresso_Implementation(const FString
 	NomeAccount = Nome;
 	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
 	UValdorsoArchivista::Di(this)->CreaAccount(CodiceInvito, Nome, Password, Indirizzo(), [Debole](const FValdorsoEsitoAccount& Esito)
+	{
+		if (AValdorsoPlayerController* Controllore = Debole.Get())
+		{
+			Controllore->RispostaArchivista(Esito);
+		}
+	});
+}
+
+void AValdorsoPlayerController::ServerRecupera_Implementation(const FString& Nome, const FString& Codice, const FString& Nuova)
+{
+	if (Codice.Len() > 64)
+	{
+		Espelli(TEXT("Richiesta non valida."));
+		return;
+	}
+	if (!PuoChiedere(Nome, Nuova))
+	{
+		return;
+	}
+	bRichiestaInCorso = true;
+	NomeAccount = Nome;
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	UValdorsoArchivista::Di(this)->RecuperaConCodice(Nome, Codice, Nuova, Indirizzo(), [Debole](const FValdorsoEsitoAccount& Esito)
 	{
 		if (AValdorsoPlayerController* Controllore = Debole.Get())
 		{
@@ -347,6 +392,8 @@ void AValdorsoPlayerController::FaiEntrare(const FValdorsoEsitoAccount& Esito)
 
 	bAutenticato = true;
 	bDeveCambiarePassword = false;
+	// Codici di recupero nuovi: il personaggio nasce dopo che il giocatore li ha scritti.
+	bAttendeCodici = Esito.CodiciRecupero.Num() > 0;
 	AccountId = Esito.AccountId;
 	NomeAccount = Esito.Nome;
 	Ruolo = Esito.Ruolo;
@@ -413,6 +460,7 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 		}
 		Anticamera.Reset();
 	}
+	ChiudiCodiciRecupero();
 	if (GetWorld())
 	{
 		GetWorldTimerManager().ClearTimer(TimerAnticamera);
@@ -433,6 +481,10 @@ void AValdorsoPlayerController::ClientEsitoAccesso_Implementation(const FValdors
 		}
 		ChiudiAnticamera();
 		MostraSulloSchermo(Esito.Messaggio, FColor(232, 196, 120));
+		if (Esito.CodiciRecupero.Num() > 0)
+		{
+			MostraCodiciRecupero(Esito.CodiciRecupero);
+		}
 		break;
 
 	case EValdorsoEsitoAccount::OkDeveCambiarePassword:
@@ -493,6 +545,49 @@ void AValdorsoPlayerController::ChiudiAnticamera()
 	Anticamera.Reset();
 	SetInputMode(FInputModeGameOnly());
 	bShowMouseCursor = false;
+}
+
+void AValdorsoPlayerController::MostraCodiciRecupero(const TArray<FString>& Codici)
+{
+	ChiudiCodiciRecupero();
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	TSharedRef<SValdorsoCodiciRecupero> Schermata = SNew(SValdorsoCodiciRecupero)
+		.Codici(Codici)
+		.OnFatto(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ChiudiCodiciRecupero();
+				Controllore->ServerCodiciScritti();
+			}
+		}));
+	SchermataCodici = Schermata;
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->AddViewportWidgetContent(Schermata, 60);
+	}
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(Schermata->PulsanteIniziale());
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+}
+
+void AValdorsoPlayerController::ChiudiCodiciRecupero()
+{
+	if (!SchermataCodici.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(SchermataCodici.ToSharedRef());
+	}
+	SchermataCodici.Reset();
+	if (IsLocalController() && !IsActorBeingDestroyed())
+	{
+		SetInputMode(FInputModeGameOnly());
+		bShowMouseCursor = false;
+	}
 }
 
 void AValdorsoPlayerController::ClientBiglietto_Implementation(const FString& Biglietto, const FString& Nome)

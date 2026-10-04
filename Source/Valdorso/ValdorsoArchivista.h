@@ -141,6 +141,23 @@ struct FValdorsoAccount
 	UPROPERTY()
 	FString InvitatoDa;
 
+	/** Codici di recupero: le impronte di quelli non ancora usati, il sale e quando sono stati creati. */
+	UPROPERTY()
+	TArray<FString> CodiciRecupero;
+
+	UPROPERTY()
+	FString SaleRecupero;
+
+	UPROPERTY()
+	int64 CodiciCreatiIl = 0;
+
+	/** Predisposti per la registrazione con l'email (roadmap): per ora restano vuoti. */
+	UPROPERTY()
+	FString Email;
+
+	UPROPERTY()
+	bool bEmailVerificata = false;
+
 	/** Gli Id dei personaggi (fino a 3, passo 3 della v0.1.2). */
 	UPROPERTY()
 	TArray<FString> Personaggi;
@@ -221,6 +238,14 @@ struct FValdorsoEsitoAccount
 	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Account")
 	EValdorsoRuolo Ruolo = EValdorsoRuolo::Giocatore;
 
+	/** Solo quando ne nascono di nuovi (primo ingresso, account senza codici, codici finiti): da mostrare una volta. */
+	UPROPERTY()
+	TArray<FString> CodiciRecupero;
+
+	/** Quanti codici di recupero restano (dopo un recupero), -1 se non serve dirlo. */
+	UPROPERTY()
+	int32 CodiciRimasti = -1;
+
 	bool Riuscito() const
 	{
 		return Esito == EValdorsoEsitoAccount::Ok || Esito == EValdorsoEsitoAccount::OkDeveCambiarePassword;
@@ -249,6 +274,16 @@ public:
 
 	/** Accesso con nome e password. */
 	void Accedi(const FString& Nome, const FString& Password, const FString& Indirizzo, FRisposta Risposta);
+
+	/**
+	 * Il giocatore ha scritto i codici di recupero appena mostrati: da adesso valgono (e si salvano).
+	 * Finché non conferma restano in attesa, solo in memoria: se il collegamento cade prima, al prossimo accesso
+	 * ne riceve di nuovi (così non succede mai di avere codici salvati che nessuno ha visto).
+	 */
+	void ConfermaCodiciRecupero(const FString& AccountId);
+
+	/** Password dimenticata: nome, un codice di recupero e la password nuova. Il codice si consuma. */
+	void RecuperaConCodice(const FString& Nome, const FString& Codice, const FString& Nuova, const FString& Indirizzo, FRisposta Risposta);
 
 	/** Cambio della password (anche quella temporanea dopo un reset). */
 	void CambiaPassword(const FString& Nome, const FString& Attuale, const FString& Nuova, const FString& Indirizzo, FRisposta Risposta);
@@ -343,6 +378,17 @@ private:
 	bool IndirizzoBloccato(const FString& Indirizzo, int64 Ora, int64& OutSecondiRimasti) const;
 	void ErroreDaIndirizzo(const FString& Indirizzo, int64 Ora);
 	void ErroreSullAccount(FValdorsoAccount& Dati, const FString& Indirizzo, int64 Ora);
+
+	/** 8 codici nuovi per l'account, in attesa di conferma: restituisce i codici da mostrare, nella forma XXXX-XXXX-XXXX-XXXX. */
+	TArray<FString> CreaCodiciRecupero(const FValdorsoAccount& Dati);
+
+	/** Codici mostrati e non ancora confermati: account -> sale e impronte. */
+	struct FCodiciInAttesa
+	{
+		FString Sale;
+		TArray<FString> Impronte;
+	};
+	TMap<FString, FCodiciInAttesa> CodiciInAttesa;
 
 	FValdorsoInvito* TrovaInvitoValido(const FString& ImprontaCodice, int64 Ora);
 	FValdorsoAccount* TrovaAccount(const FString& Nome);
