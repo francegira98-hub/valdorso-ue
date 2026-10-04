@@ -505,6 +505,48 @@ void AValdorsoPlayerController::ServerCancellaPersonaggio_Implementation(const F
 	InviaSceltaPersonaggio(Problema.IsEmpty() ? FString(TEXT("Il personaggio è stato cancellato.")) : Problema, !Problema.IsEmpty());
 }
 
+void AValdorsoPlayerController::ServerChiediRegistro_Implementation(const FString& IdRegistro)
+{
+	if (IdRegistro.Len() > 64 || !PuoChiederePersonaggi())
+	{
+		return;
+	}
+	const FValdorsoPersonaggio* Dati = UValdorsoArchivista::Di(this)->TrovaPersonaggio(AccountId, IdRegistro);
+	if (!Dati)
+	{
+		InviaSceltaPersonaggio(TEXT("Questo personaggio non c'è più."), true);
+		return;
+	}
+	ClientRegistro(Dati->Id, Dati->Nome, Dati->Registro);
+}
+
+void AValdorsoPlayerController::ServerSalvaRegistro_Implementation(const FString& IdRegistro, const FValdorsoRegistro& Proposto, bool bFirma)
+{
+	if (IdRegistro.Len() > 64 || !bAutenticato || bPersonaggioScelto || bAttendeCodici || !UValdorsoArchivista::Di(this))
+	{
+		return;
+	}
+	if (++RichiesteRegistro > 300)
+	{
+		Espelli(TEXT("Troppe richieste: ricollegati."));
+		return;
+	}
+	FValdorsoRegistro Salvato;
+	const FString Errore = UValdorsoArchivista::Di(this)->SalvaRegistro(AccountId, IdRegistro, Proposto, bFirma, Salvato);
+	ClientEsitoRegistro(IdRegistro, Errore, Errore.IsEmpty(), Salvato);
+}
+
+void AValdorsoPlayerController::ClientRegistro_Implementation(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Registro)
+{
+	// La schermata del Registro arriva al passo 4.2; per ora si scrive nel registro di Unreal.
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro di %s: %s"), *NomePersonaggio, Registro.bFirmato ? TEXT("firmato") : TEXT("da compilare"));
+}
+
+void AValdorsoPlayerController::ClientEsitoRegistro_Implementation(const FString& IdRegistro, const FString& Messaggio, bool bRiuscito, const FValdorsoRegistro& Salvato)
+{
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro: %s"), bRiuscito ? (Salvato.bFirmato ? TEXT("firmato") : TEXT("bozza salvata")) : *Messaggio);
+}
+
 void AValdorsoPlayerController::FaiNascere(const FString& Id)
 {
 	UValdorsoArchivista* Archivista = UValdorsoArchivista::Di(this);

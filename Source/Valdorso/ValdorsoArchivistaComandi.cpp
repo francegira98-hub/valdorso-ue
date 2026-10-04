@@ -16,10 +16,12 @@
 //   Valdorso.Account.Nota <nome> <testo>          nota dello staff, i giocatori non la vedono
 //   Valdorso.Account.Cancella <nome> <nome>       cancella l'account per sempre (il nome due volte, per conferma)
 //   Valdorso.Account.Personaggi <nome>            i personaggi dell'account
+//   Valdorso.Personaggio.Registro <nome>          il Registro di Val d'Orso di un personaggio (risposte, racconto, storia)
 // Solo nelle versioni di sviluppo (mai nel gioco pubblicato), per provare senza schermata:
 //   Valdorso.Prova.Crea <codice> <nome> <password>
 //   Valdorso.Prova.Entra <nome> <password>
 //   Valdorso.Prova.Cambia <nome> <attuale> <nuova>
+//   Valdorso.Prova.FirmaRegistro <personaggio>    risposte a caso e firma (per provare il passo 4.1 senza schermata)
 // Attenzione: la console ricorda i comandi scritti, quindi nei comandi di prova si usano solo password di prova.
 
 #include "ValdorsoArchivista.h"
@@ -230,6 +232,14 @@ namespace
 		}
 	}
 
+	void PersonaggioRegistro(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
+	{
+		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Personaggio.Registro <nome del personaggio>"), Uscita))
+		{
+			Scrivi(Uscita, A->RegistroTesto(Unisci(Argomenti, 0)));
+		}
+	}
+
 	void AccountPersonaggi(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
 	{
 		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Account.Personaggi <nome>"), Uscita))
@@ -282,6 +292,9 @@ namespace
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountCancella(TEXT("Valdorso.Account.Cancella"),
 		TEXT("Cancella un account per sempre. Valdorso.Account.Cancella <nome> <nome di nuovo>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountCancella));
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoPersonaggioRegistro(TEXT("Valdorso.Personaggio.Registro"),
+		TEXT("Il Registro di Val d'Orso di un personaggio. Valdorso.Personaggio.Registro <nome>"),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&PersonaggioRegistro));
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountPersonaggi(TEXT("Valdorso.Account.Personaggi"),
 		TEXT("I personaggi di un account. Valdorso.Account.Personaggi <nome>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountPersonaggi));
@@ -329,6 +342,28 @@ namespace
 		}
 	}
 
+	void ProvaFirmaRegistro(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
+	{
+		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Prova.FirmaRegistro <nome del personaggio>"), Uscita))
+		{
+			const FValdorsoPersonaggio* Dati = A->PersonaggioPerNome(Unisci(Argomenti, 0));
+			if (!Dati)
+			{
+				Uscita.Log(TEXT("Nessun personaggio con questo nome."));
+				return;
+			}
+			FValdorsoRegistro Proposto = Dati->Registro;
+			FRandomStream Dadi(static_cast<int32>(FPlatformTime::Cycles()));
+			ValdorsoRegistro::Casuale(Proposto, Dadi, false);
+			FValdorsoRegistro Salvato;
+			const FString Errore = A->SalvaRegistro(Dati->AccountId, Dati->Id, Proposto, true, Salvato);
+			Scrivi(Uscita, Errore.IsEmpty() ? A->RegistroTesto(Unisci(Argomenti, 0)) : Errore);
+		}
+	}
+
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoProvaFirmaRegistro(TEXT("Valdorso.Prova.FirmaRegistro"),
+		TEXT("Solo sviluppo. Risposte a caso e firma. Valdorso.Prova.FirmaRegistro <nome del personaggio>"),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&ProvaFirmaRegistro));
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoProvaCrea(TEXT("Valdorso.Prova.Crea"),
 		TEXT("Solo sviluppo. Valdorso.Prova.Crea <codice> <nome> <password>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&ProvaCrea));

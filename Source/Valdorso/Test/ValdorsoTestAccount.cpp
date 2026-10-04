@@ -14,6 +14,7 @@
 #include "ValdorsoSicurezza.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoArchivista.h"
+#include "ValdorsoRegistro.h"
 #include "Engine/GameInstance.h"
 #include "HAL/FileManager.h"
 #include "Misc/Guid.h"
@@ -432,6 +433,73 @@ bool FValdorsoTestNomiPersonaggi::RunTest(const FString& Parameters)
 	TestEqual(TEXT("maiuscole e apostrofi"), ValdorsoRegole::ScheletroNome(TEXT("Gaspare d'Orso")), ValdorsoRegole::ScheletroNome(TEXT("GASPARE DORSO")));
 	TestNotEqual(TEXT("nomi diversi restano diversi"), ValdorsoRegole::ScheletroNome(TEXT("Aldo")), ValdorsoRegole::ScheletroNome(TEXT("Alda")));
 	TestEqual(TEXT("3 personaggi per account"), ValdorsoRegole::PersonaggiPerAccount, 3);
+	return true;
+}
+
+// ------------------------------------------------------------------------------------------------
+// Il Registro di Val d'Orso
+// ------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestRegistro, "Valdorso.Registro.Risposte", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestRegistro::RunTest(const FString& Parameters)
+{
+	using ValdorsoRegistro::EDomanda;
+
+	// Il catalogo: ogni domanda ha almeno due risposte, con chiavi diverse.
+	for (int32 i = 0; i < static_cast<int32>(EDomanda::Numero); ++i)
+	{
+		const EDomanda Quale = static_cast<EDomanda>(i);
+		TSet<FString> Chiavi;
+		for (const FValdorsoVoceRegistro& Voce : ValdorsoRegistro::Voci(Quale))
+		{
+			Chiavi.Add(Voce.Chiave);
+		}
+		TestTrue(FString(TEXT("almeno due risposte: ")) + ValdorsoRegistro::Domanda(Quale), Chiavi.Num() >= 2);
+		TestEqual(FString(TEXT("chiavi diverse: ")) + ValdorsoRegistro::Domanda(Quale), Chiavi.Num(), ValdorsoRegistro::Voci(Quale).Num());
+	}
+
+	// La bozza vuota va bene; la firma no.
+	FValdorsoRegistro Vuoto;
+	TestTrue(TEXT("bozza vuota"), ValdorsoRegistro::Problema(Vuoto, false).IsEmpty());
+	TestFalse(TEXT("firma senza risposte"), ValdorsoRegistro::Problema(Vuoto, true).IsEmpty());
+
+	// I dadi del destino riempiono tutto con risposte valide.
+	FValdorsoRegistro Pieno;
+	FRandomStream Dadi(312);
+	ValdorsoRegistro::Casuale(Pieno, Dadi, true);
+	TestTrue(TEXT("a caso: tutto valido per la firma"), ValdorsoRegistro::Problema(Pieno, true).IsEmpty());
+
+	// Risposte sbagliate.
+	FValdorsoRegistro Sbagliato = Pieno;
+	Sbagliato.Fede = TEXT("ilsussurro");
+	TestFalse(TEXT("una fede che non c'è"), ValdorsoRegistro::Problema(Sbagliato, false).IsEmpty());
+	Sbagliato = Pieno;
+	Sbagliato.Eta = 12;
+	TestFalse(TEXT("12 anni"), ValdorsoRegistro::Problema(Sbagliato, true).IsEmpty());
+	Sbagliato = Pieno;
+	Sbagliato.Storia = TEXT("Sono venuto per fare lo stronzo con tutti.");
+	TestFalse(TEXT("insulto nella storia"), ValdorsoRegistro::Problema(Sbagliato, true).IsEmpty());
+	Sbagliato.Storia = TEXT("Visitate www.esempio.it");
+	TestFalse(TEXT("indirizzo web nella storia"), ValdorsoRegistro::Problema(Sbagliato, true).IsEmpty());
+	Sbagliato.Storia = TEXT("Mio padre forgiava spade a Torre Grigia; io ho imparato a tacere.");
+	TestTrue(TEXT("storia buona"), ValdorsoRegistro::Problema(Sbagliato, true).IsEmpty());
+
+	// Il racconto del sacerdote, al maschile e al femminile.
+	FValdorsoRegistro Lui = Pieno;
+	Lui.Sesso = TEXT("uomo");
+	Lui.Origine = TEXT("sud");
+	Lui.Mestiere = TEXT("cacciatore");
+	Lui.Ricordo = TEXT("anello");
+	const FString RaccontoLui = ValdorsoRegistro::ComponiRacconto(Lui, TEXT("Aldo"));
+	TestTrue(TEXT("il racconto ha il nome"), RaccontoLui.Contains(TEXT("Aldo")));
+	TestTrue(TEXT("al maschile"), RaccontoLui.Contains(TEXT("figlio delle campagne del sud")) && RaccontoLui.Contains(TEXT("stato cacciatore")));
+	TestTrue(TEXT("il ricordo con 'sua madre'"), RaccontoLui.Contains(TEXT("l'anello di sua madre")));
+	TestTrue(TEXT("finisce con il Cuore"), RaccontoLui.EndsWith(TEXT("Il Cuore batte ancora.")));
+	FValdorsoRegistro Lei = Lui;
+	Lei.Sesso = TEXT("donna");
+	const FString RaccontoLei = ValdorsoRegistro::ComponiRacconto(Lei, TEXT("Livia"));
+	TestTrue(TEXT("al femminile"), RaccontoLei.Contains(TEXT("figlia delle campagne del sud")) && RaccontoLei.Contains(TEXT("stata cacciatrice")));
+	TestTrue(TEXT("il racconto si può firmare"), ValdorsoRegole::ProblemaTestoLibero(RaccontoLei, ValdorsoRegistro::MassimoRacconto).IsEmpty());
 	return true;
 }
 

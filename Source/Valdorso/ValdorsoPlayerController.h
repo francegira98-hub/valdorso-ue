@@ -79,6 +79,22 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientSceltaPersonaggio(const TArray<FValdorsoPersonaggioBreve>& Elenco, const FString& Messaggio, bool bErrore);
 
+	// --- Il Registro di Val d'Orso (v0.1.2, passo 4) -------------------------------------------------
+
+	/** Il registro di un proprio personaggio (per aprirlo, anche a metà). */
+	UFUNCTION(Server, Reliable)
+	void ServerChiediRegistro(const FString& IdRegistro);
+
+	/** Salva le risposte (bozza) o, con bFirma, firma il registro. */
+	UFUNCTION(Server, Reliable)
+	void ServerSalvaRegistro(const FString& IdRegistro, const FValdorsoRegistro& Proposto, bool bFirma);
+
+	UFUNCTION(Client, Reliable)
+	void ClientRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Registro);
+
+	UFUNCTION(Client, Reliable)
+	void ClientEsitoRegistro(const FString& IdRegistro, const FString& Messaggio, bool bRiuscito, const FValdorsoRegistro& Salvato);
+
 	/** Il personaggio sta nascendo: via la scelta. */
 	UFUNCTION(Client, Reliable)
 	void ClientPersonaggioScelto(const FString& Nome);
@@ -167,6 +183,8 @@ private:
 	/** Server: entrato con il biglietto del rientro (torna con l'ultimo personaggio, senza scelta). */
 	bool bRientro = false;
 	int32 RichiestePersonaggi = 0;
+	/** Le bozze del registro si salvano spesso (una per pagina): hanno il loro conto. */
+	int32 RichiesteRegistro = 0;
 	double UltimoSalvataggio = 0.0;
 	FTimerHandle TimerSalvataggio;
 

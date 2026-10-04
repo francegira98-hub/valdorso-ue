@@ -170,6 +170,12 @@ namespace ValdorsoRegole
 			TEXT("ritardat"), TEXT("mongoioid")
 		};
 
+		/** Parole vere che contengono una parola vietata: nei testi liberi si lasciano passare. */
+		const TCHAR* const ParoleAmmesse[] = {
+			TEXT("cazzuoia"), TEXT("cazzuoie"), TEXT("finocchio"), TEXT("finocchi"),
+			TEXT("ritardato"), TEXT("ritardata"), TEXT("ritardati"), TEXT("ritardate")
+		};
+
 		/** Parole dello staff: nessun personaggio può fingersi staff. */
 		const TCHAR* const ParoleStaff[] = {
 			TEXT("admin"), TEXT("amministrat"), TEXT("moderat"), TEXT("staff"), TEXT("narrator"), TEXT("sistema"),
@@ -225,7 +231,7 @@ namespace ValdorsoRegole
 		return Base;
 	}
 
-	bool ContieneParolaVietata(const FString& Scheletro)
+	bool ContieneInsulto(const FString& Scheletro)
 	{
 		for (const TCHAR* Parola : ParoleVietate)
 		{
@@ -233,6 +239,58 @@ namespace ValdorsoRegole
 			{
 				return true;
 			}
+		}
+		return false;
+	}
+
+	FString ProblemaTestoLibero(const FString& Testo, int32 Massimo)
+	{
+		if (Testo.Len() > Massimo)
+		{
+			return FString::Printf(TEXT("Il testo è troppo lungo: al massimo %d caratteri."), Massimo);
+		}
+		const FString Minuscolo = Testo.ToLower();
+		if (Minuscolo.Contains(TEXT("http")) || Minuscolo.Contains(TEXT("www.")))
+		{
+			return TEXT("Nel registro non si scrivono indirizzi web.");
+		}
+		// Parola per parola (le parole sono le sequenze di lettere e cifre).
+		FString Parola;
+		auto Controlla = [&Parola]()
+		{
+			const FString Ossa = ScheletroNome(Parola);
+			bool bAmmessa = false;
+			for (const TCHAR* Ammessa : ParoleAmmesse)
+			{
+				bAmmessa |= Ossa == Ammessa;
+			}
+			const bool bInsulto = !Parola.IsEmpty() && !bAmmessa && ContieneInsulto(Ossa);
+			Parola.Reset();
+			return bInsulto;
+		};
+		for (const TCHAR C : Testo)
+		{
+			if (FChar::IsAlnum(C) || C >= 0x00C0)
+			{
+				Parola.AppendChar(C);
+			}
+			else if (Controlla())
+			{
+				return TEXT("Nel testo c'è una parola che non si può usare nella valle.");
+			}
+		}
+		if (Controlla())
+		{
+			return TEXT("Nel testo c'è una parola che non si può usare nella valle.");
+		}
+		return FString();
+	}
+
+	bool ContieneParolaVietata(const FString& Scheletro)
+	{
+		if (ContieneInsulto(Scheletro))
+		{
+			return true;
 		}
 		for (const TCHAR* Parola : ParoleStaff)
 		{

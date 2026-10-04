@@ -66,6 +66,15 @@ namespace ValdorsoRegole
 	 */
 	VALDORSO_API FString ScheletroNome(const FString& Nome);
 
+	/** Vero se lo scheletro contiene un insulto (senza le parole dello staff: per i testi liberi). */
+	VALDORSO_API bool ContieneInsulto(const FString& Scheletro);
+
+	/**
+	 * Un testo libero scritto dal giocatore (La tua storia, il racconto ritoccato): vuoto se va bene, altrimenti il motivo.
+	 * Lunghezza massima, niente insulti (parola per parola, anche con lettere scambiate), niente indirizzi web.
+	 */
+	VALDORSO_API FString ProblemaTestoLibero(const FString& Testo, int32 Massimo);
+
 	/** Vero se lo scheletro contiene una parola vietata (insulti) o una parola dello staff. */
 	VALDORSO_API bool ContieneParolaVietata(const FString& Scheletro);
 

@@ -263,6 +263,11 @@ void UValdorsoArchivista::CaricaTutto()
 			continue;
 		}
 		NomiPersonaggi.Add(Scheletro, Dati.Id);
+		if (Dati.VersioneSchema < 2)
+		{
+			// Versione 1 (passo 3): il registro non c'era; resta vuoto e si compila al primo ingresso.
+			Dati.VersioneSchema = 2;
+		}
 		Personaggi.Add(Dati.Id, MoveTemp(Dati));
 	}
 	if (IFileManager::Get().FileExists(*FileNomiRiservati) && !LeggiFile(FileNomiRiservati, NomiRiservati))
@@ -1752,6 +1757,7 @@ TArray<FValdorsoPersonaggioBreve> UValdorsoArchivista::ElencoPersonaggi(const FS
 			Breve.Nome = Dati->Nome;
 			Breve.UltimoGioco = Dati->UltimoGioco;
 			Breve.TempoDiGioco = Dati->TempoDiGioco;
+			Breve.bRegistroFirmato = Dati->Registro.bFirmato;
 			Elenco.Add(Breve);
 		}
 	}
@@ -1898,3 +1904,80 @@ FString UValdorsoArchivista::ElencoPersonaggiTesto(const FString& NomeAccount) c
 	}
 	return Testo;
 }
+
+// ------------------------------------------------------------------------------------------------
+// Il Registro di Val d'Orso (v0.1.2, passo 4.1)
+// ------------------------------------------------------------------------------------------------
+
+FString UValdorsoArchivista::SalvaRegistro(const FString& AccountId, const FString& PersonaggioId, const FValdorsoRegistro& Proposto, bool bFirma, FValdorsoRegistro& OutSalvato)
+{
+	check(IsInGameThread());
+	FValdorsoPersonaggio* Dati = TrovaPersonaggio(AccountId, PersonaggioId);
+	if (!Dati)
+	{
+		return TEXT("Personaggio non trovato.");
+	}
+	OutSalvato = Dati->Registro;
+	if (Dati->Registro.bFirmato)
+	{
+		return TEXT("Il registro di questo personaggio è già firmato.");
+	}
+
+	// Si prendono solo le risposte: firma e data le decide il server.
+	FValdorsoRegistro Nuovo = Proposto;
+	Nuovo.bFirmato = false;
+	Nuovo.FirmatoIl = 0;
+	Nuovo.Racconto = Nuovo.Racconto.TrimStartAndEnd();
+	Nuovo.Storia = Nuovo.Storia.TrimStartAndEnd();
+	if (bFirma && Nuovo.Racconto.IsEmpty())
+	{
+		Nuovo.Racconto = ValdorsoRegistro::ComponiRacconto(Nuovo, Dati->Nome);
+	}
+	const FString Errore = ValdorsoRegistro::Problema(Nuovo, bFirma);
+	if (!Errore.IsEmpty())
+	{
+		return Errore;
+	}
+	if (bFirma)
+	{
+		Nuovo.bFirmato = true;
+		Nuovo.FirmatoIl = Adesso();
+	}
+	Dati->Registro = Nuovo;
+	SalvaPersonaggio(*Dati, false);
+	if (bFirma)
+	{
+		Annota(FString::Printf(TEXT("REGISTRO_FIRMATO | %s"), *Dati->Nome));
+	}
+	OutSalvato = Dati->Registro;
+	return FString();
+}
+
+FValdorsoPersonaggio* UValdorsoArchivista::PersonaggioPerNome(const FString& Nome)
+{
+	const FString* Id = NomiPersonaggi.Find(ValdorsoRegole::ScheletroNome(Nome));
+	return Id ? Personaggi.Find(*Id) : nullptr;
+}
+
+FString UValdorsoArchivista::RegistroTesto(const FString& NomePersonaggio)
+{
+	const FValdorsoPersonaggio* Dati = PersonaggioPerNome(NomePersonaggio);
+	if (!Dati)
+	{
+		return FString::Printf(TEXT("Nessun personaggio di nome %s."), *NomePersonaggio);
+	}
+	const FValdorsoRegistro& R = Dati->Registro;
+	FString Righe = FString::Printf(TEXT("%s | registro %s\n"), *Dati->Nome,
+		R.bFirmato ? *FString::Printf(TEXT("firmato il %s"), *Data(R.FirmatoIl)) : TEXT("non ancora firmato"));
+	Righe += FString::Printf(TEXT("  Età: %d\n"), R.Eta);
+	for (int32 i = 0; i < static_cast<int32>(ValdorsoRegistro::EDomanda::Numero); ++i)
+	{
+		const ValdorsoRegistro::EDomanda Quale = static_cast<ValdorsoRegistro::EDomanda>(i);
+		const FString Scelta = ValdorsoRegistro::Testo(Quale, ValdorsoRegistro::Risposta(R, Quale), R.Sesso);
+		Righe += FString::Printf(TEXT("  %s %s\n"), ValdorsoRegistro::Domanda(Quale), Scelta.IsEmpty() ? TEXT("-") : *Scelta);
+	}
+	Righe += TEXT("  Racconto: ") + (R.Racconto.IsEmpty() ? FString(TEXT("-")) : R.Racconto) + TEXT("\n");
+	Righe += TEXT("  La sua storia: ") + (R.Storia.IsEmpty() ? FString(TEXT("-")) : R.Storia) + TEXT("\n");
+	return Righe;
+}
+

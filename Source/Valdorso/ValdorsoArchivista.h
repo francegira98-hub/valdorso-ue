@@ -23,6 +23,7 @@
 #include "Tasks/Pipe.h"
 #include "Tasks/Task.h"
 #include "Containers/Ticker.h"
+#include "ValdorsoRegistro.h"
 #include "ValdorsoArchivista.generated.h"
 
 UENUM(BlueprintType)
@@ -173,8 +174,8 @@ struct FValdorsoAccount
 
 /**
  * Un personaggio, così come sta nel suo file (Saved/Server/Archivio/Personaggi/<Id>.json).
- * Passo 3 della v0.1.2: nome, luogo e statistiche. Il Registro di Val d'Orso (passo 4) aggiungerà aspetto,
- * fede, età e le risposte al sacerdote: i campi nuovi arriveranno con VersioneSchema 2.
+ * Passo 3 della v0.1.2: nome, luogo e statistiche. Versione 2 (passo 4.1, 05/10): il Registro di Val d'Orso.
+ * I file della versione 1 si leggono uguali (il registro resta vuoto, da compilare al primo ingresso).
  */
 USTRUCT()
 struct FValdorsoPersonaggio
@@ -182,7 +183,7 @@ struct FValdorsoPersonaggio
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 VersioneSchema = 1;
+	int32 VersioneSchema = 2;
 
 	UPROPERTY()
 	int64 Versione = 0;
@@ -228,6 +229,10 @@ struct FValdorsoPersonaggio
 
 	UPROPERTY()
 	float Mana = -1.f;
+
+	/** Il Registro di Val d'Orso (versione 2). */
+	UPROPERTY()
+	FValdorsoRegistro Registro;
 };
 
 /** Quello che il giocatore vede nella scelta del personaggio (viaggia dal server al client). */
@@ -247,6 +252,10 @@ struct FValdorsoPersonaggioBreve
 
 	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
 	int64 TempoDiGioco = 0;
+
+	/** Falso finché il registro non è firmato (allora Entra apre il Registro). */
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	bool bRegistroFirmato = false;
 };
 
 /** Un nome di personaggio cancellato, riservato fino a una data. */
@@ -453,6 +462,18 @@ public:
 
 	/** Salva il personaggio (luogo, statistiche, tempo di gioco); se bGiocato, lo segna come ultimo giocato. */
 	void SalvaPersonaggio(FValdorsoPersonaggio& Dati, bool bGiocato = true);
+
+	/**
+	 * Il Registro di Val d'Orso: salva le risposte (bozza) o, con bFirma, le controlla tutte e firma.
+	 * Vuoto se riuscito (OutSalvato = il registro come è ora sul server), altrimenti il motivo.
+	 */
+	FString SalvaRegistro(const FString& AccountId, const FString& PersonaggioId, const FValdorsoRegistro& Proposto, bool bFirma, FValdorsoRegistro& OutSalvato);
+
+	/** Un personaggio per nome (per la console dello staff). */
+	FValdorsoPersonaggio* PersonaggioPerNome(const FString& Nome);
+
+	/** Per la console: il registro di un personaggio, con il racconto e la sua storia. */
+	FString RegistroTesto(const FString& NomePersonaggio);
 
 	/** L'ultimo personaggio giocato dall'account (vuoto se nessuno o non esiste più). */
 	FString UltimoPersonaggio(const FString& AccountId) const;
