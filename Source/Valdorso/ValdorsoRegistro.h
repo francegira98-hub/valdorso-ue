@@ -1,4 +1,4 @@
-// Valdorso - Il Registro di Val d'Orso: le risposte del nuovo colono (v0.1.2, passo 4.1). Scritto da Claude il 05/10/2026.
+// Valdorso - Il Registro di Val d'Orso: le risposte del nuovo colono (v0.1.2, passo 4.1; aiuti per la schermata al 4.2a). Scritto da Claude il 05/10/2026.
 //
 // Il sacerdote scrive il colono nel registro: sesso, età, fede, da dove viene, cosa faceva, perché è venuto,
 // cosa porta con sé, cosa teme, com'è il suo carattere, se ha sentito il richiamo della magia; poi compone un breve
@@ -120,4 +120,13 @@ namespace ValdorsoRegistro
 
 	/** I dadi del destino: riempie le risposte vuote (o tutte, se bTutte) a caso. */
 	VALDORSO_API void Casuale(FValdorsoRegistro& Registro, FRandomStream& Dadi, bool bTutte);
+
+	/** I dadi del destino per una sola domanda (passo 4.2a): una risposta a caso, diversa da quella di prima se si può. */
+	VALDORSO_API void CasualeUna(FValdorsoRegistro& Registro, EDomanda Quale, FRandomStream& Dadi);
+
+	/** Vero se le due versioni hanno le stesse risposte, età, racconto e storia (per non salvare bozze uguali). */
+	VALDORSO_API bool StesseRisposte(const FValdorsoRegistro& A, const FValdorsoRegistro& B);
+
+	/** La prima domanda ancora senza risposta (l'età conta come Sesso, sulla stessa pagina); Numero se non manca niente. */
+	VALDORSO_API EDomanda PrimaMancante(const FValdorsoRegistro& Registro);
 }

@@ -503,4 +503,52 @@ bool FValdorsoTestRegistro::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Passo 4.2a (05/10): quello che serve alla schermata del Registro (dadi di una pagina, bozze, pagina da riaprire).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestRegistroPagine, "Valdorso.Registro.Pagine", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestRegistroPagine::RunTest(const FString& Parameters)
+{
+	using ValdorsoRegistro::EDomanda;
+
+	// Un registro nuovo riparte dalla prima pagina; senza l'età anche se il sesso c'è.
+	FValdorsoRegistro Nuovo;
+	TestTrue(TEXT("nuovo: si parte da Chi sei"), ValdorsoRegistro::PrimaMancante(Nuovo) == EDomanda::Sesso);
+	Nuovo.Sesso = TEXT("donna");
+	TestTrue(TEXT("senza età: ancora Chi sei"), ValdorsoRegistro::PrimaMancante(Nuovo) == EDomanda::Sesso);
+	Nuovo.Eta = 30;
+	TestTrue(TEXT("con sesso ed età: la fede"), ValdorsoRegistro::PrimaMancante(Nuovo) == EDomanda::Fede);
+
+	// Tutto riempito: non manca niente.
+	FValdorsoRegistro Pieno;
+	FRandomStream Dadi(2026);
+	ValdorsoRegistro::Casuale(Pieno, Dadi, true);
+	TestTrue(TEXT("pieno: non manca niente"), ValdorsoRegistro::PrimaMancante(Pieno) == EDomanda::Numero);
+	Pieno.Paura.Empty();
+	TestTrue(TEXT("manca la paura"), ValdorsoRegistro::PrimaMancante(Pieno) == EDomanda::Paura);
+
+	// I dadi di una pagina: sempre una risposta valida, e diversa da quella di prima.
+	for (int32 Giro = 0; Giro < 50; ++Giro)
+	{
+		const FString Prima = Pieno.Mestiere;
+		ValdorsoRegistro::CasualeUna(Pieno, EDomanda::Mestiere, Dadi);
+		TestFalse(TEXT("dadi: il mestiere cambia"), Pieno.Mestiere == Prima);
+		TestFalse(TEXT("dadi: un mestiere vero"), ValdorsoRegistro::Testo(EDomanda::Mestiere, Pieno.Mestiere, Pieno.Sesso).IsEmpty());
+		const FString PrimaOnesta = Pieno.Onesta;
+		ValdorsoRegistro::CasualeUna(Pieno, EDomanda::Onesta, Dadi);
+		TestFalse(TEXT("dadi: con due risposte si passa all'altra"), Pieno.Onesta == PrimaOnesta);
+	}
+
+	// Le bozze: uguali se le risposte sono uguali; diverse appena cambia una lettera della storia o l'età.
+	FValdorsoRegistro Copia = Pieno;
+	TestTrue(TEXT("bozze uguali"), ValdorsoRegistro::StesseRisposte(Pieno, Copia));
+	Copia.Storia = TEXT("Vengo dal lago.");
+	TestFalse(TEXT("storia diversa"), ValdorsoRegistro::StesseRisposte(Pieno, Copia));
+	Copia = Pieno;
+	Copia.Eta = Pieno.Eta + 1;
+	TestFalse(TEXT("età diversa"), ValdorsoRegistro::StesseRisposte(Pieno, Copia));
+	Copia = Pieno;
+	Copia.Fede = Pieno.Fede == TEXT("solara") ? TEXT("ignar") : TEXT("solara");
+	TestFalse(TEXT("fede diversa"), ValdorsoRegistro::StesseRisposte(Pieno, Copia));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

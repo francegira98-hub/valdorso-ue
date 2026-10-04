@@ -373,4 +373,53 @@ namespace ValdorsoRegistro
 			Registro.Eta = Dadi.RandRange(EtaMinima, 40);
 		}
 	}
+
+	void CasualeUna(FValdorsoRegistro& Registro, EDomanda Quale, FRandomStream& Dadi)
+	{
+		const TArrayView<const FValdorsoVoceRegistro> Possibili = Voci(Quale);
+		if (Possibili.Num() == 0)
+		{
+			return;
+		}
+		FString& Campo = Risposta(Registro, Quale);
+		int32 Scelto = Dadi.RandRange(0, Possibili.Num() - 1);
+		if (Possibili.Num() > 1 && Campo == Possibili[Scelto].Chiave)
+		{
+			// Rilanciare i dadi deve cambiare qualcosa.
+			Scelto = (Scelto + 1 + Dadi.RandRange(0, Possibili.Num() - 2)) % Possibili.Num();
+		}
+		Campo = Possibili[Scelto].Chiave;
+	}
+
+	bool StesseRisposte(const FValdorsoRegistro& A, const FValdorsoRegistro& B)
+	{
+		for (int32 i = 0; i < static_cast<int32>(EDomanda::Numero); ++i)
+		{
+			const EDomanda Quale = static_cast<EDomanda>(i);
+			if (!Risposta(A, Quale).Equals(Risposta(B, Quale), ESearchCase::CaseSensitive))
+			{
+				return false;
+			}
+		}
+		return A.Eta == B.Eta
+			&& A.Racconto.Equals(B.Racconto, ESearchCase::CaseSensitive)
+			&& A.Storia.Equals(B.Storia, ESearchCase::CaseSensitive);
+	}
+
+	EDomanda PrimaMancante(const FValdorsoRegistro& Registro)
+	{
+		if (Registro.Eta < EtaMinima || Registro.Eta > EtaMassima)
+		{
+			return EDomanda::Sesso;
+		}
+		for (int32 i = 0; i < static_cast<int32>(EDomanda::Numero); ++i)
+		{
+			const EDomanda Quale = static_cast<EDomanda>(i);
+			if (Risposta(Registro, Quale).IsEmpty())
+			{
+				return Quale;
+			}
+		}
+		return EDomanda::Numero;
+	}
 }

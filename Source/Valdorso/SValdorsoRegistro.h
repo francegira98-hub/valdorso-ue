@@ -1,0 +1,123 @@
+// Valdorso - Il Registro di Val d'Orso a schermo (v0.1.2, passo 4.2a), nello stile "Oro e brace".
+// Scritto da Claude il 05/10/2026.
+//
+// Il sacerdote scrive il nuovo colono nel registro: una pergamena a sinistra, una pagina per scelta, ognuna aperta
+// da una frase della storia del mondo. Pagine: Chi sei (sesso ed età), Fede, Da dove vieni, Cosa facevi, Perché sei
+// venuto, Cosa porti, Cosa temi, Il carattere, Il richiamo, Il racconto del sacerdote (ritoccabile), La tua storia
+// (facoltativa) e Firma il registro. I dadi del destino danno una risposta a caso alla pagina, o a tutto il registro.
+// A ogni cambio di pagina le risposte partono verso il server come bozza: se il gioco si chiude a metà, restano.
+// Dopo la firma, nel nero: "Il frammento batte più forte, per un istante. La valle ti ha sentito."
+//
+// La parte bella (palco con il ritratto, pergamena vera, calligrafia, suoni, ceralacca, luce) è il passo 4.2b:
+// per ora a destra c'è solo il frammento che batte.
+//
+// Tastiera e controller: frecce o croce per scegliere, Invio o A per confermare, Esc o B per tornare indietro,
+// Pagina su/giù o dorsali per cambiare pagina.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Widgets/SCompoundWidget.h"
+#include "Styling/SlateTypes.h"
+#include "ValdorsoRegistro.h"
+
+class FValdorsoStileAccesso;
+class SBox;
+class SButton;
+class SMultiLineEditableTextBox;
+
+DECLARE_DELEGATE_TwoParams(FValdorsoSuSalvaRegistro, const FValdorsoRegistro& /*Risposte*/, bool /*bFirma*/);
+
+class VALDORSO_API SValdorsoRegistroColono : public SCompoundWidget
+{
+public:
+	SLATE_BEGIN_ARGS(SValdorsoRegistroColono) {}
+		SLATE_ARGUMENT(FString, NomePersonaggio)
+		SLATE_ARGUMENT(FValdorsoRegistro, Registro)
+		/** Bozza (bFirma falso) o firma: la risposta del server arriva con Esito. */
+		SLATE_EVENT(FValdorsoSuSalvaRegistro, OnSalva)
+		/** Firmato e finita la dissolvenza: il personaggio può entrare. */
+		SLATE_EVENT(FSimpleDelegate, OnFirmato)
+		/** "Torna ai personaggi" (la bozza è già partita). */
+		SLATE_EVENT(FSimpleDelegate, OnTorna)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& InArgs);
+
+	/** La risposta del server a una bozza o alla firma. */
+	void Esito(const FString& Avviso, bool bRiuscito, const FValdorsoRegistro& Salvato);
+
+	/** Il widget a cui dare il fuoco. */
+	TSharedPtr<SWidget> FuocoIniziale() const;
+
+	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
+	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
+	virtual bool SupportsKeyboardFocus() const override { return true; }
+
+	/** Le pagine, nell'ordine. */
+	enum class EPagina : uint8
+	{
+		ChiSei, Fede, Origine, Mestiere, Motivo, Ricordo, Paura, Carattere, Richiamo, Racconto, Storia, Firma, Numero
+	};
+
+private:
+	void VaiA(EPagina Nuova);
+	void Avanti();
+	void Indietro();
+	void Torna();
+	void Ridisegna();
+	/** Manda la bozza se è cambiata; se un testo non va, non la manda e restituisce il motivo. */
+	FText SalvaBozza();
+	void Firma();
+	void TiraDadiPagina();
+	void TiraDadiTutto();
+	void AvviaFinale();
+	EActiveTimerReturnType FineFinale(double Ora, float Delta);
+
+	bool PaginaCompleta(EPagina Quale) const;
+	/** Il registro come partirebbe alla firma (con il racconto composto se è vuoto). */
+	FValdorsoRegistro PerLaFirma() const;
+	FText FrasePagina(EPagina Quale) const;
+	FText TitoloPagina(EPagina Quale) const;
+
+	TSharedRef<SWidget> ContenutoPagina();
+	TSharedRef<SWidget> Scelte(ValdorsoRegistro::EDomanda Quale, bool bCompatte);
+	TSharedRef<SWidget> PaginaChiSei();
+	TSharedRef<SWidget> PaginaCarattere();
+	TSharedRef<SWidget> PaginaTesto(bool bRacconto);
+	TSharedRef<SWidget> PaginaFirma();
+	TSharedRef<SButton> PulsanteVoce(const FText& Scritta, TFunction<bool()> Scelta, TFunction<void()> Azione, float Dimensione);
+	void CambiaEta(int32 Di);
+	void MostraMessaggio(const FText& Scritta, bool bComeErrore);
+
+	TSharedPtr<FValdorsoStileAccesso> Stile;
+	FButtonStyle StileVoce;
+	FButtonStyle StileVoceScelta;
+
+	FValdorsoSuSalvaRegistro OnSalva;
+	FSimpleDelegate OnFirmato;
+	FSimpleDelegate OnTorna;
+
+	FString Nome;
+	FValdorsoRegistro Bozza;
+	/** L'ultima bozza mandata al server (per non rimandare risposte uguali). */
+	FValdorsoRegistro Inviata;
+	bool bInviataValida = false;
+	/** Il giocatore ha ritoccato il racconto: non si riscrive da solo quando cambiano le risposte. */
+	bool bRaccontoToccato = false;
+
+	EPagina Pagina = EPagina::ChiSei;
+	TSharedPtr<SBox> Corpo;
+	TSharedPtr<SWidget> PrimoFuoco;
+	TSharedPtr<SWidget> PulsanteAvanti;
+	TSharedPtr<SMultiLineEditableTextBox> CampoTesto;
+	FRandomStream Dadi;
+
+	FText Messaggio;
+	bool bErrore = false;
+	bool bInFirma = false;
+	bool bFinale = false;
+	/** "Torna ai personaggi" è partito: tutto spento finché arriva l'elenco. */
+	bool bInUscita = false;
+	double InizioFinale = 0.0;
+};

@@ -11,6 +11,7 @@
 #include "ValdorsoGameInstance.h"
 #include "SValdorsoAccesso.h"
 #include "SValdorsoPersonaggi.h"
+#include "SValdorsoRegistro.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoAttributeSet.h"
 #include "AbilitySystemComponent.h"
@@ -493,6 +494,21 @@ void AValdorsoPlayerController::ServerCreaPersonaggio_Implementation(const FStri
 		return;
 	}
 	InviaSceltaPersonaggio(FString::Printf(TEXT("%s è scritto nel registro."), *ValdorsoRegole::NormalizzaNomePersonaggio(Nome)), false);
+
+	// Passo 4.2a: subito dopo il nome, il sacerdote apre il Registro di Val d'Orso.
+	if (const FValdorsoPersonaggio* Nuovo = UValdorsoArchivista::Di(this)->TrovaPersonaggio(AccountId, NuovoId))
+	{
+		ClientRegistro(Nuovo->Id, Nuovo->Nome, Nuovo->Registro);
+	}
+}
+
+void AValdorsoPlayerController::ServerTornaAllaScelta_Implementation()
+{
+	if (!PuoChiederePersonaggi())
+	{
+		return;
+	}
+	InviaSceltaPersonaggio();
 }
 
 void AValdorsoPlayerController::ServerCancellaPersonaggio_Implementation(const FString& Id, const FString& Conferma)
@@ -538,13 +554,17 @@ void AValdorsoPlayerController::ServerSalvaRegistro_Implementation(const FString
 
 void AValdorsoPlayerController::ClientRegistro_Implementation(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Registro)
 {
-	// La schermata del Registro arriva al passo 4.2; per ora si scrive nel registro di Unreal.
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro di %s: %s"), *NomePersonaggio, Registro.bFirmato ? TEXT("firmato") : TEXT("da compilare"));
+	MostraRegistro(IdRegistro, NomePersonaggio, Registro);
 }
 
 void AValdorsoPlayerController::ClientEsitoRegistro_Implementation(const FString& IdRegistro, const FString& Messaggio, bool bRiuscito, const FValdorsoRegistro& Salvato)
 {
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro: %s"), bRiuscito ? (Salvato.bFirmato ? TEXT("firmato") : TEXT("bozza salvata")) : *Messaggio);
+	if (SchermataRegistro.IsValid() && IdRegistro == RegistroAperto)
+	{
+		SchermataRegistro->Esito(Messaggio, bRiuscito, Salvato);
+	}
 }
 
 void AValdorsoPlayerController::FaiNascere(const FString& Id)
@@ -554,6 +574,13 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 	if (!Dati)
 	{
 		InviaSceltaPersonaggio(TEXT("Questo personaggio non c'è più."), true);
+		return;
+	}
+
+	// Passo 4.2a: si entra nella valle solo con il registro firmato (i personaggi di prima lo aprono ora).
+	if (!Dati->Registro.bFirmato)
+	{
+		ClientRegistro(Dati->Id, Dati->Nome, Dati->Registro);
 		return;
 	}
 
@@ -693,6 +720,7 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 		Anticamera.Reset();
 	}
 	ChiudiCodiciRecupero();
+	ChiudiRegistro();
 	ChiudiSceltaPersonaggio();
 	// Server che si spegne o cambia mappa: l'ultimo minuto non va perso.
 	SalvaPersonaggio();
@@ -829,6 +857,7 @@ void AValdorsoPlayerController::ChiudiCodiciRecupero()
 void AValdorsoPlayerController::ClientSceltaPersonaggio_Implementation(const TArray<FValdorsoPersonaggioBreve>& Elenco, const FString& Messaggio, bool bErrore)
 {
 	ChiudiAnticamera();
+	ChiudiRegistro();
 	MostraSceltaPersonaggio();
 	if (SceltaPersonaggio.IsValid())
 	{
@@ -842,6 +871,7 @@ void AValdorsoPlayerController::ClientSceltaPersonaggio_Implementation(const TAr
 
 void AValdorsoPlayerController::ClientPersonaggioScelto_Implementation(const FString& Nome)
 {
+	ChiudiRegistro();
 	ChiudiSceltaPersonaggio();
 	SetInputMode(FInputModeGameOnly());
 	bShowMouseCursor = false;
@@ -909,6 +939,66 @@ void AValdorsoPlayerController::ChiudiSceltaPersonaggio()
 		Viewport->RemoveViewportWidgetContent(SceltaPersonaggio.ToSharedRef());
 	}
 	SceltaPersonaggio.Reset();
+}
+
+void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Risposte)
+{
+	// Un registro già firmato non si riapre per scriverci (una vista in sola lettura arriverà con l'esame del personaggio).
+	if (Risposte.bFirmato)
+	{
+		return;
+	}
+	ChiudiRegistro();
+	ChiudiAnticamera();
+	RegistroAperto = IdRegistro;
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	SAssignNew(SchermataRegistro, SValdorsoRegistroColono)
+		.NomePersonaggio(NomePersonaggio)
+		.Registro(Risposte)
+		.OnSalva(FValdorsoSuSalvaRegistro::CreateLambda([Debole](const FValdorsoRegistro& Proposto, bool bFirma)
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ServerSalvaRegistro(Controllore->RegistroAperto, Proposto, bFirma);
+			}
+		}))
+		.OnFirmato(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			// Il registro resta nero finché il personaggio non nasce (ClientPersonaggioScelto lo chiude).
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ServerScegliPersonaggio(Controllore->RegistroAperto);
+			}
+		}))
+		.OnTorna(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ServerTornaAllaScelta();
+			}
+		}));
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->AddViewportWidgetContent(SchermataRegistro.ToSharedRef(), 57);
+	}
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(SchermataRegistro->FuocoIniziale());
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+}
+
+void AValdorsoPlayerController::ChiudiRegistro()
+{
+	if (!SchermataRegistro.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(SchermataRegistro.ToSharedRef());
+	}
+	SchermataRegistro.Reset();
+	RegistroAperto.Empty();
 }
 
 void AValdorsoPlayerController::ClientBiglietto_Implementation(const FString& Biglietto, const FString& Nome)

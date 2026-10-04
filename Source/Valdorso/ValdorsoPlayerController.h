@@ -13,6 +13,7 @@
 class UInputMappingContext;
 class SValdorsoAnticamera;
 class SValdorsoSceltaPersonaggio;
+class SValdorsoRegistroColono;
 class UUserWidget;
 
 /**
@@ -94,6 +95,10 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void ClientEsitoRegistro(const FString& IdRegistro, const FString& Messaggio, bool bRiuscito, const FValdorsoRegistro& Salvato);
+
+	/** Dal Registro (passo 4.2a): "Torna ai personaggi", il server rimanda l'elenco. */
+	UFUNCTION(Server, Reliable)
+	void ServerTornaAllaScelta();
 
 	/** Il personaggio sta nascendo: via la scelta. */
 	UFUNCTION(Client, Reliable)
@@ -197,6 +202,12 @@ private:
 	void MostraSceltaPersonaggio();
 	void ChiudiSceltaPersonaggio();
 	TSharedPtr<SValdorsoSceltaPersonaggio> SceltaPersonaggio;
+
+	/** Client: il Registro di Val d'Orso a schermo (passo 4.2a) e l'Id del personaggio che si sta scrivendo. */
+	void MostraRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Risposte);
+	void ChiudiRegistro();
+	TSharedPtr<SValdorsoRegistroColono> SchermataRegistro;
+	FString RegistroAperto;
 	int32 RichiesteFatte = 0;
 	FString AccountId;
 	FString NomeAccount;
