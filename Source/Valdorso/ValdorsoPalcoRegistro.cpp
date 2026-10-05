@@ -251,6 +251,16 @@ void AValdorsoPalcoRegistro::Aggiorna(const FValdorsoRegistro& Risposte)
 	ColoreFedeVoluto = PalcoColoreFede(Risposte.Fede);
 }
 
+void AValdorsoPalcoRegistro::Presenta(const FValdorsoRegistro& Risposte)
+{
+	// Il cambio di corpo si fa mentre è girato di lato, poi si volta verso chi guarda.
+	SessoAttuale.Empty();
+	CambiaSesso(Risposte.Sesso);
+	ColoreFedeVoluto = PalcoColoreFede(Risposte.Fede);
+	GiroDaFare = 50.f;
+	Tempo = FMath::Min(Tempo, PalcoAvvicinamento * 0.6f);
+}
+
 void AValdorsoPalcoRegistro::Firmato()
 {
 	for (AActor* Pezzo : Scena)
@@ -280,6 +290,10 @@ void AValdorsoPalcoRegistro::Tick(float DeltaSeconds)
 	Obiettivo->SetRelativeLocationAndRotation(Occhio, (Guarda - Occhio).Rotation());
 	Obiettivo->PostProcessSettings.DepthOfFieldFocalDistance = Distanza;
 	Obiettivo->PostProcessSettings.AutoExposureBias = CVarPalcoEsposizione.GetValueOnGameThread();
+
+	// Il colono si volta verso la telecamera.
+	GiroDaFare = FMath::FInterpTo(GiroDaFare, 0.f, DeltaSeconds, 4.f);
+	Colono->SetRelativeRotation(FRotator(0.f, -90.f + GiroDaFare, 0.f));
 
 	// La luce della fede cambia colore piano; la luce calda tremola come un fuoco, la luce della fede batte col Cuore.
 	ColoreFede = FMath::Lerp(ColoreFede, ColoreFedeVoluto, FMath::Clamp(DeltaSeconds * 2.5f, 0.f, 1.f));

@@ -890,7 +890,21 @@ void AValdorsoPlayerController::MostraSceltaPersonaggio()
 		return;
 	}
 	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	AValdorsoPalcoRegistro* Scena = AssicuraPalco();
 	SAssignNew(SceltaPersonaggio, SValdorsoSceltaPersonaggio)
+		.Ritratto(Scena ? Scena->GetRitratto() : nullptr)
+		.OnMostra(FValdorsoSuMostraPersonaggio::CreateLambda([Debole](const FValdorsoPersonaggioBreve& Scelto)
+		{
+			// Chi è selezionato sale sul palco: uomo o donna, con la luce della sua fede.
+			AValdorsoPlayerController* Controllore = Debole.Get();
+			if (Controllore && Controllore->Palco.IsValid())
+			{
+				FValdorsoRegistro Aspetto;
+				Aspetto.Sesso = Scelto.Sesso;
+				Aspetto.Fede = Scelto.Fede;
+				Controllore->Palco->Presenta(Aspetto);
+			}
+		}))
 		.OnScegli(FValdorsoSuPersonaggio::CreateLambda([Debole](const FString& Id)
 		{
 			if (AValdorsoPlayerController* Controllore = Debole.Get())
@@ -944,6 +958,7 @@ void AValdorsoPlayerController::ChiudiSceltaPersonaggio()
 		Viewport->RemoveViewportWidgetContent(SceltaPersonaggio.ToSharedRef());
 	}
 	SceltaPersonaggio.Reset();
+	ForseTogliPalco();
 }
 
 void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Risposte)
@@ -957,17 +972,10 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 	ChiudiAnticamera();
 	RegistroAperto = IdRegistro;
 
-	// Il palco del ritratto (passo 4.2b): molto in alto sopra la mappa, visto solo dalla sua telecamera.
-	if (UWorld* Mondo = GetWorld())
+	// Il palco del ritratto (passo 4.2b): lo stesso della scelta del personaggio, se c'è già.
+	if (AValdorsoPalcoRegistro* Scena = AssicuraPalco())
 	{
-		FActorSpawnParameters Parametri;
-		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		Palco = Mondo->SpawnActor<AValdorsoPalcoRegistro>(AValdorsoPalcoRegistro::StaticClass(),
-			FTransform(FVector(0.f, 0.f, 30000.f)), Parametri);
-		if (Palco.IsValid())
-		{
-			Palco->Aggiorna(Risposte);
-		}
+		Scena->Presenta(Risposte);
 	}
 
 	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
@@ -1015,15 +1023,41 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 	bShowMouseCursor = true;
 }
 
+AValdorsoPalcoRegistro* AValdorsoPlayerController::AssicuraPalco()
+{
+	if (!Palco.IsValid())
+	{
+		// Molto in alto sopra la mappa, visto solo dalla sua telecamera.
+		if (UWorld* Mondo = GetWorld())
+		{
+			FActorSpawnParameters Parametri;
+			Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			Palco = Mondo->SpawnActor<AValdorsoPalcoRegistro>(AValdorsoPalcoRegistro::StaticClass(),
+				FTransform(FVector(0.f, 0.f, 30000.f)), Parametri);
+		}
+	}
+	return Palco.Get();
+}
+
+void AValdorsoPlayerController::ForseTogliPalco()
+{
+	// Prima si tolgono le schermate (che tengono vivo il ritratto), poi il palco.
+	if (SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid())
+	{
+		return;
+	}
+	if (Palco.IsValid())
+	{
+		Palco->Destroy();
+	}
+	Palco.Reset();
+}
+
 void AValdorsoPlayerController::ChiudiRegistro()
 {
 	if (!SchermataRegistro.IsValid())
 	{
-		if (Palco.IsValid())
-		{
-			Palco->Destroy();
-		}
-		Palco.Reset();
+		ForseTogliPalco();
 		return;
 	}
 	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
@@ -1032,12 +1066,7 @@ void AValdorsoPlayerController::ChiudiRegistro()
 	}
 	SchermataRegistro.Reset();
 	RegistroAperto.Empty();
-	// Prima via la schermata (che tiene vivo il ritratto), poi il palco.
-	if (Palco.IsValid())
-	{
-		Palco->Destroy();
-	}
-	Palco.Reset();
+	ForseTogliPalco();
 }
 
 void AValdorsoPlayerController::ClientBiglietto_Implementation(const FString& Biglietto, const FString& Nome)

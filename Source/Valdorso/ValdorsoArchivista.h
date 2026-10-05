@@ -256,6 +256,14 @@ struct FValdorsoPersonaggioBreve
 	/** Falso finché il registro non è firmato (allora Entra apre il Registro). */
 	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
 	bool bRegistroFirmato = false;
+
+	/** (05/10) Per il ritratto nella scelta del personaggio: "uomo" o "donna" (vuoto se il registro è ancora bianco). */
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	FString Sesso;
+
+	/** La chiave della fede (per il colore della luce nel ritratto). */
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	FString Fede;
 };
 
 /** Un nome di personaggio cancellato, riservato fino a una data. */

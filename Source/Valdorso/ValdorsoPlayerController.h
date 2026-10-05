@@ -209,8 +209,11 @@ private:
 	void ChiudiRegistro();
 	TSharedPtr<SValdorsoRegistroColono> SchermataRegistro;
 	FString RegistroAperto;
-	/** Client: il palco con il ritratto del colono (passo 4.2b), solo su questo PC. */
+	/** Client: il palco con il ritratto del colono (passo 4.2b), solo su questo PC; lo usano Registro e scelta. */
 	TWeakObjectPtr<AValdorsoPalcoRegistro> Palco;
+	AValdorsoPalcoRegistro* AssicuraPalco();
+	/** Il palco si toglie quando non lo usa più nessuna schermata. */
+	void ForseTogliPalco();
 	int32 RichiesteFatte = 0;
 	FString AccountId;
 	FString NomeAccount;

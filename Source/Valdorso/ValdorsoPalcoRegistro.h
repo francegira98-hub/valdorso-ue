@@ -40,6 +40,9 @@ public:
 	/** Le risposte sono cambiate: uomo o donna, colore della fede. */
 	void Aggiorna(const FValdorsoRegistro& Risposte);
 
+	/** (05/10) Un personaggio diverso sul palco (scelta del personaggio, apertura del Registro): si gira verso di te. */
+	void Presenta(const FValdorsoRegistro& Risposte);
+
 	/** Il registro è firmato: il frammento batte più forte e le rune si accendono. */
 	void Firmato();
 
@@ -92,4 +95,6 @@ private:
 	FLinearColor ColoreFede;
 	FLinearColor ColoreFedeVoluto;
 	float Tempo = 0.f;
+	/** Gradi che mancano perché il colono guardi la telecamera (si gira piano fino a 0). */
+	float GiroDaFare = 0.f;
 };

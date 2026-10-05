@@ -25,6 +25,15 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 	OnCrea = InArgs._OnCrea;
 	OnCancella = InArgs._OnCancella;
 	OnEsci = InArgs._OnEsci;
+	OnMostra = InArgs._OnMostra;
+	if (InArgs._Ritratto)
+	{
+		// (05/10) Il ritratto di chi è selezionato, dallo stesso palco del Registro.
+		RitrattoVivo.Reset(InArgs._Ritratto);
+		PennelloRitratto.SetResourceObject(InArgs._Ritratto);
+		PennelloRitratto.ImageSize = FVector2D(InArgs._Ritratto->SizeX, InArgs._Ritratto->SizeY);
+		PennelloRitratto.DrawAs = ESlateBrushDrawType::Image;
+	}
 
 	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(40.f, TEXT("Bold"));
 	FontTitolo.LetterSpacing = 60;
@@ -40,9 +49,13 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 		]
 
 		+ SOverlay::Slot()
-		.HAlign(HAlign_Center)
-		.VAlign(VAlign_Center)
 		[
+			SNew(SHorizontalBox)
+
+			// Con il ritratto il pannello va a sinistra; senza, resta al centro.
+			+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(RitrattoVivo.IsValid() ? HAlign_Left : HAlign_Center).VAlign(VAlign_Center)
+			.Padding(FMargin(RitrattoVivo.IsValid() ? 70.f : 0.f, 30.f, 0.f, 30.f))
+			[
 			SNew(SBorder)
 			.BorderImage(&Stile->SfondoPannello)
 			.Padding(FMargin(54.f, 40.f))
@@ -109,6 +122,33 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 					]
 				]
 			]
+			]
+
+			// A destra il ritratto di chi è selezionato (nascosto se non c'è ancora nessun personaggio).
+			+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
+			[
+				SNew(SVerticalBox)
+				.Visibility_Lambda([this]() { return RitrattoVivo.IsValid() && Elenco.Num() > 0 ? EVisibility::Visible : EVisibility::Collapsed; })
+				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+				[
+					SNew(SBorder)
+					.BorderImage(&Stile->SfondoPannello)
+					.Padding(FMargin(6.f))
+					[
+						SNew(SBox).WidthOverride(520.f).HeightOverride(650.f)
+						[
+							SNew(SImage).Image(&PennelloRitratto)
+						]
+					]
+				]
+				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 16.f, 0.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text_Lambda([this]() { return FText::FromString(NomeMostrato); })
+					.Font(Stile->Caratteri->Titolo(24.f, TEXT("Bold")))
+					.ColorAndOpacity(ValdorsoTema::Oro())
+				]
+			]
 		]
 	];
 
@@ -118,6 +158,8 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 void SValdorsoSceltaPersonaggio::Aggiorna(const TArray<FValdorsoPersonaggioBreve>& Nuovi, const FText& Testo, bool bComeErrore)
 {
 	Elenco = Nuovi;
+	// Si ridisegna tutto: il ritratto si ripresenta (anche se è lo stesso personaggio di prima).
+	IdMostrato.Empty();
 	Messaggio = Testo;
 	bErrore = bComeErrore;
 	bInAttesa = false;
@@ -154,6 +196,7 @@ void SValdorsoSceltaPersonaggio::Ridisegna()
 	// Quello che il giocatore aveva scritto resta (se il server ha detto di no, non deve riscriverlo).
 	const FText NomeScritto = CampoNome.IsValid() ? CampoNome->GetText() : FText::GetEmpty();
 	Righe->ClearChildren();
+	RigheVive.Empty();
 	CampoNome.Reset();
 	CampoConferma.Reset();
 	PrimoPulsante.Reset();
@@ -292,12 +335,14 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 		];
 	}
 
-	return SNew(SBorder)
+	TSharedRef<SBorder> Riga = SNew(SBorder)
 		.BorderImage(&Stile->SfondoCampo)
 		.Padding(FMargin(20.f, 14.f))
 		[
 			Contenuto
 		];
+	RigheVive.Add(TPair<TSharedPtr<SWidget>, FString>(Riga, Id));
+	return Riga;
 }
 
 TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaNuovo()
@@ -355,6 +400,44 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaLibera()
 			.Font(Stile->Caratteri->Testo(19.f, TEXT("Italic")))
 			.ColorAndOpacity(ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.5f))
 		];
+}
+
+void SValdorsoSceltaPersonaggio::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+	if (Elenco.Num() == 0)
+	{
+		return;
+	}
+	// Chi è selezionato: la riga sotto il mouse, o quella con il fuoco (tastiera e controller); altrimenti resta l'ultimo.
+	FString Scelto;
+	for (const TPair<TSharedPtr<SWidget>, FString>& Coppia : RigheVive)
+	{
+		if (Coppia.Key.IsValid() && (Coppia.Key->IsHovered() || Coppia.Key->HasFocusedDescendants()))
+		{
+			Scelto = Coppia.Value;
+			break;
+		}
+	}
+	if (Scelto.IsEmpty())
+	{
+		Scelto = IdMostrato.IsEmpty() ? Elenco[0].Id : IdMostrato;
+	}
+	if (Scelto == IdMostrato)
+	{
+		return;
+	}
+	for (const FValdorsoPersonaggioBreve& Personaggio : Elenco)
+	{
+		if (Personaggio.Id == Scelto)
+		{
+			IdMostrato = Scelto;
+			NomeMostrato = Personaggio.Nome;
+			OnMostra.ExecuteIfBound(Personaggio);
+			return;
+		}
+	}
+	IdMostrato.Empty();
 }
 
 void SValdorsoSceltaPersonaggio::Crea()

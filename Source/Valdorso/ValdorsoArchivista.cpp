@@ -1758,6 +1758,8 @@ TArray<FValdorsoPersonaggioBreve> UValdorsoArchivista::ElencoPersonaggi(const FS
 			Breve.UltimoGioco = Dati->UltimoGioco;
 			Breve.TempoDiGioco = Dati->TempoDiGioco;
 			Breve.bRegistroFirmato = Dati->Registro.bFirmato;
+			Breve.Sesso = Dati->Registro.Sesso;
+			Breve.Fede = Dati->Registro.Fede;
 			Elenco.Add(Breve);
 		}
 	}

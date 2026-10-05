@@ -11,6 +11,8 @@
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 #include "ValdorsoArchivista.h"
+#include "UObject/StrongObjectPtr.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 class FValdorsoStileAccesso;
 class SVerticalBox;
@@ -18,11 +20,16 @@ class SEditableTextBox;
 
 DECLARE_DELEGATE_OneParam(FValdorsoSuPersonaggio, const FString& /*Id o Nome*/);
 DECLARE_DELEGATE_TwoParams(FValdorsoSuCancellaPersonaggio, const FString& /*Id*/, const FString& /*Conferma*/);
+DECLARE_DELEGATE_OneParam(FValdorsoSuMostraPersonaggio, const FValdorsoPersonaggioBreve& /*Personaggio*/);
 
 class VALDORSO_API SValdorsoSceltaPersonaggio : public SCompoundWidget
 {
 public:
-	SLATE_BEGIN_ARGS(SValdorsoSceltaPersonaggio) {}
+	SLATE_BEGIN_ARGS(SValdorsoSceltaPersonaggio) : _Ritratto(nullptr) {}
+		/** (05/10) Il ritratto del palco: a destra si vede chi è selezionato. */
+		SLATE_ARGUMENT(UTextureRenderTarget2D*, Ritratto)
+		/** È cambiato chi è selezionato (mouse sopra o fuoco): il palco lo mostra. */
+		SLATE_EVENT(FValdorsoSuMostraPersonaggio, OnMostra)
 		SLATE_EVENT(FValdorsoSuPersonaggio, OnScegli)
 		SLATE_EVENT(FValdorsoSuPersonaggio, OnCrea)
 		SLATE_EVENT(FValdorsoSuCancellaPersonaggio, OnCancella)
@@ -41,6 +48,7 @@ public:
 	TSharedPtr<SWidget> FuocoIniziale() const;
 
 	virtual bool SupportsKeyboardFocus() const override { return true; }
+	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
 private:
 	void Ridisegna();
@@ -54,6 +62,14 @@ private:
 	FValdorsoSuPersonaggio OnCrea;
 	FValdorsoSuCancellaPersonaggio OnCancella;
 	FSimpleDelegate OnEsci;
+	FValdorsoSuMostraPersonaggio OnMostra;
+
+	TStrongObjectPtr<UTextureRenderTarget2D> RitrattoVivo;
+	FSlateBrush PennelloRitratto;
+	/** Le righe dei personaggi (per sapere quale ha il mouse sopra o il fuoco) e chi si sta mostrando. */
+	TArray<TPair<TSharedPtr<SWidget>, FString>> RigheVive;
+	FString IdMostrato;
+	FString NomeMostrato;
 
 	TArray<FValdorsoPersonaggioBreve> Elenco;
 	TSharedPtr<SVerticalBox> Righe;
