@@ -355,6 +355,11 @@ namespace
 			FValdorsoRegistro Proposto = Dati->Registro;
 			FRandomStream Dadi(static_cast<int32>(FPlatformTime::Cycles()));
 			ValdorsoRegistro::Casuale(Proposto, Dadi, false);
+			// (05/10) Dalla firma vera in poi il registro va firmato: la prova firma "con il nome".
+			if (Proposto.Firma.IsEmpty())
+			{
+				Proposto.Firma = ValdorsoRegistro::FirmaColNome;
+			}
 			FValdorsoRegistro Salvato;
 			const FString Errore = A->SalvaRegistro(Dati->AccountId, Dati->Id, Proposto, true, Salvato);
 			Scrivi(Uscita, Errore.IsEmpty() ? A->RegistroTesto(Unisci(Argomenti, 0)) : Errore);

@@ -503,6 +503,22 @@ struct FValdorsoProvaSchermate
 				}
 			}
 			Dati.Storia = TestoLungo(ValdorsoRegistro::MassimoStoria);
+			// (05/10) Una firma disegnata (un'onda in tre tratti), perché le foto la mostrino.
+			{
+				TArray<FString> Tratti;
+				for (int32 Tratto = 0; Tratto < 3; ++Tratto)
+				{
+					TArray<FString> Punti;
+					for (int32 i = 0; i < 30; ++i)
+					{
+						const float X = 0.08f + Tratto * 0.28f + i * 0.008f;
+						const float Y = 0.55f + 0.18f * FMath::Sin(i * 0.45f + Tratto);
+						Punti.Add(FString::Printf(TEXT("%d,%d"), FMath::RoundToInt(X * 999.f), FMath::RoundToInt(Y * 999.f)));
+					}
+					Tratti.Add(FString::Join(Punti, TEXT(" ")));
+				}
+				Dati.Firma = FString::Join(Tratti, TEXT(";"));
+			}
 
 			const FString Sesso = VoceSesso.Chiave;
 			TSharedRef<SValdorsoRegistroColono> Schermata = SNew(SValdorsoRegistroColono)

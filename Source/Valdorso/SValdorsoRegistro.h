@@ -32,6 +32,7 @@ class FValdorsoStileAccesso;
 class SBox;
 class SButton;
 class SMultiLineEditableTextBox;
+class SValdorsoFirma;
 
 DECLARE_DELEGATE_TwoParams(FValdorsoSuSalvaRegistro, const FValdorsoRegistro& /*Risposte*/, bool /*bFirma*/);
 DECLARE_DELEGATE_OneParam(FValdorsoSuCambioRisposte, const FValdorsoRegistro& /*Risposte*/);
@@ -169,6 +170,8 @@ private:
 	TSharedPtr<SButton> BottoneProssimo;
 	FButtonStyle StileFirma;
 	TSharedPtr<SMultiLineEditableTextBox> CampoTesto;
+	/** (05/10) Il riquadro della firma vera (pagina della firma). */
+	TSharedPtr<SValdorsoFirma> CampoFirma;
 	FRandomStream Dadi;
 
 	FText Messaggio;

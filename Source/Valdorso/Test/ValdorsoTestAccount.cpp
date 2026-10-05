@@ -467,6 +467,10 @@ bool FValdorsoTestRegistro::RunTest(const FString& Parameters)
 	FValdorsoRegistro Pieno;
 	FRandomStream Dadi(312);
 	ValdorsoRegistro::Casuale(Pieno, Dadi, true);
+	// (05/10) Senza firma il registro non si firma; con la firma col nome sì.
+	TestFalse(TEXT("a caso ma senza firma: non si firma"), ValdorsoRegistro::Problema(Pieno, true).IsEmpty());
+	TestTrue(TEXT("senza firma la bozza va bene"), ValdorsoRegistro::Problema(Pieno, false).IsEmpty());
+	Pieno.Firma = ValdorsoRegistro::FirmaColNome;
 	TestTrue(TEXT("a caso: tutto valido per la firma"), ValdorsoRegistro::Problema(Pieno, true).IsEmpty());
 
 	// Risposte sbagliate.
@@ -500,6 +504,46 @@ bool FValdorsoTestRegistro::RunTest(const FString& Parameters)
 	const FString RaccontoLei = ValdorsoRegistro::ComponiRacconto(Lei, TEXT("Livia"));
 	TestTrue(TEXT("al femminile"), RaccontoLei.Contains(TEXT("figlia delle campagne del sud")) && RaccontoLei.Contains(TEXT("stata cacciatrice")));
 	TestTrue(TEXT("il racconto si può firmare"), ValdorsoRegole::ProblemaTestoLibero(RaccontoLei, ValdorsoRegistro::MassimoRacconto).IsEmpty());
+	return true;
+}
+
+// Passo 4.2b (05/10): la firma vera, disegnata a tratti.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestRegistroFirma, "Valdorso.Registro.Firma", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestRegistroFirma::RunTest(const FString& Parameters)
+{
+	TArray<TArray<FIntPoint>> Tratti;
+
+	// Una firma vera: due tratti.
+	const FString Buona = TEXT("100,700 140,500 180,720 220,480;300,650 360,640 420,660");
+	TestTrue(TEXT("si legge"), ValdorsoRegistro::LeggiFirma(Buona, Tratti));
+	TestEqual(TEXT("due tratti"), Tratti.Num(), 2);
+	TestTrue(TEXT("primo punto"), Tratti.Num() > 0 && Tratti[0].Num() > 0 && Tratti[0][0] == FIntPoint(100, 700));
+	TestTrue(TEXT("valida"), ValdorsoRegistro::ProblemaFirma(Buona, true).IsEmpty());
+
+	// La firma col nome e la firma che manca.
+	TestTrue(TEXT("col nome: valida"), ValdorsoRegistro::ProblemaFirma(ValdorsoRegistro::FirmaColNome, true).IsEmpty());
+	TestFalse(TEXT("col nome: niente tratti"), ValdorsoRegistro::LeggiFirma(ValdorsoRegistro::FirmaColNome, Tratti));
+	TestFalse(TEXT("manca alla firma"), ValdorsoRegistro::ProblemaFirma(FString(), true).IsEmpty());
+	TestTrue(TEXT("manca nella bozza: va bene"), ValdorsoRegistro::ProblemaFirma(FString(), false).IsEmpty());
+
+	// Firme rotte o troppo grandi: rifiutate (il server non si fida del gioco).
+	TestFalse(TEXT("fuori dal riquadro"), ValdorsoRegistro::ProblemaFirma(TEXT("100,700 1000,500 180,720 220,480"), true).IsEmpty());
+	TestFalse(TEXT("numero negativo"), ValdorsoRegistro::ProblemaFirma(TEXT("100,700 -5,500 180,720 220,480"), true).IsEmpty());
+	TestFalse(TEXT("lettere"), ValdorsoRegistro::ProblemaFirma(TEXT("100,700 ab,500 180,720 220,480"), true).IsEmpty());
+	TestFalse(TEXT("decimali"), ValdorsoRegistro::ProblemaFirma(TEXT("100,700 1.5,500 180,720 220,480"), true).IsEmpty());
+	TestFalse(TEXT("troppo corta"), ValdorsoRegistro::ProblemaFirma(TEXT("100,700 140,500"), true).IsEmpty());
+	FString Enorme;
+	for (int32 i = 0; i < ValdorsoRegistro::MassimoPuntiFirma + 10; ++i)
+	{
+		Enorme += FString::Printf(TEXT("%d,%d "), i % 1000, (i * 7) % 1000);
+	}
+	TestFalse(TEXT("troppi punti"), ValdorsoRegistro::ProblemaFirma(Enorme, true).IsEmpty());
+
+	// La firma conta per le bozze: cambiarla vuol dire salvare di nuovo.
+	FValdorsoRegistro A;
+	FValdorsoRegistro B;
+	B.Firma = Buona;
+	TestFalse(TEXT("firma diversa, bozza diversa"), ValdorsoRegistro::StesseRisposte(A, B));
 	return true;
 }
 

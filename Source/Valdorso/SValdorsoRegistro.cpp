@@ -5,6 +5,7 @@
 
 #include "SValdorsoRegistro.h"
 #include "SValdorsoAccesso.h"
+#include "SValdorsoFirma.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoTemaUI.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -433,13 +434,87 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 						// Il contenuto della pagina (si ridisegna a ogni cambio di pagina).
 						+ SVerticalBox::Slot().AutoHeight()
 						[
-							SNew(SBox).MaxDesiredHeight(470.f)
+							// (05/10) Nella pagina della firma la parte che scorre è più bassa: sotto c'è il riquadro della firma.
+							SNew(SBox).MaxDesiredHeight_Lambda([this]() { return FOptionalSize(Pagina == EPagina::Firma ? 290.f : 470.f); })
 							[
 								SNew(SScrollBox)
 								+ SScrollBox::Slot()
 								[
 									SAssignNew(Corpo, SBox)
 								]
+							]
+						]
+
+						// (05/10) La firma vera: solo nella pagina della firma, fuori dalla parte che scorre (si vede sempre).
+						+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 10.f, 0.f, 0.f))
+						[
+							SNew(SVerticalBox)
+							.Visibility_Lambda([this]() { return Pagina == EPagina::Firma ? EVisibility::Visible : EVisibility::Collapsed; })
+							+ SVerticalBox::Slot().AutoHeight()
+							[
+								SNew(SHorizontalBox)
+								+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+								[
+									SNew(STextBlock)
+									.Text(LOCTEXT("TuaFirma", "La tua firma"))
+									.Font(Stile->Caratteri->Testo(20.f, TEXT("SemiBold")))
+									.ColorAndOpacity(ValdorsoTema::Inchiostro())
+								]
+								+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+								[
+									Collegamento(LOCTEXT("FirmaNome", "Firma con il nome"), FSimpleDelegate::CreateLambda([this]()
+									{
+										Bozza.Firma = ValdorsoRegistro::FirmaColNome;
+										if (CampoFirma.IsValid())
+										{
+											CampoFirma->ImpostaFirma(Bozza.Firma);
+										}
+										if (bErrore)
+										{
+											MostraMessaggio(FText::GetEmpty(), false);
+										}
+									}))
+								]
+								+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(18.f, 0.f, 0.f, 0.f))
+								[
+									Collegamento(LOCTEXT("FirmaCancella", "Cancella"), FSimpleDelegate::CreateLambda([this]()
+									{
+										Bozza.Firma.Empty();
+										if (CampoFirma.IsValid())
+										{
+											CampoFirma->ImpostaFirma(Bozza.Firma);
+										}
+										if (bErrore)
+										{
+											MostraMessaggio(FText::GetEmpty(), false);
+										}
+									}))
+								]
+							]
+							+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 2.f, 0.f, 0.f))
+							[
+								SAssignNew(CampoFirma, SValdorsoFirma)
+								.Firma(Bozza.Firma)
+								.Nome(Nome)
+								.FontNome(Stile->Caratteri->Calligrafia(52.f))
+								.Grandezza(FVector2D(560.f, 116.f))
+								.IsEnabled_Lambda([this]() { return !bInFirma && !bFinale && !bInUscita; })
+								.OnCambia_Lambda([this](const FString& Nuova)
+								{
+									Bozza.Firma = Nuova;
+									if (bErrore)
+									{
+										MostraMessaggio(FText::GetEmpty(), false);
+									}
+								})
+							]
+							+ SVerticalBox::Slot().AutoHeight()
+							[
+								SNew(STextBlock)
+								.Text(LOCTEXT("FirmaAiuto", "Tieni premuto il tasto sinistro e scrivi. Con il controller: stick sinistro per la penna, A tenuto premuto per scrivere."))
+								.Font(Stile->Caratteri->Testo(15.f, TEXT("Italic")))
+								.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+								.AutoWrapText(true)
 							]
 						]
 
@@ -667,6 +742,11 @@ void SValdorsoRegistroColono::Ridisegna()
 		IniziaScrittura();
 	}
 
+	// (05/10) Nella pagina della firma, se manca ancora, il fuoco va sul riquadro (per chi usa il controller).
+	if (Pagina == EPagina::Firma && Bozza.Firma.IsEmpty() && CampoFirma.IsValid())
+	{
+		PrimoFuoco = CampoFirma;
+	}
 	TSharedPtr<SWidget> Fuoco = FuocoIniziale();
 	if (Fuoco.IsValid() && FSlateApplication::IsInitialized())
 	{
@@ -1276,16 +1356,18 @@ void SValdorsoRegistroColono::Firma()
 	if (!Difetto.IsEmpty())
 	{
 		const ValdorsoRegistro::EDomanda Manca = ValdorsoRegistro::PrimaMancante(Pronto);
+		const bool bRacconto = !ValdorsoRegole::ProblemaTestoLibero(Pronto.Racconto, ValdorsoRegistro::MassimoRacconto).IsEmpty();
+		const bool bStoria = !ValdorsoRegole::ProblemaTestoLibero(Pronto.Storia, ValdorsoRegistro::MassimoStoria).IsEmpty();
 		if (Manca != ValdorsoRegistro::EDomanda::Numero)
 		{
 			VaiA(RegSchermoPaginaDellaDomanda(Manca));
 		}
-		else
+		else if (bRacconto || bStoria)
 		{
 			// Non manca niente: è un testo da sistemare (il racconto o la storia).
-			const bool bRacconto = !ValdorsoRegole::ProblemaTestoLibero(Pronto.Racconto, ValdorsoRegistro::MassimoRacconto).IsEmpty();
 			VaiA(bRacconto ? EPagina::Racconto : EPagina::Storia);
 		}
+		// (05/10) Altrimenti manca (o non si legge) la firma: si resta qui, sul riquadro.
 		MostraMessaggio(FText::FromString(Difetto), true);
 		return;
 	}

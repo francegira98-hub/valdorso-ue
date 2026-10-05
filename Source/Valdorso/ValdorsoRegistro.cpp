@@ -232,7 +232,96 @@ namespace ValdorsoRegistro
 		{
 			return SulRacconto;
 		}
-		return ValdorsoRegole::ProblemaTestoLibero(Registro.Storia, MassimoStoria);
+		const FString SullaStoria = ValdorsoRegole::ProblemaTestoLibero(Registro.Storia, MassimoStoria);
+		if (!SullaStoria.IsEmpty())
+		{
+			return SullaStoria;
+		}
+		// (05/10) La firma per ultima: si mette quando tutto il resto è a posto.
+		return ProblemaFirma(Registro.Firma, bCompleto);
+	}
+
+	/** Legge i tratti senza guardare se sono abbastanza; OutPunti dice quanti punti ci sono. */
+	bool LeggiTrattiFirma(const FString& Firma, TArray<TArray<FIntPoint>>& OutTratti, int32& OutPunti)
+	{
+		OutTratti.Reset();
+		OutPunti = 0;
+		if (Firma.IsEmpty() || Firma == FirmaColNome || Firma.Len() > MassimoLunghezzaFirma)
+		{
+			return false;
+		}
+		// Solo cifre, da una a tre (niente segni, decimali o numeri lunghissimi): il server non si fida del gioco.
+		auto Cifre = [](const FString& Testo)
+		{
+			if (Testo.IsEmpty() || Testo.Len() > 3)
+			{
+				return false;
+			}
+			for (const TCHAR Carattere : Testo)
+			{
+				if (!FChar::IsDigit(Carattere))
+				{
+					return false;
+				}
+			}
+			return true;
+		};
+		TArray<FString> Tratti;
+		Firma.ParseIntoArray(Tratti, TEXT(";"), true);
+		if (Tratti.Num() == 0 || Tratti.Num() > MassimoTrattiFirma)
+		{
+			return false;
+		}
+		for (const FString& Tratto : Tratti)
+		{
+			TArray<FString> Coppie;
+			Tratto.ParseIntoArray(Coppie, TEXT(" "), true);
+			if (Coppie.Num() == 0)
+			{
+				return false;
+			}
+			TArray<FIntPoint>& Nuovo = OutTratti.AddDefaulted_GetRef();
+			for (const FString& Coppia : Coppie)
+			{
+				FString X, Y;
+				if (!Coppia.Split(TEXT(","), &X, &Y) || !Cifre(X) || !Cifre(Y) || ++OutPunti > MassimoPuntiFirma)
+				{
+					return false;
+				}
+				Nuovo.Add(FIntPoint(FCString::Atoi(*X), FCString::Atoi(*Y)));
+			}
+		}
+		return true;
+	}
+
+	bool LeggiFirma(const FString& Firma, TArray<TArray<FIntPoint>>& OutTratti)
+	{
+		int32 Punti = 0;
+		return LeggiTrattiFirma(Firma, OutTratti, Punti) && Punti >= MinimoPuntiFirma;
+	}
+
+	FString ProblemaFirma(const FString& Firma, bool bCompleto)
+	{
+		if (Firma.IsEmpty())
+		{
+			return bCompleto ? FString(TEXT("Manca la tua firma: disegnala nel riquadro, oppure firma con il nome.")) : FString();
+		}
+		if (Firma == FirmaColNome)
+		{
+			return FString();
+		}
+		TArray<TArray<FIntPoint>> Tratti;
+		int32 Punti = 0;
+		if (!LeggiTrattiFirma(Firma, Tratti, Punti))
+		{
+			return TEXT("La firma non si legge: cancellala e rifalla.");
+		}
+		// Una firma appena cominciata va bene per la bozza, non per firmare.
+		if (bCompleto && Punti < MinimoPuntiFirma)
+		{
+			return TEXT("La firma è troppo corta: scrivila per intero.");
+		}
+		return FString();
 	}
 
 	FString ComponiRacconto(const FValdorsoRegistro& Registro, const FString& Nome)
@@ -403,7 +492,8 @@ namespace ValdorsoRegistro
 		}
 		return A.Eta == B.Eta
 			&& A.Racconto.Equals(B.Racconto, ESearchCase::CaseSensitive)
-			&& A.Storia.Equals(B.Storia, ESearchCase::CaseSensitive);
+			&& A.Storia.Equals(B.Storia, ESearchCase::CaseSensitive)
+			&& A.Firma.Equals(B.Firma, ESearchCase::CaseSensitive);
 	}
 
 	const TCHAR* Vantaggio(EDomanda Quale, const FString& Scelta)

@@ -73,6 +73,14 @@ struct FValdorsoRegistro
 	/** La tua storia, con parole del giocatore (facoltativa). Lo staff può chiedere di correggerla (passo 4.5). */
 	UPROPERTY()
 	FString Storia;
+
+	/**
+	 * (05/10) La firma vera, disegnata dal giocatore: i tratti di penna come testo ("x,y x,y;x,y ...", coordinate da 0
+	 * a 999 dentro il riquadro della firma; ";" separa i tratti). "@" vuol dire "firma con il nome" (in calligrafia).
+	 * Servirà anche per il Patto, i contratti, le lettere al futuro e il testamento.
+	 */
+	UPROPERTY()
+	FString Firma;
 };
 
 /** Una risposta del catalogo: la chiave salvata, e il testo da mostrare (maschile e femminile se cambia). */
@@ -89,6 +97,14 @@ namespace ValdorsoRegistro
 	inline constexpr int32 EtaMassima = 60;
 	inline constexpr int32 MassimoRacconto = 2000;
 	inline constexpr int32 MassimoStoria = 3000;
+
+	/** (05/10) I limiti della firma disegnata: abbastanza per una firma vera, non per un disegno. */
+	inline constexpr int32 MassimoPuntiFirma = 1200;
+	inline constexpr int32 MassimoTrattiFirma = 60;
+	inline constexpr int32 MassimoLunghezzaFirma = 10000;
+	inline constexpr int32 MinimoPuntiFirma = 4;
+	/** La firma "con il nome": scritta in calligrafia invece che disegnata. */
+	inline constexpr const TCHAR* FirmaColNome = TEXT("@");
 
 	/** Le pagine del registro con domande a scelta, nell'ordine in cui il sacerdote le fa. */
 	enum class EDomanda : uint8
@@ -123,6 +139,15 @@ namespace ValdorsoRegistro
 
 	/** I dadi del destino per una sola domanda (passo 4.2a): una risposta a caso, diversa da quella di prima se si può. */
 	VALDORSO_API void CasualeUna(FValdorsoRegistro& Registro, EDomanda Quale, FRandomStream& Dadi);
+
+	/**
+	 * (05/10) Legge una firma disegnata: i tratti, con i punti da 0 a 999. Falso se il testo non è una firma valida
+	 * (o è vuoto, o è la firma col nome).
+	 */
+	VALDORSO_API bool LeggiFirma(const FString& Firma, TArray<TArray<FIntPoint>>& OutTratti);
+
+	/** (05/10) Vuoto se la firma va bene; bCompleto: alla firma del registro deve esserci. */
+	VALDORSO_API FString ProblemaFirma(const FString& Firma, bool bCompleto);
 
 	/** Vero se le due versioni hanno le stesse risposte, età, racconto e storia (per non salvare bozze uguali). */
 	VALDORSO_API bool StesseRisposte(const FValdorsoRegistro& A, const FValdorsoRegistro& B);
