@@ -35,8 +35,9 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 		PennelloRitratto.DrawAs = ESlateBrushDrawType::Image;
 	}
 
-	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(40.f, TEXT("Bold"));
-	FontTitolo.LetterSpacing = 60;
+	// (05/10) 32 punti e meno spaziatura: a 40 il titolo usciva a destra dal pannello ("COLON").
+	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(32.f, TEXT("Bold"));
+	FontTitolo.LetterSpacing = 30;
 
 	ChildSlot
 	[
@@ -222,13 +223,31 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 	const FString Id = Personaggio.Id;
 	const FString Nome = Personaggio.Nome;
 
-	// "Ultima volta il 04/10/2026 · 2 ore e 15 minuti nella valle"
+	// (05/10) Più corta, e va a capo se serve: "04/10/2026 · 2 ore e 15 minuti nella valle".
+	// Sotto il minuto dice "meno di un minuto" (non "0 minuti"); singolare e plurale giusti.
 	const int64 MinutiTotali = Personaggio.TempoDiGioco / 60;
-	const FString Tempo = MinutiTotali >= 60
-		? FString::Printf(TEXT("%lld ore e %lld minuti nella valle"), MinutiTotali / 60, MinutiTotali % 60)
-		: FString::Printf(TEXT("%lld minuti nella valle"), MinutiTotali);
+	const int64 Ore = MinutiTotali / 60;
+	const int64 Minuti = MinutiTotali % 60;
+	const FString TestoMinuti = Minuti == 1 ? FString(TEXT("1 minuto")) : FString::Printf(TEXT("%lld minuti"), Minuti);
+	FString Tempo;
+	if (MinutiTotali < 1)
+	{
+		Tempo = TEXT("meno di un minuto");
+	}
+	else if (Ore == 0)
+	{
+		Tempo = TestoMinuti;
+	}
+	else
+	{
+		Tempo = Ore == 1 ? FString(TEXT("1 ora")) : FString::Printf(TEXT("%lld ore"), Ore);
+		if (Minuti > 0)
+		{
+			Tempo += TEXT(" e ") + TestoMinuti;
+		}
+	}
 	const FString Quando = Personaggio.UltimoGioco > 0
-		? TEXT("Ultima volta il ") + FDateTime::FromUnixTimestamp(Personaggio.UltimoGioco).ToString(TEXT("%d/%m/%Y")) + TEXT(" · ") + Tempo
+		? FDateTime::FromUnixTimestamp(Personaggio.UltimoGioco).ToString(TEXT("%d/%m/%Y")) + TEXT(" · ") + Tempo + TEXT(" nella valle")
 		: FString(TEXT("Non è ancora entrato nella valle"));
 
 	FSlateFontInfo FontNome = Stile->Caratteri->Titolo(26.f, TEXT("Bold"));
@@ -258,6 +277,7 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 				SNew(STextBlock).Text(FText::FromString(Quando))
 				.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
 				.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+				.AutoWrapText(true)
 			]
 		]
 		+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(12.f, 0.f, 0.f, 0.f))
