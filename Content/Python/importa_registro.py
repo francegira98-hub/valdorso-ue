@@ -2,7 +2,7 @@
 # Si lancia nell'editor: Strumenti -> Esegui script Python -> questo file. Si può rilanciare: rimpiazza quello che c'è.
 #
 # Cosa fa:
-#   - importa V:/Texture/valdorso/T_Pergamena.png in Content/UI/Registro, con le impostazioni da interfaccia
+#   - importa V:/Texture/valdorso/T_Pergamena.png e T_Cuoio.png (05/10) in Content/UI/Registro, con le impostazioni da interfaccia
 #     (gruppo UI, compressione per interfacce, niente mipmap, colore sRGB);
 #   - importa Tangerine (Regular e Bold, licenza OFL) da V:/Font/Tangerine in Content/UI/Font, come Font Face;
 #   - salva tutto e scrive nel Registro output "[Valdorso] Registro: importato" e cosa ha trovato.
@@ -11,6 +11,7 @@
 import unreal
 
 PERGAMENA = "V:/Texture/valdorso/T_Pergamena.png"
+CUOIO = "V:/Texture/valdorso/T_Cuoio.png"       # (05/10) i pulsanti di cuoio
 CARTELLA_REGISTRO = "/Game/UI/Registro"
 FONT = ["V:/Font/Tangerine/Tangerine-Regular.ttf", "V:/Font/Tangerine/Tangerine-Bold.ttf"]
 CARTELLA_FONT = "/Game/UI/Font"
@@ -38,13 +39,17 @@ def importa(file, destinazione):
 
 
 def esegui():
-    tex = importa(PERGAMENA, CARTELLA_REGISTRO)
-    if tex is not None:
-        tex.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)
-        tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_EDITOR_ICON)
-        tex.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
-        tex.set_editor_property("srgb", True)
-        libreria.save_loaded_asset(tex)
+    tex = None
+    for file in [PERGAMENA, CUOIO]:
+        una = importa(file, CARTELLA_REGISTRO)
+        if una is not None:
+            una.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)
+            una.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_EDITOR_ICON)
+            una.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
+            una.set_editor_property("srgb", True)
+            libreria.save_loaded_asset(una)
+            if file == PERGAMENA:
+                tex = una
 
     trovati = 0
     for file in FONT:

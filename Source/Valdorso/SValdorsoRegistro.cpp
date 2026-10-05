@@ -96,6 +96,23 @@ namespace
 		return ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.5f);
 	}
 
+	/**
+	 * (05/10) Carica una texture dell'interfaccia e, nell'editor, aspetta che sia pronta: se Slate la chiede mentre
+	 * l'editor la sta ancora preparando "in sottofondo", non la disegna (era il motivo della pergamena invisibile).
+	 */
+	UTexture2D* RegSchermoCaricaTexture(const TCHAR* Percorso)
+	{
+		UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, Percorso, nullptr, LOAD_NoWarn | LOAD_Quiet);
+#if WITH_EDITOR
+		if (Texture)
+		{
+			UTexture* DaPreparare = Texture;
+			FTextureCompilingManager::Get().FinishCompilation(MakeArrayView(&DaPreparare, 1));
+		}
+#endif
+		return Texture;
+	}
+
 	/** Le quattro coppie del carattere, nell'ordine della pagina. */
 	const ValdorsoRegistro::EDomanda RegSchermoCarattere[] = {
 		ValdorsoRegistro::EDomanda::Onesta, ValdorsoRegistro::EDomanda::Coraggio,
@@ -157,15 +174,9 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 
 	// La pergamena: disegnata "a nove pezzi", così i bordi bruciati restano uguali e il centro si allunga con la pagina.
 	// Se la texture non è ancora importata (Content/Python/importa_registro.py), un foglio liscio dello stesso colore.
-	TexturePergamena.Reset(LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Registro/T_Pergamena.T_Pergamena"), nullptr, LOAD_NoWarn | LOAD_Quiet));
+	TexturePergamena.Reset(RegSchermoCaricaTexture(TEXT("/Game/UI/Registro/T_Pergamena.T_Pergamena")));
 	if (TexturePergamena.IsValid())
 	{
-#if WITH_EDITOR
-		// (05/10) Nell'editor le texture appena caricate si preparano "in sottofondo": se Slate la chiede prima che sia
-		// pronta, non la disegna. Qui si aspetta che sia pronta (pochi millisecondi; nel gioco finito non serve).
-		UTexture* DaPreparare = TexturePergamena.Get();
-		FTextureCompilingManager::Get().FinishCompilation(MakeArrayView(&DaPreparare, 1));
-#endif
 		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro: pergamena %dx%d, pronta: %s"),
 			TexturePergamena->GetSizeX(), TexturePergamena->GetSizeY(), TexturePergamena->GetResource() ? TEXT("sì") : TEXT("no"));
 		PennelloPergamena.SetResourceObject(TexturePergamena.Get());
@@ -179,6 +190,9 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 		PennelloPergamena = FSlateRoundedBoxBrush(ValdorsoTema::Hex(TEXT("D9C49A")), 4.f, ValdorsoTema::Hex(TEXT("5A3A1E")), 2.f);
 	}
 
+	// Il riquadro del capolettera: oro scuro su un velo di rosso.
+	PennelloCapolettera = FSlateRoundedBoxBrush(ValdorsoTema::Rubrica().CopyWithNewOpacity(0.07f), 3.f, ValdorsoTema::OroScuro(), 1.5f);
+
 	// I campi di testo (racconto e storia): niente fondo scuro, un filo d'inchiostro che si scurisce quando si scrive.
 	StileCampoPergamena = Stile->StileCampo;
 	StileCampoPergamena
@@ -189,6 +203,40 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 		.SetForegroundColor(FSlateColor(Inchiostro))
 		.SetFocusedForegroundColor(FSlateColor(Inchiostro))
 		.SetReadOnlyForegroundColor(FSlateColor(Inchiostro));
+
+	// (05/10) L'inchiostro che si asciuga: mentre il sacerdote scrive è fresco, quasi nero con un riflesso blu;
+	// finita la scrittura passa a "mezzo asciutto" e dopo un attimo al bruno dell'inchiostro secco.
+	auto ConInchiostro = [this](const FLinearColor& Colore)
+	{
+		FEditableTextBoxStyle Nuovo = StileCampoPergamena;
+		Nuovo.SetForegroundColor(FSlateColor(Colore)).SetFocusedForegroundColor(FSlateColor(Colore)).SetReadOnlyForegroundColor(FSlateColor(Colore));
+		return Nuovo;
+	};
+	StileCampoFresco = ConInchiostro(ValdorsoTema::Hex(TEXT("15111C")));
+	StileCampoMezzo = ConInchiostro(ValdorsoTema::Hex(TEXT("221610")));
+
+	// (05/10) I pulsanti del Registro diventano linguette di cuoio cucite (solo qui: questo Stile è del Registro).
+	TextureCuoio.Reset(RegSchermoCaricaTexture(TEXT("/Game/UI/Registro/T_Cuoio.T_Cuoio")));
+	if (TextureCuoio.IsValid())
+	{
+		auto Cuoio = [this](const FLinearColor& Tinta)
+		{
+			FSlateBrush Pennello;
+			Pennello.SetResourceObject(TextureCuoio.Get());
+			Pennello.ImageSize = FVector2D(256.f, 80.f);
+			Pennello.DrawAs = ESlateBrushDrawType::Box;
+			Pennello.Margin = FMargin(0.1f, 0.22f);
+			Pennello.TintColor = FSlateColor(Tinta);
+			return Pennello;
+		};
+		Stile->StilePulsante
+			.SetNormal(Cuoio(FLinearColor(0.88f, 0.88f, 0.88f, 1.f)))
+			.SetHovered(Cuoio(FLinearColor::White))
+			.SetPressed(Cuoio(FLinearColor(0.68f, 0.68f, 0.68f, 1.f)))
+			.SetDisabled(Cuoio(FLinearColor(0.75f, 0.75f, 0.75f, 0.45f)))
+			.SetNormalPadding(FMargin(24.f, 10.f))
+			.SetPressedPadding(FMargin(24.f, 11.f, 24.f, 9.f));
+	}
 
 	FSlateFontInfo FontNome = Stile->Caratteri->Titolo(30.f, TEXT("Bold"));
 	FontNome.LetterSpacing = 50;
@@ -243,6 +291,14 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			return PaginaCompleta(Pagina);
 		}));
 	PulsanteAvanti = Prossimo;
+	BottoneProssimo = Prossimo;
+	// (05/10) "Firma il registro" in rosso ceralacca, come il sigillo che cadrà: è il gesto più importante della pagina.
+	StileFirma = Stile->StilePulsante;
+	StileFirma
+		.SetNormal(FSlateRoundedBoxBrush(ValdorsoTema::RossoSangue(), 3.f, ValdorsoTema::Oro().CopyWithNewOpacity(0.6f), 1.f))
+		.SetHovered(FSlateRoundedBoxBrush(ValdorsoTema::Hex(TEXT("A8362E")), 3.f, ValdorsoTema::OroChiaro(), 1.f))
+		.SetPressed(FSlateRoundedBoxBrush(ValdorsoTema::Hex(TEXT("6E201B")), 3.f, ValdorsoTema::Oro(), 1.f))
+		.SetDisabled(FSlateRoundedBoxBrush(ValdorsoTema::RossoSangue().CopyWithNewOpacity(0.45f), 3.f, ValdorsoTema::Oro().CopyWithNewOpacity(0.15f), 1.f));
 
 	TSharedRef<SButton> DadiPagina = Stile->Pulsante(LOCTEXT("DadiPagina", "I dadi del destino"),
 		FSimpleDelegate::CreateSP(this, &SValdorsoRegistroColono::TiraDadiPagina), 16.f,
@@ -284,6 +340,19 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(70.f, 30.f, 0.f, 30.f))
 			[
 				SNew(SOverlay)
+				// (05/10) L'ombra della pergamena: la stessa forma, nera e spostata, così il foglio "si stacca" dal fondo.
+				// (Nel SBox a misura zero: l'ombra non cambia la grandezza della pagina.)
+				+ SOverlay::Slot()
+				[
+					SNew(SBox).WidthOverride(0.f).HeightOverride(0.f)
+					[
+						SNew(SImage)
+						.Image(&PennelloPergamena)
+						.ColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.55f))
+						.Visibility(EVisibility::HitTestInvisible)
+						.RenderTransform(FSlateRenderTransform(FVector2f(9.f, 12.f)))
+					]
+				]
 				+ SOverlay::Slot()
 				[
 				SNew(SBorder)
@@ -573,6 +642,10 @@ void SValdorsoRegistroColono::Ridisegna()
 	FinisciScrittura();
 	PrimoFuoco.Reset();
 	CampoTesto.Reset();
+	if (BottoneProssimo.IsValid())
+	{
+		BottoneProssimo->SetButtonStyle(Pagina == EPagina::Firma ? &StileFirma : &Stile->StilePulsante);
+	}
 	Corpo->SetContent(ContenutoPagina());
 	OnCambia.ExecuteIfBound(Bozza);
 	if (Pagina == EPagina::Racconto && !bRaccontoScritto && !bRaccontoToccato)
@@ -895,7 +968,6 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaTesto(bool bRacconto)
 	TSharedRef<SMultiLineEditableTextBox> Campo = SNew(SMultiLineEditableTextBox)
 		.Style(&StileCampoPergamena)
 		.Font(bRacconto ? Stile->Caratteri->Calligrafia(34.f) : Stile->Caratteri->Testo(20.f))
-		.ForegroundColor(FSlateColor(ValdorsoTema::Inchiostro()))
 		.AutoWrapText(true)
 		.Text(FText::FromString(bRacconto ? Bozza.Racconto : Bozza.Storia))
 		.HintText(bRacconto ? FText::GetEmpty() : LOCTEXT("SugStoria", "Mio padre forgiava spade a Torre Grigia; io ho imparato a tacere..."))
@@ -1074,11 +1146,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 			.IsEnabled_Lambda([this]() { return !bInFirma && !bFinale && !bInUscita; })
 			.OnClicked_Lambda([this]() { VaiA(EPagina::Racconto); return FReply::Handled(); })
 			[
-				SNew(STextBlock)
-				.Text(FText::FromString(PerLaFirma().Racconto))
-				.Font(Stile->Caratteri->Calligrafia(30.f))
-				.ColorAndOpacity(ValdorsoTema::Inchiostro())
-				.AutoWrapText(true)
+				Capolettera(PerLaFirma().Racconto)
 			]
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 14.f, 0.f, 0.f))
@@ -1260,6 +1328,43 @@ void SValdorsoRegistroColono::MostraMessaggio(const FText& Scritta, bool bComeEr
 // Passo 4.2b: ritratto, sigillo, calligrafia, foto della pagina
 // ------------------------------------------------------------------------------------------------
 
+TSharedRef<SWidget> SValdorsoRegistroColono::Capolettera(const FString& Racconto)
+{
+	// (05/10) Il capolettera, come nei manoscritti: la prima lettera grande, rossa, in un riquadro d'oro;
+	// il resto del racconto accanto, nella mano del sacerdote.
+	const FString Pulito = Racconto.TrimStart();
+	if (Pulito.IsEmpty())
+	{
+		return SNullWidget::NullWidget;
+	}
+	FSlateFontInfo FontLettera = Stile->Caratteri->Titolo(44.f, TEXT("Black"));
+	return SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top).Padding(FMargin(0.f, 6.f, 12.f, 0.f))
+		[
+			SNew(SBorder)
+			.BorderImage(&PennelloCapolettera)
+			.Padding(FMargin(0.f))
+			[
+				// Almeno 72x72, ma cresce con la lettera: Cinzel Black a 44 punti è alta circa 80 (controllo automatico).
+				SNew(SBox).MinDesiredWidth(72.f).MinDesiredHeight(72.f).Padding(FMargin(10.f, 0.f)).HAlign(HAlign_Center).VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Pulito.Left(1).ToUpper()))
+					.Font(FontLettera)
+					.ColorAndOpacity(ValdorsoTema::Rubrica())
+				]
+			]
+		]
+		+ SHorizontalBox::Slot().FillWidth(1.f)
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(Pulito.Mid(1)))
+			.Font(Stile->Caratteri->Calligrafia(30.f))
+			.ColorAndOpacity(ValdorsoTema::Inchiostro())
+			.AutoWrapText(true)
+		];
+}
+
 TSharedRef<SWidget> SValdorsoRegistroColono::Destra()
 {
 	if (!RitrattoVivo.IsValid())
@@ -1360,6 +1465,7 @@ void SValdorsoRegistroColono::IniziaScrittura()
 	}
 	bScrivendo = true;
 	Scritte = 0.f;
+	CampoTesto->SetStyle(&StileCampoFresco);
 	CampoTesto->SetText(FText::GetEmpty());
 	MostraMessaggio(LOCTEXT("Scrivendo", "Il sacerdote scrive... (un tasto o un clic per leggere subito)"), false);
 	bMessaggioScrittura = true;
@@ -1404,6 +1510,17 @@ void SValdorsoRegistroColono::FinisciScrittura()
 	if (CampoTesto.IsValid())
 	{
 		CampoTesto->SetText(FText::FromString(Bozza.Racconto));
+		// L'inchiostro si asciuga: mezzo asciutto subito, secco dopo poco meno di un secondo.
+		CampoTesto->SetStyle(&StileCampoMezzo);
+		TWeakPtr<SMultiLineEditableTextBox> Debole = CampoTesto;
+		RegisterActiveTimer(0.9f, FWidgetActiveTimerDelegate::CreateLambda([this, Debole](double, float)
+		{
+			if (const TSharedPtr<SMultiLineEditableTextBox> Campo = Debole.Pin())
+			{
+				Campo->SetStyle(&StileCampoPergamena);
+			}
+			return EActiveTimerReturnType::Stop;
+		}));
 	}
 	// SetText può far credere che il giocatore abbia ritoccato il racconto: non è così.
 	bRaccontoToccato = false;

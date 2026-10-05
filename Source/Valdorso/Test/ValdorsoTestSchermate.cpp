@@ -295,8 +295,9 @@ struct FValdorsoProvaSchermate
 		{
 			return;
 		}
-		FWidgetRenderer Pittore(true, true);
-		TStrongObjectPtr<UTextureRenderTarget2D> Tela(FWidgetRenderer::CreateTargetFor(Pixel, TF_Bilinear, true));
+		// (05/10) Senza la correzione della luminosità: con "true" le foto uscivano più chiare del gioco.
+		FWidgetRenderer Pittore(false, true);
+		TStrongObjectPtr<UTextureRenderTarget2D> Tela(FWidgetRenderer::CreateTargetFor(Pixel, TF_Bilinear, false));
 		if (!Tela.IsValid())
 		{
 			return;
@@ -389,6 +390,8 @@ struct FValdorsoProvaSchermate
 		TSharedRef<SValdorsoMenuPrincipale> Schermata = SNew(SValdorsoMenuPrincipale);
 		// La comparsa lenta è già finita.
 		Schermata->Inizio = FPlatformTime::Seconds() - 60.0;
+		// (05/10) Il menu parte trasparente e appare con un timer: nelle foto restava invisibile.
+		Schermata->SetRenderOpacity(1.f);
 		Misura(Schermata, TEXT("menu"));
 		Schermata->MostraImpostazioni();
 		Misura(Schermata, TEXT("Impostazioni"));

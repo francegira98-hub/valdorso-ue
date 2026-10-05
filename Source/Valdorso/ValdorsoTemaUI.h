@@ -28,8 +28,8 @@ namespace ValdorsoTema
 
 	// L'inchiostro sulla pergamena del Registro (passo 4.2b, 05/10): scuro per i testi, tenue per le note,
 	// rosso "di rubrica" (come i titoli dei registri antichi) per nomi, scelte ed errori, oro scuro per i rombi.
-	inline FLinearColor Inchiostro()       { return Hex(TEXT("3A2414")); }
-	inline FLinearColor InchiostroTenue()  { return Hex(TEXT("6E5034")); }
+	inline FLinearColor Inchiostro()       { return Hex(TEXT("2E1B0E")); }
+	inline FLinearColor InchiostroTenue()  { return Hex(TEXT("5C4128")); }
 	inline FLinearColor Rubrica()          { return Hex(TEXT("8E2B25")); }
 	inline FLinearColor OroScuro()         { return Hex(TEXT("7A5A12")); }
 

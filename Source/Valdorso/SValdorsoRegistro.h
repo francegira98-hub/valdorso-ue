@@ -105,6 +105,8 @@ private:
 	TSharedRef<SWidget> PaginaFirma();
 	TSharedRef<SWidget> Destra();
 	TSharedRef<SWidget> Sigillo();
+	/** (05/10) Il racconto nella pagina della firma, con il capolettera rosso. */
+	TSharedRef<SWidget> Capolettera(const FString& Racconto);
 	/** La calligrafia del sacerdote: il racconto si scrive lettera per lettera (la prima volta). */
 	void IniziaScrittura();
 	void FinisciScrittura();
@@ -126,6 +128,12 @@ private:
 	FSlateBrush PennelloPergamena;
 	/** I campi di testo sulla pergamena: niente fondo scuro, solo un filo d'inchiostro. */
 	FEditableTextBoxStyle StileCampoPergamena;
+	/** (05/10) L'inchiostro del sacerdote appena scritto (fresco, lucido) e mentre si asciuga. */
+	FEditableTextBoxStyle StileCampoFresco;
+	FEditableTextBoxStyle StileCampoMezzo;
+	/** (05/10) Il cuoio dei pulsanti del Registro (Content/UI/Registro/T_Cuoio). */
+	TStrongObjectPtr<UTexture2D> TextureCuoio;
+	FSlateBrush PennelloCapolettera;
 
 	FValdorsoSuSalvaRegistro OnSalva;
 	FValdorsoSuCambioRisposte OnCambia;
@@ -144,6 +152,9 @@ private:
 	TSharedPtr<SBox> Corpo;
 	TSharedPtr<SWidget> PrimoFuoco;
 	TSharedPtr<SWidget> PulsanteAvanti;
+	/** (05/10) Lo stesso pulsante come SButton: nella pagina della firma diventa rosso ceralacca. */
+	TSharedPtr<SButton> BottoneProssimo;
+	FButtonStyle StileFirma;
 	TSharedPtr<SMultiLineEditableTextBox> CampoTesto;
 	FRandomStream Dadi;
 
