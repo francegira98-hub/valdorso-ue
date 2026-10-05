@@ -36,6 +36,9 @@ DECLARE_DELEGATE_OneParam(FValdorsoSuCambioRisposte, const FValdorsoRegistro& /*
 
 class VALDORSO_API SValdorsoRegistroColono : public SCompoundWidget
 {
+	/** (05/10) Il controllo automatico delle schermate (Test/ValdorsoTestSchermate.cpp) può aprire pannelli e pagine. */
+	friend struct FValdorsoProvaSchermate;
+
 public:
 	SLATE_BEGIN_ARGS(SValdorsoRegistroColono) : _Ritratto(nullptr) {}
 		SLATE_ARGUMENT(FString, NomePersonaggio)

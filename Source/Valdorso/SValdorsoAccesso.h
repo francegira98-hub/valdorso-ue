@@ -52,6 +52,9 @@ public:
 /** "Prima di entrare": il pannello dell'accesso nel menu. */
 class VALDORSO_API SValdorsoPrimaDiEntrare : public SCompoundWidget
 {
+	/** (05/10) Il controllo automatico delle schermate (Test/ValdorsoTestSchermate.cpp) può aprire pannelli e pagine. */
+	friend struct FValdorsoProvaSchermate;
+
 public:
 	SLATE_BEGIN_ARGS(SValdorsoPrimaDiEntrare) : _bPrimoIngresso(false) {}
 		SLATE_ARGUMENT(FString, NomeIniziale)

@@ -480,7 +480,8 @@ void SValdorsoPrimaDiEntrare::Construct(const FArguments& InArgs)
 									{
 										return LOCTEXT("Crea", "Crea l'account");
 									}
-									return bRecupero ? LOCTEXT("CambiaEntra", "Cambia la password ed entra") : LOCTEXT("EntraOra", "Entra nella valle");
+									// (05/10) "Cambia la password ed entra" era così lungo da schiacciare "Indietro" a larghezza zero.
+									return bRecupero ? LOCTEXT("CambiaEntra", "Cambia ed entra") : LOCTEXT("EntraOra", "Entra nella valle");
 								}),
 								FSimpleDelegate::CreateSP(this, &SValdorsoPrimaDiEntrare::Invia), 22.f, Libero)
 						]
@@ -493,6 +494,8 @@ void SValdorsoPrimaDiEntrare::Construct(const FArguments& InArgs)
 						SNew(SButton)
 						.ButtonStyle(&FCoreStyle::Get(), "NoBorder")
 						.IsEnabled(Libero)
+						// (05/10) Nascosto in "Ho perso la password": il pannello è il più alto e a 720p usciva dallo schermo.
+						.Visibility_Lambda([this]() { return bRecupero ? EVisibility::Collapsed : EVisibility::Visible; })
 						.OnClicked_Lambda([this]() { OnProvaLocale.ExecuteIfBound(); return FReply::Handled(); })
 						[
 							SNew(STextBlock)
@@ -894,8 +897,10 @@ void SValdorsoCodiciRecupero::Construct(const FArguments& InArgs)
 	// (05/10) Titolo e codici erano troppo larghi per il pannello: caratteri un poco più piccoli e pannello più largo.
 	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(30.f, TEXT("Bold"));
 	FontTitolo.LetterSpacing = 30;
-	FSlateFontInfo FontCodice = Stile->Caratteri->Titolo(21.f, TEXT("Bold"));
-	FontCodice.LetterSpacing = 60;
+	// (05/10, controllo automatico) Con lettere larghe (M, W) i codici uscivano dal pannello fino a 250 pixel:
+	// carattere 20 con spaziatura 30 e pannello da 1040.
+	FSlateFontInfo FontCodice = Stile->Caratteri->Titolo(20.f, TEXT("Bold"));
+	FontCodice.LetterSpacing = 30;
 
 	// Due colonne di codici.
 	TSharedRef<SHorizontalBox> Colonne = SNew(SHorizontalBox);
@@ -958,7 +963,7 @@ void SValdorsoCodiciRecupero::Construct(const FArguments& InArgs)
 			.BorderImage(&Stile->SfondoPannello)
 			.Padding(FMargin(54.f, 40.f))
 			[
-				SNew(SBox).WidthOverride(820.f)
+				SNew(SBox).WidthOverride(1040.f)
 				[
 					SNew(SVerticalBox)
 					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)

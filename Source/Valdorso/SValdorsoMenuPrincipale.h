@@ -67,6 +67,9 @@ public:
 /** Il menu principale. */
 class VALDORSO_API SValdorsoMenuPrincipale : public SCompoundWidget
 {
+	/** (05/10) Il controllo automatico delle schermate (Test/ValdorsoTestSchermate.cpp) può aprire pannelli e pagine. */
+	friend struct FValdorsoProvaSchermate;
+
 public:
 	SLATE_BEGIN_ARGS(SValdorsoMenuPrincipale) {}
 		SLATE_EVENT(FSimpleDelegate, OnEntra)

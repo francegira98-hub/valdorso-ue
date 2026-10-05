@@ -24,6 +24,9 @@ DECLARE_DELEGATE_OneParam(FValdorsoSuMostraPersonaggio, const FValdorsoPersonagg
 
 class VALDORSO_API SValdorsoSceltaPersonaggio : public SCompoundWidget
 {
+	/** (05/10) Il controllo automatico delle schermate (Test/ValdorsoTestSchermate.cpp) può aprire pannelli e pagine. */
+	friend struct FValdorsoProvaSchermate;
+
 public:
 	SLATE_BEGIN_ARGS(SValdorsoSceltaPersonaggio) : _Ritratto(nullptr) {}
 		/** (05/10) Il ritratto del palco: a destra si vede chi è selezionato. */

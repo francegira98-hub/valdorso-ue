@@ -55,13 +55,14 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 
 			// Con il ritratto il pannello va a sinistra; senza, resta al centro.
 			+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(RitrattoVivo.IsValid() ? HAlign_Left : HAlign_Center).VAlign(VAlign_Center)
-			.Padding(FMargin(RitrattoVivo.IsValid() ? 70.f : 0.f, 30.f, 0.f, 30.f))
+			.Padding(FMargin(RitrattoVivo.IsValid() ? 50.f : 0.f, 30.f, 0.f, 30.f))
 			[
 			SNew(SBorder)
 			.BorderImage(&Stile->SfondoPannello)
 			.Padding(FMargin(54.f, 40.f))
 			[
-				SNew(SBox).WidthOverride(640.f)
+				// (05/10) Da 640 a 680: i nomi lunghi (20 lettere) avevano bisogno di spazio (controllo automatico delle scritte).
+				SNew(SBox).WidthOverride(680.f)
 				[
 					SNew(SVerticalBox)
 
@@ -250,8 +251,10 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 		? FDateTime::FromUnixTimestamp(Personaggio.UltimoGioco).ToString(TEXT("%d/%m/%Y")) + TEXT(" · ") + Tempo + TEXT(" nella valle")
 		: FString(TEXT("Non è ancora entrato nella valle"));
 
-	FSlateFontInfo FontNome = Stile->Caratteri->Titolo(26.f, TEXT("Bold"));
-	FontNome.LetterSpacing = 40;
+	// (05/10) Da 26 a 22 punti e meno spaziatura: un nome di 20 lettere usciva dalla riga di oltre 100 pixel.
+	// Se non basta (nomi con lettere larghe), il nome va a capo invece di tagliarsi.
+	FSlateFontInfo FontNome = Stile->Caratteri->Titolo(22.f, TEXT("Bold"));
+	FontNome.LetterSpacing = 20;
 
 	TSharedRef<SVerticalBox> Contenuto = SNew(SVerticalBox);
 
@@ -270,7 +273,7 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 			SNew(SVerticalBox)
 			+ SVerticalBox::Slot().AutoHeight()
 			[
-				SNew(STextBlock).Text(FText::FromString(Nome)).Font(FontNome).ColorAndOpacity(ValdorsoTema::Oro())
+				SNew(STextBlock).Text(FText::FromString(Nome)).Font(FontNome).ColorAndOpacity(ValdorsoTema::Oro()).AutoWrapText(true)
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 2.f, 0.f, 0.f))
 			[
