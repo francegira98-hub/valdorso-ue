@@ -428,7 +428,8 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 				return FSlateColor(ValdorsoTema::TestoSecondario().CopyWithNewOpacity(FMath::Clamp((Passati - 2.0f) / 1.0f, 0.f, 0.8f)));
 			})
 		]
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(FMargin(80.f, 0.f))
+		// (05/10) Fill e non Center (il testo è già centrato): con Center la frase finale andava a capo a ogni parola.
+		+ SOverlay::Slot().HAlign(HAlign_Fill).VAlign(VAlign_Center).Padding(FMargin(80.f, 0.f))
 		[
 			SNew(STextBlock)
 			.Text(LOCTEXT("Finale", "Il frammento batte più forte, per un istante. La valle ti ha sentito."))
@@ -645,7 +646,9 @@ TSharedRef<SButton> SValdorsoRegistroColono::PulsanteVoce(const FText& Scritta, 
 	return SNew(SButton)
 		.ButtonStyle(Scelta() ? &StileVoceScelta : &StileVoce)
 		.IsFocusable(true)
-		.HAlign(HAlign_Left)
+		// (05/10, segnalato da Fra) Fill e non Left: con Left il testo che va a capo si stringeva da solo fino alla
+		// parola più lunga ("La / solitudine" su due righe). Il testo resta allineato a sinistra.
+		.HAlign(HAlign_Fill)
 		.ToolTipText(Aiuto)
 		.IsEnabled_Lambda([this]() { return !bInFirma && !bFinale && !bInUscita; })
 		.OnClicked_Lambda([this, Azione]()
@@ -885,7 +888,8 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaTesto(bool bRacconto)
 			}), 15.f, TAttribute<bool>::CreateLambda([this]() { return bRaccontoToccato && !bInFirma && !bFinale && !bInUscita; }))
 		];
 	}
-	Sotto->AddSlot().FillWidth(1.f).HAlign(HAlign_Right).VAlign(VAlign_Center)
+	// (05/10) Fill e non Right (il testo è già allineato a destra): con Right "2.974 / 3.000" andava a capo da solo.
+	Sotto->AddSlot().FillWidth(1.f).HAlign(HAlign_Fill).VAlign(VAlign_Center)
 	[
 		SNew(STextBlock)
 		.Text_Lambda([this, bRacconto, Massimo]()

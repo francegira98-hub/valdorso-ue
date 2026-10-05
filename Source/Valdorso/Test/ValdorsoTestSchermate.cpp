@@ -29,7 +29,9 @@
 #include "Engine/FontFace.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/UserInterfaceSettings.h"
+#include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Rendering/SlateRenderer.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
 #include "ImageUtils.h"
@@ -223,6 +225,26 @@ struct FValdorsoProvaSchermate
 				const float Em = StaticCastSharedRef<STextBlock>(Widget)->GetFont().Size * 96.f / 72.f;
 				const bool bPiuRighe = Voluto.Y > Em * 1.9f;
 				const float MargineX = Margine + (bPiuRighe ? Em * 0.4f : 0.f);
+				// (05/10) Il difetto di "La / solitudine": una scritta che va a capo in uno spazio stretto quanto la sua
+				// parola più lunga. Succede quando il genitore le dà solo la larghezza che chiede (HAlign Left, Right o
+				// Center): lei chiede poco perché va a capo, e va a capo perché ha poco. Si sistema con HAlign_Fill.
+				if (bPiuRighe)
+				{
+					const TSharedRef<FSlateFontMeasure> Misuratore = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+					const FSlateFontInfo Carattere = StaticCastSharedRef<STextBlock>(Widget)->GetFont();
+					TArray<FString> Parole;
+					Scritta.ParseIntoArrayWS(Parole);
+					float ParolaPiuLarga = 0.f;
+					for (const FString& Parola : Parole)
+					{
+						ParolaPiuLarga = FMath::Max(ParolaPiuLarga, static_cast<float>(Misuratore->Measure(Parola, Carattere).X));
+					}
+					if (Parole.Num() >= 2 && ParolaPiuLarga > 0.f && Spazio.X < ParolaPiuLarga * 1.6f)
+					{
+						OutProblemi.Add(FString::Printf(TEXT("\"%s\" va a capo quasi a ogni parola: ha solo %.0f di spazio (serve HAlign_Fill)"),
+							*Breve(Scritta), Spazio.X));
+					}
+				}
 				if (Voluto.X > Spazio.X + MargineX)
 				{
 					OutProblemi.Add(FString::Printf(TEXT("\"%s\" è larga %.0f ma ha %.0f: esce di %.0f"),

@@ -791,7 +791,8 @@ void SValdorsoAnticamera::Construct(const FArguments& InArgs)
 					}))
 				]
 
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+				// (05/10, controllo automatico) Fill e non Center (il testo è già centrato): con Center andava a capo a ogni parola.
+				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Fill)
 				[
 					SNew(STextBlock)
 					.Text_Lambda([this]() { return Messaggio; })
