@@ -26,6 +26,7 @@
 #include "UObject/StrongObjectPtr.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/Texture2D.h"
+#include "Components/AudioComponent.h"
 
 class FValdorsoStileAccesso;
 class SBox;
@@ -57,6 +58,9 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
+
+	/** (05/10) Sfuma i suoni del palco (fuoco, battito, pennino) quando la schermata se ne va. */
+	virtual ~SValdorsoRegistroColono();
 
 	/** La risposta del server a una bozza o alla firma. */
 	void Esito(const FString& Avviso, bool bRiuscito, const FValdorsoRegistro& Salvato);
@@ -134,6 +138,15 @@ private:
 	/** (05/10) Il cuoio dei pulsanti del Registro (Content/UI/Registro/T_Cuoio). */
 	TStrongObjectPtr<UTexture2D> TextureCuoio;
 	FSlateBrush PennelloCapolettera;
+
+	/** (05/10) I suoni (ValdorsoSuoni): fuoco e battito sotto il Registro, il pennino mentre il sacerdote scrive,
+	 *  il motivo della fede scelta, la campana e la ceralacca alla firma. Tenuti vivi qui finché suonano. */
+	TStrongObjectPtr<UAudioComponent> SuonoFuoco;
+	TStrongObjectPtr<UAudioComponent> SuonoBattito;
+	TStrongObjectPtr<UAudioComponent> SuonoPennino;
+	TStrongObjectPtr<UAudioComponent> SuonoMotivo;
+	TStrongObjectPtr<UAudioComponent> SuonoCampana;
+	TStrongObjectPtr<UAudioComponent> SuonoCeralacca;
 
 	FValdorsoSuSalvaRegistro OnSalva;
 	FValdorsoSuCambioRisposte OnCambia;

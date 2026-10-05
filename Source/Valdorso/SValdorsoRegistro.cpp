@@ -26,6 +26,7 @@
 #include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Valdorso.h"
+#include "ValdorsoSuoni.h"
 #if WITH_EDITOR
 #include "TextureCompiler.h"
 #endif
@@ -564,8 +565,21 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 		]
 	];
 
+	// (05/10) I suoni del palco: il fuoco dei bracieri e il battito del Cuore, a tempo con il rombo che pulsa
+	// (il battito di ValdorsoTema dura 1,6 secondi: si parte dal punto giusto del giro).
+	SuonoFuoco.Reset(ValdorsoSuoni::Suona(TEXT("S_Fuoco"), 0.35f));
+	SuonoBattito.Reset(ValdorsoSuoni::Suona(TEXT("S_Battito"), 0.55f, static_cast<float>(FMath::Fmod(FPlatformTime::Seconds(), 1.6))));
+
 	// Si riparte dalla prima domanda senza risposta (o dal racconto, se ci sono tutte).
 	VaiA(RegSchermoPaginaDellaDomanda(ValdorsoRegistro::PrimaMancante(Bozza)));
+}
+
+SValdorsoRegistroColono::~SValdorsoRegistroColono()
+{
+	ValdorsoSuoni::Sfuma(SuonoFuoco.Get(), 0.8f);
+	ValdorsoSuoni::Sfuma(SuonoBattito.Get(), 0.8f);
+	ValdorsoSuoni::Sfuma(SuonoPennino.Get(), 0.2f);
+	ValdorsoSuoni::Sfuma(SuonoMotivo.Get(), 0.8f);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -824,7 +838,16 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Scelte(ValdorsoRegistro::EDomanda Q
 		const FString PortaVoce = ValdorsoRegistro::Vantaggio(Quale, Chiave);
 		TSharedRef<SButton> Voce = PulsanteVoce(Scritta,
 			[this, Quale, Chiave]() { return ValdorsoRegistro::Risposta(Bozza, Quale) == Chiave; },
-			[this, Quale, Chiave]() { ValdorsoRegistro::Risposta(Bozza, Quale) = Chiave; },
+			[this, Quale, Chiave]()
+			{
+				ValdorsoRegistro::Risposta(Bozza, Quale) = Chiave;
+				// (05/10) Scegliendo una fede si sente il suo motivo.
+				if (Quale == ValdorsoRegistro::EDomanda::Fede)
+				{
+					ValdorsoSuoni::Sfuma(SuonoMotivo.Get(), 0.3f);
+					SuonoMotivo.Reset(ValdorsoSuoni::SuonaFede(Chiave, 0.7f));
+				}
+			},
 			bCompatte ? 20.f : 21.f,
 			FText::FromString(PortaVoce),
 			Quale == ValdorsoRegistro::EDomanda::Fede ? RegSchermoColoreFede(Chiave) : FLinearColor::Transparent);
@@ -1307,6 +1330,23 @@ void SValdorsoRegistroColono::AvviaFinale()
 	Messaggio = FText::GetEmpty();
 	FinisciScrittura();
 	RegisterActiveTimer(RegSchermoSecondiFinale, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoRegistroColono::FineFinale));
+	// (05/10) La campana del tempio; il sigillo tocca la carta con la ceralacca; il fuoco si quieta e il Cuore
+	// batte più forte ("Il frammento batte più forte, per un istante").
+	SuonoCampana.Reset(ValdorsoSuoni::Suona(TEXT("S_Campana"), 0.9f));
+	RegisterActiveTimer(RegSchermoSigillo * 0.85f, FWidgetActiveTimerDelegate::CreateLambda([this](double, float)
+	{
+		SuonoCeralacca.Reset(ValdorsoSuoni::Suona(TEXT("S_Ceralacca"), 0.9f));
+		return EActiveTimerReturnType::Stop;
+	}));
+	if (SuonoBattito.IsValid())
+	{
+		// (AdjustVolume moltiplica il volume di partenza, 0,55: 1/0,55 lo porta a 1.)
+		SuonoBattito->AdjustVolume(1.5f, 1.f / 0.55f);
+	}
+	if (SuonoFuoco.IsValid())
+	{
+		SuonoFuoco->AdjustVolume(2.f, 0.12f / 0.35f);
+	}
 	// Quando il sigillo è caduto, la foto della pagina firmata.
 	RegisterActiveTimer(RegSchermoSigillo + 0.1f, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoRegistroColono::FotoPagina));
 }
@@ -1466,6 +1506,9 @@ void SValdorsoRegistroColono::IniziaScrittura()
 	bScrivendo = true;
 	Scritte = 0.f;
 	CampoTesto->SetStyle(&StileCampoFresco);
+	// (05/10) Il pennino che gratta finché il sacerdote scrive.
+	ValdorsoSuoni::Sfuma(SuonoPennino.Get(), 0.1f);
+	SuonoPennino.Reset(ValdorsoSuoni::Suona(TEXT("S_Pennino"), 0.5f));
 	CampoTesto->SetText(FText::GetEmpty());
 	MostraMessaggio(LOCTEXT("Scrivendo", "Il sacerdote scrive... (un tasto o un clic per leggere subito)"), false);
 	bMessaggioScrittura = true;
@@ -1500,6 +1543,11 @@ void SValdorsoRegistroColono::FinisciScrittura()
 	{
 		UnRegisterActiveTimer(TimerScrittura.ToSharedRef());
 		TimerScrittura.Reset();
+	}
+	if (SuonoPennino.IsValid())
+	{
+		ValdorsoSuoni::Sfuma(SuonoPennino.Get(), 0.15f);
+		SuonoPennino.Reset();
 	}
 	if (!bScrivendo)
 	{

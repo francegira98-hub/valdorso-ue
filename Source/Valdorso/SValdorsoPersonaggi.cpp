@@ -15,6 +15,7 @@
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
+#include "ValdorsoSuoni.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoPersonaggi"
 
@@ -457,6 +458,9 @@ void SValdorsoSceltaPersonaggio::Tick(const FGeometry& AllottedGeometry, const d
 			IdMostrato = Scelto;
 			NomeMostrato = Personaggio.Nome;
 			OnMostra.ExecuteIfBound(Personaggio);
+			// (05/10) Il motivo della sua fede (niente se il registro è ancora bianco).
+			ValdorsoSuoni::Sfuma(SuonoMotivo.Get(), 0.3f);
+			SuonoMotivo.Reset(ValdorsoSuoni::SuonaFede(Personaggio.Fede, 0.6f));
 			return;
 		}
 	}

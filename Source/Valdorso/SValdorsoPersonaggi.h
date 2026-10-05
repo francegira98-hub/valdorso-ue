@@ -13,6 +13,7 @@
 #include "ValdorsoArchivista.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Components/AudioComponent.h"
 
 class FValdorsoStileAccesso;
 class SVerticalBox;
@@ -73,6 +74,8 @@ private:
 	TArray<TPair<TSharedPtr<SWidget>, FString>> RigheVive;
 	FString IdMostrato;
 	FString NomeMostrato;
+	/** (05/10) Il motivo della fede di chi è selezionato (ValdorsoSuoni). */
+	TStrongObjectPtr<UAudioComponent> SuonoMotivo;
 
 	TArray<FValdorsoPersonaggioBreve> Elenco;
 	TSharedPtr<SVerticalBox> Righe;
