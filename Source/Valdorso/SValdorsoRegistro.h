@@ -75,6 +75,9 @@ public:
 	virtual FReply OnPreviewKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply OnPreviewMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual bool SupportsKeyboardFocus() const override { return true; }
+	/** (06/10) La penna d'oca come cursore, dove non c'è un cursore più preciso (testo, firma). */
+	virtual FCursorReply OnCursorQuery(const FGeometry& MyGeometry, const FPointerEvent& CursorEvent) const override;
+	virtual TOptional<TSharedRef<SWidget>> OnMapCursor(const FCursorReply& CursorReply) const override;
 
 	/** Le pagine, nell'ordine. */
 	enum class EPagina : uint8
@@ -194,4 +197,22 @@ private:
 	float Scritte = 0.f;
 	TSharedPtr<FActiveTimerHandle> TimerScrittura;
 	double InizioFinale = 0.0;
+
+	// ---- (06/10) Passo 4.2c, le rifiniture del palco ----
+	/** La cornice d'oro intagliata del ritratto. */
+	TStrongObjectPtr<UTexture2D> TextureCornice;
+	FSlateBrush PennelloCornice;
+	/** Il sigillo vero (ceralacca con la zampa dell'Orso); se manca resta il disco con la V. */
+	TStrongObjectPtr<UTexture2D> TextureSigillo;
+	FSlateBrush PennelloSigilloVero;
+	/** La penna d'oca come cursore del mouse. */
+	TStrongObjectPtr<UTexture2D> TexturePenna;
+	FSlateBrush PennelloPenna;
+	TSharedPtr<SWidget> CursorePenna;
+	/** Le pagine che si girano: quando è cambiata l'ultima volta (la pagina appare e scivola appena). */
+	double TempoPagina = -10.0;
+	bool bPrimaPagina = true;
+	/** Il bordone del palco e il fruscio della pagina. */
+	TStrongObjectPtr<UAudioComponent> SuonoBordone;
+	TStrongObjectPtr<UAudioComponent> SuonoPagina;
 };

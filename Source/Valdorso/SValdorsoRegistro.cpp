@@ -6,6 +6,7 @@
 #include "SValdorsoRegistro.h"
 #include "SValdorsoAccesso.h"
 #include "SValdorsoFirma.h"
+#include "SValdorsoPolvere.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoTemaUI.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -104,15 +105,7 @@ namespace
 	 */
 	UTexture2D* RegSchermoCaricaTexture(const TCHAR* Percorso)
 	{
-		UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, Percorso, nullptr, LOAD_NoWarn | LOAD_Quiet);
-#if WITH_EDITOR
-		if (Texture)
-		{
-			UTexture* DaPreparare = Texture;
-			FTextureCompilingManager::Get().FinishCompilation(MakeArrayView(&DaPreparare, 1));
-		}
-#endif
-		return Texture;
+		return ValdorsoCaricaTextureUI(Percorso);
 	}
 
 	/** Le quattro coppie del carattere, nell'ordine della pagina. */
@@ -190,6 +183,32 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 	{
 		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Registro: T_Pergamena non trovata in Content/UI/Registro (lanciare importa_registro.py)"));
 		PennelloPergamena = FSlateRoundedBoxBrush(ValdorsoTema::Hex(TEXT("D9C49A")), 4.f, ValdorsoTema::Hex(TEXT("5A3A1E")), 2.f);
+	}
+
+	// (06/10) Passo 4.2c: la cornice d'oro del ritratto, il sigillo vero e la penna d'oca come cursore.
+	PennelloCornice = ValdorsoTema::Cornice(TextureCornice, Stile->SfondoPannello);
+	TextureSigillo.Reset(RegSchermoCaricaTexture(TEXT("/Game/UI/Registro/T_Sigillo.T_Sigillo")));
+	if (TextureSigillo.IsValid())
+	{
+		PennelloSigilloVero.SetResourceObject(TextureSigillo.Get());
+		PennelloSigilloVero.ImageSize = FVector2D(256.f, 256.f);
+		PennelloSigilloVero.DrawAs = ESlateBrushDrawType::Image;
+	}
+	TexturePenna.Reset(RegSchermoCaricaTexture(TEXT("/Game/UI/Registro/T_Penna.T_Penna")));
+	if (TexturePenna.IsValid())
+	{
+		PennelloPenna.SetResourceObject(TexturePenna.Get());
+		PennelloPenna.ImageSize = FVector2D(36.f, 36.f);
+		PennelloPenna.DrawAs = ESlateBrushDrawType::Image;
+		// Slate disegna il cursore centrato sul puntatore: la penna sta nel quarto in basso a destra di un riquadro
+		// doppio, così la punta (in alto a sinistra dell'immagine) cade proprio dove si clicca.
+		CursorePenna = SNew(SBox).WidthOverride(72.f).HeightOverride(72.f).HAlign(HAlign_Right).VAlign(VAlign_Bottom)
+			[
+				SNew(SBox).WidthOverride(36.f).HeightOverride(36.f)
+				[
+					SNew(SImage).Image(&PennelloPenna).Visibility(EVisibility::HitTestInvisible)
+				]
+			];
 	}
 
 	// Il riquadro del capolettera: oro scuro su un velo di rosso.
@@ -434,6 +453,21 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 						// Il contenuto della pagina (si ridisegna a ogni cambio di pagina).
 						+ SVerticalBox::Slot().AutoHeight()
 						[
+							// (06/10) La pagina che si gira: a ogni cambio il contenuto appare e scivola appena da destra.
+							SNew(SBorder)
+							.BorderImage(FCoreStyle::Get().GetBrush("NoBorder"))
+							.Padding(FMargin(0.f))
+							.ColorAndOpacity_Lambda([this]()
+							{
+								const float A = FMath::Clamp(static_cast<float>(FPlatformTime::Seconds() - TempoPagina) / 0.3f, 0.f, 1.f);
+								return FLinearColor(1.f, 1.f, 1.f, A);
+							})
+							.RenderTransform_Lambda([this]()
+							{
+								const float A = FMath::Clamp(static_cast<float>(FPlatformTime::Seconds() - TempoPagina) / 0.3f, 0.f, 1.f);
+								return TOptional<FSlateRenderTransform>(FSlateRenderTransform(FVector2f((1.f - A) * (1.f - A) * 18.f, 0.f)));
+							})
+							[
 							// (05/10) Nella pagina della firma la parte che scorre è più bassa: sotto c'è il riquadro della firma.
 							SNew(SBox).MaxDesiredHeight_Lambda([this]() { return FOptionalSize(Pagina == EPagina::Firma ? 290.f : 470.f); })
 							[
@@ -442,6 +476,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 								[
 									SAssignNew(Corpo, SBox)
 								]
+							]
 							]
 						]
 
@@ -597,6 +632,12 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			]
 		]
 
+		// (06/10) La polvere nella luce, davanti al palco (non prende i clic).
+		+ SOverlay::Slot()
+		[
+			SNew(SValdorsoPolvere)
+		]
+
 		// Dopo la firma: il nero e la frase.
 		+ SOverlay::Slot()
 		[
@@ -644,6 +685,8 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 	// (il battito di ValdorsoTema dura 1,6 secondi: si parte dal punto giusto del giro).
 	SuonoFuoco.Reset(ValdorsoSuoni::Suona(TEXT("S_Fuoco"), 0.35f));
 	SuonoBattito.Reset(ValdorsoSuoni::Suona(TEXT("S_Battito"), 0.55f, static_cast<float>(FMath::Fmod(FPlatformTime::Seconds(), 1.6))));
+	// (06/10) Il bordone del palco, piano: musica d'ambiente finché non arriva quella vera.
+	SuonoBordone.Reset(ValdorsoSuoni::Suona(TEXT("S_Bordone"), 0.22f));
 
 	// Si riparte dalla prima domanda senza risposta (o dal racconto, se ci sono tutte).
 	VaiA(RegSchermoPaginaDellaDomanda(ValdorsoRegistro::PrimaMancante(Bozza)));
@@ -655,6 +698,22 @@ SValdorsoRegistroColono::~SValdorsoRegistroColono()
 	ValdorsoSuoni::Sfuma(SuonoBattito.Get(), 0.8f);
 	ValdorsoSuoni::Sfuma(SuonoPennino.Get(), 0.2f);
 	ValdorsoSuoni::Sfuma(SuonoMotivo.Get(), 0.8f);
+	ValdorsoSuoni::Sfuma(SuonoBordone.Get(), 1.2f);
+}
+
+FCursorReply SValdorsoRegistroColono::OnCursorQuery(const FGeometry& MyGeometry, const FPointerEvent& CursorEvent) const
+{
+	// "Default" e non "Custom": se un giorno la penna non si potesse disegnare, resta la freccia normale.
+	return CursorePenna.IsValid() ? FCursorReply::Cursor(EMouseCursor::Default) : FCursorReply::Unhandled();
+}
+
+TOptional<TSharedRef<SWidget>> SValdorsoRegistroColono::OnMapCursor(const FCursorReply& CursorReply) const
+{
+	if (CursorePenna.IsValid() && CursorReply.GetCursorType() == EMouseCursor::Default)
+	{
+		return CursorePenna.ToSharedRef();
+	}
+	return SCompoundWidget::OnMapCursor(CursorReply);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -663,6 +722,14 @@ SValdorsoRegistroColono::~SValdorsoRegistroColono()
 
 void SValdorsoRegistroColono::VaiA(EPagina Nuova)
 {
+	// (06/10) La pagina si gira: il fruscio (non alla prima pagina, che si apre insieme al Registro).
+	if (!bPrimaPagina && Nuova != Pagina)
+	{
+		TempoPagina = FPlatformTime::Seconds();
+		ValdorsoSuoni::Sfuma(SuonoPagina.Get(), 0.05f);
+		SuonoPagina.Reset(ValdorsoSuoni::Suona(TEXT("S_Pagina"), 0.6f));
+	}
+	bPrimaPagina = false;
 	Pagina = Nuova;
 	Messaggio = FText::GetEmpty();
 	bErrore = false;
@@ -1506,17 +1573,19 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Destra()
 			];
 	}
 
-	// Il ritratto in una cornice sottile d'oro, con l'iscrizione sotto.
+	// (06/10) Il ritratto nella cornice d'oro intagliata, con la luce delle candele che trema; l'iscrizione sotto.
 	return SNew(SVerticalBox)
 		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
 		[
 			SNew(SBorder)
-			.BorderImage(&Stile->SfondoPannello)
-			.Padding(FMargin(6.f))
+			.BorderImage(&PennelloCornice)
+			.Padding(FMargin(TextureCornice.IsValid() ? ValdorsoTema::LarghezzaCornice - 4.f : 6.f))
 			[
 				SNew(SBox).WidthOverride(560.f).HeightOverride(700.f)
 				[
-					SNew(SImage).Image(&PennelloRitratto)
+					SNew(SImage)
+					.Image(&PennelloRitratto)
+					.ColorAndOpacity_Lambda([]() { return FSlateColor(ValdorsoTema::LuceCandela(FPlatformTime::Seconds())); })
 				]
 			]
 		]
@@ -1556,10 +1625,13 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Sigillo()
 		})
 		[
 			SNew(SBox)
-			.WidthOverride(92.f)
-			.HeightOverride(92.f)
+			.WidthOverride(TextureSigillo.IsValid() ? 118.f : 92.f)
+			.HeightOverride(TextureSigillo.IsValid() ? 118.f : 92.f)
 			[
-				SNew(SOverlay)
+				TextureSigillo.IsValid()
+				// (06/10) Il sigillo vero: ceralacca con la zampa dell'Orso.
+				? StaticCastSharedRef<SWidget>(SNew(SImage).Image(&PennelloSigilloVero))
+				: StaticCastSharedRef<SWidget>(SNew(SOverlay)
 				+ SOverlay::Slot()
 				[
 					SNew(SImage).Image(&PennelloSigillo)
@@ -1574,7 +1646,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Sigillo()
 					.Text(LOCTEXT("SigilloV", "V"))
 					.Font(FontV)
 					.ColorAndOpacity(ValdorsoTema::Oro())
-				]
+				])
 			]
 		];
 }

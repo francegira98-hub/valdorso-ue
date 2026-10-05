@@ -37,6 +37,13 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 	}
 
 	// (05/10) 32 punti e meno spaziatura: a 40 il titolo usciva a destra dal pannello ("COLON").
+	// (06/10) La cornice d'oro del ritratto e, se c'è il ritratto (il palco), il bordone piano.
+	PennelloCornice = ValdorsoTema::Cornice(TextureCornice, Stile->SfondoPannello);
+	if (RitrattoVivo.IsValid())
+	{
+		SuonoBordone.Reset(ValdorsoSuoni::Suona(TEXT("S_Bordone"), 0.2f));
+	}
+
 	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(32.f, TEXT("Bold"));
 	FontTitolo.LetterSpacing = 30;
 
@@ -135,12 +142,14 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
 				[
 					SNew(SBorder)
-					.BorderImage(&Stile->SfondoPannello)
-					.Padding(FMargin(6.f))
+					.BorderImage(&PennelloCornice)
+					.Padding(FMargin(TextureCornice.IsValid() ? ValdorsoTema::LarghezzaCornice - 4.f : 6.f))
 					[
 						SNew(SBox).WidthOverride(520.f).HeightOverride(650.f)
 						[
-							SNew(SImage).Image(&PennelloRitratto)
+							SNew(SImage)
+							.Image(&PennelloRitratto)
+							.ColorAndOpacity_Lambda([]() { return FSlateColor(ValdorsoTema::LuceCandela(FPlatformTime::Seconds())); })
 						]
 					]
 				]
@@ -156,6 +165,12 @@ void SValdorsoSceltaPersonaggio::Construct(const FArguments& InArgs)
 	];
 
 	Ridisegna();
+}
+
+SValdorsoSceltaPersonaggio::~SValdorsoSceltaPersonaggio()
+{
+	ValdorsoSuoni::Sfuma(SuonoBordone.Get(), 1.f);
+	ValdorsoSuoni::Sfuma(SuonoMotivo.Get(), 0.5f);
 }
 
 void SValdorsoSceltaPersonaggio::Aggiorna(const TArray<FValdorsoPersonaggioBreve>& Nuovi, const FText& Testo, bool bComeErrore)

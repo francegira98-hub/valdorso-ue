@@ -2,6 +2,10 @@
 
 #include "ValdorsoTemaUI.h"
 #include "Engine/FontFace.h"
+#include "Engine/Texture2D.h"
+#if WITH_EDITOR
+#include "TextureCompiler.h"
+#endif
 #include "Styling/CoreStyle.h"
 #include "Valdorso.h"
 
@@ -84,4 +88,33 @@ FSlateFontInfo FValdorsoCaratteri::Calligrafia(float Dimensione, FName Peso) con
 		return FSlateFontInfo(Tangerine, Dimensione, Peso);
 	}
 	return Testo(Dimensione * 0.62f, TEXT("Italic"));
+}
+
+UTexture2D* ValdorsoCaricaTextureUI(const TCHAR* Percorso)
+{
+	UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, Percorso, nullptr, LOAD_NoWarn | LOAD_Quiet);
+#if WITH_EDITOR
+	if (Texture)
+	{
+		UTexture* DaPreparare = Texture;
+		FTextureCompilingManager::Get().FinishCompilation(MakeArrayView(&DaPreparare, 1));
+	}
+#endif
+	return Texture;
+}
+
+FSlateBrush ValdorsoTema::Cornice(TStrongObjectPtr<UTexture2D>& TieniViva, const FSlateBrush& Riserva)
+{
+	TieniViva.Reset(ValdorsoCaricaTextureUI(TEXT("/Game/UI/Registro/T_Cornice.T_Cornice")));
+	if (!TieniViva.IsValid())
+	{
+		return Riserva;
+	}
+	// La texture è 384x384 con il bordo largo 64: disegnata a 240, il bordo resta largo 40 (LarghezzaCornice).
+	FSlateBrush Pennello;
+	Pennello.SetResourceObject(TieniViva.Get());
+	Pennello.ImageSize = FVector2D(240.f, 240.f);
+	Pennello.DrawAs = ESlateBrushDrawType::Border;
+	Pennello.Margin = FMargin(64.f / 384.f);
+	return Pennello;
 }

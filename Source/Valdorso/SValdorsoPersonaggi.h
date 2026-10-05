@@ -13,6 +13,7 @@
 #include "ValdorsoArchivista.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Texture2D.h"
 #include "Components/AudioComponent.h"
 
 class FValdorsoStileAccesso;
@@ -41,6 +42,7 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
+	virtual ~SValdorsoSceltaPersonaggio();
 
 	/** Il server ha mandato l'elenco (e un messaggio, se c'è): si ridisegnano le righe. */
 	void Aggiorna(const TArray<FValdorsoPersonaggioBreve>& Nuovi, const FText& Testo, bool bComeErrore);
@@ -62,6 +64,10 @@ private:
 	void Crea();
 
 	TSharedPtr<FValdorsoStileAccesso> Stile;
+	/** (06/10) La cornice d'oro del ritratto e il bordone del palco. */
+	TStrongObjectPtr<UTexture2D> TextureCornice;
+	FSlateBrush PennelloCornice;
+	TStrongObjectPtr<UAudioComponent> SuonoBordone;
 	FValdorsoSuPersonaggio OnScegli;
 	FValdorsoSuPersonaggio OnCrea;
 	FValdorsoSuCancellaPersonaggio OnCancella;

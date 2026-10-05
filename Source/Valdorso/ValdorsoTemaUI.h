@@ -6,6 +6,10 @@
 #include "CoreMinimal.h"
 #include "Fonts/SlateFontInfo.h"
 #include "Fonts/CompositeFont.h"
+#include "Styling/SlateBrush.h"
+#include "UObject/StrongObjectPtr.h"
+
+class UTexture2D;
 
 namespace ValdorsoTema
 {
@@ -49,6 +53,32 @@ namespace ValdorsoTema
 		const double Valore = Colpo(P, 0.0) + Colpo(P, Periodo) + 0.75 * Colpo(P, 0.32);
 		return static_cast<float>(FMath::Clamp(Valore, 0.0, 1.0));
 	}
+
+	/** (06/10) La luce delle candele del palco: un tremolio caldo e irregolare da moltiplicare sul ritratto. */
+	inline FLinearColor LuceCandela(double Secondi)
+	{
+		const float S = static_cast<float>(FMath::Fmod(Secondi, 1000.0));
+		const float Tremolio = 0.93f + 0.035f * FMath::Sin(S * 7.3f) + 0.025f * FMath::Sin(S * 13.1f + 1.f) + 0.015f * FMath::Sin(S * 23.7f + 2.f);
+		return FLinearColor(Tremolio, Tremolio * 0.97f, Tremolio * 0.92f, 1.f);
+	}
+}
+
+/**
+ * (06/10) Carica una texture dell'interfaccia (per esempio "/Game/UI/Registro/T_Cornice.T_Cornice") e, nell'editor,
+ * aspetta che sia pronta: se Slate la chiede mentre l'editor la prepara "in sottofondo", non la disegna. nullptr se manca.
+ */
+VALDORSO_API UTexture2D* ValdorsoCaricaTextureUI(const TCHAR* Percorso);
+
+namespace ValdorsoTema
+{
+	/**
+	 * (06/10) La cornice d'oro intagliata dei ritratti (Content/UI/Registro/T_Cornice), disegnata solo sul bordo.
+	 * TieniViva tiene la texture finché serve. Se la texture manca, restituisce Riserva (il filo d'oro di prima).
+	 */
+	VALDORSO_API FSlateBrush Cornice(TStrongObjectPtr<UTexture2D>& TieniViva, const FSlateBrush& Riserva);
+
+	/** Quanto è largo il bordo della cornice sullo schermo (il ritratto va spostato dentro di tanto). */
+	inline constexpr float LarghezzaCornice = 40.f;
 }
 
 /**

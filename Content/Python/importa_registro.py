@@ -14,14 +14,16 @@ import unreal
 
 PERGAMENA = "V:/Texture/valdorso/T_Pergamena.png"
 CUOIO = "V:/Texture/valdorso/T_Cuoio.png"       # (05/10) i pulsanti di cuoio
+# (06/10, passo 4.2c) la cornice d'oro, il sigillo vero e la penna d'oca (Tools/Generatori/rifiniture.py)
+RIFINITURE = ["V:/Texture/valdorso/T_Cornice.png", "V:/Texture/valdorso/T_Sigillo.png", "V:/Texture/valdorso/T_Penna.png"]
 CARTELLA_REGISTRO = "/Game/UI/Registro"
 FONT = ["V:/Font/Tangerine/Tangerine-Regular.ttf", "V:/Font/Tangerine/Tangerine-Bold.ttf"]
 CARTELLA_FONT = "/Game/UI/Font"
 SUONI = "V:/Texture/valdorso/suoni"
 CARTELLA_SUONI = "/Game/Audio/Registro"
-SUONI_RIPETUTI = ["S_Battito", "S_Fuoco", "S_Pennino"]
+SUONI_RIPETUTI = ["S_Battito", "S_Fuoco", "S_Pennino", "S_Bordone"]
 NOMI_SUONI = SUONI_RIPETUTI + ["S_Campana", "S_Ceralacca", "S_Fede_Solara", "S_Fede_Ignar", "S_Fede_Nereia",
-                               "S_Fede_Torvald", "S_Fede_Zefira", "S_Fede_VecchiDei", "S_Fede_Nessuna"]
+                               "S_Fede_Torvald", "S_Fede_Zefira", "S_Fede_VecchiDei", "S_Fede_Nessuna", "S_Pagina"]
 
 strumenti = unreal.AssetToolsHelpers.get_asset_tools()
 libreria = unreal.EditorAssetLibrary
@@ -47,7 +49,7 @@ def importa(file, destinazione):
 
 def esegui():
     tex = None
-    for file in [PERGAMENA, CUOIO]:
+    for file in [PERGAMENA, CUOIO] + RIFINITURE:
         una = importa(file, CARTELLA_REGISTRO)
         if una is not None:
             una.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)

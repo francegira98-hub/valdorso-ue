@@ -215,3 +215,36 @@ MOTIVI = {
 }
 for nome, suono in MOTIVI.items():
     salva("S_Fede_" + nome, suono, 0.8)
+
+
+# ---------------------------------------------------------------- (06/10, passo 4.2c) La pagina che si gira
+# In fondo al file: i suoni di prima restano identici (stessa sequenza di numeri casuali).
+tt = t(0.42)
+fruscio = rng.standard_normal(len(tt))
+fruscio = signal.lfilter(*signal.butter(2, [900 / (SR / 2), 7000 / (SR / 2)], btype="band"), fruscio)
+inviluppo = np.clip(tt / 0.04, 0, 1) * np.exp(-np.clip(tt - 0.06, 0, None) * 9)
+crepitio = (rng.random(len(tt)) < 0.004) * rng.uniform(-1, 1, len(tt))
+crepitio = signal.lfilter(*signal.butter(2, 2500 / (SR / 2), btype="high"), crepitio)
+pagina = fruscio * inviluppo * (0.7 + 0.3 * np.sin(2 * np.pi * 11 * tt)) + crepitio * inviluppo * 2
+salva("S_Pagina", riverbero(pagina, 0.6, 0.15, 5000), 0.55)
+
+# ---------------------------------------------------------------- (06/10, passo 4.2c) Il bordone del palco (16 s, si ripete)
+# Un accordo caldo e lento (re, la, re, fa), che respira piano: musica d'ambiente finché non arriva quella vera.
+dur = 16.0
+tt = t(dur)
+bordone = np.zeros(len(tt))
+for midi, vol in [(38, 0.9), (45, 0.6), (50, 0.45), (53, 0.3), (57, 0.18)]:
+    f = 440.0 * 2 ** ((midi - 69) / 12)
+    for stonatura in (-0.12, 0.0, 0.11):                      # tre voci un poco stonate: un coro d'archi lontano
+        ff = f * 2 ** (stonatura / 12)
+        sega = signal.sawtooth(2 * np.pi * ff * tt + rng.uniform(0, 6))
+        bordone += sega * vol / 3
+bordone = signal.lfilter(*signal.butter(2, 900 / (SR / 2)), bordone)
+respiro = 0.75 + 0.25 * np.sin(2 * np.pi * tt / 8.0)          # due respiri nel giro, così il giro si chiude
+bordone *= respiro
+bordone = riverbero(bordone, 3.5, 0.45, 1800)
+giro = int(dur * SR)
+coda = bordone[giro:]
+bordone = bordone[:giro].copy()
+bordone[: len(coda)] += coda[:giro]
+salva("S_Bordone", bordone, 0.6, loop=True)
