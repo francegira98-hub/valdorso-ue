@@ -211,6 +211,9 @@ private:
 	TSharedPtr<SWidget> CursorePenna;
 	/** Le pagine che si girano: quando è cambiata l'ultima volta (la pagina appare e scivola appena). */
 	double TempoPagina = -10.0;
+	/** (06/10, passo 4.5) Il registro è firmato ma lo staff chiede di correggere la storia: si cambia solo quella. */
+	bool bCorrezione = false;
+	void SalvaCorrezione();
 	bool bPrimaPagina = true;
 	/** Il bordone del palco e il fruscio della pagina. */
 	TStrongObjectPtr<UAudioComponent> SuonoBordone;

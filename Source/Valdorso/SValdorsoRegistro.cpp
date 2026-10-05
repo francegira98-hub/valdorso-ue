@@ -285,11 +285,19 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 	TSharedRef<SButton> Prossimo = Stile->Pulsante(
 		TAttribute<FText>::CreateLambda([this]()
 		{
+			if (bCorrezione)
+			{
+				return LOCTEXT("SalvaStoria", "Salva la storia");
+			}
 			return Pagina == EPagina::Firma ? LOCTEXT("Firma", "Firma il registro") : LOCTEXT("Avanti", "Avanti");
 		}),
 		FSimpleDelegate::CreateLambda([this]()
 		{
-			if (Pagina == EPagina::Firma)
+			if (bCorrezione)
+			{
+				SalvaCorrezione();
+			}
+			else if (Pagina == EPagina::Firma)
 			{
 				Firma();
 			}
@@ -301,13 +309,17 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 		20.f,
 		TAttribute<bool>::CreateLambda([this]()
 		{
-			if (bInFirma || bFinale)
+			if (bInFirma || bFinale || bInUscita)
 			{
 				return false;
 			}
+			if (bCorrezione)
+			{
+				return PaginaCompleta(EPagina::Storia);
+			}
 			if (Pagina == EPagina::Firma)
 			{
-				return ValdorsoRegistro::Problema(PerLaFirma(), true).IsEmpty();
+				return ValdorsoRegistro::Problema(PerLaFirma(), true, Nome).IsEmpty();
 			}
 			return PaginaCompleta(Pagina);
 		}));
@@ -580,7 +592,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 							[
 								Stile->Pulsante(LOCTEXT("Indietro", "Indietro"),
 									FSimpleDelegate::CreateSP(this, &SValdorsoRegistroColono::Indietro), 18.f,
-									TAttribute<bool>::CreateLambda([this]() { return Pagina != EPagina::ChiSei && !bInFirma && !bFinale && !bInUscita; }))
+									TAttribute<bool>::CreateLambda([this]() { return Pagina != EPagina::ChiSei && !bInFirma && !bFinale && !bInUscita && !bCorrezione; }))
 							]
 							// (Dentro un SBox: quando i dadi spariscono lo spazio resta, e Firma resta a destra.)
 							+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
@@ -688,6 +700,16 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 	// (06/10) Il bordone del palco, piano: musica d'ambiente finché non arriva quella vera.
 	SuonoBordone.Reset(ValdorsoSuoni::Suona(TEXT("S_Bordone"), 0.22f));
 
+	// (06/10, passo 4.5) Registro firmato, ma lo staff chiede di correggere la storia: si apre solo quella pagina.
+	bCorrezione = Bozza.bFirmato && Bozza.bStoriaDaCorreggere;
+	if (bCorrezione)
+	{
+		VaiA(EPagina::Storia);
+		MostraMessaggio(FText::Format(LOCTEXT("RichiestaStaff", "Lo staff della valle ti chiede di correggere la tua storia: {0}"),
+			FText::FromString(Bozza.RichiestaStaff)), true);
+		return;
+	}
+
 	// Si riparte dalla prima domanda senza risposta (o dal racconto, se ci sono tutte).
 	VaiA(RegSchermoPaginaDellaDomanda(ValdorsoRegistro::PrimaMancante(Bozza)));
 }
@@ -744,7 +766,7 @@ void SValdorsoRegistroColono::VaiA(EPagina Nuova)
 
 void SValdorsoRegistroColono::Avanti()
 {
-	if (bInFirma || bFinale || bInUscita || Pagina >= EPagina::Firma || !PaginaCompleta(Pagina))
+	if (bInFirma || bFinale || bInUscita || bCorrezione || Pagina >= EPagina::Firma || !PaginaCompleta(Pagina))
 	{
 		return;
 	}
@@ -758,7 +780,7 @@ void SValdorsoRegistroColono::Avanti()
 
 void SValdorsoRegistroColono::Indietro()
 {
-	if (bInFirma || bFinale || bInUscita || Pagina == EPagina::ChiSei)
+	if (bInFirma || bFinale || bInUscita || bCorrezione || Pagina == EPagina::ChiSei)
 	{
 		return;
 	}
@@ -1324,7 +1346,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 			SNew(STextBlock)
 			.Text_Lambda([this]()
 			{
-				const FString Difetto = ValdorsoRegistro::Problema(PerLaFirma(), true);
+				const FString Difetto = ValdorsoRegistro::Problema(PerLaFirma(), true, Nome);
 				if (!Difetto.IsEmpty())
 				{
 					return FText::FromString(Difetto);
@@ -1335,7 +1357,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 			.AutoWrapText(true)
 			.ColorAndOpacity_Lambda([this]()
 			{
-				return FSlateColor(ValdorsoRegistro::Problema(PerLaFirma(), true).IsEmpty() ? ValdorsoTema::Inchiostro() : ValdorsoTema::Rubrica());
+				return FSlateColor(ValdorsoRegistro::Problema(PerLaFirma(), true, Nome).IsEmpty() ? ValdorsoTema::Inchiostro() : ValdorsoTema::Rubrica());
 			})
 		];
 }
@@ -1347,7 +1369,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 void SValdorsoRegistroColono::TiraDadiPagina()
 {
 	// Racconto, storia e firma non hanno dadi.
-	if (bInFirma || bFinale || bInUscita || Pagina > EPagina::Richiamo)
+	if (bInFirma || bFinale || bInUscita || bCorrezione || Pagina > EPagina::Richiamo)
 	{
 		return;
 	}
@@ -1376,7 +1398,7 @@ void SValdorsoRegistroColono::TiraDadiPagina()
 
 void SValdorsoRegistroColono::TiraDadiTutto()
 {
-	if (bInFirma || bFinale || bInUscita)
+	if (bInFirma || bFinale || bInUscita || bCorrezione)
 	{
 		return;
 	}
@@ -1391,13 +1413,14 @@ void SValdorsoRegistroColono::TiraDadiTutto()
 
 FText SValdorsoRegistroColono::SalvaBozza()
 {
-	if (bInFirma || bFinale || bInUscita)
+	// (06/10, passo 4.5) Nella correzione chiesta dallo staff non ci sono bozze: la storia si salva solo con "Salva la storia".
+	if (bInFirma || bFinale || bInUscita || bCorrezione)
 	{
 		return FText::GetEmpty();
 	}
 	// Una bozza con un testo non accettabile non parte (il server la rifiuterebbe): si restituisce il motivo,
 	// che chi chiama mostra dopo aver cambiato pagina.
-	const FString Difetto = ValdorsoRegistro::Problema(Bozza, false);
+	const FString Difetto = ValdorsoRegistro::Problema(Bozza, false, Nome);
 	if (!Difetto.IsEmpty())
 	{
 		return FText::Format(LOCTEXT("BozzaNonSalvata", "Le risposte non sono state salvate: {0}"), FText::FromString(Difetto));
@@ -1419,12 +1442,14 @@ void SValdorsoRegistroColono::Firma()
 		return;
 	}
 	const FValdorsoRegistro Pronto = PerLaFirma();
-	const FString Difetto = ValdorsoRegistro::Problema(Pronto, true);
+	const FString Difetto = ValdorsoRegistro::Problema(Pronto, true, Nome);
 	if (!Difetto.IsEmpty())
 	{
 		const ValdorsoRegistro::EDomanda Manca = ValdorsoRegistro::PrimaMancante(Pronto);
-		const bool bRacconto = !ValdorsoRegole::ProblemaTestoLibero(Pronto.Racconto, ValdorsoRegistro::MassimoRacconto).IsEmpty();
-		const bool bStoria = !ValdorsoRegole::ProblemaTestoLibero(Pronto.Storia, ValdorsoRegistro::MassimoStoria).IsEmpty();
+		const bool bRacconto = !ValdorsoRegole::ProblemaTestoLibero(Pronto.Racconto, ValdorsoRegistro::MassimoRacconto).IsEmpty()
+			|| !ValdorsoRegole::ProblemaTestoNelMondo(Pronto.Racconto, Nome).IsEmpty();
+		const bool bStoria = !ValdorsoRegole::ProblemaTestoLibero(Pronto.Storia, ValdorsoRegistro::MassimoStoria).IsEmpty()
+			|| !ValdorsoRegole::ProblemaTestoNelMondo(Pronto.Storia, Nome).IsEmpty();
 		if (Manca != ValdorsoRegistro::EDomanda::Numero)
 		{
 			VaiA(RegSchermoPaginaDellaDomanda(Manca));
@@ -1444,10 +1469,49 @@ void SValdorsoRegistroColono::Firma()
 	OnSalva.ExecuteIfBound(Pronto, true);
 }
 
+void SValdorsoRegistroColono::SalvaCorrezione()
+{
+	if (!bCorrezione || bInFirma || bFinale || bInUscita)
+	{
+		return;
+	}
+	const FString Storia = Bozza.Storia.TrimStartAndEnd();
+	FString Difetto = ValdorsoRegole::ProblemaTestoLibero(Storia, ValdorsoRegistro::MassimoStoria);
+	if (Difetto.IsEmpty())
+	{
+		Difetto = ValdorsoRegole::ProblemaTestoNelMondo(Storia, Nome);
+	}
+	if (!Difetto.IsEmpty())
+	{
+		MostraMessaggio(FText::FromString(Difetto), true);
+		return;
+	}
+	bInFirma = true;
+	MostraMessaggio(LOCTEXT("Ricopiando", "Il sacerdote ricopia la tua storia nel registro..."), false);
+	OnSalva.ExecuteIfBound(Bozza, false);
+}
+
 void SValdorsoRegistroColono::Esito(const FString& Avviso, bool bRiuscito, const FValdorsoRegistro& Salvato)
 {
 	if (bFinale)
 	{
+		return;
+	}
+	if (bCorrezione)
+	{
+		// (06/10, passo 4.5) La risposta alla storia corretta: il registro resta firmato, si entra nella valle.
+		bInFirma = false;
+		// (Anche se non è riuscito: la storia può essere già stata corretta da un'altra finestra.)
+		if (Salvato.bFirmato && !Salvato.bStoriaDaCorreggere)
+		{
+			// (Si resta in correzione, con tutto spento, finché il personaggio non nasce: niente sigillo, è già firmato.)
+			Bozza = Salvato;
+			bInUscita = true;
+			MostraMessaggio(LOCTEXT("StoriaCorretta", "La tua storia è ricopiata nel registro. La valle ti aspetta."), false);
+			RegisterActiveTimer(1.6f, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoRegistroColono::FineFinale));
+			return;
+		}
+		MostraMessaggio(Avviso.IsEmpty() ? LOCTEXT("NonCorretta", "La storia non è stata salvata: riprova.") : FText::FromString(Avviso), true);
 		return;
 	}
 	if (Salvato.bFirmato)
@@ -1793,7 +1857,8 @@ FReply SValdorsoRegistroColono::OnKeyDown(const FGeometry& MyGeometry, const FKe
 	const FKey Tasto = InKeyEvent.GetKey();
 	if (Tasto == EKeys::Escape || Tasto == EKeys::Gamepad_FaceButton_Right)
 	{
-		if (Pagina == EPagina::ChiSei)
+		// (06/10) Nella correzione dello staff non c'è un "indietro": si torna ai personaggi.
+		if (Pagina == EPagina::ChiSei || bCorrezione)
 		{
 			Torna();
 		}

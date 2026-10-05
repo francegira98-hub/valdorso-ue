@@ -204,7 +204,7 @@ namespace ValdorsoRegistro
 		return (Sesso == TEXT("donna") && Voce->Femminile) ? Voce->Femminile : Voce->Maschile;
 	}
 
-	FString Problema(const FValdorsoRegistro& Registro, bool bCompleto)
+	FString Problema(const FValdorsoRegistro& Registro, bool bCompleto, const FString& NomePersonaggio)
 	{
 		for (int32 i = 0; i < static_cast<int32>(EDomanda::Numero); ++i)
 		{
@@ -236,6 +236,17 @@ namespace ValdorsoRegistro
 		if (!SullaStoria.IsEmpty())
 		{
 			return SullaStoria;
+		}
+		// (06/10, passo 4.5) La storia e il racconto ritoccato restano nel mondo di Valdorso.
+		const FString NelMondo = ValdorsoRegole::ProblemaTestoNelMondo(Registro.Storia, NomePersonaggio);
+		if (!NelMondo.IsEmpty())
+		{
+			return NelMondo;
+		}
+		const FString RaccontoNelMondo = ValdorsoRegole::ProblemaTestoNelMondo(Registro.Racconto, NomePersonaggio);
+		if (!RaccontoNelMondo.IsEmpty())
+		{
+			return RaccontoNelMondo.Replace(TEXT("Nella storia"), TEXT("Nel racconto"));
 		}
 		// (05/10) La firma per ultima: si mette quando tutto il resto è a posto.
 		return ProblemaFirma(Registro.Firma, bCompleto);
@@ -603,5 +614,26 @@ namespace ValdorsoRegistro
 			}
 		}
 		return EDomanda::Numero;
+	}
+
+	FValdorsoOggettoRicordo OggettoDelRicordo(const FString& Chiave)
+	{
+		static const FValdorsoOggettoRicordo Ricordi[] = {
+			{ TEXT("Ricordo_Anello"), TEXT("L'anello di tua madre"), TEXT("Un anello d'argento consumato. Si può dare in pegno e poi riscattare.") },
+			{ TEXT("Ricordo_Lettera"), TEXT("Una lettera mai aperta"), TEXT("Il sigillo è intatto. Dentro c'è una storia, quando troverai il coraggio.") },
+			{ TEXT("Ricordo_Spada"), TEXT("La spada spezzata di tuo padre"), TEXT("Due pezzi avvolti in un panno. Un fabbro potrebbe riforgiarla.") },
+			{ TEXT("Ricordo_Amuleto"), TEXT("Un amuleto di legno"), TEXT("Intagliato a forma di zampa. Stretto in mano, la paura pesa meno.") },
+			{ TEXT("Ricordo_Mappa"), TEXT("Una mappa strappata"), TEXT("Mezza mappa della valle, con un segno. L'altra metà è da qualche parte.") },
+			{ TEXT("Ricordo_Libro"), TEXT("Un libro di preghiere"), TEXT("Le pagine sanno di cera. Il primo tomo della luce.") },
+		};
+		static const TCHAR* const Chiavi[] = { TEXT("anello"), TEXT("lettera"), TEXT("spada"), TEXT("amuleto"), TEXT("mappa"), TEXT("libro") };
+		for (int32 i = 0; i < UE_ARRAY_COUNT(Chiavi); ++i)
+		{
+			if (Chiave == Chiavi[i])
+			{
+				return Ricordi[i];
+			}
+		}
+		return FValdorsoOggettoRicordo{ NAME_None, TEXT(""), TEXT("") };
 	}
 }

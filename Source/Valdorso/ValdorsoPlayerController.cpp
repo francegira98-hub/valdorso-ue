@@ -565,7 +565,7 @@ void AValdorsoPlayerController::ClientEsitoRegistro_Implementation(const FString
 	if (SchermataRegistro.IsValid() && IdRegistro == RegistroAperto)
 	{
 		SchermataRegistro->Esito(Messaggio, bRiuscito, Salvato);
-		if (Salvato.bFirmato && Palco.IsValid())
+		if (Salvato.bFirmato && !Salvato.bStoriaDaCorreggere && Palco.IsValid())
 		{
 			Palco->Firmato();
 		}
@@ -583,7 +583,8 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 	}
 
 	// Passo 4.2a: si entra nella valle solo con il registro firmato (i personaggi di prima lo aprono ora).
-	if (!Dati->Registro.bFirmato)
+	// (06/10, passo 4.5) E se lo staff ha chiesto di correggere la storia, prima la si corregge.
+	if (!Dati->Registro.bFirmato || Dati->Registro.bStoriaDaCorreggere)
 	{
 		ClientRegistro(Dati->Id, Dati->Nome, Dati->Registro);
 		return;
@@ -964,7 +965,8 @@ void AValdorsoPlayerController::ChiudiSceltaPersonaggio()
 void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Risposte)
 {
 	// Un registro già firmato non si riapre per scriverci (una vista in sola lettura arriverà con l'esame del personaggio).
-	if (Risposte.bFirmato)
+	// (06/10, passo 4.5) Tranne quando lo staff chiede di correggere la storia: allora si apre su quella pagina.
+	if (Risposte.bFirmato && !Risposte.bStoriaDaCorreggere)
 	{
 		return;
 	}

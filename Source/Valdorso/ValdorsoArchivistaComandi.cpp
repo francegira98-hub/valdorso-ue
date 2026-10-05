@@ -17,6 +17,8 @@
 //   Valdorso.Account.Cancella <nome> <nome>       cancella l'account per sempre (il nome due volte, per conferma)
 //   Valdorso.Account.Personaggi <nome>            i personaggi dell'account
 //   Valdorso.Personaggio.Registro <nome>          il Registro di Val d'Orso di un personaggio (risposte, racconto, storia)
+//   Valdorso.Staff.CorreggiStoria <nome> | <motivo>   (06/10) chiede al giocatore di correggere La tua storia: il personaggio
+//                                                 non entra finché non la corregge; il motivo lo legge il giocatore
 // Solo nelle versioni di sviluppo (mai nel gioco pubblicato), per provare senza schermata:
 //   Valdorso.Prova.Crea <codice> <nome> <password>
 //   Valdorso.Prova.Entra <nome> <password>
@@ -240,6 +242,22 @@ namespace
 		}
 	}
 
+	void StaffCorreggiStoria(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
+	{
+		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Staff.CorreggiStoria <nome del personaggio> | <motivo>"), Uscita))
+		{
+			// Il nome può avere spazi: nome e motivo sono divisi da "|".
+			FString Nome, Motivo;
+			if (!Unisci(Argomenti, 0).Split(TEXT("|"), &Nome, &Motivo))
+			{
+				Uscita.Log(TEXT("Dividi il nome dal motivo con |, per esempio: Valdorso.Staff.CorreggiStoria Aldo Neri | togli il nome della città vera"));
+				return;
+			}
+			const FString Errore = A->ChiediCorrezioneStoria(Nome.TrimStartAndEnd(), Motivo.TrimStartAndEnd());
+			Scrivi(Uscita, Errore.IsEmpty() ? FString::Printf(TEXT("Fatto: %s dovrà correggere la sua storia prima di entrare."), *Nome.TrimStartAndEnd()) : Errore);
+		}
+	}
+
 	void AccountPersonaggi(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
 	{
 		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Account.Personaggi <nome>"), Uscita))
@@ -295,6 +313,9 @@ namespace
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoPersonaggioRegistro(TEXT("Valdorso.Personaggio.Registro"),
 		TEXT("Il Registro di Val d'Orso di un personaggio. Valdorso.Personaggio.Registro <nome>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&PersonaggioRegistro));
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoStaffCorreggiStoria(TEXT("Valdorso.Staff.CorreggiStoria"),
+		TEXT("Chiede di correggere La tua storia. Valdorso.Staff.CorreggiStoria <nome del personaggio> | <motivo>"),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&StaffCorreggiStoria));
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountPersonaggi(TEXT("Valdorso.Account.Personaggi"),
 		TEXT("I personaggi di un account. Valdorso.Account.Personaggi <nome>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountPersonaggi));

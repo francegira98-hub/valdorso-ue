@@ -81,6 +81,26 @@ struct FValdorsoRegistro
 	 */
 	UPROPERTY()
 	FString Firma;
+
+	/**
+	 * (06/10, passo 4.5) Lo staff chiede di correggere La tua storia (comando Valdorso.Staff.CorreggiStoria):
+	 * finché non è corretta il personaggio non entra, e solo la storia si può cambiare (il resto è firmato).
+	 */
+	UPROPERTY()
+	bool bStoriaDaCorreggere = false;
+
+	/** Il motivo scritto dallo staff, che il giocatore legge. */
+	UPROPERTY()
+	FString RichiestaStaff;
+};
+
+/** (06/10, passo 4.5) Il ricordo che il colono porta con sé, pronto per l'inventario (v0.1.4). */
+struct FValdorsoOggettoRicordo
+{
+	/** Il nome dell'oggetto per l'inventario (per esempio "Ricordo_Anello"). */
+	FName Id;
+	const TCHAR* Nome;
+	const TCHAR* Descrizione;
 };
 
 /** Una risposta del catalogo: la chiave salvata, e il testo da mostrare (maschile e femminile se cambia). */
@@ -129,7 +149,7 @@ namespace ValdorsoRegistro
 	 * Vuoto se il registro va bene, altrimenti il motivo. bCompleto: tutte le risposte devono esserci (alla firma);
 	 * falso: si controllano solo quelle date (la bozza).
 	 */
-	VALDORSO_API FString Problema(const FValdorsoRegistro& Registro, bool bCompleto);
+	VALDORSO_API FString Problema(const FValdorsoRegistro& Registro, bool bCompleto, const FString& NomePersonaggio = FString());
 
 	/** Il racconto del sacerdote, composto dalle risposte. */
 	VALDORSO_API FString ComponiRacconto(const FValdorsoRegistro& Registro, const FString& Nome);
@@ -148,6 +168,12 @@ namespace ValdorsoRegistro
 
 	/** (05/10) Vuoto se la firma va bene; bCompleto: alla firma del registro deve esserci. */
 	VALDORSO_API FString ProblemaFirma(const FString& Firma, bool bCompleto);
+
+	/**
+	 * (06/10, passo 4.5) L'oggetto del ricordo scelto, per l'inventario della v0.1.4 (non si perde morendo).
+	 * Id vuoto (NAME_None) se la chiave non è un ricordo.
+	 */
+	VALDORSO_API FValdorsoOggettoRicordo OggettoDelRicordo(const FString& Chiave);
 
 	/** Vero se le due versioni hanno le stesse risposte, età, racconto e storia (per non salvare bozze uguali). */
 	VALDORSO_API bool StesseRisposte(const FValdorsoRegistro& A, const FValdorsoRegistro& B);

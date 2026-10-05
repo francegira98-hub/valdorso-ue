@@ -608,4 +608,84 @@ bool FValdorsoTestRegistroPagine::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Passo 4.5 (06/10): il filtro della storia (resta nel mondo di Valdorso) e il ricordo pronto per l'inventario.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestRegistroFiltro, "Valdorso.Registro.Filtro", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestRegistroFiltro::RunTest(const FString& Parameters)
+{
+	auto Va = [](const TCHAR* Testo) { return ValdorsoRegole::ProblemaTestoNelMondo(Testo).IsEmpty(); };
+
+	// Storie buone: accenti, apostrofi, numeri piccoli, parole che contengono un nome vietato ("romano", "europeo").
+	for (const TCHAR* Buona : {
+		TEXT("Sono nato al passo del Corvo, l'inverno in cui il fiume gelò. Mio padre era un soldato romano di un'altra valle."),
+		TEXT("Ho 3 fratelli e 12 pecore. Il mio nome l'ho preso da mia nonna, Èlia."),
+		TEXT("Cerco il fabbro che riforgia le spade spezzate: dicono viva oltre il bosco."),
+		TEXT("Viaggio da anni con un mercante europeo... no, di un regno lontano. Lo chiamavano Roman il Rosso."),
+		TEXT("") })
+	{
+		TestTrue(FString(TEXT("va bene: ")) + Buona, Va(Buona));
+	}
+	// Storie da correggere.
+	for (const TCHAR* Cattiva : {
+		TEXT("Vengo da Roma e ho lasciato la mia famiglia."),
+		TEXT("Sono nato in ITALIA, ma cresciuto altrove."),
+		TEXT("Arrivo dall’Italia con un sogno."),
+		TEXT("Scrivimi a nome.cognome@posta.it per giocare insieme."),
+		TEXT("Chiamami al 333 123 4567."),
+		TEXT("Ero un guerriero fortissimooooo."),
+		TEXT("SONO IL PIU FORTE DI TUTTA LA VALLE E NESSUNO MI BATTE"),
+		TEXT("Un cavaliere \U0001F5E1 senza paura."),
+		TEXT("Il mio maestro era Gandalf il grigio."),
+		TEXT("Pagavo in euro."),
+		TEXT("Seguimi su Twitch") })
+	{
+		TestFalse(FString(TEXT("da correggere: ")) + Cattiva, Va(Cattiva));
+	}
+
+	// Il registro intero: una storia del mondo reale non si firma (e il messaggio parla della storia).
+	FRandomStream Dadi(4512);
+	FValdorsoRegistro Pieno;
+	ValdorsoRegistro::Casuale(Pieno, Dadi, true);
+	Pieno.Racconto = ValdorsoRegistro::ComponiRacconto(Pieno, TEXT("Aldo"));
+	Pieno.Firma = ValdorsoRegistro::FirmaColNome;
+	Pieno.Storia = TEXT("Ho combattuto a Milano.");
+	const FString Motivo = ValdorsoRegistro::Problema(Pieno, true);
+	TestTrue(TEXT("storia del mondo reale rifiutata"), Motivo.StartsWith(TEXT("Nella storia")));
+	Pieno.Storia = TEXT("Ho combattuto al guado del Lupo, tra il 1200 e il 1300 della valle.");
+	TestTrue(TEXT("storia della valle accettata"), ValdorsoRegistro::Problema(Pieno, true).IsEmpty());
+
+	// Il nome del personaggio non conta: un colono di nome "Roma" può firmare (il racconto lo nomina).
+	FValdorsoRegistro Omonimo = Pieno;
+	Omonimo.Racconto = ValdorsoRegistro::ComponiRacconto(Omonimo, TEXT("Roma"));
+	Omonimo.Storia = TEXT("Mi chiamo Roma, come la nonna.");
+	TestTrue(TEXT("il proprio nome va bene"), ValdorsoRegistro::Problema(Omonimo, true, TEXT("Roma")).IsEmpty());
+	TestFalse(TEXT("ma solo il proprio"), ValdorsoRegole::ProblemaTestoNelMondo(TEXT("Vengo da Milano."), TEXT("Roma")).IsEmpty());
+
+	// Nessun racconto scritto dal sacerdote deve mai essere rifiutato dal filtro (altrimenti non si firmerebbe).
+	for (int32 i = 0; i < 300; ++i)
+	{
+		FValdorsoRegistro Prova;
+		ValdorsoRegistro::Casuale(Prova, Dadi, true);
+		const FString Racconto = ValdorsoRegistro::ComponiRacconto(Prova, i % 2 ? TEXT("Livia") : TEXT("Aldo"));
+		const FString Difetto = ValdorsoRegole::ProblemaTestoNelMondo(Racconto);
+		if (!Difetto.IsEmpty())
+		{
+			AddError(FString::Printf(TEXT("racconto rifiutato (%s): %s"), *Difetto, *Racconto));
+			break;
+		}
+	}
+
+	// Ogni ricordo del catalogo ha il suo oggetto per l'inventario, con un nome diverso dagli altri.
+	TSet<FName> Visti;
+	for (const FValdorsoVoceRegistro& Voce : ValdorsoRegistro::Voci(ValdorsoRegistro::EDomanda::Ricordo))
+	{
+		const FValdorsoOggettoRicordo Oggetto = ValdorsoRegistro::OggettoDelRicordo(Voce.Chiave);
+		TestFalse(FString(TEXT("oggetto per ")) + Voce.Chiave, Oggetto.Id.IsNone());
+		TestTrue(FString(TEXT("nome e descrizione per ")) + Voce.Chiave, FCString::Strlen(Oggetto.Nome) > 0 && FCString::Strlen(Oggetto.Descrizione) > 0);
+		TestFalse(FString(TEXT("oggetto non ripetuto: ")) + Voce.Chiave, Visti.Contains(Oggetto.Id));
+		Visti.Add(Oggetto.Id);
+	}
+	TestTrue(TEXT("chiave sconosciuta: nessun oggetto"), ValdorsoRegistro::OggettoDelRicordo(TEXT("drago")).Id.IsNone());
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

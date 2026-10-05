@@ -298,6 +298,16 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 				.ColorAndOpacity(ValdorsoTema::TestoSecondario())
 				.AutoWrapText(true)
 			]
+			// (06/10, passo 4.5) Lo staff ha chiesto di correggere la storia: si legge qui, prima di entrare.
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 4.f, 0.f, 0.f))
+			[
+				SNew(STextBlock)
+				.Visibility(Personaggio.RichiestaStaff.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
+				.Text(FText::Format(LOCTEXT("RichiestaStaff", "Lo staff chiede di correggere la tua storia: {0}"), FText::FromString(Personaggio.RichiestaStaff)))
+				.Font(Stile->Caratteri->Testo(16.f, TEXT("Italic")))
+				.ColorAndOpacity(ValdorsoTema::Brace())
+				.AutoWrapText(true)
+			]
 		]
 		+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(12.f, 0.f, 0.f, 0.f))
 		[

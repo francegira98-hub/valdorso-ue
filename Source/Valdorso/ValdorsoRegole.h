@@ -70,6 +70,15 @@ namespace ValdorsoRegole
 	VALDORSO_API bool ContieneInsulto(const FString& Scheletro);
 
 	/**
+	 * (06/10, passo 4.5) Il filtro della storia del personaggio: vuoto se va bene, altrimenti il motivo in italiano.
+	 * Oltre a ProblemaTestoLibero (lunghezza, indirizzi web, insulti) controlla che il testo resti nel mondo di Valdorso:
+	 * niente nomi del mondo reale (paesi, città, marchi, personaggi famosi), indirizzi email o numeri di telefono,
+	 * emoji, testo tutto in maiuscolo, lettere ripetute per riempire.
+	 * NomePersonaggio: le sue parole non contano (un personaggio di nome "Roma" può scriverlo, e il racconto lo nomina).
+	 */
+	VALDORSO_API FString ProblemaTestoNelMondo(const FString& Testo, const FString& NomePersonaggio = FString());
+
+	/**
 	 * Un testo libero scritto dal giocatore (La tua storia, il racconto ritoccato): vuoto se va bene, altrimenti il motivo.
 	 * Lunghezza massima, niente insulti (parola per parola, anche con lettere scambiate), niente indirizzi web.
 	 */

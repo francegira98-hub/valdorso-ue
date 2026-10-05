@@ -523,3 +523,127 @@ namespace ValdorsoArchivioFile
 		});
 	}
 }
+
+// (06/10, passo 4.5) Il filtro della storia: dentro il namespace delle regole.
+namespace ValdorsoRegole
+{
+	FString ProblemaTestoNelMondo(const FString& Testo, const FString& NomePersonaggio)
+	{
+		// Emoji e simboli fuori dall'alfabeto (le coppie surrogate UTF-16 e i simboli grafici).
+		for (const TCHAR C : Testo)
+		{
+			const uint32 Codice = static_cast<uint32>(C);
+			if ((Codice >= 0xD800 && Codice <= 0xDFFF) || (Codice >= 0x2600 && Codice <= 0x27BF) || (Codice >= 0x1F000))
+			{
+				return TEXT("Nella storia non si usano emoji: scrivila solo con le parole.");
+			}
+		}
+		// Indirizzi email e numeri di telefono.
+		int32 CifreDiFila = 0;
+		for (int32 i = 0; i < Testo.Len(); ++i)
+		{
+			const TCHAR C = Testo[i];
+			if (FChar::IsDigit(C))
+			{
+				// (Da 9 cifre in su, anche divise da spazi o punti: un numero di telefono. Gli anni restano liberi.)
+				if (++CifreDiFila >= 9)
+				{
+					return TEXT("Nella storia non si scrivono numeri di telefono o codici.");
+				}
+			}
+			else if (C != ' ' && C != '.' && C != '-')
+			{
+				CifreDiFila = 0;
+			}
+			if (C == '@' && i > 0 && i + 1 < Testo.Len() && FChar::IsAlnum(Testo[i - 1]) && FChar::IsAlnum(Testo[i + 1]))
+			{
+				return TEXT("Nella storia non si scrivono indirizzi email.");
+			}
+		}
+		// Lettere ripetute per riempire ("aaaaaa") e testo gridato (tutto maiuscolo).
+		int32 Uguali = 0;
+		int32 Lettere = 0;
+		int32 Maiuscole = 0;
+		TCHAR Prima = 0;
+		for (const TCHAR C : Testo)
+		{
+			Uguali = (FChar::ToLower(C) == FChar::ToLower(Prima) && FChar::IsAlpha(C)) ? Uguali + 1 : 1;
+			Prima = C;
+			if (Uguali >= 5)
+			{
+				return TEXT("Nella storia c'è una lettera ripetuta troppe volte.");
+			}
+			if (FChar::IsAlpha(C))
+			{
+				++Lettere;
+				Maiuscole += FChar::IsUpper(C) ? 1 : 0;
+			}
+		}
+		if (Lettere >= 20 && Maiuscole * 10 > Lettere * 6)
+		{
+			return TEXT("Nella storia non si scrive tutto in maiuscolo: nella valle non si grida.");
+		}
+		// Parole del mondo reale, intere (non pezzi di parola: "romano" va bene, "Roma" no).
+		static const TCHAR* const MondoReale[] = {
+			TEXT("italia"), TEXT("roma"), TEXT("milano"), TEXT("napoli"), TEXT("torino"), TEXT("venezia"), TEXT("firenze"),
+			TEXT("londra"), TEXT("parigi"), TEXT("berlino"), TEXT("madrid"), TEXT("america"), TEXT("europa"), TEXT("africa"),
+			TEXT("germania"), TEXT("francia"), TEXT("spagna"), TEXT("inghilterra"), TEXT("cina"), TEXT("giappone"),
+			TEXT("russia"), TEXT("ucraina"), TEXT("brasile"), TEXT("messico"), TEXT("canada"), TEXT("australia"),
+			TEXT("facebook"), TEXT("instagram"), TEXT("youtube"), TEXT("tiktok"), TEXT("twitch"), TEXT("discord"), TEXT("google"),
+			TEXT("whatsapp"), TEXT("telegram"), TEXT("twitter"), TEXT("iphone"), TEXT("android"), TEXT("internet"), TEXT("computer"),
+			TEXT("smartphone"), TEXT("cellulare"), TEXT("televisione"), TEXT("netflix"), TEXT("amazon"), TEXT("microsoft"),
+			TEXT("pokemon"), TEXT("naruto"), TEXT("goku"), TEXT("gandalf"), TEXT("hogwarts"), TEXT("potter"), TEXT("skyrim"),
+			TEXT("minecraft"), TEXT("fortnite"), TEXT("hitler"), TEXT("mussolini"), TEXT("nazi"), TEXT("nazista"), TEXT("fascista"),
+			TEXT("covid"), TEXT("euro"), TEXT("dollari"), TEXT("gesù"), TEXT("cristo"), TEXT("allah"), TEXT("buddha"),
+		};
+		// (Le lettere accentate sì, i segni come l'apostrofo curvo no: "dall’Italia" sono due parole.)
+		auto Lettera = [](TCHAR C) { return FChar::IsAlpha(C) || (C >= 0x00C0 && C <= 0x024F && C != 0x00D7 && C != 0x00F7); };
+		TArray<FString> DelNome;
+		FString Pezzo;
+		for (const TCHAR C : NomePersonaggio + TEXT(" "))
+		{
+			if (Lettera(C))
+			{
+				Pezzo.AppendChar(C);
+			}
+			else if (!Pezzo.IsEmpty())
+			{
+				DelNome.Add(Pezzo.ToLower());
+				Pezzo.Reset();
+			}
+		}
+		FString Parola;
+		// (Un insieme, fatto una volta sola: la schermata del Registro fa questo controllo a ogni fotogramma.)
+		static const TSet<FString> Vietate = []()
+		{
+			TSet<FString> Insieme;
+			for (const TCHAR* Vietata : MondoReale)
+			{
+				Insieme.Add(Vietata);
+			}
+			return Insieme;
+		}();
+		auto Nel = [&Parola, &DelNome]()
+		{
+			const FString Minuscola = Parola.ToLower();
+			Parola.Reset();
+			return !Minuscola.IsEmpty() && !DelNome.Contains(Minuscola) && Vietate.Contains(Minuscola);
+		};
+		for (const TCHAR C : Testo)
+		{
+			if (Lettera(C))
+			{
+				Parola.AppendChar(C);
+			}
+			else if (Nel())
+			{
+				return TEXT("Nella storia c'è un nome del mondo reale: Valdorso è un mondo a sé, scrivila con luoghi e nomi della valle.");
+			}
+		}
+		if (Nel())
+		{
+			return TEXT("Nella storia c'è un nome del mondo reale: Valdorso è un mondo a sé, scrivila con luoghi e nomi della valle.");
+		}
+		return FString();
+	}
+}

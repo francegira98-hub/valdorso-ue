@@ -1760,6 +1760,7 @@ TArray<FValdorsoPersonaggioBreve> UValdorsoArchivista::ElencoPersonaggi(const FS
 			Breve.bRegistroFirmato = Dati->Registro.bFirmato;
 			Breve.Sesso = Dati->Registro.Sesso;
 			Breve.Fede = Dati->Registro.Fede;
+			Breve.RichiestaStaff = Dati->Registro.bStoriaDaCorreggere ? Dati->Registro.RichiestaStaff : FString();
 			Elenco.Add(Breve);
 		}
 	}
@@ -1922,20 +1923,41 @@ FString UValdorsoArchivista::SalvaRegistro(const FString& AccountId, const FStri
 	OutSalvato = Dati->Registro;
 	if (Dati->Registro.bFirmato)
 	{
-		return TEXT("Il registro di questo personaggio è già firmato.");
+		// (06/10, passo 4.5) Dopo la firma si può cambiare solo La tua storia, e solo se lo staff lo ha chiesto.
+		if (!Dati->Registro.bStoriaDaCorreggere)
+		{
+			return TEXT("Il registro di questo personaggio è già firmato.");
+		}
+		FValdorsoRegistro Corretto = Dati->Registro;
+		Corretto.Storia = Proposto.Storia.TrimStartAndEnd();
+		const FString SullaStoria = ValdorsoRegole::ProblemaTestoLibero(Corretto.Storia, ValdorsoRegistro::MassimoStoria);
+		const FString NelMondo = SullaStoria.IsEmpty() ? ValdorsoRegole::ProblemaTestoNelMondo(Corretto.Storia, Dati->Nome) : SullaStoria;
+		if (!NelMondo.IsEmpty())
+		{
+			return NelMondo;
+		}
+		Corretto.bStoriaDaCorreggere = false;
+		Corretto.RichiestaStaff.Empty();
+		Dati->Registro = Corretto;
+		SalvaPersonaggio(*Dati, false);
+		Annota(FString::Printf(TEXT("STORIA_CORRETTA | %s"), *Dati->Nome));
+		OutSalvato = Dati->Registro;
+		return FString();
 	}
 
-	// Si prendono solo le risposte: firma e data le decide il server.
+	// Si prendono solo le risposte: firma e data le decide il server (e le richieste dello staff restano sue).
 	FValdorsoRegistro Nuovo = Proposto;
 	Nuovo.bFirmato = false;
 	Nuovo.FirmatoIl = 0;
+	Nuovo.bStoriaDaCorreggere = Dati->Registro.bStoriaDaCorreggere;
+	Nuovo.RichiestaStaff = Dati->Registro.RichiestaStaff;
 	Nuovo.Racconto = Nuovo.Racconto.TrimStartAndEnd();
 	Nuovo.Storia = Nuovo.Storia.TrimStartAndEnd();
 	if (bFirma && Nuovo.Racconto.IsEmpty())
 	{
 		Nuovo.Racconto = ValdorsoRegistro::ComponiRacconto(Nuovo, Dati->Nome);
 	}
-	const FString Errore = ValdorsoRegistro::Problema(Nuovo, bFirma);
+	const FString Errore = ValdorsoRegistro::Problema(Nuovo, bFirma, Dati->Nome);
 	if (!Errore.IsEmpty())
 	{
 		return Errore;
@@ -1952,6 +1974,30 @@ FString UValdorsoArchivista::SalvaRegistro(const FString& AccountId, const FStri
 		Annota(FString::Printf(TEXT("REGISTRO_FIRMATO | %s"), *Dati->Nome));
 	}
 	OutSalvato = Dati->Registro;
+	return FString();
+}
+
+FString UValdorsoArchivista::ChiediCorrezioneStoria(const FString& NomePersonaggio, const FString& Motivo)
+{
+	check(IsInGameThread());
+	FValdorsoPersonaggio* Dati = PersonaggioPerNome(NomePersonaggio);
+	if (!Dati)
+	{
+		return FString::Printf(TEXT("Nessun personaggio di nome %s."), *NomePersonaggio);
+	}
+	if (!Dati->Registro.bFirmato)
+	{
+		return TEXT("Il registro non è ancora firmato: la storia si corregge già prima della firma, con il filtro.");
+	}
+	const FString Pulito = Motivo.TrimStartAndEnd().Left(300);
+	if (Pulito.IsEmpty())
+	{
+		return TEXT("Scrivi il motivo: il giocatore lo legge (per esempio: togli il nome della città vera).");
+	}
+	Dati->Registro.bStoriaDaCorreggere = true;
+	Dati->Registro.RichiestaStaff = Pulito;
+	SalvaPersonaggio(*Dati, false);
+	Annota(FString::Printf(TEXT("STORIA_DA_CORREGGERE | %s | %s"), *Dati->Nome, *Pulito));
 	return FString();
 }
 
@@ -1980,6 +2026,16 @@ FString UValdorsoArchivista::RegistroTesto(const FString& NomePersonaggio)
 	}
 	Righe += TEXT("  Racconto: ") + (R.Racconto.IsEmpty() ? FString(TEXT("-")) : R.Racconto) + TEXT("\n");
 	Righe += TEXT("  La sua storia: ") + (R.Storia.IsEmpty() ? FString(TEXT("-")) : R.Storia) + TEXT("\n");
+	Righe += FString::Printf(TEXT("  Firma: %s\n"), R.Firma.IsEmpty() ? TEXT("-") : (R.Firma == ValdorsoRegistro::FirmaColNome ? TEXT("con il nome") : TEXT("disegnata")));
+	if (R.bStoriaDaCorreggere)
+	{
+		Righe += TEXT("  Lo staff ha chiesto di correggere la storia: ") + R.RichiestaStaff + TEXT("\n");
+	}
+	const FValdorsoOggettoRicordo Oggetto = ValdorsoRegistro::OggettoDelRicordo(R.Ricordo);
+	if (!Oggetto.Id.IsNone())
+	{
+		Righe += FString::Printf(TEXT("  Ricordo per l'inventario: %s (%s)\n"), Oggetto.Nome, *Oggetto.Id.ToString());
+	}
 	return Righe;
 }
 

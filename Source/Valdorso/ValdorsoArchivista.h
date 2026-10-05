@@ -264,6 +264,10 @@ struct FValdorsoPersonaggioBreve
 	/** La chiave della fede (per il colore della luce nel ritratto). */
 	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
 	FString Fede;
+
+	/** (06/10, passo 4.5) Lo staff chiede di correggere la sua storia, con questo motivo (vuoto se no). */
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	FString RichiestaStaff;
 };
 
 /** Un nome di personaggio cancellato, riservato fino a una data. */
@@ -476,6 +480,12 @@ public:
 	 * Vuoto se riuscito (OutSalvato = il registro come è ora sul server), altrimenti il motivo.
 	 */
 	FString SalvaRegistro(const FString& AccountId, const FString& PersonaggioId, const FValdorsoRegistro& Proposto, bool bFirma, FValdorsoRegistro& OutSalvato);
+
+	/**
+	 * (06/10, passo 4.5) Lo staff chiede di correggere La tua storia di un personaggio (con il motivo, che il giocatore
+	 * legge). Il personaggio non entra finché la storia non è corretta. Vuoto se riuscito, altrimenti il motivo.
+	 */
+	FString ChiediCorrezioneStoria(const FString& NomePersonaggio, const FString& Motivo);
 
 	/** Un personaggio per nome (per la console dello staff). */
 	FValdorsoPersonaggio* PersonaggioPerNome(const FString& Nome);
