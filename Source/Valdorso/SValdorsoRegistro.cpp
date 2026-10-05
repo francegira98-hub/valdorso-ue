@@ -25,6 +25,10 @@
 #include "Widgets/SNullWidget.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
+#include "Valdorso.h"
+#if WITH_EDITOR
+#include "TextureCompiler.h"
+#endif
 
 #define LOCTEXT_NAMESPACE "ValdorsoRegistroSchermo"
 
@@ -82,13 +86,14 @@ namespace
 	/** Il colore dell'elemento di ogni fede (luce, fuoco, acqua, terra, aria; i Vecchi Dei verdi del bosco). */
 	FLinearColor RegSchermoColoreFede(const FString& Chiave)
 	{
-		if (Chiave == TEXT("solara")) { return ValdorsoTema::OroChiaro(); }
+		// (05/10) Più scuri dove serve, perché si vedano sulla pergamena.
+		if (Chiave == TEXT("solara")) { return ValdorsoTema::Hex(TEXT("B8860B")); }
 		if (Chiave == TEXT("ignar")) { return ValdorsoTema::Brace(); }
 		if (Chiave == TEXT("nereia")) { return ValdorsoTema::BluArcano(); }
 		if (Chiave == TEXT("torvald")) { return ValdorsoTema::Hex(TEXT("8B6B3E")); }
-		if (Chiave == TEXT("zefira")) { return ValdorsoTema::Hex(TEXT("A9CBDD")); }
+		if (Chiave == TEXT("zefira")) { return ValdorsoTema::Hex(TEXT("4F7F99")); }
 		if (Chiave == TEXT("vecchidei")) { return ValdorsoTema::VerdeVita(); }
-		return ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.5f);
+		return ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.5f);
 	}
 
 	/** Le quattro coppie del carattere, nell'ordine della pagina. */
@@ -135,13 +140,55 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 		Bozza.Eta = 25;
 	}
 
-	// Le risposte: chiare come i pulsanti, con il bordo d'oro pieno quando sono scelte.
+	// (05/10) Le risposte sulla pergamena: un filo d'inchiostro e un velo appena scuro; quella scelta in rosso di rubrica.
+	const FLinearColor Inchiostro = ValdorsoTema::Inchiostro();
+	const FLinearColor Rubrica = ValdorsoTema::Rubrica();
 	StileVoce = Stile->StilePulsante;
-	StileVoce.SetNormalPadding(FMargin(16.f, 7.f)).SetPressedPadding(FMargin(16.f, 8.f, 16.f, 6.f));
+	StileVoce
+		.SetNormal(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.04f), 3.f, ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.45f), 1.f))
+		.SetHovered(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.10f), 3.f, Inchiostro.CopyWithNewOpacity(0.75f), 1.f))
+		.SetPressed(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.16f), 3.f, Inchiostro, 1.f))
+		.SetDisabled(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.02f), 3.f, ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.2f), 1.f))
+		.SetNormalPadding(FMargin(16.f, 7.f)).SetPressedPadding(FMargin(16.f, 8.f, 16.f, 6.f));
 	StileVoceScelta = StileVoce;
 	StileVoceScelta
-		.SetNormal(FSlateRoundedBoxBrush(ValdorsoTema::PulsanteSopra(), 3.f, ValdorsoTema::Oro(), 1.5f))
-		.SetHovered(FSlateRoundedBoxBrush(ValdorsoTema::PulsantePremuto(), 3.f, ValdorsoTema::OroChiaro(), 1.5f));
+		.SetNormal(FSlateRoundedBoxBrush(Rubrica.CopyWithNewOpacity(0.10f), 3.f, Rubrica, 1.5f))
+		.SetHovered(FSlateRoundedBoxBrush(Rubrica.CopyWithNewOpacity(0.16f), 3.f, Rubrica, 1.5f));
+
+	// La pergamena: disegnata "a nove pezzi", così i bordi bruciati restano uguali e il centro si allunga con la pagina.
+	// Se la texture non è ancora importata (Content/Python/importa_registro.py), un foglio liscio dello stesso colore.
+	TexturePergamena.Reset(LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Registro/T_Pergamena.T_Pergamena"), nullptr, LOAD_NoWarn | LOAD_Quiet));
+	if (TexturePergamena.IsValid())
+	{
+#if WITH_EDITOR
+		// (05/10) Nell'editor le texture appena caricate si preparano "in sottofondo": se Slate la chiede prima che sia
+		// pronta, non la disegna. Qui si aspetta che sia pronta (pochi millisecondi; nel gioco finito non serve).
+		UTexture* DaPreparare = TexturePergamena.Get();
+		FTextureCompilingManager::Get().FinishCompilation(MakeArrayView(&DaPreparare, 1));
+#endif
+		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro: pergamena %dx%d, pronta: %s"),
+			TexturePergamena->GetSizeX(), TexturePergamena->GetSizeY(), TexturePergamena->GetResource() ? TEXT("sì") : TEXT("no"));
+		PennelloPergamena.SetResourceObject(TexturePergamena.Get());
+		PennelloPergamena.ImageSize = FVector2D(1024.f, 1280.f);
+		PennelloPergamena.DrawAs = ESlateBrushDrawType::Box;
+		PennelloPergamena.Margin = FMargin(0.085f, 0.07f);
+	}
+	else
+	{
+		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Registro: T_Pergamena non trovata in Content/UI/Registro (lanciare importa_registro.py)"));
+		PennelloPergamena = FSlateRoundedBoxBrush(ValdorsoTema::Hex(TEXT("D9C49A")), 4.f, ValdorsoTema::Hex(TEXT("5A3A1E")), 2.f);
+	}
+
+	// I campi di testo (racconto e storia): niente fondo scuro, un filo d'inchiostro che si scurisce quando si scrive.
+	StileCampoPergamena = Stile->StileCampo;
+	StileCampoPergamena
+		.SetBackgroundImageNormal(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.03f), 3.f, ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.4f), 1.f))
+		.SetBackgroundImageHovered(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.05f), 3.f, Inchiostro.CopyWithNewOpacity(0.6f), 1.f))
+		.SetBackgroundImageFocused(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.05f), 3.f, Rubrica.CopyWithNewOpacity(0.8f), 1.f))
+		.SetBackgroundImageReadOnly(FSlateRoundedBoxBrush(Inchiostro.CopyWithNewOpacity(0.03f), 3.f, ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.4f), 1.f))
+		.SetForegroundColor(FSlateColor(Inchiostro))
+		.SetFocusedForegroundColor(FSlateColor(Inchiostro))
+		.SetReadOnlyForegroundColor(FSlateColor(Inchiostro));
 
 	FSlateFontInfo FontNome = Stile->Caratteri->Titolo(30.f, TEXT("Bold"));
 	FontNome.LetterSpacing = 50;
@@ -159,9 +206,9 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 				{
 					// La pagina di adesso batte con il Cuore, come il frammento.
 					const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds());
-					return FSlateColor(FMath::Lerp(ValdorsoTema::Oro(), ValdorsoTema::OroChiaro(), 0.4f + 0.6f * Colpo));
+					return FSlateColor(FMath::Lerp(ValdorsoTema::Rubrica(), ValdorsoTema::Brace(), 0.2f + 0.6f * Colpo));
 				}
-				return FSlateColor(PaginaCompleta(Questa) ? ValdorsoTema::Oro() : ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.3f));
+				return FSlateColor(PaginaCompleta(Questa) ? ValdorsoTema::OroScuro() : ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.3f));
 			}))
 		];
 	}
@@ -215,7 +262,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			[
 				SNew(STextBlock).Text(Scritta)
 				.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
-				.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+				.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 			];
 	};
 
@@ -240,8 +287,9 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 				+ SOverlay::Slot()
 				[
 				SNew(SBorder)
-				.BorderImage(&Stile->SfondoPannello)
-				.Padding(FMargin(44.f, 30.f))
+				.BorderImage(&PennelloPergamena)
+				// (05/10) Più margine: i bordi bruciati della pergamena non devono toccare le scritte.
+				.Padding(FMargin(76.f, 64.f))
 				[
 					SNew(SBox).WidthOverride(680.f)
 					[
@@ -253,7 +301,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 							SNew(SHorizontalBox)
 							+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
 							[
-								Stile->Etichetta(LOCTEXT("Intestazione", "IL REGISTRO DI VAL D'ORSO"))
+								Stile->Etichetta(LOCTEXT("Intestazione", "IL REGISTRO DI VAL D'ORSO"), ValdorsoTema::Rubrica())
 							]
 							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 							[
@@ -264,7 +312,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 										FText::AsNumber(static_cast<int32>(Pagina) + 1), FText::AsNumber(static_cast<int32>(EPagina::Numero)));
 								})
 								.Font(Stile->Caratteri->Testo(16.f, TEXT("Italic")))
-								.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+								.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 							]
 						]
 
@@ -282,13 +330,13 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 							.ColorAndOpacity_Lambda([]()
 							{
 								const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds());
-								return FSlateColor(FMath::Lerp(ValdorsoTema::Oro(), ValdorsoTema::OroChiaro(), Colpo * 0.5f));
+								return FSlateColor(FMath::Lerp(ValdorsoTema::Rubrica(), ValdorsoTema::Hex(TEXT("B0402F")), Colpo * 0.5f));
 							})
 						]
 
 						+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 6.f, 0.f, 10.f))
 						[
-							Stile->Separatore(300.f)
+							Stile->Separatore(300.f, ValdorsoTema::InchiostroTenue())
 						]
 
 						// La frase della storia che apre la pagina.
@@ -297,7 +345,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 							SNew(STextBlock)
 							.Text_Lambda([this]() { return FrasePagina(Pagina); })
 							.Font(Stile->Caratteri->Testo(19.f, TEXT("Italic")))
-							.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+							.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 							.Justification(ETextJustify::Center)
 							.AutoWrapText(true)
 						]
@@ -308,7 +356,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 							SNew(STextBlock)
 							.Text_Lambda([this]() { return TitoloPagina(Pagina); })
 							.Font(Stile->Caratteri->Testo(24.f, TEXT("SemiBold")))
-							.ColorAndOpacity(ValdorsoTema::Pergamena())
+							.ColorAndOpacity(ValdorsoTema::Inchiostro())
 							.AutoWrapText(true)
 						]
 
@@ -338,9 +386,9 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 								if (bInFirma)
 								{
 									const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds());
-									return FSlateColor(FMath::Lerp(ValdorsoTema::Oro(), ValdorsoTema::OroChiaro(), Colpo));
+									return FSlateColor(FMath::Lerp(ValdorsoTema::Rubrica(), ValdorsoTema::Brace(), Colpo));
 								}
-								return FSlateColor(bErrore ? ValdorsoTema::Brace() : ValdorsoTema::Pergamena());
+								return FSlateColor(bErrore ? ValdorsoTema::Rubrica() : ValdorsoTema::Inchiostro());
 							})
 						]
 
@@ -672,7 +720,7 @@ TSharedRef<SButton> SValdorsoRegistroColono::PulsanteVoce(const FText& Scritta, 
 					{
 						return FSlateColor(Scelta() ? Simbolo : Simbolo.CopyWithNewOpacity(Simbolo.A * 0.45f));
 					}
-					return FSlateColor(Scelta() ? ValdorsoTema::OroChiaro() : ValdorsoTema::Oro().CopyWithNewOpacity(0.18f));
+					return FSlateColor(Scelta() ? ValdorsoTema::Rubrica() : ValdorsoTema::InchiostroTenue().CopyWithNewOpacity(0.35f));
 				}))
 			]
 			+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
@@ -683,7 +731,7 @@ TSharedRef<SButton> SValdorsoRegistroColono::PulsanteVoce(const FText& Scritta, 
 				.AutoWrapText(true)
 				.ColorAndOpacity_Lambda([Scelta]()
 				{
-					return FSlateColor(Scelta() ? ValdorsoTema::OroChiaro() : ValdorsoTema::Pergamena());
+					return FSlateColor(Scelta() ? ValdorsoTema::Rubrica() : ValdorsoTema::Inchiostro());
 				})
 			]
 		];
@@ -736,7 +784,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Scelte(ValdorsoRegistro::EDomanda Q
 				? EVisibility::Visible : EVisibility::Collapsed;
 		})
 		.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
-		.ColorAndOpacity(ValdorsoTema::Oro().CopyWithNewOpacity(0.85f))
+		.ColorAndOpacity(ValdorsoTema::OroScuro())
 		.AutoWrapText(true);
 
 	return SNew(SVerticalBox)
@@ -774,7 +822,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaChiSei()
 			SNew(STextBlock)
 			.Text(LOCTEXT("QuantiAnni", "Quanti anni hai?"))
 			.Font(Stile->Caratteri->Testo(22.f, TEXT("SemiBold")))
-			.ColorAndOpacity(ValdorsoTema::Pergamena())
+			.ColorAndOpacity(ValdorsoTema::Inchiostro())
 		]
 		+ SVerticalBox::Slot().AutoHeight()
 		[
@@ -786,7 +834,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaChiSei()
 				SNew(STextBlock)
 				.Text_Lambda([this]() { return FText::Format(LOCTEXT("Anni", "{0} anni"), FText::AsNumber(Bozza.Eta)); })
 				.Font(Stile->Caratteri->Titolo(26.f, TEXT("Bold")))
-				.ColorAndOpacity(ValdorsoTema::OroChiaro())
+				.ColorAndOpacity(ValdorsoTema::Rubrica())
 			]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(6.f, 0.f, 0.f, 0.f)) [ PulsanteEta(TEXT("+1"), 1) ]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(6.f, 0.f, 0.f, 0.f)) [ PulsanteEta(TEXT("+5"), 5) ]
@@ -797,7 +845,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaChiSei()
 			.Text(FText::Format(LOCTEXT("SpiegaEta", "Da {0} a {1} anni. La corona accoglie solo coloni adulti."),
 				FText::AsNumber(ValdorsoRegistro::EtaMinima), FText::AsNumber(ValdorsoRegistro::EtaMassima)))
 			.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
-			.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+			.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 		];
 }
 
@@ -818,7 +866,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaCarattere()
 			SNew(STextBlock)
 			.Text(FText::FromString(ValdorsoRegistro::Domanda(Coppia, Bozza.Sesso)))
 			.Font(Stile->Caratteri->Testo(19.f, TEXT("Italic")))
-			.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+			.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 		];
 		PrimoFuoco.Reset();
 		Coppie->AddSlot().AutoHeight().Padding(FMargin(0.f, 0.f, 0.f, 6.f)) [ Scelte(Coppia, true) ];
@@ -843,10 +891,11 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaTesto(bool bRacconto)
 		? LOCTEXT("SpiegaRacconto", "Il sacerdote ha scritto così il tuo arrivo, con le tue risposte. Puoi leggerlo e ritoccarlo con parole tue: è quello che resterà nel registro.")
 		: LOCTEXT("SpiegaStoria", "Facoltativa. Scrivi con parole tue chi eri prima di arrivare nella valle, in gioco di ruolo e coerente con il mondo di Valdorso: niente nomi o fatti del mondo reale, niente indirizzi web. Lo staff può chiederti di correggerla. Si legge esaminando il personaggio da vicino.");
 
+	// (05/10) Il racconto nella mano del sacerdote (Tangerine); la tua storia con le tue lettere (EB Garamond).
 	TSharedRef<SMultiLineEditableTextBox> Campo = SNew(SMultiLineEditableTextBox)
-		.Style(&Stile->StileCampo)
-		.Font(Stile->Caratteri->Testo(20.f))
-		.ForegroundColor(FSlateColor(ValdorsoTema::Pergamena()))
+		.Style(&StileCampoPergamena)
+		.Font(bRacconto ? Stile->Caratteri->Calligrafia(34.f) : Stile->Caratteri->Testo(20.f))
+		.ForegroundColor(FSlateColor(ValdorsoTema::Inchiostro()))
 		.AutoWrapText(true)
 		.Text(FText::FromString(bRacconto ? Bozza.Racconto : Bozza.Storia))
 		.HintText(bRacconto ? FText::GetEmpty() : LOCTEXT("SugStoria", "Mio padre forgiava spade a Torre Grigia; io ho imparato a tacere..."))
@@ -911,7 +960,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaTesto(bool bRacconto)
 		.Justification(ETextJustify::Right)
 		.ColorAndOpacity_Lambda([this, bRacconto]()
 		{
-			return FSlateColor(PaginaCompleta(bRacconto ? EPagina::Racconto : EPagina::Storia) ? ValdorsoTema::TestoSecondario() : ValdorsoTema::Brace());
+			return FSlateColor(PaginaCompleta(bRacconto ? EPagina::Racconto : EPagina::Storia) ? ValdorsoTema::InchiostroTenue() : ValdorsoTema::Rubrica());
 		})
 	];
 
@@ -921,7 +970,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaTesto(bool bRacconto)
 			SNew(STextBlock)
 			.Text(Spiegazione)
 			.Font(Stile->Caratteri->Testo(18.f, TEXT("Italic")))
-			.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+			.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 			.AutoWrapText(true)
 		]
 		+ SVerticalBox::Slot().AutoHeight()
@@ -959,7 +1008,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 					[
 						SNew(STextBlock).Text(Etichetta)
 						.Font(Stile->Caratteri->Testo(18.f, TEXT("Italic")))
-						.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+						.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 					]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Top)
@@ -968,7 +1017,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 					.Text(bManca ? LOCTEXT("Manca", "manca: tocca qui per rispondere") : FText::FromString(Valore))
 					.Font(Stile->Caratteri->Testo(18.f))
 					.AutoWrapText(true)
-					.ColorAndOpacity(bManca ? ValdorsoTema::Brace() : ValdorsoTema::Pergamena())
+					.ColorAndOpacity(bManca ? ValdorsoTema::Rubrica() : ValdorsoTema::Inchiostro())
 				]
 			]
 		];
@@ -1015,7 +1064,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 		// Il racconto del sacerdote, da rileggere prima di firmare (un clic riporta alla sua pagina).
 		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 12.f, 0.f, 8.f))
 		[
-			Stile->Separatore(200.f)
+			Stile->Separatore(200.f, ValdorsoTema::InchiostroTenue())
 		]
 		+ SVerticalBox::Slot().AutoHeight()
 		[
@@ -1027,8 +1076,8 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 			[
 				SNew(STextBlock)
 				.Text(FText::FromString(PerLaFirma().Racconto))
-				.Font(Stile->Caratteri->Testo(18.f, TEXT("Italic")))
-				.ColorAndOpacity(ValdorsoTema::Pergamena())
+				.Font(Stile->Caratteri->Calligrafia(30.f))
+				.ColorAndOpacity(ValdorsoTema::Inchiostro())
 				.AutoWrapText(true)
 			]
 		]
@@ -1048,7 +1097,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 			.AutoWrapText(true)
 			.ColorAndOpacity_Lambda([this]()
 			{
-				return FSlateColor(ValdorsoRegistro::Problema(PerLaFirma(), true).IsEmpty() ? ValdorsoTema::Pergamena() : ValdorsoTema::Brace());
+				return FSlateColor(ValdorsoRegistro::Problema(PerLaFirma(), true).IsEmpty() ? ValdorsoTema::Inchiostro() : ValdorsoTema::Rubrica());
 			})
 		];
 }

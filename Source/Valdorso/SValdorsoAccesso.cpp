@@ -158,11 +158,11 @@ TSharedRef<SEditableTextBox> FValdorsoStileAccesso::Campo(const FText& Suggerime
 		.OnTextCommitted(SuInvio);
 }
 
-TSharedRef<SWidget> FValdorsoStileAccesso::Etichetta(const FText& Testo)
+TSharedRef<SWidget> FValdorsoStileAccesso::Etichetta(const FText& Testo, TOptional<FLinearColor> Colore)
 {
 	FSlateFontInfo Font = Caratteri->Titolo(13.f, TEXT("Bold"));
 	Font.LetterSpacing = 180;
-	return SNew(STextBlock).Text(Testo).Font(Font).ColorAndOpacity(ValdorsoTema::Oro().CopyWithNewOpacity(0.85f));
+	return SNew(STextBlock).Text(Testo).Font(Font).ColorAndOpacity(Colore.Get(ValdorsoTema::Oro().CopyWithNewOpacity(0.85f)));
 }
 
 TSharedRef<SWidget> FValdorsoStileAccesso::Diamante(float Lato, TAttribute<FSlateColor> Colore)
@@ -177,9 +177,10 @@ TSharedRef<SWidget> FValdorsoStileAccesso::Diamante(float Lato, TAttribute<FSlat
 		];
 }
 
-TSharedRef<SWidget> FValdorsoStileAccesso::Separatore(float Larghezza)
+TSharedRef<SWidget> FValdorsoStileAccesso::Separatore(float Larghezza, TOptional<FLinearColor> Colore)
 {
-	const FLinearColor Linea = ValdorsoTema::Oro().CopyWithNewOpacity(0.5f);
+	const FLinearColor Tinta = Colore.Get(ValdorsoTema::Oro());
+	const FLinearColor Linea = Tinta.CopyWithNewOpacity(0.5f);
 	return SNew(SBox).WidthOverride(Larghezza).HeightOverride(14.f)
 		[
 			SNew(SHorizontalBox)
@@ -189,7 +190,7 @@ TSharedRef<SWidget> FValdorsoStileAccesso::Separatore(float Larghezza)
 			]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(12.f, 0.f))
 			[
-				Diamante(8.f, FSlateColor(ValdorsoTema::Oro()))
+				Diamante(8.f, FSlateColor(Tinta))
 			]
 			+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
 			[

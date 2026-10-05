@@ -35,6 +35,11 @@ FValdorsoCaratteri::FValdorsoCaratteri()
 		{ TEXT("Regular"),  TEXT("EBGaramond-Regular") },
 		{ TEXT("Italic"),   TEXT("EBGaramond-Italic") },
 		{ TEXT("SemiBold"), TEXT("EBGaramond-SemiBold") } });
+
+	// (05/10) Si importa con Content/Python/importa_registro.py; finché non c'è, il Registro usa EB Garamond corsivo.
+	Tangerine = Crea({
+		{ TEXT("Regular"), TEXT("Tangerine-Regular") },
+		{ TEXT("Bold"),    TEXT("Tangerine-Bold") } });
 }
 
 TSharedPtr<FStandaloneCompositeFont> FValdorsoCaratteri::Crea(const TArray<TPair<FName, FString>>& Facce)
@@ -70,4 +75,13 @@ FSlateFontInfo FValdorsoCaratteri::Testo(float Dimensione, FName Stile) const
 		return FSlateFontInfo(Garamond, Dimensione, Stile);
 	}
 	return FCoreStyle::GetDefaultFontStyle(Stile == TEXT("Italic") ? TEXT("Italic") : TEXT("Regular"), Dimensione);
+}
+
+FSlateFontInfo FValdorsoCaratteri::Calligrafia(float Dimensione, FName Peso) const
+{
+	if (Tangerine.IsValid())
+	{
+		return FSlateFontInfo(Tangerine, Dimensione, Peso);
+	}
+	return Testo(Dimensione * 0.62f, TEXT("Italic"));
 }

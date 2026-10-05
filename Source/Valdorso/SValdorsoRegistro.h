@@ -25,6 +25,7 @@
 #include "ValdorsoRegistro.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Texture2D.h"
 
 class FValdorsoStileAccesso;
 class SBox;
@@ -119,6 +120,12 @@ private:
 	TSharedPtr<FValdorsoStileAccesso> Stile;
 	FButtonStyle StileVoce;
 	FButtonStyle StileVoceScelta;
+
+	/** (05/10) La pergamena vera: texture con i bordi bruciati (Content/UI/Registro/T_Pergamena), tenuta viva qui. */
+	TStrongObjectPtr<UTexture2D> TexturePergamena;
+	FSlateBrush PennelloPergamena;
+	/** I campi di testo sulla pergamena: niente fondo scuro, solo un filo d'inchiostro. */
+	FEditableTextBoxStyle StileCampoPergamena;
 
 	FValdorsoSuSalvaRegistro OnSalva;
 	FValdorsoSuCambioRisposte OnCambia;

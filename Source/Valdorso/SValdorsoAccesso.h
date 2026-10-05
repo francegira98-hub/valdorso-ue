@@ -35,8 +35,9 @@ public:
 
 	TSharedRef<SButton> Pulsante(TAttribute<FText> Testo, FSimpleDelegate Azione, float Dimensione = 24.f, TAttribute<bool> Abilitato = true);
 	TSharedRef<SEditableTextBox> Campo(const FText& Suggerimento, TAttribute<bool> Nascosto, FOnTextCommitted SuInvio);
-	TSharedRef<SWidget> Etichetta(const FText& Testo);
-	TSharedRef<SWidget> Separatore(float Larghezza);
+	/** (05/10) Il colore si può cambiare: sulla pergamena del Registro etichette e separatori sono d'inchiostro. */
+	TSharedRef<SWidget> Etichetta(const FText& Testo, TOptional<FLinearColor> Colore = TOptional<FLinearColor>());
+	TSharedRef<SWidget> Separatore(float Larghezza, TOptional<FLinearColor> Colore = TOptional<FLinearColor>());
 	TSharedRef<SWidget> Diamante(float Lato, TAttribute<FSlateColor> Colore);
 
 	TSharedPtr<FValdorsoCaratteri> Caratteri;
