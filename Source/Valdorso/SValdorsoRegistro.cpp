@@ -10,6 +10,9 @@
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "Framework/Application/SlateApplication.h"
 #include "HAL/PlatformTime.h"
+#include "Misc/DateTime.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
@@ -28,7 +31,14 @@
 namespace
 {
 	/** Quanto dura il nero dopo la firma, prima che il personaggio entri. */
-	constexpr float RegSchermoSecondiFinale = 4.5f;
+	constexpr float RegSchermoSecondiFinale = 5.5f;
+
+	/** Il sigillo cade nei primi 0,7 secondi; poi la foto della pagina, poi il nero (passo 4.2b). */
+	constexpr float RegSchermoSigillo = 0.7f;
+	constexpr float RegSchermoInizioNero = 1.1f;
+
+	/** La calligrafia del sacerdote: lettere al secondo. */
+	constexpr float RegSchermoLettereAlSecondo = 70.f;
 
 	/** Oltre questo numero di risposte, la pagina le mette su due colonne. */
 	constexpr int32 RegSchermoMassimoUnaColonna = 7;
@@ -94,7 +104,20 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 	OnSalva = InArgs._OnSalva;
 	OnFirmato = InArgs._OnFirmato;
 	OnTorna = InArgs._OnTorna;
+	OnCambia = InArgs._OnCambia;
 	Nome = InArgs._NomePersonaggio;
+
+	// Il ritratto del palco (passo 4.2b): la schermata lo tiene vivo finché si vede.
+	if (InArgs._Ritratto)
+	{
+		RitrattoVivo.Reset(InArgs._Ritratto);
+		PennelloRitratto.SetResourceObject(InArgs._Ritratto);
+		PennelloRitratto.ImageSize = FVector2D(InArgs._Ritratto->SizeX, InArgs._Ritratto->SizeY);
+		PennelloRitratto.DrawAs = ESlateBrushDrawType::Image;
+	}
+	// Il sigillo: un disco rosso sangue con il bordo più scuro (disegnati come rettangoli tutti arrotondati).
+	PennelloSigillo = FSlateRoundedBoxBrush(ValdorsoTema::RossoSangue(), 46.f, ValdorsoTema::Hex(TEXT("5C1A16")), 4.f);
+	PennelloSigilloBordo = FSlateRoundedBoxBrush(FLinearColor::Transparent, 34.f, ValdorsoTema::Oro().CopyWithNewOpacity(0.55f), 1.5f);
 	Bozza = InArgs._Registro;
 	Dadi.Initialize(static_cast<int32>(FPlatformTime::Cycles()));
 
@@ -213,6 +236,9 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			// La pergamena, a sinistra.
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(70.f, 30.f, 0.f, 30.f))
 			[
+				SNew(SOverlay)
+				+ SOverlay::Slot()
+				[
 				SNew(SBorder)
 				.BorderImage(&Stile->SfondoPannello)
 				.Padding(FMargin(44.f, 30.f))
@@ -361,24 +387,20 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 						]
 					]
 				]
+				]
+
+				// Il sigillo di ceralacca: alla firma cade sulla pergamena (passo 4.2b).
+				+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(FMargin(0.f, 0.f, 36.f, 92.f))
+				[
+					Sigillo()
+				]
 			]
 
-			// A destra, per ora, il frammento che batte (il palco arriva al passo 4.2b).
+			// A destra il ritratto del colono, disegnato dalla telecamera del palco (passo 4.2b);
+			// senza palco, il frammento che batte.
 			+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
 			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-				[
-					Stile->Diamante(64.f, TAttribute<FSlateColor>::CreateLambda([]()
-					{
-						const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds());
-						return FSlateColor(FMath::Lerp(ValdorsoTema::Brace().CopyWithNewOpacity(0.55f), ValdorsoTema::OroChiaro(), Colpo));
-					}))
-				]
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 46.f, 0.f, 0.f))
-				[
-					Stile->Etichetta(LOCTEXT("Cuore", "IL CUORE BATTE ANCORA"))
-				]
+				Destra()
 			]
 		]
 
@@ -390,8 +412,20 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			.Visibility_Lambda([this]() { return bFinale ? EVisibility::Visible : EVisibility::Collapsed; })
 			.ColorAndOpacity_Lambda([this]()
 			{
-				const float Passati = static_cast<float>(FPlatformTime::Seconds() - InizioFinale);
+				const float Passati = static_cast<float>(FPlatformTime::Seconds() - InizioFinale) - RegSchermoInizioNero;
 				return FSlateColor(FLinearColor(0.f, 0.f, 0.f, FMath::Clamp(Passati / 1.2f, 0.f, 1.f)));
+			})
+		]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(FMargin(80.f, 150.f, 80.f, 0.f))
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("FinaleFoto", "La pagina firmata è salvata tra gli screenshot del gioco."))
+			.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
+			.Visibility_Lambda([this]() { return bFinale ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			.ColorAndOpacity_Lambda([this]()
+			{
+				const float Passati = static_cast<float>(FPlatformTime::Seconds() - InizioFinale) - RegSchermoInizioNero;
+				return FSlateColor(ValdorsoTema::TestoSecondario().CopyWithNewOpacity(FMath::Clamp((Passati - 2.0f) / 1.0f, 0.f, 0.8f)));
 			})
 		]
 		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(FMargin(80.f, 0.f))
@@ -404,7 +438,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 			.Visibility_Lambda([this]() { return bFinale ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 			.ColorAndOpacity_Lambda([this]()
 			{
-				const float Passati = static_cast<float>(FPlatformTime::Seconds() - InizioFinale);
+				const float Passati = static_cast<float>(FPlatformTime::Seconds() - InizioFinale) - RegSchermoInizioNero;
 				const float Luce = FMath::Clamp((Passati - 1.0f) / 1.0f, 0.f, 1.f);
 				const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds());
 				return FSlateColor(FMath::Lerp(ValdorsoTema::Pergamena(), ValdorsoTema::OroChiaro(), Colpo * 0.6f).CopyWithNewOpacity(Luce));
@@ -487,9 +521,15 @@ void SValdorsoRegistroColono::Ridisegna()
 	{
 		return;
 	}
+	FinisciScrittura();
 	PrimoFuoco.Reset();
 	CampoTesto.Reset();
 	Corpo->SetContent(ContenutoPagina());
+	OnCambia.ExecuteIfBound(Bozza);
+	if (Pagina == EPagina::Racconto && !bRaccontoScritto && !bRaccontoToccato)
+	{
+		IniziaScrittura();
+	}
 
 	TSharedPtr<SWidget> Fuoco = FuocoIniziale();
 	if (Fuoco.IsValid() && FSlateApplication::IsInitialized())
@@ -808,8 +848,14 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaTesto(bool bRacconto)
 		.Text(FText::FromString(bRacconto ? Bozza.Racconto : Bozza.Storia))
 		.HintText(bRacconto ? FText::GetEmpty() : LOCTEXT("SugStoria", "Mio padre forgiava spade a Torre Grigia; io ho imparato a tacere..."))
 		.IsEnabled_Lambda([this]() { return !bInFirma && !bFinale && !bInUscita; })
+		.IsReadOnly_Lambda([this]() { return bScrivendo; })
 		.OnTextChanged_Lambda([this, bRacconto](const FText& Nuovo)
 		{
+			if (bScrivendo)
+			{
+				// Lo sta scrivendo il sacerdote, non il giocatore.
+				return;
+			}
 			if (bRacconto)
 			{
 				Bozza.Racconto = Nuovo.ToString();
@@ -1138,7 +1184,10 @@ void SValdorsoRegistroColono::AvviaFinale()
 	bFinale = true;
 	InizioFinale = FPlatformTime::Seconds();
 	Messaggio = FText::GetEmpty();
+	FinisciScrittura();
 	RegisterActiveTimer(RegSchermoSecondiFinale, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoRegistroColono::FineFinale));
+	// Quando il sigillo è caduto, la foto della pagina firmata.
+	RegisterActiveTimer(RegSchermoSigillo + 0.1f, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoRegistroColono::FotoPagina));
 }
 
 EActiveTimerReturnType SValdorsoRegistroColono::FineFinale(double Ora, float Delta)
@@ -1149,12 +1198,205 @@ EActiveTimerReturnType SValdorsoRegistroColono::FineFinale(double Ora, float Del
 
 void SValdorsoRegistroColono::MostraMessaggio(const FText& Scritta, bool bComeErrore)
 {
+	bMessaggioScrittura = false;
 	Messaggio = Scritta;
 	bErrore = bComeErrore;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Passo 4.2b: ritratto, sigillo, calligrafia, foto della pagina
+// ------------------------------------------------------------------------------------------------
+
+TSharedRef<SWidget> SValdorsoRegistroColono::Destra()
+{
+	if (!RitrattoVivo.IsValid())
+	{
+		return SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+			[
+				Stile->Diamante(64.f, TAttribute<FSlateColor>::CreateLambda([]()
+				{
+					const float Colpo = ValdorsoTema::Battito(FPlatformTime::Seconds());
+					return FSlateColor(FMath::Lerp(ValdorsoTema::Brace().CopyWithNewOpacity(0.55f), ValdorsoTema::OroChiaro(), Colpo));
+				}))
+			]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 46.f, 0.f, 0.f))
+			[
+				Stile->Etichetta(LOCTEXT("Cuore", "IL CUORE BATTE ANCORA"))
+			];
+	}
+
+	// Il ritratto in una cornice sottile d'oro, con l'iscrizione sotto.
+	return SNew(SVerticalBox)
+		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+		[
+			SNew(SBorder)
+			.BorderImage(&Stile->SfondoPannello)
+			.Padding(FMargin(6.f))
+			[
+				SNew(SBox).WidthOverride(560.f).HeightOverride(700.f)
+				[
+					SNew(SImage).Image(&PennelloRitratto)
+				]
+			]
+		]
+		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 18.f, 0.f, 0.f))
+		[
+			Stile->Etichetta(LOCTEXT("CuoreRitratto", "IL CUORE BATTE ANCORA"))
+		];
+}
+
+TSharedRef<SWidget> SValdorsoRegistroColono::Sigillo()
+{
+	FSlateFontInfo FontV = Stile->Caratteri->Titolo(40.f, TEXT("Black"));
+
+	// Cade dall'alto: grande e trasparente, poi giusto e pieno, con un piccolo rimbalzo.
+	auto Caduta = [this]()
+	{
+		const float Passati = static_cast<float>(FPlatformTime::Seconds() - InizioFinale);
+		return FMath::Clamp(Passati / RegSchermoSigillo, 0.f, 1.f);
+	};
+
+	return SNew(SBorder)
+		.BorderImage(FCoreStyle::Get().GetBrush("NoBorder"))
+		.Padding(FMargin(0.f))
+		.Visibility_Lambda([this]() { return bFinale ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+		.RenderTransformPivot(FVector2D(0.5f, 0.5f))
+		.RenderTransform_Lambda([Caduta]()
+		{
+			const float A = Caduta();
+			const float Rimbalzo = A < 0.75f ? FMath::Lerp(2.2f, 0.92f, A / 0.75f) : FMath::Lerp(0.92f, 1.f, (A - 0.75f) / 0.25f);
+			const FSlateRenderTransform Scala{ TScale2<float>(Rimbalzo) };
+			const FSlateRenderTransform Giro{ FQuat2D(FMath::DegreesToRadians(-12.f)) };
+			return TOptional<FSlateRenderTransform>(Scala.Concatenate(Giro));
+		})
+		.ColorAndOpacity_Lambda([Caduta]()
+		{
+			return FLinearColor(1.f, 1.f, 1.f, FMath::Clamp(Caduta() * 1.6f, 0.f, 1.f));
+		})
+		[
+			SNew(SBox)
+			.WidthOverride(92.f)
+			.HeightOverride(92.f)
+			[
+				SNew(SOverlay)
+				+ SOverlay::Slot()
+				[
+					SNew(SImage).Image(&PennelloSigillo)
+				]
+				+ SOverlay::Slot().Padding(FMargin(12.f))
+				[
+					SNew(SImage).Image(&PennelloSigilloBordo)
+				]
+				+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("SigilloV", "V"))
+					.Font(FontV)
+					.ColorAndOpacity(ValdorsoTema::Oro())
+				]
+			]
+		];
+}
+
+void SValdorsoRegistroColono::IniziaScrittura()
+{
+	if (!CampoTesto.IsValid() || Bozza.Racconto.IsEmpty())
+	{
+		return;
+	}
+	bScrivendo = true;
+	Scritte = 0.f;
+	CampoTesto->SetText(FText::GetEmpty());
+	MostraMessaggio(LOCTEXT("Scrivendo", "Il sacerdote scrive... (un tasto o un clic per leggere subito)"), false);
+	bMessaggioScrittura = true;
+	TimerScrittura = RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoRegistroColono::Scrivi));
+}
+
+EActiveTimerReturnType SValdorsoRegistroColono::Scrivi(double Ora, float Delta)
+{
+	if (!bScrivendo || !CampoTesto.IsValid() || Pagina != EPagina::Racconto)
+	{
+		TimerScrittura.Reset();
+		FinisciScrittura();
+		return EActiveTimerReturnType::Stop;
+	}
+	Scritte += Delta * RegSchermoLettereAlSecondo;
+	const int32 Quante = FMath::Min(FMath::FloorToInt32(Scritte), Bozza.Racconto.Len());
+	CampoTesto->SetText(FText::FromString(Bozza.Racconto.Left(Quante)));
+	// Le lettere nuove restano in vista anche quando il racconto è più lungo della casella.
+	CampoTesto->GoTo(ETextLocation::EndOfDocument);
+	if (Quante >= Bozza.Racconto.Len())
+	{
+		TimerScrittura.Reset();
+		FinisciScrittura();
+		return EActiveTimerReturnType::Stop;
+	}
+	return EActiveTimerReturnType::Continue;
+}
+
+void SValdorsoRegistroColono::FinisciScrittura()
+{
+	if (TimerScrittura.IsValid())
+	{
+		UnRegisterActiveTimer(TimerScrittura.ToSharedRef());
+		TimerScrittura.Reset();
+	}
+	if (!bScrivendo)
+	{
+		return;
+	}
+	bScrivendo = false;
+	bRaccontoScritto = true;
+	if (CampoTesto.IsValid())
+	{
+		CampoTesto->SetText(FText::FromString(Bozza.Racconto));
+	}
+	// SetText può far credere che il giocatore abbia ritoccato il racconto: non è così.
+	bRaccontoToccato = false;
+	if (bMessaggioScrittura)
+	{
+		Messaggio = FText::GetEmpty();
+		bMessaggioScrittura = false;
+	}
+}
+
+EActiveTimerReturnType SValdorsoRegistroColono::FotoPagina(double Ora, float Delta)
+{
+	// Saved/Screenshots/...: Registro_<nome>_<data>.png, con la pagina, il sigillo e il ritratto.
+	const FString NomeFile = FString::Printf(TEXT("Registro_%s_%s.png"),
+		*FPaths::MakeValidFileName(Nome.Replace(TEXT(" "), TEXT("_")).Replace(TEXT("'"), TEXT(""))),
+		*FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+	FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / NomeFile, true, false);
+	return EActiveTimerReturnType::Stop;
+}
+
+FReply SValdorsoRegistroColono::OnPreviewKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
+{
+	if (bScrivendo)
+	{
+		FinisciScrittura();
+		return FReply::Handled();
+	}
+	return SCompoundWidget::OnPreviewKeyDown(MyGeometry, InKeyEvent);
+}
+
+FReply SValdorsoRegistroColono::OnPreviewMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (bScrivendo)
+	{
+		FinisciScrittura();
+		return FReply::Handled();
+	}
+	return SCompoundWidget::OnPreviewMouseButtonDown(MyGeometry, MouseEvent);
+}
+
 FReply SValdorsoRegistroColono::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	if (bScrivendo)
+	{
+		FinisciScrittura();
+	}
 	// Un clic sullo sfondo non deve togliere il fuoco al registro (Esc e controller smetterebbero di funzionare).
 	const TSharedPtr<SWidget> Fuoco = FuocoIniziale();
 	if (Fuoco.IsValid())
@@ -1168,6 +1410,12 @@ FReply SValdorsoRegistroColono::OnKeyDown(const FGeometry& MyGeometry, const FKe
 {
 	if (bFinale || bInFirma || bInUscita)
 	{
+		return FReply::Handled();
+	}
+	if (bScrivendo)
+	{
+		// Un tasto qualsiasi: il sacerdote finisce subito di scrivere.
+		FinisciScrittura();
 		return FReply::Handled();
 	}
 	const FKey Tasto = InKeyEvent.GetKey();

@@ -12,6 +12,7 @@
 #include "SValdorsoAccesso.h"
 #include "SValdorsoPersonaggi.h"
 #include "SValdorsoRegistro.h"
+#include "ValdorsoPalcoRegistro.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoAttributeSet.h"
 #include "AbilitySystemComponent.h"
@@ -564,6 +565,10 @@ void AValdorsoPlayerController::ClientEsitoRegistro_Implementation(const FString
 	if (SchermataRegistro.IsValid() && IdRegistro == RegistroAperto)
 	{
 		SchermataRegistro->Esito(Messaggio, bRiuscito, Salvato);
+		if (Salvato.bFirmato && Palco.IsValid())
+		{
+			Palco->Firmato();
+		}
 	}
 }
 
@@ -951,10 +956,33 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 	ChiudiRegistro();
 	ChiudiAnticamera();
 	RegistroAperto = IdRegistro;
+
+	// Il palco del ritratto (passo 4.2b): molto in alto sopra la mappa, visto solo dalla sua telecamera.
+	if (UWorld* Mondo = GetWorld())
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Palco = Mondo->SpawnActor<AValdorsoPalcoRegistro>(AValdorsoPalcoRegistro::StaticClass(),
+			FTransform(FVector(0.f, 0.f, 30000.f)), Parametri);
+		if (Palco.IsValid())
+		{
+			Palco->Aggiorna(Risposte);
+		}
+	}
+
 	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
 	SAssignNew(SchermataRegistro, SValdorsoRegistroColono)
 		.NomePersonaggio(NomePersonaggio)
 		.Registro(Risposte)
+		.Ritratto(Palco.IsValid() ? Palco->GetRitratto() : nullptr)
+		.OnCambia(FValdorsoSuCambioRisposte::CreateLambda([Debole](const FValdorsoRegistro& Cambiate)
+		{
+			AValdorsoPlayerController* Controllore = Debole.Get();
+			if (Controllore && Controllore->Palco.IsValid())
+			{
+				Controllore->Palco->Aggiorna(Cambiate);
+			}
+		}))
 		.OnSalva(FValdorsoSuSalvaRegistro::CreateLambda([Debole](const FValdorsoRegistro& Proposto, bool bFirma)
 		{
 			if (AValdorsoPlayerController* Controllore = Debole.Get())
@@ -991,6 +1019,11 @@ void AValdorsoPlayerController::ChiudiRegistro()
 {
 	if (!SchermataRegistro.IsValid())
 	{
+		if (Palco.IsValid())
+		{
+			Palco->Destroy();
+		}
+		Palco.Reset();
 		return;
 	}
 	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
@@ -999,6 +1032,12 @@ void AValdorsoPlayerController::ChiudiRegistro()
 	}
 	SchermataRegistro.Reset();
 	RegistroAperto.Empty();
+	// Prima via la schermata (che tiene vivo il ritratto), poi il palco.
+	if (Palco.IsValid())
+	{
+		Palco->Destroy();
+	}
+	Palco.Reset();
 }
 
 void AValdorsoPlayerController::ClientBiglietto_Implementation(const FString& Biglietto, const FString& Nome)

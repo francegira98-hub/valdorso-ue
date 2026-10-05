@@ -245,9 +245,10 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 	if (IdDaCancellare == Id)
 	{
 		CampoConferma = Stile->Campo(FText::FromString(Nome), false,
-			FOnTextCommitted::CreateLambda([this, Id](const FText& Testo, ETextCommit::Type Tipo)
+			FOnTextCommitted::CreateLambda([this, Id, Nome](const FText& Testo, ETextCommit::Type Tipo)
 			{
-				if (Tipo == ETextCommit::OnEnter && !bInAttesa)
+				// (05/10) Solo con il nome giusto, come il server (spazi ai lati e maiuscole non contano).
+				if (Tipo == ETextCommit::OnEnter && !bInAttesa && Testo.ToString().TrimStartAndEnd().Equals(Nome, ESearchCase::IgnoreCase))
 				{
 					OnCancella.ExecuteIfBound(Id, Testo.ToString());
 				}
@@ -281,7 +282,12 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 					{
 						OnCancella.ExecuteIfBound(Id, Campo->GetText().ToString());
 					}
-				}), 18.f)
+				}), 18.f,
+				// (05/10) Acceso solo quando il nome scritto è quello giusto.
+				TAttribute<bool>::CreateLambda([this, Campo, Nome]()
+				{
+					return !bInAttesa && Campo.IsValid() && Campo->GetText().ToString().TrimStartAndEnd().Equals(Nome, ESearchCase::IgnoreCase);
+				}))
 			]
 		];
 	}

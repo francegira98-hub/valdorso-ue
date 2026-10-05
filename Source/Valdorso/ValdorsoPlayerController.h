@@ -14,6 +14,7 @@ class UInputMappingContext;
 class SValdorsoAnticamera;
 class SValdorsoSceltaPersonaggio;
 class SValdorsoRegistroColono;
+class AValdorsoPalcoRegistro;
 class UUserWidget;
 
 /**
@@ -208,6 +209,8 @@ private:
 	void ChiudiRegistro();
 	TSharedPtr<SValdorsoRegistroColono> SchermataRegistro;
 	FString RegistroAperto;
+	/** Client: il palco con il ritratto del colono (passo 4.2b), solo su questo PC. */
+	TWeakObjectPtr<AValdorsoPalcoRegistro> Palco;
 	int32 RichiesteFatte = 0;
 	FString AccountId;
 	FString NomeAccount;

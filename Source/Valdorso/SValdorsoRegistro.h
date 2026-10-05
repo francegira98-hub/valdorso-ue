@@ -23,6 +23,8 @@
 #include "Widgets/SCompoundWidget.h"
 #include "Styling/SlateTypes.h"
 #include "ValdorsoRegistro.h"
+#include "UObject/StrongObjectPtr.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 class FValdorsoStileAccesso;
 class SBox;
@@ -30,13 +32,18 @@ class SButton;
 class SMultiLineEditableTextBox;
 
 DECLARE_DELEGATE_TwoParams(FValdorsoSuSalvaRegistro, const FValdorsoRegistro& /*Risposte*/, bool /*bFirma*/);
+DECLARE_DELEGATE_OneParam(FValdorsoSuCambioRisposte, const FValdorsoRegistro& /*Risposte*/);
 
 class VALDORSO_API SValdorsoRegistroColono : public SCompoundWidget
 {
 public:
-	SLATE_BEGIN_ARGS(SValdorsoRegistroColono) {}
+	SLATE_BEGIN_ARGS(SValdorsoRegistroColono) : _Ritratto(nullptr) {}
 		SLATE_ARGUMENT(FString, NomePersonaggio)
 		SLATE_ARGUMENT(FValdorsoRegistro, Registro)
+		/** Il ritratto del palco (passo 4.2b); se manca, a destra resta il frammento che batte. */
+		SLATE_ARGUMENT(UTextureRenderTarget2D*, Ritratto)
+		/** Le risposte sono cambiate (per il palco: uomo o donna, colore della fede). */
+		SLATE_EVENT(FValdorsoSuCambioRisposte, OnCambia)
 		/** Bozza (bFirma falso) o firma: la risposta del server arriva con Esito. */
 		SLATE_EVENT(FValdorsoSuSalvaRegistro, OnSalva)
 		/** Firmato e finita la dissolvenza: il personaggio può entrare. */
@@ -55,6 +62,9 @@ public:
 
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
+	/** Mentre il sacerdote scrive, un tasto o un clic ovunque finisce subito la scrittura. */
+	virtual FReply OnPreviewKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
+	virtual FReply OnPreviewMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual bool SupportsKeyboardFocus() const override { return true; }
 
 	/** Le pagine, nell'ordine. */
@@ -89,6 +99,14 @@ private:
 	TSharedRef<SWidget> PaginaCarattere();
 	TSharedRef<SWidget> PaginaTesto(bool bRacconto);
 	TSharedRef<SWidget> PaginaFirma();
+	TSharedRef<SWidget> Destra();
+	TSharedRef<SWidget> Sigillo();
+	/** La calligrafia del sacerdote: il racconto si scrive lettera per lettera (la prima volta). */
+	void IniziaScrittura();
+	void FinisciScrittura();
+	EActiveTimerReturnType Scrivi(double Ora, float Delta);
+	/** La pagina firmata, con il sigillo, salvata come immagine tra gli screenshot. */
+	EActiveTimerReturnType FotoPagina(double Ora, float Delta);
 	/** Una risposta: rombo e testo. Simbolo trasparente = rombo d'oro; altrimenti il colore del simbolo (le fedi). */
 	TSharedRef<SButton> PulsanteVoce(const FText& Scritta, TFunction<bool()> Scelta, TFunction<void()> Azione, float Dimensione,
 		const FText& Aiuto = FText::GetEmpty(), FLinearColor Simbolo = FLinearColor::Transparent);
@@ -100,6 +118,7 @@ private:
 	FButtonStyle StileVoceScelta;
 
 	FValdorsoSuSalvaRegistro OnSalva;
+	FValdorsoSuCambioRisposte OnCambia;
 	FSimpleDelegate OnFirmato;
 	FSimpleDelegate OnTorna;
 
@@ -124,5 +143,18 @@ private:
 	bool bFinale = false;
 	/** "Torna ai personaggi" è partito: tutto spento finché arriva l'elenco. */
 	bool bInUscita = false;
+
+	/** Il ritratto (tenuto vivo dalla schermata finché si vede) e il suo pennello. */
+	TStrongObjectPtr<UTextureRenderTarget2D> RitrattoVivo;
+	FSlateBrush PennelloRitratto;
+	FSlateBrush PennelloSigillo;
+	FSlateBrush PennelloSigilloBordo;
+
+	bool bScrivendo = false;
+	/** Il messaggio di adesso è quello della scrittura (si toglie alla fine; gli altri restano). */
+	bool bMessaggioScrittura = false;
+	bool bRaccontoScritto = false;
+	float Scritte = 0.f;
+	TSharedPtr<FActiveTimerHandle> TimerScrittura;
 	double InizioFinale = 0.0;
 };

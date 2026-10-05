@@ -512,6 +512,16 @@ void AValdorsoMenuController::SfumaSopra(float Opacita)
 	if (Accesso.IsValid())
 	{
 		Accesso->SetRenderOpacity(Opacita);
+		// (05/10) I bordi arrotondati non seguono del tutto la trasparenza: a fine sfumatura il pannello si toglie.
+		// (Durante il volo ChiudiAccesso non riaccende il menu.)
+		if (Opacita <= 0.01f)
+		{
+			ChiudiAccesso();
+		}
+	}
+	if (Menu.IsValid() && Opacita <= 0.01f)
+	{
+		Menu->SetVisibility(EVisibility::Collapsed);
 	}
 }
 
