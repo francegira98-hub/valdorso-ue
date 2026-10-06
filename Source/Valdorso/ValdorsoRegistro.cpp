@@ -227,6 +227,12 @@ namespace ValdorsoRegistro
 		{
 			return FString::Printf(TEXT("L'età va da %d a %d anni."), EtaMinima, EtaMassima);
 		}
+		// (06/10, passo 4.4) L'aspetto: se è scelto, ogni valore dentro il catalogo (la barba solo per gli uomini).
+		const FString SullAspetto = ValdorsoAspetto::Problema(Registro.Aspetto, Registro.Sesso);
+		if (!SullAspetto.IsEmpty())
+		{
+			return SullAspetto;
+		}
 		const FString SulRacconto = ValdorsoRegole::ProblemaTestoLibero(Registro.Racconto, MassimoRacconto);
 		if (!SulRacconto.IsEmpty())
 		{
@@ -472,6 +478,15 @@ namespace ValdorsoRegistro
 		{
 			Registro.Eta = Dadi.RandRange(EtaMinima, 40);
 		}
+		// (06/10, passo 4.4) Anche l'aspetto, se non era ancora scelto; altrimenti lo si adatta al sesso uscito.
+		if (bTutte || ValdorsoAspetto::NonScelto(Registro.Aspetto))
+		{
+			ValdorsoAspetto::Casuale(Registro.Aspetto, Registro.Sesso, Dadi);
+		}
+		else
+		{
+			ValdorsoAspetto::Adatta(Registro.Aspetto, Registro.Sesso);
+		}
 	}
 
 	void CasualeUna(FValdorsoRegistro& Registro, EDomanda Quale, FRandomStream& Dadi)
@@ -489,6 +504,11 @@ namespace ValdorsoRegistro
 			Scelto = (Scelto + 1 + Dadi.RandRange(0, Possibili.Num() - 2)) % Possibili.Num();
 		}
 		Campo = Possibili[Scelto].Chiave;
+		if (Quale == EDomanda::Sesso)
+		{
+			// (06/10) Cambiando sesso, l'aspetto resta com'è dove si può (niente barba per una donna).
+			ValdorsoAspetto::Adatta(Registro.Aspetto, Registro.Sesso);
+		}
 	}
 
 	bool StesseRisposte(const FValdorsoRegistro& A, const FValdorsoRegistro& B)
@@ -504,7 +524,8 @@ namespace ValdorsoRegistro
 		return A.Eta == B.Eta
 			&& A.Racconto.Equals(B.Racconto, ESearchCase::CaseSensitive)
 			&& A.Storia.Equals(B.Storia, ESearchCase::CaseSensitive)
-			&& A.Firma.Equals(B.Firma, ESearchCase::CaseSensitive);
+			&& A.Firma.Equals(B.Firma, ESearchCase::CaseSensitive)
+			&& ValdorsoAspetto::Uguali(A.Aspetto, B.Aspetto);
 	}
 
 	const TCHAR* Vantaggio(EDomanda Quale, const FString& Scelta)

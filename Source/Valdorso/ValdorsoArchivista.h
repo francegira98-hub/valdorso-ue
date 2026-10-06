@@ -268,6 +268,10 @@ struct FValdorsoPersonaggioBreve
 	/** (06/10, passo 4.5) Lo staff chiede di correggere la sua storia, con questo motivo (vuoto se no). */
 	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
 	FString RichiestaStaff;
+
+	/** (06/10, passo 4.4) L'aspetto, per il ritratto nella scelta del personaggio (una ventina di byte). */
+	UPROPERTY()
+	FValdorsoAspetto Aspetto;
 };
 
 /** Un nome di personaggio cancellato, riservato fino a una data. */

@@ -1761,6 +1761,7 @@ TArray<FValdorsoPersonaggioBreve> UValdorsoArchivista::ElencoPersonaggi(const FS
 			Breve.Sesso = Dati->Registro.Sesso;
 			Breve.Fede = Dati->Registro.Fede;
 			Breve.RichiestaStaff = Dati->Registro.bStoriaDaCorreggere ? Dati->Registro.RichiestaStaff : FString();
+			Breve.Aspetto = Dati->Registro.Aspetto;
 			Elenco.Add(Breve);
 		}
 	}

@@ -1010,6 +1010,11 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Scelte(ValdorsoRegistro::EDomanda Q
 			[this, Quale, Chiave]()
 			{
 				ValdorsoRegistro::Risposta(Bozza, Quale) = Chiave;
+				// (06/10, passo 4.4) Cambiando sesso l'aspetto si adatta (niente barba per una donna).
+				if (Quale == ValdorsoRegistro::EDomanda::Sesso)
+				{
+					ValdorsoAspetto::Adatta(Bozza.Aspetto, Bozza.Sesso);
+				}
 				// (05/10) Scegliendo una fede si sente il suo motivo.
 				if (Quale == ValdorsoRegistro::EDomanda::Fede)
 				{

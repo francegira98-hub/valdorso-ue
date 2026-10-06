@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ValdorsoAspetto.h"
 #include "ValdorsoRegistro.generated.h"
 
 /** Le risposte del Registro, salvate nel file del personaggio. Le scelte sono chiavi del catalogo (vuote = non ancora). */
@@ -92,6 +93,13 @@ struct FValdorsoRegistro
 	/** Il motivo scritto dallo staff, che il giocatore legge. */
 	UPROPERTY()
 	FString RichiestaStaff;
+
+	/**
+	 * (06/10, passo 4.4) L'aspetto del colono (Mutable con i dati MetaHuman): la testa base, i cursori del volto,
+	 * pelle, occhi, capelli, barba e corpo. Non scelto = l'aspetto di partenza. Vedi ValdorsoAspetto.h.
+	 */
+	UPROPERTY()
+	FValdorsoAspetto Aspetto;
 };
 
 /** (06/10, passo 4.5) Il ricordo che il colono porta con sé, pronto per l'inventario (v0.1.4). */

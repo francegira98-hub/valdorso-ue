@@ -15,6 +15,7 @@
 #include "ValdorsoRegole.h"
 #include "ValdorsoArchivista.h"
 #include "ValdorsoRegistro.h"
+#include "ValdorsoAspetto.h"
 #include "Engine/GameInstance.h"
 #include "HAL/FileManager.h"
 #include "Misc/Guid.h"
@@ -685,6 +686,101 @@ bool FValdorsoTestRegistroFiltro::RunTest(const FString& Parameters)
 		Visti.Add(Oggetto.Id);
 	}
 	TestTrue(TEXT("chiave sconosciuta: nessun oggetto"), ValdorsoRegistro::OggettoDelRicordo(TEXT("drago")).Id.IsNone());
+	return true;
+}
+
+// Passo 4.4 (06/10): l'aspetto del colono, la parte dei dati (catalogo, controlli del server, dadi).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestAspetto, "Valdorso.Registro.Aspetto", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestAspetto::RunTest(const FString& Parameters)
+{
+	// Il catalogo: nomi unici, ogni scelta ha almeno un valore, il valore di partenza è valido.
+	TSet<FString> Nomi;
+	for (const FValdorsoVoceAspetto& Voce : ValdorsoAspetto::Voci())
+	{
+		TestFalse(FString(TEXT("nome ripetuto: ")) + Voce.Id, Nomi.Contains(Voce.Id));
+		Nomi.Add(Voce.Id);
+		TestTrue(FString(TEXT("scelte per tutti: ")) + Voce.Id, ValdorsoAspetto::Possibili(Voce, TEXT("uomo")) >= 1 && ValdorsoAspetto::Possibili(Voce, TEXT("donna")) >= 1);
+		TestTrue(FString(TEXT("partenza valida: ")) + Voce.Id, Voce.Predefinito < ValdorsoAspetto::Possibili(Voce, TEXT("donna")));
+	}
+	TestTrue(TEXT("una ventina di voci"), ValdorsoAspetto::Voci().Num() >= 15 && ValdorsoAspetto::Voci().Num() <= 64);
+
+	// Non scelto: va bene, e vale come quello di partenza.
+	FValdorsoAspetto Vuoto;
+	TestTrue(TEXT("non scelto va bene"), ValdorsoAspetto::Problema(Vuoto, TEXT("donna")).IsEmpty());
+	TestEqual(TEXT("cursore nel mezzo"), ValdorsoAspetto::Cursore(Vuoto, TEXT("Mascella")), 0.f);
+	TestEqual(TEXT("prima testa"), static_cast<int32>(ValdorsoAspetto::Valore(Vuoto, TEXT("Testa"))), 0);
+
+	// Imposta e Cursore: gli estremi diventano -1 e 1.
+	FValdorsoAspetto Mio;
+	ValdorsoAspetto::Imposta(Mio, TEXT("NasoLunghezza"), 255);
+	ValdorsoAspetto::Imposta(Mio, TEXT("Altezza"), 0);
+	TestFalse(TEXT("dopo Imposta è scelto"), ValdorsoAspetto::NonScelto(Mio));
+	TestTrue(TEXT("naso al massimo"), FMath::IsNearlyEqual(ValdorsoAspetto::Cursore(Mio, TEXT("NasoLunghezza")), 1.f));
+	TestTrue(TEXT("altezza al minimo"), FMath::IsNearlyEqual(ValdorsoAspetto::Cursore(Mio, TEXT("Altezza")), -1.f, 0.01f));
+	TestTrue(TEXT("valido"), ValdorsoAspetto::Problema(Mio, TEXT("uomo")).IsEmpty());
+	TestFalse(TEXT("scelto non è uguale a non scelto"), ValdorsoAspetto::Uguali(Mio, Vuoto));
+
+	// La barba solo per gli uomini; Adatta la toglie cambiando sesso.
+	ValdorsoAspetto::Imposta(Mio, TEXT("Barba"), 3);
+	TestTrue(TEXT("barba per un uomo"), ValdorsoAspetto::Problema(Mio, TEXT("uomo")).IsEmpty());
+	TestFalse(TEXT("niente barba per una donna"), ValdorsoAspetto::Problema(Mio, TEXT("donna")).IsEmpty());
+	FValdorsoAspetto Lei = Mio;
+	ValdorsoAspetto::Adatta(Lei, TEXT("donna"));
+	TestTrue(TEXT("adattato per una donna"), ValdorsoAspetto::Problema(Lei, TEXT("donna")).IsEmpty());
+	TestTrue(TEXT("il resto resta"), FMath::IsNearlyEqual(ValdorsoAspetto::Cursore(Lei, TEXT("NasoLunghezza")), 1.f));
+
+	// Il server non si fida: versione sbagliata, valori in meno, una scelta che non c'è.
+	FValdorsoAspetto Rotto = Mio;
+	Rotto.Versione = 99;
+	TestFalse(TEXT("versione sbagliata"), ValdorsoAspetto::Problema(Rotto, TEXT("uomo")).IsEmpty());
+	Rotto = Mio;
+	Rotto.Valori.Pop();
+	TestFalse(TEXT("un valore in meno"), ValdorsoAspetto::Problema(Rotto, TEXT("uomo")).IsEmpty());
+	Rotto = Mio;
+	Rotto.Valori[ValdorsoAspetto::Indice(TEXT("Testa"))] = 250;
+	TestFalse(TEXT("una testa che non c'è"), ValdorsoAspetto::Problema(Rotto, TEXT("uomo")).IsEmpty());
+
+	// I dadi del destino: sempre validi, per tutti e due i sessi, e diversi tra loro.
+	FRandomStream Dadi(606);
+	int32 Diversi = 0;
+	FValdorsoAspetto Prima;
+	for (int32 i = 0; i < 200; ++i)
+	{
+		const FString Sesso = i % 2 ? TEXT("donna") : TEXT("uomo");
+		FValdorsoAspetto Caso;
+		ValdorsoAspetto::Casuale(Caso, Sesso, Dadi);
+		if (!ValdorsoAspetto::Problema(Caso, Sesso).IsEmpty())
+		{
+			AddError(FString::Printf(TEXT("aspetto a caso non valido per %s"), *Sesso));
+			break;
+		}
+		Diversi += ValdorsoAspetto::Uguali(Caso, Prima) ? 0 : 1;
+		Prima = Caso;
+	}
+	TestEqual(TEXT("i dadi cambiano sempre qualcosa"), Diversi, 200);
+
+	// I segni (cicatrici, tatuaggi, segni particolari): la prima scelta è "nessuno", e i dadi li danno di rado.
+	TestEqual(TEXT("senza cicatrice all'inizio"), static_cast<int32>(ValdorsoAspetto::Valore(FValdorsoAspetto(), TEXT("Cicatrice"))), 0);
+	int32 ConTatuaggio = 0;
+	for (int32 i = 0; i < 400; ++i)
+	{
+		FValdorsoAspetto Caso;
+		ValdorsoAspetto::Casuale(Caso, TEXT("donna"), Dadi);
+		ConTatuaggio += ValdorsoAspetto::Valore(Caso, TEXT("Tatuaggio")) != 0 ? 1 : 0;
+	}
+	TestTrue(TEXT("tatuaggi rari ma presenti"), ConTatuaggio > 10 && ConTatuaggio < 120);
+
+	// Nel registro: i dadi riempiono anche l'aspetto, e un aspetto rotto non si firma.
+	FValdorsoRegistro Registro;
+	ValdorsoRegistro::Casuale(Registro, Dadi, true);
+	Registro.Firma = ValdorsoRegistro::FirmaColNome;
+	TestFalse(TEXT("i dadi scelgono l'aspetto"), ValdorsoAspetto::NonScelto(Registro.Aspetto));
+	TestTrue(TEXT("registro a caso firmabile"), ValdorsoRegistro::Problema(Registro, true).IsEmpty());
+	FValdorsoRegistro Cambiato = Registro;
+	ValdorsoAspetto::Imposta(Cambiato.Aspetto, TEXT("Labbra"), static_cast<uint8>(ValdorsoAspetto::Valore(Registro.Aspetto, TEXT("Labbra")) ^ 1));
+	TestFalse(TEXT("cambiare l'aspetto è una bozza nuova"), ValdorsoRegistro::StesseRisposte(Registro, Cambiato));
+	Cambiato.Aspetto.Versione = 99;
+	TestFalse(TEXT("aspetto rotto: non si firma"), ValdorsoRegistro::Problema(Cambiato, true).IsEmpty());
 	return true;
 }
 
