@@ -305,6 +305,7 @@ def valle(lato, uscita, cartella_font):
     os.makedirs(cartella_strati, exist_ok=True)
     for k, m in strati.items():
         Image.fromarray(np.round(np.clip(m, 0, 1) * 255).astype(np.uint8)).save(os.path.join(cartella_strati, f"{k}.png"))
+    impacchetta(cartella_strati, os.path.join(uscita, f"T_ValleMaschere_{nome}.png"))
 
     # Luoghi: metri, e posizione in Unreal (cm) con il Landscape importato con l'angolo nord-ovest in (0,0,0):
     # Unreal X = est, Unreal Y = sud (righe dell'immagine), Z = quota.
@@ -326,6 +327,19 @@ def valle(lato, uscita, cartella_font):
           os.path.join(uscita, f"Mappa_{nome}.png"))
     print(f"Fatto: valle {lato} m (quota {h.min():.0f}-{h.max():.0f} m), {uscita}")
     return dati
+
+
+def impacchetta(cartella_strati, percorso, lato_px=4096):
+    """(06/10) Le maschere che usa il materiale M_Valle, in un'immagine sola RGBA (lineare, non sRGB):
+    R = roccia, G = neve, B = terra (strade e villaggio), A = ghiaia (rive, alveo e fondale).
+    Copre tutta la valle: in Unreal UV = posizione del mondo X, Y / lato in cm."""
+    def leggi(n):
+        return Image.open(os.path.join(cartella_strati, f"{n}.png")).convert("L").resize((lato_px, lato_px), Image.BILINEAR)
+    ghiaia = np.maximum(np.array(leggi("Ghiaia")), np.array(leggi("Acqua")))
+    # Le sponde del fiume sono ripide ma non sono roccia: dove c'è ghiaia o acqua, niente roccia.
+    roccia = (np.array(leggi("Roccia")).astype(np.float32) * (1 - ghiaia / 255.0)).astype(np.uint8)
+    canali = [Image.fromarray(roccia), leggi("Neve"), leggi("Terra"), Image.fromarray(ghiaia)]
+    Image.merge("RGBA", canali).save(percorso, optimize=True)
 
 
 def ombra(h, passo, forza=1.0):
@@ -463,6 +477,10 @@ def P_bosco(lato):
 
 if __name__ == "__main__":
     argomenti = [a for a in sys.argv[1:]]
+    if argomenti[:1] == ["--solo-maschere"]:
+        # python valle.py --solo-maschere <cartella Strati> <file di uscita>: rifà solo l'immagine delle maschere.
+        impacchetta(argomenti[1], argomenti[2])
+        sys.exit(0)
     cartella_font = "."
     if "--vertici" in argomenti:
         i = argomenti.index("--vertici"); N = int(argomenti[i + 1]); del argomenti[i:i + 2]
