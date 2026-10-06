@@ -11,7 +11,7 @@
 #
 # Come e fatta (dalla mappa del 28/09, in proporzione al lato):
 #   monti tutto intorno, piu alti a nord; un solo passo a sud-est verso Aurelia (gola con il posto di guardia);
-#   fiume da nord-est in diagonale fino al lago a sud-ovest; villaggio al centro-sud sulla riva est, mulino a ovest
+#   fiume da nord-est in diagonale fino al lago a sud-ovest, e dal lago l'emissario verso ovest tra i monti; villaggio al centro-sud sulla riva est, mulino a ovest
 #   del villaggio, ponte a nord; collina dell'Orso al centro-nord (la piu alta della conca); bosco grande a ovest e
 #   nord-ovest con le rovine degli Antichi; boschetto a est; grotta a est nei monti, seconda grotta a nord oltre la
 #   collina; pascoli a sud-est del villaggio; palude di Nonna Edda vicino al lago; cimitero a sud-ovest del villaggio.
@@ -214,6 +214,14 @@ def valle(lato, uscita, cartella_font):
     gola = lisca(1 - dg / (largo * 2.2))
     h = h * (1 - gola) + np.minimum(h, letto_gola + np.maximum(dg - 18, 0) * 1.1) * gola
 
+    # --- il villaggio: un ripiano quasi piano (si costruisce meglio), raccordato.
+    # (06/10) Prima del fiume: se viene dopo, lo spianamento riempie l'alveo vicino al mulino e il fiume sparisce.
+    vx, vy = luoghi["Piazza del villaggio"]
+    rv = np.hypot(X - vx, Y - vy) / (0.12 * conca)
+    piano = lisca((1.3 - rv) / 0.6)
+    liscio = ndimage.gaussian_filter(h, 50 / passo)
+    h = h * (1 - piano) + (liscio * 0.9 + h * 0.1) * piano
+
     # --- il fiume: da nord-est nei monti, in diagonale con qualche ansa, a ovest del villaggio, fino al lago
     base_fiume = [P(0.90, -0.16), P(0.85, -0.05), P(0.80, 0.05), P(0.765, 0.13), P(0.725, 0.21), P(0.71, 0.29),
                   P(0.655, 0.36), P(0.625, 0.44), P(0.585, 0.50),
@@ -227,7 +235,9 @@ def valle(lato, uscita, cartella_font):
     alveo = lisca(1 - df / larghezza)
     h -= alveo * (3.0 + 2.5 * tf)
 
-    # --- il lago a sud-ovest: due anse, fondale profondo, riva morbida
+    # --- il lago a sud-ovest: due anse, fondale profondo, riva morbida.
+    # (06/10, chiesto da Fra) Piu profondo (circa 27 m al centro invece di 17) e con la riva piu ripida:
+    # la fascia di acqua bassa e la spiaggia di ghiaia sono piu strette.
     lx, ly = luoghi["Lago"]
     mosso = 0.22 * frattale(rng, N, 9, 3, 0.5)
     r1 = np.hypot((X - lx) / (0.10 * conca), (Y - ly) / (0.072 * conca))
@@ -236,8 +246,8 @@ def valle(lato, uscita, cartella_font):
     pelo_lago = 30.0
     intorno = lisca(1.8 - rl)
     h = h * (1 - intorno) + np.minimum(h, pelo_lago + 1.5 + 18 * np.clip(rl - 1, 0, 1)) * intorno
-    lago = lisca((1.05 - rl) / 0.25)
-    h -= lago * (2 + 15 * lisca(1 - rl))
+    lago = lisca((1.04 - rl) / 0.14)
+    h -= lago * (3 + 24 * lisca((1 - rl) / 0.55))
 
     # --- la palude: piatta, appena sopra il lago, con pozze
     px, py = luoghi["Palude"]
@@ -245,12 +255,21 @@ def valle(lato, uscita, cartella_font):
     palude = lisca((1 - rp) / 0.7)
     h = h * (1 - palude) + (pelo_lago + 0.5 + 0.7 * frattale(rng, N, 90, 2)) * palude
 
-    # --- il villaggio: un ripiano quasi piano (si costruisce meglio), raccordato
-    vx, vy = luoghi["Piazza del villaggio"]
-    rv = np.hypot(X - vx, Y - vy) / (0.12 * conca)
-    piano = lisca((1.3 - rv) / 0.6)
-    liscio = ndimage.gaussian_filter(h, 50 / passo)
-    h = h * (1 - piano) + (liscio * 0.9 + h * 0.1) * piano
+    # --- (06/10) l'emissario: il torrente che esce dal lago verso ovest e lascia la valle in una gola tra i monti
+    # (un giorno porterà alle altre terre della baronia). Dopo la palude, perché la palude non lo riempia.
+    base_emissario = [P(0.12, 0.82), P(0.04, 0.825), P(-0.04, 0.845), P(-0.12, 0.86), P(-0.19, 0.85),
+                      (-0.02 * lato, P(0, 0.85)[1])]
+    emissario_pts = curva(base_emissario, 30)
+    de, te = distanza_da_linea(X, Y, emissario_pts)
+    quota_em = 29.2 - 17 * te                              # dal lago (30 m) al bordo del mondo
+    montagna = lisca((te - 0.25) / 0.25)                  # dopo un quarto entra nei monti
+    largo_em = 40 + 140 * montagna
+    gola_em = lisca(1 - de / largo_em)
+    h = h * (1 - gola_em) + np.minimum(h, quota_em + 0.8 + np.maximum(de - 5, 0) * (0.10 + 0.8 * montagna)) * gola_em
+    larghezza_em = 3.5 + 2 * te
+    alveo_em = lisca(1 - de / larghezza_em)
+    h -= alveo_em * 2.0
+    del te, quota_em, montagna, largo_em, gola_em
 
     # --- le strade (maschera, e un leggero spianamento)
     strade_pts = {
@@ -267,6 +286,8 @@ def valle(lato, uscita, cartella_font):
     h = h * (1 - 0.6 * strade) + ndimage.gaussian_filter(h, 6 / passo) * 0.6 * strade
 
     h = np.clip(h, 0, QUOTA_MAX - 1)
+    # (06/10) Con 4033 vertici e l'emissario la memoria non bastava: via i campi che non servono più alle maschere.
+    del tf, quota_fiume, sponde, mosso, r1, r2, intorno, rp, liscio, dett, pend0, dg, tg, letto_gola, largo, gola, u, v
 
     # ============================================================== uscite
     os.makedirs(uscita, exist_ok=True)
@@ -278,7 +299,7 @@ def valle(lato, uscita, cartella_font):
     gy_, gx_ = np.gradient(h, passo)
     pend = np.degrees(np.arctan(np.hypot(gx_, gy_)))
 
-    acqua = np.clip(np.maximum(alveo, lago), 0, 1)
+    acqua = np.clip(np.maximum(np.maximum(alveo, lago), alveo_em), 0, 1)
     bosco_grande = lisca(1.2 - np.hypot((X - P(0.17, 0.30)[0]) / (0.30 * conca), (Y - P(0.17, 0.30)[1]) / (0.38 * conca))
                          + 0.25 * frattale(rng, N, 10, 3))
     bx, by = luoghi["Boschetto"]
@@ -287,7 +308,8 @@ def valle(lato, uscita, cartella_font):
                     * (1 - piano) * (1 - palude) * (h < 330), 0, 1)
     roccia = lisca((pend - 28) / 12)
     neve = lisca((h - (500 if lato > 2600 else 440) - 40 * frattale(rng, N, 30, 3)) / 50)
-    ghiaia = np.clip(lisca(1 - df / (larghezza + 6)) - alveo, 0, 1) + np.clip(lisca(1.32 - rl) - lago, 0, 1)
+    ghiaia = (np.clip(lisca(1 - df / (larghezza + 6)) - alveo, 0, 1) + np.clip(lisca((1.12 - rl) / 0.15) - lago, 0, 1)
+              + np.clip(lisca(1 - de / (larghezza_em + 3)) - alveo_em, 0, 1))
     terra = np.clip(strade + 0.6 * piano * lisca(1 - rv / 0.6), 0, 1)
     strati = {
         "Prato": np.clip(1 - roccia - neve - terra - ghiaia, 0, 1),
@@ -315,7 +337,10 @@ def valle(lato, uscita, cartella_font):
         return float(h[r_, c])
     dati = {"lato_m": lato, "vertici": N, "scala_xy_cm": round(passo * 100, 4),
             "scala_z": round(QUOTA_MAX / 512 * 100, 4), "posizione_z_cm": round(QUOTA_MAX / 2 * 100, 1),
-            "pelo_del_lago_m": pelo_lago, "luoghi": {}}
+            "pelo_del_lago_m": pelo_lago, "luoghi": {},
+            # (06/10) i corsi d'acqua in metri (x est, y nord): li legge acqua.py per il lago, il fiume e l'emissario.
+            "fiume_m": [[round(x, 2), round(y, 2)] for x, y in fiume_pts],
+            "emissario_m": [[round(x, 2), round(y, 2)] for x, y in emissario_pts]}
     for k, (x, y) in luoghi.items():
         dati["luoghi"][k] = {"x_m": round(x, 1), "y_m": round(y, 1), "quota_m": round(quota(x, y), 1),
                              "unreal_cm": [round(x * 100), round((lato - y) * 100), round(quota(x, y) * 100)]}
@@ -323,7 +348,7 @@ def valle(lato, uscita, cartella_font):
         json.dump(dati, f, ensure_ascii=False, indent=2)
 
     anteprima(h, acqua, bosco, neve, roccia, strade, passo, os.path.join(uscita, f"Anteprima_{nome}.png"))
-    mappa(h, acqua, bosco, strade, palude, luoghi, lato, passo, fiume_pts, cartella_font,
+    mappa(h, acqua, bosco, strade, palude, luoghi, lato, passo, fiume_pts, emissario_pts, cartella_font,
           os.path.join(uscita, f"Mappa_{nome}.png"))
     print(f"Fatto: valle {lato} m (quota {h.min():.0f}-{h.max():.0f} m), {uscita}")
     return dati
@@ -365,7 +390,7 @@ def anteprima(h, acqua, bosco, neve, roccia, strade, passo, percorso):
     Image.fromarray(np.clip(c, 0, 255).astype(np.uint8)).save(percorso)
 
 
-def mappa(h, acqua, bosco, strade, palude, luoghi, lato, passo, fiume_pts, cartella_font, percorso):
+def mappa(h, acqua, bosco, strade, palude, luoghi, lato, passo, fiume_pts, emissario_pts, cartella_font, percorso):
     """La mappa di carta: pergamena, rilievo a tratteggio leggero, fiume a inchiostro, alberelli, nomi a mano."""
     L = 1600
     k = L / lato
@@ -412,6 +437,8 @@ def mappa(h, acqua, bosco, strade, palude, luoghi, lato, passo, fiume_pts, carte
     pts = [(x * k, (lato - y) * k) for x, y in fiume_pts]
     for i in range(len(pts) - 1):
         d.line((pts[i], pts[i + 1]), fill=(46, 62, 78), width=int(1 + 4 * i / len(pts)))
+    pts = [(x * k, (lato - y) * k) for x, y in emissario_pts]
+    d.line(pts, fill=(46, 62, 78), width=2)
     # simboli e nomi
     def font(n, s):
         for p in n:
