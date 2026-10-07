@@ -28,6 +28,13 @@ from scipy import ndimage
 N = 2017                  # vertici per lato: misura consigliata da Unreal (63 quadrati x 32 componenti + 1)
 QUOTA_MAX = 800.0         # metri rappresentati dai 16 bit (0 .. 800 m)
 SEME = 2809               # il giorno della mappa approvata
+# (06/10) La cascata (decisa da Fra: un salto solo, alto e spettacolare, con la pozza)
+T_ORLO = 0.13             # a che punto del fiume è l'orlo (0 = sorgente nei monti, 1 = lago): circa 320 m dalla sorgente
+Q_ORLO = 112.0            # quota dell'orlo, in metri
+SALTO = 30.0              # altezza del salto
+RAGGIO_POZZA = 18.0       # la pozza dove cade l'acqua
+PROFONDITA_POZZA = 7.0
+POZZA_AVANTI = 19.0       # il centro della pozza è 19 m oltre l'orlo: la pozza comincia ai piedi della parete, il getto cade a 6-7 m da lei
 
 
 # ------------------------------------------------------------------------------------------------ rumore
@@ -37,8 +44,10 @@ def lisca(t):
     return t * t * (3 - 2 * t)
 
 
-def distanza_da_linea(X, Y, punti):
-    """Distanza (m) di ogni punto dalla spezzata, e posizione lungo la spezzata (0..1)."""
+def distanza_da_linea(X, Y, punti, param=None):
+    """Distanza (m) di ogni punto dalla spezzata, e posizione lungo la spezzata (0..1).
+    (07/10) Con 'param' (un valore per punto) la posizione è quel valore interpolato, non la frazione di lunghezza:
+    così il fiume può serpeggiare senza spostare le quote lungo il suo corso."""
     best = np.full(X.shape, np.inf, dtype=X.dtype)
     lungo = np.zeros(X.shape, dtype=X.dtype)
     lunghezze = [math.dist(punti[i], punti[i + 1]) for i in range(len(punti) - 1)]
@@ -52,9 +61,73 @@ def distanza_da_linea(X, Y, punti):
         d = np.hypot(X - (ax + t * dx), Y - (ay + t * dy))
         meglio = d < best
         best = np.where(meglio, d, best)
-        lungo = np.where(meglio, (fatto + t * lunghezze[i]) / totale, lungo)
+        if param is None:
+            lungo = np.where(meglio, (fatto + t * lunghezze[i]) / totale, lungo)
+        else:
+            lungo = np.where(meglio, param[i] + t * (param[i + 1] - param[i]), lungo)
         fatto += lunghezze[i]
     return best, lungo
+
+
+def frazione_lungo(punti, punto):
+    """(07/10) A che frazione della lunghezza della spezzata sta il suo punto più vicino a 'punto'."""
+    migliore, frazione, fatto = 1e18, 0.0, 0.0
+    lunghezze = [math.dist(punti[i], punti[i + 1]) for i in range(len(punti) - 1)]
+    totale = sum(lunghezze)
+    for i in range(len(punti) - 1):
+        (ax, ay), (bx, by) = punti[i], punti[i + 1]
+        dx, dy = bx - ax, by - ay
+        L2 = dx * dx + dy * dy or 1e-12
+        u = min(max(((punto[0] - ax) * dx + (punto[1] - ay) * dy) / L2, 0), 1)
+        d = math.hypot(punto[0] - ax - u * dx, punto[1] - ay - u * dy)
+        if d < migliore:
+            migliore, frazione = d, (fatto + u * lunghezze[i]) / totale
+        fatto += lunghezze[i]
+    return frazione
+
+
+def punto_param(punti, param, t):
+    """(07/10) Il punto della spezzata dove il parametro (un valore per punto, crescente) vale t."""
+    i = int(np.searchsorted(param, t)) - 1
+    i = min(max(i, 0), len(punti) - 2)
+    f = (t - param[i]) / max(param[i + 1] - param[i], 1e-12)
+    return (punti[i][0] + f * (punti[i + 1][0] - punti[i][0]), punti[i][1] + f * (punti[i + 1][1] - punti[i][1]))
+
+
+def serpeggia(punti, param, lunghezza, t_orlo):
+    """(07/10) Il torrente nei monti fa curve: ogni punto si sposta di lato (perpendicolare al corso) con due onde
+    di 95 e 41 m. Ampiezza 9 m sopra la cascata, 6 m nelle rapide sotto; zero vicino all'orlo e alla pozza
+    (da 25 m prima dell'orlo a 60 m dopo) e dove il fiume entra nella conca, così il resto non cambia."""
+    nuovi = []
+    for i, (x, y) in enumerate(punti):
+        t = param[i]
+        s = t * lunghezza
+        sopra = lisca(t / 0.02) * lisca((t_orlo - 25.0 / lunghezza - t) / (15.0 / lunghezza))
+        sotto = lisca((t - t_orlo - 60.0 / lunghezza) / (25.0 / lunghezza)) * lisca((0.25 - t) / 0.03)
+        ampiezza = 9.0 * sopra + 6.0 * sotto
+        if ampiezza <= 0 or i == 0 or i == len(punti) - 1:
+            nuovi.append((x, y))
+            continue
+        ax, ay = punti[i - 1]
+        bx, by = punti[i + 1]
+        dx, dy = bx - ax, by - ay
+        l = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / l, dx / l
+        onda = math.sin(2 * math.pi * s / 95.0 + 0.7) + 0.45 * math.sin(2 * math.pi * s / 41.0 + 2.1)
+        nuovi.append((x + nx * ampiezza * onda / 1.45, y + ny * ampiezza * onda / 1.45))
+    return nuovi
+
+
+def punto_a(punti, t):
+    """Il punto della spezzata a una frazione t (0..1) della sua lunghezza."""
+    lunghezze = [math.dist(punti[i], punti[i + 1]) for i in range(len(punti) - 1)]
+    resto = t * sum(lunghezze)
+    for i, l in enumerate(lunghezze):
+        if resto <= l:
+            f = resto / l if l > 0 else 0
+            return (punti[i][0] + f * (punti[i + 1][0] - punti[i][0]), punti[i][1] + f * (punti[i + 1][1] - punti[i][1]))
+        resto -= l
+    return tuple(punti[-1])
 
 
 def curva(punti, passi=24):
@@ -227,13 +300,144 @@ def valle(lato, uscita, cartella_font):
                   P(0.655, 0.36), P(0.625, 0.44), P(0.585, 0.50),
                   P(0.545, 0.585), P(0.53, 0.66), P(0.495, 0.735), P(0.43, 0.765), P(0.35, 0.80), P(0.28, 0.795)]
     fiume_pts = curva(base_fiume, 30)
-    df, tf = distanza_da_linea(X, Y, fiume_pts)
+    # (07/10, approvato da Fra: "mi fido di te, vai pure") Il torrente nei monti non è più dritto come un righello:
+    # serpeggia tra le pareti (sopra la cascata e nelle rapide sotto), ma passa sempre dall'orlo, che resta dov'era.
+    # Ogni punto tiene la sua posizione "di prima" lungo il corso (param), così le quote del fiume non cambiano.
+    fiume_dritto = fiume_pts
+    lunghezze_f = [math.dist(fiume_pts[i], fiume_pts[i + 1]) for i in range(len(fiume_pts) - 1)]
+    L_fiume = sum(lunghezze_f)
+    param_f = list(np.concatenate([[0.0], np.cumsum(lunghezze_f)]) / L_fiume)
+    fiume_pts = serpeggia(fiume_pts, param_f, L_fiume, T_ORLO)
+    # La distanza dal letto si misura dal fiume che serpeggia; la posizione lungo il corso (per le quote) dal corso
+    # dritto: così i fianchi della gola restano lisci, senza pieghe dove le curve si avvicinano.
+    df, _ = distanza_da_linea(X, Y, fiume_pts, param_f)
+    _, tf = distanza_da_linea(X, Y, fiume_dritto)
+    del _
     larghezza = 6 + 10 * tf
     quota_fiume = 64 - 34 * tf + 120 * lisca((0.22 - tf) / 0.22)
+    # (06/10, decisa da Fra: "A") La cascata: dove il fiume esce dai monti di nord-est non scende più lungo uno scivolo,
+    # ma salta un gradino di roccia di 30 m e cade in una pozza rotonda. Sopra l'orlo una cengia quasi piana, sotto le rapide.
+    orlo_x, orlo_y = (float(v) for v in punto_a(fiume_dritto, T_ORLO))
+    avanti = np.subtract(punto_a(fiume_dritto, T_ORLO + 0.004), (orlo_x, orlo_y)).astype(float)
+    avanti = avanti / np.linalg.norm(avanti)                 # la direzione in cui l'acqua salta
+    ax_, ay_ = float(avanti[0]), float(avanti[1])
+    pozza_x, pozza_y = orlo_x + ax_ * POZZA_AVANTI, orlo_y + ay_ * POZZA_AVANTI
+    # Tutto quello che riguarda la cascata si calcola in una finestra di 560 m intorno all'orlo (poca memoria).
+    mezza = int(280 / passo)
+    rc, cc = int(round((lato - orlo_y) / passo)), int(round(orlo_x / passo))
+    fr, fc = slice(max(rc - mezza, 0), min(rc + mezza + 1, N)), slice(max(cc - mezza, 0), min(cc + mezza + 1, N))
+    Xf, Yf = X[fr, fc], Y[fr, fc]
+    # La parete non è una riga dritta: è un ferro di cavallo intorno alla pozza (i lati girano verso valle),
+    # con il bordo frastagliato. lungo = metri verso valle dall'orlo, lato = metri di traverso.
+    lungo = (Xf - orlo_x) * ax_ + (Yf - orlo_y) * ay_
+    lato_ = -(Xf - orlo_x) * ay_ + (Yf - orlo_y) * ax_
+
+    def frastaglio(l):
+        return 2.2 * np.sin(l / 6.3 + 1.0) + 1.4 * np.sin(l / 2.9 + 2.0) + 0.8 * np.sin(l / 1.7 + 0.3)
+    # Al centro, per 6 m di qua e di là, l'orlo è dritto e proprio al punto dell'orlo: lì cascata.py appoggia il getto.
+    bordo = (np.minimum(0.006 * lato_ * lato_, 45.0)
+             + (frastaglio(lato_) - frastaglio(0.0)) * lisca((np.abs(lato_) - 6) / 6))
+    vicino = lisca(1 - (np.abs(lungo) - 80) / 40) * lisca(1 - (np.abs(lato_) - 160) / 40)
+    gradino = lisca((tf - T_ORLO) / 0.002)                  # lontano dalla cascata: il salto di traverso al fiume
+    gradino[fr, fc] = lisca((lungo - bordo) / 2.0) * vicino + gradino[fr, fc] * (1 - vicino)   # il salto in 2 m
+    del lungo, lato_, bordo, vicino
+    quota_fiume = np.maximum(quota_fiume, Q_ORLO) * (1 - gradino) + np.minimum(quota_fiume, Q_ORLO - SALTO) * gradino
+    del gradino
     sponde = lisca(1 - df / (60 + 90 * lisca((0.25 - tf) / 0.25)))
-    h = h * (1 - sponde) + np.minimum(h, quota_fiume + 1.5 + df * (0.10 + 0.9 * lisca((0.25 - tf) / 0.25))) * sponde
+    prima_del_fiume = h.copy()
+    # (07/10) Nei monti la gola è più stretta (fianchi più ripidi: 1,3 invece di 0,9) e irregolare: i fianchi entrano
+    # ed escono (speroni di roccia), leggendo il rumore dei dettagli già fatto (nessun dado nuovo).
+    monti_f = lisca((0.25 - tf) / 0.05)
+    df_mosso = df * (1 + 0.35 * dett * monti_f)
+    h = h * (1 - sponde) + np.minimum(h, quota_fiume + 1.5 + df_mosso * (0.10 + 1.3 * lisca((0.25 - tf) / 0.25))) * sponde
+    del df_mosso
     alveo = lisca(1 - df / larghezza)
     h -= alveo * (3.0 + 2.5 * tf)
+    # (07/10) Il letto del torrente sopra la cascata scende a scalini: tratti quasi piani (le pozze) e piccoli salti di
+    # 3-4 m ogni 22 m, come i torrenti veri. Solo nel letto: i fianchi della gola restano quelli di sopra.
+    scalini_f = []
+    t0, dt = 0.004, 22.0 / L_fiume
+    fine_scalini = T_ORLO - 0.010
+    nel_tratto = (tf > t0) & (tf < fine_scalini)
+    if nel_tratto.any():
+        def q_liscia(t):
+            return 64 - 34 * t + 120 * lisca((0.22 - t) / 0.22)
+        k = np.floor((tf - t0) / dt)
+        tk = t0 + k * dt
+        f = (tf - tk) / dt
+        qa, qb = q_liscia(tk), q_liscia(np.minimum(tk + dt, fine_scalini))
+        q_scalino = qa + (qb - qa) * np.where(f < 0.8, 0.25 * f / 0.8, 0.25 + 0.75 * lisca((f - 0.8) / 0.2))
+        alza = (q_scalino - quota_fiume) * nel_tratto * lisca(1 - df / (larghezza + 3))
+        h += np.maximum(alza, 0)
+        del k, tk, f, qa, qb, q_scalino, alza
+        tt = t0 + dt * 0.9
+        while tt < fine_scalini - dt * 0.1:
+            x_s, y_s = punto_param(fiume_pts, param_f, tt)
+            x_d, y_d = punto_param(fiume_pts, param_f, tt + 0.002)
+            scalini_f.append({"x_m": round(x_s, 2), "y_m": round(y_s, 2), "t": round(tt, 5),
+                              "direzione": [round((x_d - x_s) / max(math.hypot(x_d - x_s, y_d - y_s), 1e-6), 4),
+                                            round((y_d - y_s) / max(math.hypot(x_d - x_s, y_d - y_s), 1e-6), 4)]})
+            tt += dt
+    del nel_tratto, monti_f
+
+    # --- (06/10) la pozza della cascata: una conca rotonda scavata dove cade l'acqua, con le pareti dritte verso monte
+    # (un anfiteatro di roccia intorno al getto) e il fondo a 7 m sotto il pelo; verso valle la riva è bassa e l'acqua esce.
+    # (07/10) Non più un cerchio perfetto (sembrava un pozzo): il bordo va e viene, e fuori dalla pozza la riva sale
+    # in pendio dolce (ghiaia e sassi); dritta come una parete resta solo verso monte, sotto la cascata.
+    def forma_pozza(x, y):
+        teta = np.arctan2(y - pozza_y, x - pozza_x)
+        return 1 + 0.10 * np.sin(3 * teta + 1.0) + 0.06 * np.sin(5 * teta + 2.0) + 0.03 * np.sin(9 * teta + 0.5)
+    forma = forma_pozza(Xf, Yf)
+    rz_f = np.hypot(Xf - pozza_x, Yf - pozza_y) / (RAGGIO_POZZA * forma)
+    verso_monte = lisca((8.0 - ((Xf - orlo_x) * ax_ + (Yf - orlo_y) * ay_)) / 6.0)   # 1 vicino alla parete
+    pelo_pozza = Q_ORLO - SALTO + 0.5
+    hf = h[fr, fc]
+    fondo_pozza = pelo_pozza - 0.4 - PROFONDITA_POZZA * np.clip(1 - rz_f * rz_f, 0, 1) ** 0.7
+    hf = np.where(rz_f < 1, np.minimum(hf, fondo_pozza), hf)
+    # La riva: dal pelo sale di 0,45 m per metro (circa 24 gradi) e poi sempre più ripida, finché incontra il monte
+    # (nessuna sfumatura: dove il pendio arriva al terreno vero, finisce). Verso monte niente: lì resta la parete e l'orlo.
+    oltre = np.maximum(rz_f - 1, 0) * RAGGIO_POZZA * forma            # metri veri oltre il bordo della pozza
+    riva = pelo_pozza + 0.6 + 0.45 * oltre + 0.04 * np.maximum(oltre - 10.0, 0) ** 2
+    lontano_dalla_parete = (1 - verso_monte) * (rz_f >= 1)
+    hf = hf * (1 - lontano_dalla_parete) + np.minimum(hf, riva) * lontano_dalla_parete
+    del forma, verso_monte, riva, oltre, lontano_dalla_parete
+    # Massi e ghiaione ai piedi della parete, appena fuori dalla pozza: solo in basso (non sulla cengia né nel letto).
+    # Con un dado suo: il dado della valle resta lo stesso, così il resto del terreno non cambia.
+    lato_f = max(hf.shape)
+    sassi = frattale(np.random.default_rng(SEME + 1), lato_f, max(4, int(160 * lato_f / N)), 2)[:hf.shape[0], :hf.shape[1]]
+    massi = lisca(1 - np.abs(rz_f - 1.25) / 0.3) * lisca((sassi + 0.2) / 0.5)
+    hf = hf + massi * 1.2 * (hf > pelo_pozza) * (hf < pelo_pozza + 6) * (1 - alveo[fr, fc])
+    h[fr, fc] = hf
+    acqua_pozza = np.zeros_like(h)
+    acqua_pozza[fr, fc] = lisca((1.0 - rz_f) / 0.1)
+    # (07/10) dove la cascata bagna: la nebbia degli spruzzi intorno all'orlo e alla pozza (per lo strato "bagnato")
+    spruzzi_f = lisca(1 - np.hypot(Xf - (orlo_x + ax_ * 7), Yf - (orlo_y + ay_ * 7)) / 55.0) ** 0.7
+    del fondo_pozza, sassi, massi, hf, Xf, Yf
+
+    # --- (06/10) la gola della cascata: dove il fiume ha tagliato il monte, i fianchi erano piani lisci (si vedevano i
+    # triangoli). Ora sono roccia viva: rughe, sporgenze e cenge, più forti dove il taglio è profondo. Solo nei monti
+    # (finisce dove il fiume entra nella conca); alveo e pozza restano lisci.
+    taglio = lisca((prima_del_fiume - h - 1.0) / 6.0) * lisca((0.21 - tf) / 0.03)
+    del prima_del_fiume
+    righe_g, colonne_g = np.nonzero(taglio > 0.01)
+    if len(righe_g):
+        r0, c0 = righe_g.min(), colonne_g.min()
+        lato_g = int(max(righe_g.max() - r0, colonne_g.max() - c0)) + 1
+        r1, c1 = min(r0 + lato_g, N), min(c0 + lato_g, N)
+        dado = np.random.default_rng(SEME + 2)
+        celle = max(8, int(260 * lato_g / N))
+        rughe = frattale(dado, lato_g, celle, 4, 0.55)[:r1 - r0, :c1 - c0]
+        mosse = frattale(dado, lato_g, max(4, celle // 3), 3, 0.5)[:r1 - r0, :c1 - c0]
+        hg = h[r0:r1, c0:c1]
+        livello = hg + 3.0 * mosse
+        cenge = np.round(livello / 4.0) * 4.0 - livello    # gradini ogni 4 m circa, storti: gli strati della roccia
+        Xg, Yg = X[r0:r1, c0:c1], Y[r0:r1, c0:c1]
+        rz_g = np.hypot(Xg - pozza_x, Yg - pozza_y) / (RAGGIO_POZZA * forma_pozza(Xg, Yg))
+        # (07/10) niente rughe sulla riva nuova della pozza (fino a 2,2 raggi) né nell'acqua
+        lontano = (lisca((df[r0:r1, c0:c1] - larghezza[r0:r1, c0:c1] - 2) / 6) * lisca((rz_g - 2.2) / 0.3))
+        h[r0:r1, c0:c1] = hg + taglio[r0:r1, c0:c1] * lontano * (3.5 * rughe + 0.3 * cenge)
+        del rughe, mosse, hg, livello, cenge, lontano, dado, rz_g, Xg, Yg
+    del taglio, righe_g, colonne_g
 
     # --- il lago a sud-ovest: due anse, fondale profondo, riva morbida.
     # (06/10, chiesto da Fra) Piu profondo (circa 27 m al centro invece di 17) e con la riva piu ripida:
@@ -299,7 +503,7 @@ def valle(lato, uscita, cartella_font):
     gy_, gx_ = np.gradient(h, passo)
     pend = np.degrees(np.arctan(np.hypot(gx_, gy_)))
 
-    acqua = np.clip(np.maximum(np.maximum(alveo, lago), alveo_em), 0, 1)
+    acqua = np.clip(np.maximum(np.maximum(np.maximum(alveo, lago), alveo_em), acqua_pozza), 0, 1)
     bosco_grande = lisca(1.2 - np.hypot((X - P(0.17, 0.30)[0]) / (0.30 * conca), (Y - P(0.17, 0.30)[1]) / (0.38 * conca))
                          + 0.25 * frattale(rng, N, 10, 3))
     bx, by = luoghi["Boschetto"]
@@ -308,9 +512,17 @@ def valle(lato, uscita, cartella_font):
                     * (1 - piano) * (1 - palude) * (h < 330), 0, 1)
     roccia = lisca((pend - 28) / 12)
     neve = lisca((h - (500 if lato > 2600 else 440) - 40 * frattale(rng, N, 30, 3)) / 50)
-    ghiaia = (np.clip(lisca(1 - df / (larghezza + 6)) - alveo, 0, 1) + np.clip(lisca((1.12 - rl) / 0.15) - lago, 0, 1)
+    # (07/10) la ghiaia delle rive solo dove non è ripido: sui fianchi della gola è roccia (prima erano strisce chiare)
+    ghiaia = (np.clip(lisca(1 - df / (larghezza + 6)) - alveo, 0, 1) * lisca((40 - pend) / 10)
+              + np.clip(lisca((1.12 - rl) / 0.15) - lago, 0, 1)
               + np.clip(lisca(1 - de / (larghezza_em + 3)) - alveo_em, 0, 1))
+    # (06/10) la riva della pozza, solo nella finestra della cascata
+    ghiaia[fr, fc] += np.clip(lisca((1.5 - rz_f) / 0.5) - acqua_pozza[fr, fc], 0, 1) * (pend[fr, fc] < 40)
     terra = np.clip(strade + 0.6 * piano * lisca(1 - rv / 0.6), 0, 1)
+    # (07/10) bagnato: rocce scure e lucide sotto gli spruzzi della cascata, un filo lungo i fiumi e la riva del lago
+    bagnato = np.maximum(0.45 * lisca(1 - df / (larghezza + 4)), 0.35 * lisca((1.15 - rl) / 0.15))
+    bagnato = np.maximum(bagnato, 0.35 * lisca(1 - de / (larghezza_em + 3)))
+    bagnato[fr, fc] = np.maximum(bagnato[fr, fc], spruzzi_f)
     strati = {
         "Prato": np.clip(1 - roccia - neve - terra - ghiaia, 0, 1),
         "Roccia": np.clip(roccia - neve, 0, 1),
@@ -322,12 +534,14 @@ def valle(lato, uscita, cartella_font):
         "Acqua": acqua,
         "Palude": palude,
         "Villaggio": piano,
+        "Bagnato": np.clip(bagnato, 0, 1),
     }
     cartella_strati = os.path.join(uscita, f"Strati_{nome}")
     os.makedirs(cartella_strati, exist_ok=True)
     for k, m in strati.items():
         Image.fromarray(np.round(np.clip(m, 0, 1) * 255).astype(np.uint8)).save(os.path.join(cartella_strati, f"{k}.png"))
     impacchetta(cartella_strati, os.path.join(uscita, f"T_ValleMaschere_{nome}.png"))
+    impacchetta2(cartella_strati, os.path.join(uscita, f"T_ValleMaschere2_{nome}.png"))
 
     # Luoghi: metri, e posizione in Unreal (cm) con il Landscape importato con l'angolo nord-ovest in (0,0,0):
     # Unreal X = est, Unreal Y = sud (righe dell'immagine), Z = quota.
@@ -340,7 +554,17 @@ def valle(lato, uscita, cartella_font):
             "pelo_del_lago_m": pelo_lago, "luoghi": {},
             # (06/10) i corsi d'acqua in metri (x est, y nord): li legge acqua.py per il lago, il fiume e l'emissario.
             "fiume_m": [[round(x, 2), round(y, 2)] for x, y in fiume_pts],
-            "emissario_m": [[round(x, 2), round(y, 2)] for x, y in emissario_pts]}
+            "emissario_m": [[round(x, 2), round(y, 2)] for x, y in emissario_pts],
+            # (06/10) la cascata: orlo del salto, direzione, pozza; li leggono acqua.py e cascata.py.
+            "cascata": {"t_orlo": T_ORLO, "orlo_m": [round(orlo_x, 2), round(orlo_y, 2)], "quota_orlo_m": Q_ORLO,
+                        "salto_m": SALTO, "direzione": [round(float(avanti[0]), 4), round(float(avanti[1]), 4)],
+                        "pozza_m": [round(pozza_x, 2), round(pozza_y, 2)], "raggio_pozza_m": RAGGIO_POZZA,
+                        "pelo_pozza_m": pelo_pozza, "profondita_pozza_m": PROFONDITA_POZZA,
+                        "larghezza_orlo_m": round(float(6 + 10 * T_ORLO), 2),
+                        # (07/10) l'orlo misurato lungo il fiume che serpeggia (lo usa acqua.py) e gli scalini del torrente
+                        "t_orlo_linea": round(frazione_lungo(fiume_pts, (orlo_x, orlo_y)), 6),
+                        "scalini": scalini_f}}
+    luoghi["Cascata"] = (pozza_x, pozza_y)
     for k, (x, y) in luoghi.items():
         dati["luoghi"][k] = {"x_m": round(x, 1), "y_m": round(y, 1), "quota_m": round(quota(x, y), 1),
                              "unreal_cm": [round(x * 100), round((lato - y) * 100), round(quota(x, y) * 100)]}
@@ -365,6 +589,14 @@ def impacchetta(cartella_strati, percorso, lato_px=4096):
     roccia = (np.array(leggi("Roccia")).astype(np.float32) * (1 - ghiaia / 255.0)).astype(np.uint8)
     canali = [Image.fromarray(roccia), leggi("Neve"), leggi("Terra"), Image.fromarray(ghiaia)]
     Image.merge("RGBA", canali).save(percorso, optimize=True)
+
+
+def impacchetta2(cartella_strati, percorso, lato_px=4096):
+    """(07/10) La seconda immagine di maschere per M_Valle: R = bagnato (spruzzi della cascata, rive); G, B liberi
+    (muschio e felci arriveranno con la vegetazione); A pieno."""
+    bagnato = Image.open(os.path.join(cartella_strati, "Bagnato.png")).convert("L").resize((lato_px, lato_px), Image.BILINEAR)
+    vuoto = Image.new("L", (lato_px, lato_px), 0)
+    Image.merge("RGBA", [bagnato, vuoto, vuoto, Image.new("L", (lato_px, lato_px), 255)]).save(percorso, optimize=True)
 
 
 def ombra(h, passo, forza=1.0):
@@ -476,6 +708,8 @@ def mappa(h, acqua, bosco, strade, palude, luoghi, lato, passo, fiume_pts, emiss
     scrivi("Grotta", *luoghi["Grotta est"], piccolo, dy=10); croce(*luoghi["Grotta est"])
     scrivi("Grotta (frana)", *luoghi["Grotta nord"], piccolo, dy=10); croce(*luoghi["Grotta nord"])
     scrivi("Ponte", *luoghi["Ponte"], piccolo, dx=34)
+    if "Cascata" in luoghi:
+        scrivi("Cascata", *luoghi["Cascata"], piccolo, dx=-50, dy=-8)
     scrivi("Mulino", *luoghi["Mulino"], piccolo, dx=-40)
     scrivi("Pascoli", *luoghi["Pascoli"], piccolo)
     scrivi("Cimitero", *luoghi["Cimitero"], piccolo, dy=6)
@@ -506,7 +740,10 @@ if __name__ == "__main__":
     argomenti = [a for a in sys.argv[1:]]
     if argomenti[:1] == ["--solo-maschere"]:
         # python valle.py --solo-maschere <cartella Strati> <file di uscita>: rifà solo l'immagine delle maschere.
+        # (07/10) con un terzo argomento rifà anche la seconda (bagnato): ... <file di uscita> <file di uscita 2>
         impacchetta(argomenti[1], argomenti[2])
+        if len(argomenti) > 3 and os.path.exists(os.path.join(argomenti[1], "Bagnato.png")):
+            impacchetta2(argomenti[1], argomenti[3])
         sys.exit(0)
     cartella_font = "."
     if "--vertici" in argomenti:

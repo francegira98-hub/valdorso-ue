@@ -17,6 +17,10 @@ import unreal
 
 CARTELLA_TEXTURE = "V:/Texture/valdorso/terreno"
 MASCHERE = "V:/Texture/valdorso/valle/T_ValleMaschere_3000.png"
+MASCHERE2 = "V:/Texture/valdorso/valle/T_ValleMaschere2_3000.png"      # (07/10) R = bagnato
+# (07/10) Le funzioni di Unreal che proiettano una texture da tre lati (triplanare): sulle pareti dritte la roccia
+# non si stira più in righe verticali.
+FUNZIONE_TRIPLANARE = "/Engine/Functions/Engine_MaterialFunctions01/Texturing/WorldAlignedTexture.WorldAlignedTexture"
 DESTINAZIONE = "/Game/Valle/Terreno"
 LATO_VALLE_CM = 300000.0       # 3 km (decisa da Fra il 06/10)
 
@@ -98,6 +102,60 @@ def lerp(materiale, a, a_uscita, b, b_uscita, alfa, alfa_uscita, x, y):
     return l
 
 
+def roccia_vera(materiale, texture, x, y):
+    """(07/10) La roccia: proiettata da tre lati (WorldAlignedTexture, 8 m), più scura e con gli strati.
+    - scura: x 0,62 (la texture da sola sembrava gesso);
+    - strati: bande orizzontali morbide ogni 3,5 m di quota, appena più chiare e più scure (x 0,88 .. 1,12);
+    - macchie: la stessa roccia a 31 m, mescolata un poco, per non vedere la ripetizione sulle pareti grandi."""
+    funzione = unreal.load_asset(FUNZIONE_TRIPLANARE)
+    if funzione is None:
+        unreal.log_warning("[Valdorso] Valle: non trovo WorldAlignedTexture, la roccia resta proiettata dall'alto.")
+        uv = uv_mondo(materiale, xy_globale[0], 800.0, x - 300, y)
+        return campiona(materiale, texture, uv, x, y, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+
+    def triplanare(misura, dx, dy):
+        oggetto = nodo(materiale, unreal.MaterialExpressionTextureObject, x - 500 + dx, y + dy)
+        oggetto.set_editor_property("texture", texture)
+        grandezza = nodo(materiale, unreal.MaterialExpressionConstant3Vector, x - 500 + dx, y + 120 + dy)
+        grandezza.set_editor_property("constant", unreal.LinearColor(misura, misura, misura, 1.0))
+        chiamata = nodo(materiale, unreal.MaterialExpressionMaterialFunctionCall, x - 250 + dx, y + dy)
+        chiamata.set_editor_property("material_function", funzione)
+        collega(oggetto, "", chiamata, "TextureObject")
+        collega(grandezza, "", chiamata, "TextureSize")
+        return chiamata
+
+    vicina = triplanare(800.0, 0, 0)
+    lontana = triplanare(3100.0, 0, 300)
+    mescola = nodo(materiale, unreal.MaterialExpressionConstant, x - 100, y + 450)
+    mescola.set_editor_property("r", 0.35)
+    insieme = lerp(materiale, vicina, "XYZ Texture", lontana, "XYZ Texture", mescola, "", x, y + 150)
+    # strati: 1 + 0,12 * seno(quota / 3,5 m)
+    quota = nodo(materiale, unreal.MaterialExpressionWorldPosition, x - 500, y + 600)
+    z = nodo(materiale, unreal.MaterialExpressionComponentMask, x - 350, y + 600)
+    for canale, acceso in (("r", False), ("g", False), ("b", True), ("a", False)):
+        z.set_editor_property(canale, acceso)
+    collega(quota, "", z, "")
+    seno = nodo(materiale, unreal.MaterialExpressionSine, x - 200, y + 600)
+    seno.set_editor_property("period", 350.0)
+    collega(z, "", seno, "")
+    ampiezza = nodo(materiale, unreal.MaterialExpressionMultiply, x - 50, y + 600)
+    ampiezza.set_editor_property("const_b", 0.12)
+    collega(seno, "", ampiezza, "A")
+    strati = nodo(materiale, unreal.MaterialExpressionAdd, x + 100, y + 600)
+    strati.set_editor_property("const_b", 1.0)
+    collega(ampiezza, "", strati, "A")
+    scura = nodo(materiale, unreal.MaterialExpressionMultiply, x + 150, y + 200)
+    scura.set_editor_property("const_b", 0.62)
+    collega(insieme, "", scura, "A")
+    finale = nodo(materiale, unreal.MaterialExpressionMultiply, x + 300, y + 300)
+    collega(scura, "", finale, "A")
+    collega(strati, "", finale, "B")
+    return finale
+
+
+xy_globale = [None]
+
+
 def esegui():
     # 1. Le texture.
     colori = {}
@@ -107,6 +165,7 @@ def esegui():
         normali[nome] = importa(CARTELLA_TEXTURE + "/T_" + nome + "_N.png", normale=True)
     variazione = importa(CARTELLA_TEXTURE + "/T_Variazione.png", colore=False)
     maschere = importa(MASCHERE, maschera=True)
+    maschere2 = importa(MASCHERE2, maschera=True)
     if maschere is None or None in colori.values() or None in normali.values() or variazione is None:
         unreal.log_error("[Valdorso] Valle: mancano delle texture, il materiale non si crea (vedi gli avvisi sopra).")
         return
@@ -134,6 +193,7 @@ def esegui():
     xy.set_editor_property("b", False)
     xy.set_editor_property("a", False)
     collega(posizione, "", xy, "")
+    xy_globale[0] = xy
 
     # Le maschere coprono tutta la valle, a partire dall'angolo del paesaggio (la posizione dell'attore Landscape:
     # Unreal può averlo messo centrato sull'origine, quindi non si dà per scontato che parta da 0, 0).
@@ -167,7 +227,8 @@ def esegui():
     # Colore: erba -> terra (B) -> ghiaia (A) -> roccia (R) -> neve (G).
     c1 = lerp(materiale, erba, "", campioni["Terra"][0], "RGB", m, "B", -1000, -400)
     c2 = lerp(materiale, c1, "", campioni["Ghiaia"][0], "RGB", m, "A", -800, -400)
-    c3 = lerp(materiale, c2, "", campioni["Roccia"][0], "RGB", m, "R", -600, -400)
+    roccia = roccia_vera(materiale, colori["Roccia"], -1000, -2400)
+    c3 = lerp(materiale, c2, "", roccia, "", m, "R", -600, -400)
     c4 = lerp(materiale, c3, "", campioni["Neve"][0], "RGB", m, "G", -400, -400)
 
     # Macchie grandi (50 m): un po' più chiaro o più scuro qua e là.
@@ -181,6 +242,14 @@ def esegui():
     finale = nodo(materiale, unreal.MaterialExpressionMultiply, -200, -400)
     collega(c4, "", finale, "A")
     collega(fattore, "", finale, "B")
+    # (07/10) Bagnato (maschere2.R): la roccia e la ghiaia sotto gli spruzzi diventano più scure e lucide.
+    m2 = None
+    if maschere2 is not None:
+        m2 = campiona(materiale, maschere2, uv_valle, -1800, -2900, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+        scurito = nodo(materiale, unreal.MaterialExpressionMultiply, -150, -600)
+        scurito.set_editor_property("const_b", 0.55)
+        collega(finale, "", scurito, "A")
+        finale = lerp(materiale, finale, "", scurito, "", m2, "R", -50, -450)
     mel.connect_material_property(finale, "", unreal.MaterialProperty.MP_BASE_COLOR)
 
     # Normali, con le stesse maschere.
@@ -196,6 +265,10 @@ def esegui():
     lucido = nodo(materiale, unreal.MaterialExpressionConstant, -600, 1000)
     lucido.set_editor_property("r", 0.55)
     ruvidita = lerp(materiale, ruvido, "", lucido, "", m, "G", -400, 950)
+    if m2 is not None:
+        bagnata = nodo(materiale, unreal.MaterialExpressionConstant, -400, 1100)
+        bagnata.set_editor_property("r", 0.25)
+        ruvidita = lerp(materiale, ruvidita, "", bagnata, "", m2, "R", -250, 1000)
     mel.connect_material_property(ruvidita, "", unreal.MaterialProperty.MP_ROUGHNESS)
 
     mel.layout_material_expressions(materiale)
