@@ -141,6 +141,7 @@ def esegui():
             unreal.log_warning("[Valdorso] Acqua: {}: non riesco a dare la precedenza ({})".format(nome, e))
         coppia = (("MI_AcquaLago", "water_material"), ("MI_AcquaLago_LOD", "water_static_mesh_material")) if lago \
             else (("MI_AcquaFiume", "water_material"), ("MI_AcquaFiume_LOD", "water_static_mesh_material"))
+        coppia = coppia + (("MI_AcquaLontana", "water_hlod_material"),)   # (08/10) l'acqua vista da molto lontano
         if not lago:   # (08/10) anche il passaggio fiume-lago con i nostri colori
             coppia = coppia + (("MI_AcquaFiumeLago", "lake_transition_material"),)
         for asset, proprieta in coppia:

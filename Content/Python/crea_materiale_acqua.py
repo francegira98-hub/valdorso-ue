@@ -29,6 +29,8 @@ ISTANZE = {
     "MI_AcquaFiume_LOD": "/Water/Materials/WaterSurface/LODs/Water_Material_River_LOD",
     "MI_AcquaLago":      "/Water/Materials/WaterSurface/Water_Material_Lake",
     "MI_AcquaLago_LOD":  "/Water/Materials/WaterSurface/LODs/Water_Material_Lake_LOD",
+    # (08/10) l'acqua vista da molto lontano (HLOD di World Partition): era rimasta turchese di serie
+    "MI_AcquaLontana":   "/Water/Materials/HLOD/HLODWater",
 }
 
 # Di serie: Water Albedo 0,85/0,85/0,85/0,5 · Scattering 1/1/1/0,5 · Absorption 10/150/350/8.
@@ -126,6 +128,9 @@ def esegui():
         colori = COLORI["fiume"] if nome.startswith("MI_AcquaFiume") else COLORI["lago"]
         mi = istanza(nome, genitore, colori)
         if mi is None:
+            if nome == "MI_AcquaLontana":   # facoltativa: senza, l'acqua lontana resta com'è
+                unreal.log_warning("[Valdorso] Acqua R1: niente MI_AcquaLontana, l'acqua vista da lontano resta di serie")
+                continue
             return
         fatte[nome] = mi
 
@@ -146,6 +151,11 @@ def esegui():
         componente = corpo.get_water_body_component()
         a = dai_materiale(componente, "water_material", "set_water_material", fatte[vicino])
         b = dai_materiale(componente, "water_static_mesh_material", "set_water_static_mesh_material", fatte[lontano])
+        try:   # (08/10) l'acqua vista da molto lontano
+            if "MI_AcquaLontana" in fatte:
+                componente.set_editor_property("water_hlod_material", fatte["MI_AcquaLontana"], SEMPRE)
+        except Exception as e:
+            unreal.log_warning("[Valdorso] Acqua R1: {}: acqua lontana non cambiata ({})".format(nome, e))
         try:   # in alcune versioni l'acqua da lontano usa anche questo posto: se c'è, stesso materiale
             componente.set_editor_property("water_lod_material", fatte[lontano], SEMPRE)
         except Exception:

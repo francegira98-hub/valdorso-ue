@@ -90,6 +90,15 @@ def campiona(materiale, texture, uv, x, y, tipo):
     t = nodo(materiale, unreal.MaterialExpressionTextureSample, x, y)
     t.set_editor_property("texture", texture)
     t.set_editor_property("sampler_type", tipo)
+    # (08/10) campionatore condiviso: le texture del paesaggio sono ormai tante e i campionatori propri hanno un limite (16)
+    try:
+        # le maschere della valle coprono tutto da 0 a 1: "clamp", altrimenti ai bordi del mondo il lato opposto sbava
+        if tipo == unreal.MaterialSamplerType.SAMPLERTYPE_MASKS:
+            t.set_editor_property("sampler_source", unreal.SamplerSourceMode.SSM_CLAMP_WORLD_GROUP_SETTINGS)
+        else:
+            t.set_editor_property("sampler_source", unreal.SamplerSourceMode.SSM_WRAP_WORLD_GROUP_SETTINGS)
+    except Exception:
+        pass
     collega(uv, "", t, "UVs")
     return t
 
@@ -115,6 +124,21 @@ ROCCIA_ATTENUATA = 0.6
 ROCCIA_MEDIA = (0.165, 0.145, 0.117)
 # (08/10) R4: quanto scurire il prato dipinto sotto l'erba vera (1 = com'era; meno di 1 = più scuro), per R, G, B.
 ERBA_TINTA = (0.55, 0.62, 0.42)
+# (08/10) R5, varietà della montagna (preparato da Claude mentre Fra era via; 0 = spento):
+# - TINTA_ROCCIA: la roccia va da calda (beige) a fredda (grigio-azzurra) a macchie larghe 120 m, come nelle
+#   montagne vere dove cambiano i tipi di pietra; 1 = piena, 0 = roccia tutta uguale com'era.
+# - MUSCHIO: sulla roccia meno ripida (sotto i ~55 gradi) chiazze verde scuro di muschio ed erba rasa, a macchie di 30 m.
+TINTA_ROCCIA = 1.0
+ROCCIA_CALDA = (1.22, 1.02, 0.78)      # (08/10 sera) più decise: la prima prova quasi non si vedeva
+ROCCIA_FREDDA = (0.70, 0.80, 0.94)
+MUSCHIO = 0.65
+MUSCHIO_PENDENZA = 0.40   # normale.z: sopra (pendii sotto i ~66 gradi) può esserci muschio; prima 0,55 (quasi mai)
+# (08/10 sera) macchie medie (20 m) più scure e più chiare sulla roccia: rompono le facce grandi e lisce
+MACCHIE_MEDIE = (0.68, 1.10)
+# (08/10 sera) quanto la roccia e la ghiaia bagnate si scuriscono (1 = niente): sotto l'acqua bassa della pozza
+# la ghiaia chiara faceva l'acqua color menta
+BAGNATO_SCURO = 0.35
+MUSCHIO_COLORE = (0.045, 0.06, 0.025)
 
 
 def roccia_vera(materiale, texture, x, y):
@@ -150,6 +174,36 @@ def roccia_vera(materiale, texture, x, y):
     attenua = nodo(materiale, unreal.MaterialExpressionConstant, x - 100, y + 560)
     attenua.set_editor_property("r", ROCCIA_ATTENUATA)
     insieme = lerp(materiale, insieme, "", media, "", attenua, "", x + 50, y + 150)
+    variazione = variazione_globale[0]
+    if TINTA_ROCCIA > 0 and variazione is not None:
+        uv_t = uv_mondo(materiale, xy_globale[0], 12000.0, x - 500, y + 1100)
+        macchie = campiona(materiale, variazione, uv_t, x - 300, y + 1100, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+        calda = nodo(materiale, unreal.MaterialExpressionConstant3Vector, x - 300, y + 1250)
+        calda.set_editor_property("constant", unreal.LinearColor(*ROCCIA_CALDA, 1.0))
+        fredda = nodo(materiale, unreal.MaterialExpressionConstant3Vector, x - 300, y + 1320)
+        fredda.set_editor_property("constant", unreal.LinearColor(*ROCCIA_FREDDA, 1.0))
+        tinta = lerp(materiale, calda, "", fredda, "", macchie, "R", x - 100, y + 1200)
+        uno = nodo(materiale, unreal.MaterialExpressionConstant3Vector, x - 100, y + 1350)
+        uno.set_editor_property("constant", unreal.LinearColor(1.0, 1.0, 1.0, 1.0))
+        forza_t = nodo(materiale, unreal.MaterialExpressionConstant, x - 100, y + 1400)
+        forza_t.set_editor_property("r", TINTA_ROCCIA)
+        tinta = lerp(materiale, uno, "", tinta, "", forza_t, "", x + 50, y + 1250)
+        tinto = nodo(materiale, unreal.MaterialExpressionMultiply, x + 100, y + 200)
+        collega(insieme, "", tinto, "A")
+        collega(tinta, "", tinto, "B")
+        insieme = tinto
+        # macchie medie a 20 m: da MACCHIE_MEDIE[0] (più scuro) a [1] (più chiaro)
+        uv_mm = uv_mondo(materiale, xy_globale[0], 2000.0, x - 500, y + 1700)
+        medie = campiona(materiale, variazione, uv_mm, x - 300, y + 1700, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+        scuro_mm = nodo(materiale, unreal.MaterialExpressionConstant, x - 100, y + 1750)
+        scuro_mm.set_editor_property("r", MACCHIE_MEDIE[0])
+        chiaro_mm = nodo(materiale, unreal.MaterialExpressionConstant, x - 100, y + 1800)
+        chiaro_mm.set_editor_property("r", MACCHIE_MEDIE[1])
+        fattore_mm = lerp(materiale, scuro_mm, "", chiaro_mm, "", medie, "R", x + 50, y + 1750)
+        macchiato = nodo(materiale, unreal.MaterialExpressionMultiply, x + 150, y + 250)
+        collega(insieme, "", macchiato, "A")
+        collega(fattore_mm, "", macchiato, "B")
+        insieme = macchiato
     # strati: 1 + 0,12 * seno(quota / 3,5 m)
     quota = nodo(materiale, unreal.MaterialExpressionWorldPosition, x - 500, y + 600)
     z = nodo(materiale, unreal.MaterialExpressionComponentMask, x - 350, y + 600)
@@ -203,10 +257,41 @@ def roccia_vera(materiale, texture, x, y):
     finale = nodo(materiale, unreal.MaterialExpressionMultiply, x + 300, y + 300)
     collega(scura, "", finale, "A")
     collega(strati, "", finale, "B")
+    if MUSCHIO > 0 and variazione is not None:
+        # muschio = saturo((normale.z - 0,55) x 3) x macchie a 30 m x MUSCHIO
+        piano = nodo(materiale, unreal.MaterialExpressionSubtract, x + 150, y + 1000)
+        piano.set_editor_property("const_b", MUSCHIO_PENDENZA)
+        collega(nz, "", piano, "A")
+        piano3 = nodo(materiale, unreal.MaterialExpressionMultiply, x + 250, y + 1000)
+        piano3.set_editor_property("const_b", 3.0)
+        collega(piano, "", piano3, "A")
+        dolce = nodo(materiale, unreal.MaterialExpressionSaturate, x + 350, y + 1000)
+        collega(piano3, "", dolce, "")
+        uv_m = uv_mondo(materiale, xy_globale[0], 3000.0, x - 500, y + 1500)
+        chiazze = campiona(materiale, variazione, uv_m, x - 300, y + 1500, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+        # le macchie della texture vanno da ~0,2 a ~1: sopra 0,6 c'è muschio, sotto no (chiazze, non velo)
+        soglia = nodo(materiale, unreal.MaterialExpressionSubtract, x - 100, y + 1500)
+        soglia.set_editor_property("const_b", 0.6)
+        collega(chiazze, "R", soglia, "A")
+        soglia4 = nodo(materiale, unreal.MaterialExpressionMultiply, x, y + 1500)
+        soglia4.set_editor_property("const_b", 4.0)
+        collega(soglia, "", soglia4, "A")
+        macchia = nodo(materiale, unreal.MaterialExpressionSaturate, x + 100, y + 1500)
+        collega(soglia4, "", macchia, "")
+        quanto_m = nodo(materiale, unreal.MaterialExpressionMultiply, x + 450, y + 1100)
+        collega(dolce, "", quanto_m, "A")
+        collega(macchia, "", quanto_m, "B")
+        quanto_m2 = nodo(materiale, unreal.MaterialExpressionMultiply, x + 550, y + 1100)
+        quanto_m2.set_editor_property("const_b", MUSCHIO)
+        collega(quanto_m, "", quanto_m2, "A")
+        verde = nodo(materiale, unreal.MaterialExpressionConstant3Vector, x + 450, y + 900)
+        verde.set_editor_property("constant", unreal.LinearColor(*MUSCHIO_COLORE, 1.0))
+        finale = lerp(materiale, finale, "", verde, "", quanto_m2, "", x + 600, y + 400)
     return finale
 
 
 xy_globale = [None]
+variazione_globale = [None]     # (08/10) T_Variazione, per le macchie della roccia (R5)
 
 
 def esegui():
@@ -299,6 +384,7 @@ def esegui():
     mezzo_g.set_editor_property("r", 0.5)
     ghiaia = lerp(materiale, campioni["Ghiaia"][0], "RGB", ghiaia2, "RGB", mezzo_g, "", -1300, -1300)
     c2 = lerp(materiale, c1, "", ghiaia, "", m, "A", -800, -400)
+    variazione_globale[0] = variazione
     roccia = roccia_vera(materiale, colori["Roccia"], -1000, -2400)
     c3 = lerp(materiale, c2, "", roccia, "", m, "R", -600, -400)
     c4 = lerp(materiale, c3, "", campioni["Neve"][0], "RGB", m, "G", -400, -400)
@@ -319,7 +405,7 @@ def esegui():
     if maschere2 is not None:
         m2 = campiona(materiale, maschere2, uv_valle, -1800, -2900, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
         scurito = nodo(materiale, unreal.MaterialExpressionMultiply, -150, -600)
-        scurito.set_editor_property("const_b", 0.55)
+        scurito.set_editor_property("const_b", BAGNATO_SCURO)
         collega(finale, "", scurito, "A")
         finale = lerp(materiale, finale, "", scurito, "", m2, "R", -50, -450)
     mel.connect_material_property(finale, "", unreal.MaterialProperty.MP_BASE_COLOR)
