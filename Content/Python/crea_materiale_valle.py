@@ -113,6 +113,8 @@ ROCCIA_PIATTA = 0.75
 # (misurata: 0,165 / 0,145 / 0,117 lineare): 0 = texture com'è, 1 = colore piatto. La varietà grande resta (macchie a 50 m).
 ROCCIA_ATTENUATA = 0.6
 ROCCIA_MEDIA = (0.165, 0.145, 0.117)
+# (08/10) R4: quanto scurire il prato dipinto sotto l'erba vera (1 = com'era; meno di 1 = più scuro), per R, G, B.
+ERBA_TINTA = (0.55, 0.62, 0.42)
 
 
 def roccia_vera(materiale, texture, x, y):
@@ -278,10 +280,25 @@ def esegui():
     mezzo = nodo(materiale, unreal.MaterialExpressionConstant, -1500, -1200)
     mezzo.set_editor_property("r", 0.5)
     erba = lerp(materiale, campioni["Erba"][0], "RGB", erba2, "RGB", mezzo, "", -1300, -1100)
+    # (08/10) R4: con l'erba vera sopra, il prato dipinto sotto era troppo chiaro e giallo: tra un ciuffo e l'altro e
+    # oltre gli 80 m (dove l'erba vera finisce) si vedeva un tappeto pallido. Lo si scurisce verso il verde oliva dei fili.
+    tinta = nodo(materiale, unreal.MaterialExpressionConstant3Vector, -1300, -950)
+    tinta.set_editor_property("constant", unreal.LinearColor(ERBA_TINTA[0], ERBA_TINTA[1], ERBA_TINTA[2], 1.0))
+    erba_scura = nodo(materiale, unreal.MaterialExpressionMultiply, -1150, -1050)
+    collega(erba, "", erba_scura, "A")
+    collega(tinta, "", erba_scura, "B")
+    erba = erba_scura
 
     # Colore: erba -> terra (B) -> ghiaia (A) -> roccia (R) -> neve (G).
     c1 = lerp(materiale, erba, "", campioni["Terra"][0], "RGB", m, "B", -1000, -400)
-    c2 = lerp(materiale, c1, "", campioni["Ghiaia"][0], "RGB", m, "A", -800, -400)
+    # (08/10) R4: la ghiaia ripetuta ogni 2,5 m faceva un "selciato" di celle tutte uguali: la si mescola a metà con
+    # se stessa a 13 m (come l'erba), così le celle non si mettono più in fila.
+    uv_ghiaia2 = uv_mondo(materiale, xy, 1300.0, -2000, -1300)
+    ghiaia2 = campiona(materiale, colori["Ghiaia"], uv_ghiaia2, -1700, -1300, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+    mezzo_g = nodo(materiale, unreal.MaterialExpressionConstant, -1500, -1350)
+    mezzo_g.set_editor_property("r", 0.5)
+    ghiaia = lerp(materiale, campioni["Ghiaia"][0], "RGB", ghiaia2, "RGB", mezzo_g, "", -1300, -1300)
+    c2 = lerp(materiale, c1, "", ghiaia, "", m, "A", -800, -400)
     roccia = roccia_vera(materiale, colori["Roccia"], -1000, -2400)
     c3 = lerp(materiale, c2, "", roccia, "", m, "R", -600, -400)
     c4 = lerp(materiale, c3, "", campioni["Neve"][0], "RGB", m, "G", -400, -400)
@@ -330,6 +347,49 @@ def esegui():
         bagnata.set_editor_property("r", 0.25)
         ruvidita = lerp(materiale, ruvidita, "", bagnata, "", m2, "R", -250, 1000)
     mel.connect_material_property(ruvidita, "", unreal.MaterialProperty.MP_ROUGHNESS)
+
+    # (08/10) R4: dove seminare l'erba vera (LandscapeGrassType di crea_erba_valle.py). "Prato" = dove il terreno è
+    # erba (né terra, né ghiaia, né roccia, né neve); "Felci" = prato bagnato (maschere2.R: lungo fiumi e cascata).
+    erba_tipi = {}
+    for nome in ("Prato", "Felci"):
+        percorso_lgt = "/Game/Valle/Erba/LGT_" + nome
+        if libreria.does_asset_exist(percorso_lgt):
+            erba_tipi[nome] = libreria.load_asset(percorso_lgt)
+    if erba_tipi:
+        resto = None
+        for canale in ("B", "A", "R", "G"):
+            meno = nodo(materiale, unreal.MaterialExpressionOneMinus, -300, 1400 + len(canale) * 0)
+            collega(m, canale, meno, "")
+            if resto is None:
+                resto = meno
+            else:
+                per = nodo(materiale, unreal.MaterialExpressionMultiply, -200, 1400)
+                collega(resto, "", per, "A")
+                collega(meno, "", per, "B")
+                resto = per
+        uscite = {"Prato": resto}
+        if m2 is not None:
+            felci = nodo(materiale, unreal.MaterialExpressionMultiply, -100, 1550)
+            collega(resto, "", felci, "A")
+            collega(m2, "R", felci, "B")
+            uscite["Felci"] = felci
+        erba = nodo(materiale, unreal.MaterialExpressionLandscapeGrassOutput, 100, 1400)
+        voci = []
+        for nome, tipo in erba_tipi.items():
+            if nome not in uscite:
+                continue
+            voce = unreal.GrassInput()
+            voce.set_editor_property("name", nome)
+            voce.set_editor_property("grass_type", tipo)
+            voci.append(voce)
+        erba.set_editor_property("grass_types", voci, unreal.PropertyAccessChangeNotifyMode.ALWAYS)
+        for voce in voci:
+            nome = str(voce.get_editor_property("name"))
+            if not mel.connect_material_expressions(uscite[nome], "", erba, nome):
+                unreal.log_warning("[Valdorso] Valle: non riesco a collegare l'erba '{}'".format(nome))
+        unreal.log("[Valdorso] Valle: erba vera su: " + ", ".join(str(v.get_editor_property("name")) for v in voci))
+    else:
+        unreal.log("[Valdorso] Valle: niente erba vera (manca /Game/Valle/Erba: prima crea_erba_valle.py)")
 
     mel.layout_material_expressions(materiale)
     mel.recompile_material(materiale)

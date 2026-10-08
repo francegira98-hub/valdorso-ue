@@ -26,6 +26,8 @@ __pycache__/
 *.pyc
 # Contenuti di Fab: mai su GitHub (licenza)
 Content/Fab/
+# Kite Demo di Epic (erba, fiori, felci per la valle, 08/10): pacchetto Fab, mai su GitHub
+Content/KiteDemo/
 # Contenuti Mixamo (file .fbx e animazioni importate): mai su GitHub (licenza)
 Content/Mixamo/
 # Asset pesanti del menu: fuori da GitHub per risparmiare spazio LFS (decisa da Fra, 03/10).
