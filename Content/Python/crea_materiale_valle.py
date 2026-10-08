@@ -102,10 +102,24 @@ def lerp(materiale, a, a_uscita, b, b_uscita, alfa, alfa_uscita, x, y):
     return l
 
 
+# (08/10) Forza degli strati della roccia: 1 = normale (0 = senza strati: usato per la prova R3-b, che ha mostrato che
+# le "increspature" sui pendii grigi non venivano dagli strati ma dal rilievo della roccia, vedi ROCCIA_PIATTA).
+FORZA_STRATI = 1.0
+# (08/10) R3-b: il rilievo (normale) della roccia è proiettato dall'alto e sui pendii ripidi si stira in piccole onde
+# regolari, come sabbia mossa dal vento. Lo si appiattisce: 0 = rilievo pieno, 1 = piatto. Il colore resta triplanare.
+ROCCIA_PIATTA = 0.75
+# (08/10) R3-d: con "Solo illuminazione" le chiazze sparivano: venivano dal COLORE. La texture della roccia ha macchie
+# larghe che, ripetute ogni 8 m su un pendio grande, fanno un disegno regolare. Si avvicina il colore alla sua media
+# (misurata: 0,165 / 0,145 / 0,117 lineare): 0 = texture com'è, 1 = colore piatto. La varietà grande resta (macchie a 50 m).
+ROCCIA_ATTENUATA = 0.6
+ROCCIA_MEDIA = (0.165, 0.145, 0.117)
+
+
 def roccia_vera(materiale, texture, x, y):
     """(07/10) La roccia: proiettata da tre lati (WorldAlignedTexture, 8 m), più scura e con gli strati.
     - scura: x 0,62 (la texture da sola sembrava gesso);
-    - strati: bande orizzontali morbide ogni 3,5 m di quota, appena più chiare e più scure (x 0,88 .. 1,12);
+    - strati: bande orizzontali morbide ogni 3,5 m di quota, appena più chiare e più scure (dall'08/10 x 0,92 .. 1,08,
+      con un secondo seno a 9,7 m che le rende meno regolari);
     - macchie: la stessa roccia a 31 m, mescolata un poco, per non vedere la ripetizione sulle pareti grandi."""
     funzione = unreal.load_asset(FUNZIONE_TRIPLANARE)
     if funzione is None:
@@ -129,6 +143,11 @@ def roccia_vera(materiale, texture, x, y):
     mescola = nodo(materiale, unreal.MaterialExpressionConstant, x - 100, y + 450)
     mescola.set_editor_property("r", 0.35)
     insieme = lerp(materiale, vicina, "XYZ Texture", lontana, "XYZ Texture", mescola, "", x, y + 150)
+    media = nodo(materiale, unreal.MaterialExpressionConstant3Vector, x - 100, y + 520)
+    media.set_editor_property("constant", unreal.LinearColor(ROCCIA_MEDIA[0], ROCCIA_MEDIA[1], ROCCIA_MEDIA[2], 1.0))
+    attenua = nodo(materiale, unreal.MaterialExpressionConstant, x - 100, y + 560)
+    attenua.set_editor_property("r", ROCCIA_ATTENUATA)
+    insieme = lerp(materiale, insieme, "", media, "", attenua, "", x + 50, y + 150)
     # strati: 1 + 0,12 * seno(quota / 3,5 m)
     quota = nodo(materiale, unreal.MaterialExpressionWorldPosition, x - 500, y + 600)
     z = nodo(materiale, unreal.MaterialExpressionComponentMask, x - 350, y + 600)
@@ -139,11 +158,43 @@ def roccia_vera(materiale, texture, x, y):
     seno.set_editor_property("period", 350.0)
     collega(z, "", seno, "")
     ampiezza = nodo(materiale, unreal.MaterialExpressionMultiply, x - 50, y + 600)
-    ampiezza.set_editor_property("const_b", 0.12)
+    # (08/10) R3: strati più leggeri (prima 0,12: sui pendii chiari si vedevano "onde" regolari) e meno regolari:
+    # un secondo seno a 9,7 m, più debole, rompe il passo fisso di 3,5 m
+    ampiezza.set_editor_property("const_b", 0.05 * FORZA_STRATI)
     collega(seno, "", ampiezza, "A")
+    seno2 = nodo(materiale, unreal.MaterialExpressionSine, x - 200, y + 750)
+    seno2.set_editor_property("period", 970.0)
+    collega(z, "", seno2, "")
+    ampiezza2 = nodo(materiale, unreal.MaterialExpressionMultiply, x - 50, y + 750)
+    ampiezza2.set_editor_property("const_b", 0.03 * FORZA_STRATI)
+    collega(seno2, "", ampiezza2, "A")
+    somma = nodo(materiale, unreal.MaterialExpressionAdd, x + 30, y + 680)
+    collega(ampiezza, "", somma, "A")
+    collega(ampiezza2, "", somma, "B")
+    # (08/10) R3-f: gli strati solo sulle pareti quasi verticali (come nella realtà). Sui pendii grandi e lisci
+    # diventavano righe ondulate che seguono le curve di livello. ripido = saturo((0,5 - normale.z) x 4):
+    # 0 sui pendii sotto i 60 gradi, pieno sulle pareti oltre i 75.
+    normale = nodo(materiale, unreal.MaterialExpressionVertexNormalWS, x - 500, y + 900)
+    nz = nodo(materiale, unreal.MaterialExpressionComponentMask, x - 350, y + 900)
+    for canale, acceso in (("r", False), ("g", False), ("b", True), ("a", False)):
+        nz.set_editor_property(canale, acceso)
+    collega(normale, "", nz, "")
+    meno = nodo(materiale, unreal.MaterialExpressionOneMinus, x - 250, y + 900)
+    collega(nz, "", meno, "")
+    sposta = nodo(materiale, unreal.MaterialExpressionSubtract, x - 150, y + 900)
+    sposta.set_editor_property("const_b", 0.5)
+    collega(meno, "", sposta, "A")
+    per4 = nodo(materiale, unreal.MaterialExpressionMultiply, x - 50, y + 900)
+    per4.set_editor_property("const_b", 4.0)
+    collega(sposta, "", per4, "A")
+    ripido = nodo(materiale, unreal.MaterialExpressionSaturate, x + 50, y + 900)
+    collega(per4, "", ripido, "")
+    solo_pareti = nodo(materiale, unreal.MaterialExpressionMultiply, x + 60, y + 760)
+    collega(somma, "", solo_pareti, "A")
+    collega(ripido, "", solo_pareti, "B")
     strati = nodo(materiale, unreal.MaterialExpressionAdd, x + 100, y + 600)
     strati.set_editor_property("const_b", 1.0)
-    collega(ampiezza, "", strati, "A")
+    collega(solo_pareti, "", strati, "A")
     scura = nodo(materiale, unreal.MaterialExpressionMultiply, x + 150, y + 200)
     scura.set_editor_property("const_b", 0.62)
     collega(insieme, "", scura, "A")
@@ -181,9 +232,13 @@ def esegui():
 
     # 2. Il materiale (rifatto da capo a ogni lancio).
     percorso = DESTINAZIONE + "/M_Valle"
+    # (08/10) Non si cancella più M_Valle per rifarlo: il paesaggio lo sta usando e Unreal a volte non riesce a
+    # scaricarlo ("Failed to unload all packages during ForceDeleteObjects"). Si svuota e si riempie lo stesso materiale.
     if libreria.does_asset_exist(percorso):
-        libreria.delete_asset(percorso)
-    materiale = strumenti.create_asset("M_Valle", DESTINAZIONE, unreal.Material, unreal.MaterialFactoryNew())
+        materiale = libreria.load_asset(percorso)
+        mel.delete_all_material_expressions(materiale)
+    else:
+        materiale = strumenti.create_asset("M_Valle", DESTINAZIONE, unreal.Material, unreal.MaterialFactoryNew())
     materiale.set_editor_property("use_material_attributes", False)
 
     posizione = nodo(materiale, unreal.MaterialExpressionWorldPosition, -2400, 0)
@@ -255,7 +310,12 @@ def esegui():
     # Normali, con le stesse maschere.
     n1 = lerp(materiale, campioni["Erba"][1], "RGB", campioni["Terra"][1], "RGB", m, "B", -1000, 400)
     n2 = lerp(materiale, n1, "", campioni["Ghiaia"][1], "RGB", m, "A", -800, 400)
-    n3 = lerp(materiale, n2, "", campioni["Roccia"][1], "RGB", m, "R", -600, 400)
+    piatta = nodo(materiale, unreal.MaterialExpressionConstant3Vector, -1000, 750)
+    piatta.set_editor_property("constant", unreal.LinearColor(0.0, 0.0, 1.0, 0.0))
+    quanto = nodo(materiale, unreal.MaterialExpressionConstant, -1000, 850)
+    quanto.set_editor_property("r", ROCCIA_PIATTA)
+    roccia_n = lerp(materiale, campioni["Roccia"][1], "RGB", piatta, "", quanto, "", -800, 750)
+    n3 = lerp(materiale, n2, "", roccia_n, "", m, "R", -600, 400)
     n4 = lerp(materiale, n3, "", campioni["Neve"][1], "RGB", m, "G", -400, 400)
     mel.connect_material_property(n4, "", unreal.MaterialProperty.MP_NORMAL)
 
