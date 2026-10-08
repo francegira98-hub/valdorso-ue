@@ -163,6 +163,41 @@ def main(file_altezze, file_json, file_anteprima=None):
             quota_prima = z
         return punti, lunghezza * (fine - inizio)
 
+    # (08/10) L'alveo scavato da valle.py è a V: col 70% della profondità l'acqua restava una striscia stretta nel mezzo
+    # (misurato: bagnata in media solo il 41% della larghezza nel torrente, il 50% sotto la pozza). Ora l'acqua sale
+    # finché bagna l'80% della larghezza, ma resta sempre almeno 30 cm sotto la sponda più bassa: non esce mai.
+    BAGNATO = 0.8
+
+    def livello_pieno(x, y, ux, uy, larghezza_acqua, acqua):
+        nx, ny = -uy, ux
+        mezzo = 0.5 * BAGNATO * larghezza_acqua
+        bordo = min(quota(x + nx * mezzo, y + ny * mezzo), quota(x - nx * mezzo, y - ny * mezzo)) - 0.1
+        sponda = min(quota(x + nx * larghezza_acqua / 2, y + ny * larghezza_acqua / 2),
+                     quota(x - nx * larghezza_acqua / 2, y - ny * larghezza_acqua / 2)) - 0.3
+        return max(acqua, min(bordo, sponda))
+
+    def riempi(punti, primo_fisso=False, ultimo_fisso=False, minimo=None):
+        """Alza l'acqua di ogni punto (mai la abbassa rispetto a corso()); i punti nel lago e quelli fissi restano."""
+        fisso_fine = punti[-1]["acqua"] if punti else None
+        for i, p in enumerate(punti):
+            if p["nel_lago"] or (primo_fisso and i == 0) or (ultimo_fisso and i == len(punti) - 1):
+                continue
+            a, b = punti[max(i - 1, 0)], punti[min(i + 1, len(punti) - 1)]
+            ux, uy = b["x"] - a["x"], b["y"] - a["y"]
+            lu = math.hypot(ux, uy) or 1.0
+            p["acqua"] = livello_pieno(p["x"], p["y"], ux / lu, uy / lu, p["larghezza"] * 1.3, p["acqua"])
+        # sempre in discesa da monte a valle, ma mai sotto il minimo di corso() (vicino al lago e sopra l'orlo
+        # corso() lascia un tratto piano al minimo: senza questo scenderebbe a gradini sotto il pelo del lago)
+        for i in range(1, len(punti)):
+            if punti[i]["nel_lago"]:
+                continue
+            z = min(punti[i]["acqua"], punti[i - 1]["acqua"] - 0.05)
+            if minimo is not None:
+                z = max(z, minimo)
+            punti[i]["acqua"] = z
+        if ultimo_fisso and punti:
+            punti[-1]["acqua"] = fisso_fine
+
     def per_unreal(punti):
         # Larghezza piena dell'acqua: l'alveo di valle.py ha raggio 'larghezza'; pieno al 70% è largo ~1,3 volte.
         # (07/10) velocita = quante volte più veloce della corrente normale: dove è ripido l'acqua corre e fa schiuma
@@ -199,16 +234,23 @@ def main(file_altezze, file_json, file_anteprima=None):
         riva_pozza = riva_di_pozza(pz, rp, pelo_pozza)
         # Il fiume parte dalla riva della pozza, a valle (poco dentro, così le due acque si toccano).
         t_via = t_orlo + (math.hypot(*np.subtract(pz, cascata["orlo_m"])) + 0.85 * rp) / lunghezza_fiume
+        # (08/10) punti ogni 10 m (prima 40): sotto la pozza la gola scende ripida e tra due punti lontani l'acqua
+        # tirata dritta finiva sotto i sassi (la gola sembrava asciutta)
         pf, lungo_fiume = corso(linea_fiume, t_via, largo_fiume, fondo_fiume, pelo_pozza - 0.03, PELO_LAGO + 0.05,
-                                acqua_primo=pelo_pozza - 0.03)
+                                acqua_primo=pelo_pozza - 0.03, ogni=10.0)
     else:
         # Senza cascata (valle vecchia): il fiume parte dove entra nella conca dai monti.
         pt, riva_pozza, pelo_pozza = None, None, None
         pf, lungo_fiume = corso(linea_fiume, 0.16, largo_fiume, fondo_fiume, None, PELO_LAGO + 0.05)
+    # (08/10) l'acqua riempie l'alveo fino all'80% della larghezza (l'orlo della cascata e l'inizio dalla pozza restano)
+    if pt:
+        riempi(pt, ultimo_fisso=True, minimo=q_orlo + 0.25)
+    riempi(pf, primo_fisso=True, minimo=PELO_LAGO + 0.05)
     pf[-1]["acqua"] = PELO_LAGO + 0.02
     # L'emissario esce dal lago appena sotto il suo pelo e scende fino al bordo del mondo.
     pe, lungo_em = corso([tuple(p) for p in luoghi["emissario_m"]], 0.0,
                          lambda t: 3.5 + 2 * t, lambda t: 2.0, PELO_LAGO - 0.05, None, scivolo=0.03)
+    riempi(pe, primo_fisso=True)
     punti_fiume, punti_emissario = per_unreal(pf), per_unreal(pe)
     punti_torrente = per_unreal(pt) if pt else None
     # (07/10) Gli scalini del torrente: dove il letto salta di 3-4 m, una piccola tenda d'acqua (la mette crea_cascata_valle.py).
@@ -221,6 +263,12 @@ def main(file_altezze, file_json, file_anteprima=None):
         t = sc["t"]
         acqua_sopra = sopra + RIEMPIMENTO * (3.0 + 2.5 * t)
         acqua_sotto = sotto + RIEMPIMENTO * (3.0 + 2.5 * t)
+        # (08/10) l'acqua sopra e sotto lo scalino è quella del torrente (i due punti della spline che lo stringono),
+        # così la tenda parte e arriva proprio sul pelo dell'acqua alzata
+        if pt and len(pt) > 1:
+            k = min(range(len(pt) - 1), key=lambda j: math.dist((x, y), ((pt[j]["x"] + pt[j + 1]["x"]) / 2,
+                                                                         (pt[j]["y"] + pt[j + 1]["y"]) / 2)))
+            acqua_sopra, acqua_sotto = pt[k]["acqua"], pt[k + 1]["acqua"]
         salto = acqua_sopra - acqua_sotto
         if salto < 1.0:
             continue

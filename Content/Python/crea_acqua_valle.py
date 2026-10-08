@@ -26,6 +26,8 @@ QUOTA_MAX_CM = 80000.0         # i 16 bit delle altezze coprono 0-800 m (valle.p
 RISOLUZIONE_ZONA = 2048
 # set_editor_property avvisa Unreal (PostEditChange) solo se il valore cambia; con ALWAYS lo avvisa sempre.
 SEMPRE = unreal.PropertyAccessChangeNotifyMode.ALWAYS
+# (08/10) I materiali dell'acqua di Valdorso, fatti da crea_materiale_acqua.py (verde-blu di montagna, non turchese).
+CARTELLA_MATERIALI = "/Game/Valle/Acqua"
 
 attori = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
@@ -129,6 +131,33 @@ def esegui():
         corpo.set_actor_location(posto + unreal.Vector(0, 0, 1), False, False)
         corpo.set_actor_location(posto, False, False)
 
+    def colore_nostro(componente, nome):
+        """(08/10) Se ci sono i materiali dell'acqua di Valdorso (crea_materiale_acqua.py), li dà al corpo d'acqua:
+        così rifare l'acqua non la riporta al turchese di serie."""
+        lago = nome in ("Lago", "Pozza della cascata")
+        try:   # (08/10) dove fiume e lago si sovrappongono vince il lago: niente spicchi turchesi a croce
+            componente.set_editor_property("overlap_material_priority", 10 if lago else 0, SEMPRE)
+        except Exception as e:
+            unreal.log_warning("[Valdorso] Acqua: {}: non riesco a dare la precedenza ({})".format(nome, e))
+        coppia = (("MI_AcquaLago", "water_material"), ("MI_AcquaLago_LOD", "water_static_mesh_material")) if lago \
+            else (("MI_AcquaFiume", "water_material"), ("MI_AcquaFiume_LOD", "water_static_mesh_material"))
+        if not lago:   # (08/10) anche il passaggio fiume-lago con i nostri colori
+            coppia = coppia + (("MI_AcquaFiumeLago", "lake_transition_material"),)
+        for asset, proprieta in coppia:
+            percorso = CARTELLA_MATERIALI + "/" + asset
+            if not unreal.EditorAssetLibrary.does_asset_exist(percorso):
+                continue
+            try:
+                materiale = unreal.EditorAssetLibrary.load_asset(percorso)
+                componente.set_editor_property(proprieta, materiale, SEMPRE)
+                if proprieta == "water_static_mesh_material":
+                    try:
+                        componente.set_editor_property("water_lod_material", materiale, SEMPRE)
+                    except Exception:
+                        pass
+            except Exception as e:
+                unreal.log_warning("[Valdorso] Acqua: {}: non riesco a dare {} ({})".format(nome, asset, e))
+
     def prepara(corpo, nome):
         corpo.set_actor_label(nome)
         corpo.tags = [unreal.Name(ETICHETTA)]
@@ -137,6 +166,7 @@ def esegui():
             componente.set_editor_property("affects_landscape", False)
         except Exception as e:
             unreal.log_warning("[Valdorso] Acqua: non riesco a spegnere 'Affects Landscape' su {} ({}).".format(nome, e))
+        colore_nostro(componente, nome)
         return corpo.get_water_spline()
 
     # ------------------------------------------------------------------ il lago (e la pozza della cascata)
