@@ -90,6 +90,14 @@ void AValdorsoCharacter::VoltoProva(FName Cursore, float Valore)
 	}
 }
 
+void AValdorsoCharacter::VoltoTesta(int32 Numero, int32 Donna)
+{
+	if (Aspetto)
+	{
+		Aspetto->ProvaTesta(Numero, Donna != 0);
+	}
+}
+
 UAbilitySystemComponent* AValdorsoCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;

@@ -634,7 +634,15 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 	{
 		if (UValdorsoAspettoComponent* AspettoColono = Colono->GetAspetto())
 		{
-			AspettoColono->ImpostaAspetto(Dati->Registro.Aspetto);
+			// Finché il giocatore non sceglie l'aspetto (pagina Aspetto, passo 4.4), ogni colono ha comunque un volto
+			// suo: quello "dei dadi", sempre uguale per lo stesso personaggio (non si salva).
+			FValdorsoAspetto Visto = Dati->Registro.Aspetto;
+			if (ValdorsoAspetto::NonScelto(Visto))
+			{
+				FRandomStream Dadi(static_cast<int32>(GetTypeHash(Dati->Id)));
+				ValdorsoAspetto::Casuale(Visto, Dati->Registro.Sesso, Dadi);
+			}
+			AspettoColono->ImpostaAspetto(Visto, Dati->Registro.Sesso);
 		}
 	}
 
