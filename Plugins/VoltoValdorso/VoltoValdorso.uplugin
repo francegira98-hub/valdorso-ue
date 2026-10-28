@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Volto Valdorso",
+	"Description": "Nodo dell'AnimGraph che applica i cursori del volto (ossa FACIAL_) leggendo una tabella. Scritto da Claude il 17/10/2026.",
+	"Category": "Valdorso",
+	"CreatedBy": "Valdorso",
+	"CanContainContent": false,
+	"EnabledByDefault": true,
+	"Modules": [
+		{
+			"Name": "VoltoValdorso",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault"
+		},
+		{
+			"Name": "VoltoValdorsoEditor",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault"
+		}
+	]
+}

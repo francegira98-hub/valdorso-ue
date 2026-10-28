@@ -15,6 +15,8 @@
 #include "ValdorsoPalcoRegistro.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoAttributeSet.h"
+#include "ValdorsoCharacter.h"
+#include "ValdorsoAspettoComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Kismet/GameplayStatics.h"
@@ -625,6 +627,15 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 		PersonaggioId.Empty();
 		InviaSceltaPersonaggio(TEXT("Il personaggio non è riuscito a entrare nella valle: riprova."), true);
 		return;
+	}
+
+	// (28/10) L'aspetto dal Registro: arriva a tutti e si vede sul volto MetaHuman.
+	if (AValdorsoCharacter* Colono = Cast<AValdorsoCharacter>(GetPawn()))
+	{
+		if (UValdorsoAspettoComponent* AspettoColono = Colono->GetAspetto())
+		{
+			AspettoColono->ImpostaAspetto(Dati->Registro.Aspetto);
+		}
 	}
 
 	// Le statistiche com'erano (le prime volte restano quelle di partenza).

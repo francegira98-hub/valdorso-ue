@@ -50,6 +50,18 @@
 		{
 			"Name": "AESGCMHandlerComponent",
 			"Enabled": true
+		},
+		{
+			"Name": "MetaHumanCharacter",
+			"Enabled": true
+		},
+		{
+			"Name": "HairStrands",
+			"Enabled": true
+		},
+		{
+			"Name": "VoltoValdorso",
+			"Enabled": true
 		}
 	]
-}
+}

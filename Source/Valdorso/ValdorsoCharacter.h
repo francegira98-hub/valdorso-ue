@@ -18,6 +18,7 @@ class UGameplayAbility;
 class UGameplayEffect;
 class UAnimMontage;
 class UMotionWarpingComponent;
+class UValdorsoAspettoComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -47,6 +48,10 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	/** Motion Warping: piega le animazioni per appoggiare mani e piedi sui bordi veri degli ostacoli */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UMotionWarpingComponent* MotionWarping;
+
+	/** (28/10) L'aspetto: il corpo MetaHuman sopra il manichino e i cursori del volto (vedi ValdorsoAspettoComponent.h) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UValdorsoAspettoComponent* Aspetto;
 
 	/** Le statistiche: salute, stamina, mana */
 	UPROPERTY()
@@ -173,6 +178,16 @@ public:
 
 	/** Sceglie l'animazione giusta in base all'ostacolo e alla velocità */
 	UAnimMontage* ScegliMontaggioScavalca(bool bSaliSopra) const;
+
+	/** L'aspetto del colono (corpo MetaHuman e volto) */
+	FORCEINLINE UValdorsoAspettoComponent* GetAspetto() const { return Aspetto; }
+
+	/**
+	 * Solo per le prove (console, ~): cambia un cursore del volto su questo PC, da -1 a 1.
+	 * Esempio: VoltoProva NasoLunghezza 1
+	 */
+	UFUNCTION(Exec)
+	void VoltoProva(FName Cursore, float Valore);
 
 	/** Il componente del Motion Warping */
 	FORCEINLINE UMotionWarpingComponent* GetMotionWarping() const { return MotionWarping; }

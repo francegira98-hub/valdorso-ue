@@ -38,3 +38,8 @@ Content/Menu/Montagne/
 Content/Menu/Montagne2/
 # Anteprime salvate dall'app di Claude: non fanno parte del gioco
 Claude outputs/
+# MetaHuman (teste, texture, cartella Common): solo sul PC, mai su GitHub (decisa da Fra, 28/10).
+# Si rifanno dal MetaHuman Creator con Content/Python/crea_teste_prova.py; il codice del volto e' nel plugin VoltoValdorso.
+Content/MetaHumans/
+Content/Unpacked/
+Content/MH_*.uasset

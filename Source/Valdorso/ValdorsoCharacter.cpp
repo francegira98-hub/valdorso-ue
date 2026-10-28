@@ -9,6 +9,7 @@
 #include "ValdorsoAbilitaScavalca.h"
 #include "ValdorsoAbilitaPugno.h"
 #include "MotionWarpingComponent.h"
+#include "ValdorsoAspettoComponent.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
@@ -74,8 +75,19 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	AbilitaPugno = UValdorsoAbilitaPugno::StaticClass();
 	EffettiIniziali.Add(UValdorsoGE_RecuperoStamina::StaticClass());
 
+	// (28/10) L'aspetto: corpo MetaHuman sopra il manichino, volto con i cursori del Registro.
+	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+}
+
+void AValdorsoCharacter::VoltoProva(FName Cursore, float Valore)
+{
+	if (Aspetto)
+	{
+		Aspetto->ProvaCursore(Cursore, Valore);
+	}
 }
 
 UAbilitySystemComponent* AValdorsoCharacter::GetAbilitySystemComponent() const
