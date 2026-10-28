@@ -31,7 +31,16 @@ UValdorsoAspettoComponent::UValdorsoAspettoComponent()
 	ClasseMetaHuman = Testa(TEXT("/Game/MetaHumans/MH_Prova/BP_MH_Prova.BP_MH_Prova_C"));
 	TesteUomo.Add(ClasseMetaHuman);
 	TesteUomo.Add(Testa(TEXT("/Game/Unpacked/MH_Walter/BP_MH_Walter.BP_MH_Walter_C")));
+	// (28/10) Le teste montate da crea_teste_valdorso.py. Nuove teste: in fondo, per non cambiare quelle già scelte.
+	TesteUomo.Add(Testa(TEXT("/Game/Unpacked/MH_Lorenzo/BP_MH_Lorenzo.BP_MH_Lorenzo_C")));
+	TesteUomo.Add(Testa(TEXT("/Game/Unpacked/MH_Dominic/BP_MH_Dominic.BP_MH_Dominic_C")));
+	TesteUomo.Add(Testa(TEXT("/Game/Unpacked/MH_Mikel/BP_MH_Mikel.BP_MH_Mikel_C")));
+	TesteUomo.Add(Testa(TEXT("/Game/Unpacked/MH_Omari/BP_MH_Omari.BP_MH_Omari_C")));
 	TesteDonna.Add(Testa(TEXT("/Game/Unpacked/MH_Jelena/BP_MH_Jelena.BP_MH_Jelena_C")));
+	TesteDonna.Add(Testa(TEXT("/Game/Unpacked/MH_Grace/BP_MH_Grace.BP_MH_Grace_C")));
+	TesteDonna.Add(Testa(TEXT("/Game/Unpacked/MH_Etta/BP_MH_Etta.BP_MH_Etta_C")));
+	TesteDonna.Add(Testa(TEXT("/Game/Unpacked/MH_Celeste/BP_MH_Celeste.BP_MH_Celeste_C")));
+	TesteDonna.Add(Testa(TEXT("/Game/Unpacked/MH_Sunita/BP_MH_Sunita.BP_MH_Sunita_C")));
 	AnimazioneVolto = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(TEXT("/Game/MetaHumans/Common/Face/ABP_Face_PostProcess.ABP_Face_PostProcess_C")));
 	AnimazioneCorpo = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(TEXT("/Game/MetaHumans/MH_Prova/ABP_CorpoSegue.ABP_CorpoSegue_C")));
 }
