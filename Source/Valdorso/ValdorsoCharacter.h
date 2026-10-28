@@ -191,7 +191,7 @@ public:
 
 	/**
 	 * Solo per le prove (console): mette un'altra testa base su questo PC.
-	 * Esempio: VoltoTesta 1 0 (seconda testa da uomo), VoltoTesta 0 1 (prima testa da donna)
+	 * Esempio: VoltoTesta 1 0 (seconda testa da uomo), VoltoTesta 0 1 (prima testa da donna), VoltoTesta -1 0 (quella vera)
 	 */
 	UFUNCTION(Exec)
 	void VoltoTesta(int32 Numero, int32 Donna);

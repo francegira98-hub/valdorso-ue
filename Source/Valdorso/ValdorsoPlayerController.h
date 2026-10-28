@@ -58,6 +58,16 @@ protected:
 	bool ShouldUseTouchControls() const;
 
 public:
+
+	/**
+	 * (28/10) Solo per le prove nell'editor (console): apre il Registro di Val d'Orso su un colono di prova, con il
+	 * palco e la pagina del volto, senza account. Le risposte non si salvano (il server non conosce quel colono).
+	 */
+	UFUNCTION(Exec)
+	void ProvaRegistro();
+
+	/** Chiude il Registro di prova e torna al gioco. */
+	void ChiudiProvaRegistro();
 	// --- Anticamera: dal client al server ---------------------------------------------------------
 
 	UFUNCTION(Server, Reliable)

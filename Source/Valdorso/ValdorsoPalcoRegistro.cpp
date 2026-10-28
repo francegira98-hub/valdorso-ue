@@ -4,6 +4,7 @@
 #include "ValdorsoPalcoRegistro.h"
 #include "ValdorsoScenaMenu.h"
 #include "ValdorsoTemaUI.h"
+#include "ValdorsoAspettoComponent.h"
 #include "Valdorso.h"
 #include "Animation/AnimSequence.h"
 #include "Components/PointLightComponent.h"
@@ -79,6 +80,9 @@ AValdorsoPalcoRegistro::AValdorsoPalcoRegistro()
 	CorpoDonna = Quinn.Object;
 	Riposo = Fermo.Object;
 
+	// (28/10) Sopra il manichino, il MetaHuman del colono (lo vede solo la telecamera del palco).
+	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
+
 	Obiettivo = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("Obiettivo"));
 	Obiettivo->SetupAttachment(Radice);
 	Obiettivo->FOVAngle = 28.f;
@@ -146,6 +150,8 @@ void AValdorsoPalcoRegistro::BeginPlay()
 
 	PreparaScena();
 	CambiaSesso(TEXT("uomo"));
+	// Il MetaHuman si attacca al manichino del palco e si fa vedere solo nel ritratto.
+	Aspetto->UsaSupporto(Colono, Obiettivo);
 	Obiettivo->ShowOnlyActors.Add(this);
 	for (AActor* Pezzo : Scena)
 	{
@@ -249,6 +255,8 @@ void AValdorsoPalcoRegistro::Aggiorna(const FValdorsoRegistro& Risposte)
 		CambiaSesso(Risposte.Sesso);
 	}
 	ColoreFedeVoluto = PalcoColoreFede(Risposte.Fede);
+	// (28/10) Il volto e la testa cambiano subito, mentre il giocatore muove i cursori.
+	Aspetto->ImpostaAspetto(Risposte.Aspetto, Risposte.Sesso.IsEmpty() ? SessoAttuale : Risposte.Sesso);
 }
 
 void AValdorsoPalcoRegistro::Presenta(const FValdorsoRegistro& Risposte)
@@ -257,8 +265,14 @@ void AValdorsoPalcoRegistro::Presenta(const FValdorsoRegistro& Risposte)
 	SessoAttuale.Empty();
 	CambiaSesso(Risposte.Sesso);
 	ColoreFedeVoluto = PalcoColoreFede(Risposte.Fede);
+	Aspetto->ImpostaAspetto(Risposte.Aspetto, SessoAttuale);
 	GiroDaFare = 50.f;
 	Tempo = FMath::Min(Tempo, PalcoAvvicinamento * 0.6f);
+}
+
+void AValdorsoPalcoRegistro::PrimoPiano(bool bSulVolto)
+{
+	VicinoVoluto = bSulVolto ? 1.f : 0.f;
 }
 
 void AValdorsoPalcoRegistro::Firmato()
@@ -285,10 +299,16 @@ void AValdorsoPalcoRegistro::Tick(float DeltaSeconds)
 	const float Avvicina = FMath::InterpEaseOut(0.f, 1.f, FMath::Clamp(Tempo / PalcoAvvicinamento, 0.f, 1.f), 2.f);
 	const float Distanza = FMath::Lerp(330.f, 270.f, Avvicina);
 	const FVector Respiro(0.f, FMath::Sin(Tempo * 0.25f) * 4.f, FMath::Sin(Tempo * 0.18f) * 2.f);
-	const FVector Occhio = FVector(Distanza, 0.f, 128.f) + Respiro;
-	const FVector Guarda(0.f, 0.f, 112.f);
+	// (28/10) Nella pagina del volto la telecamera va in primo piano sulla faccia.
+	Vicino = FMath::FInterpTo(Vicino, VicinoVoluto, DeltaSeconds, 3.f);
+	const float Primo = FMath::InterpEaseInOut(0.f, 1.f, Vicino, 2.f);
+	const float Lontano = FMath::Lerp(Distanza, 95.f, Primo);
+	const FVector Occhio = FVector(Lontano, 0.f, FMath::Lerp(128.f, 160.f, Primo)) + Respiro * (1.f - 0.8f * Primo);
+	const FVector Guarda(0.f, 0.f, FMath::Lerp(112.f, 158.f, Primo));
 	Obiettivo->SetRelativeLocationAndRotation(Occhio, (Guarda - Occhio).Rotation());
-	Obiettivo->PostProcessSettings.DepthOfFieldFocalDistance = Distanza;
+	// A fuoco il volto (sta una decina di centimetri davanti al centro); da vicino meno sfocato intorno.
+	Obiettivo->PostProcessSettings.DepthOfFieldFocalDistance = Lontano - 10.f * Primo;
+	Obiettivo->PostProcessSettings.DepthOfFieldFstop = FMath::Lerp(2.2f, 8.f, Primo);
 	Obiettivo->PostProcessSettings.AutoExposureBias = CVarPalcoEsposizione.GetValueOnGameThread();
 
 	// Il colono si volta verso la telecamera.

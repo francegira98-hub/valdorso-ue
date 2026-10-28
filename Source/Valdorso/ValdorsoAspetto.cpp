@@ -197,6 +197,18 @@ namespace ValdorsoAspetto
 		ForseNessuno(TEXT("SegnoParticolare"), 0.3f);
 	}
 
+	FValdorsoAspetto Visibile(const FValdorsoAspetto& Aspetto, const FString& Sesso, const FString& Seme)
+	{
+		if (!NonScelto(Aspetto))
+		{
+			return Aspetto;
+		}
+		FValdorsoAspetto Visto;
+		FRandomStream Dadi(static_cast<int32>(GetTypeHash(Seme)));
+		Casuale(Visto, Sesso, Dadi);
+		return Visto;
+	}
+
 	void Adatta(FValdorsoAspetto& Aspetto, const FString& Sesso)
 	{
 		if (NonScelto(Aspetto))

@@ -29,6 +29,8 @@
 #include "Widgets/Text/STextBlock.h"
 #include "Valdorso.h"
 #include "ValdorsoSuoni.h"
+#include "ValdorsoAspettoComponent.h"
+#include "Widgets/Input/SSlider.h"
 #if WITH_EDITOR
 #include "TextureCompiler.h"
 #endif
@@ -122,6 +124,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 	OnFirmato = InArgs._OnFirmato;
 	OnTorna = InArgs._OnTorna;
 	OnCambia = InArgs._OnCambia;
+	OnPrimoPiano = InArgs._OnPrimoPiano;
 	Nome = InArgs._NomePersonaggio;
 
 	// Il ritratto del palco (passo 4.2b): la schermata lo tiene vivo finché si vede.
@@ -753,6 +756,7 @@ void SValdorsoRegistroColono::VaiA(EPagina Nuova)
 	}
 	bPrimaPagina = false;
 	Pagina = Nuova;
+	OnPrimoPiano.ExecuteIfBound(Pagina == EPagina::Volto);
 	Messaggio = FText::GetEmpty();
 	bErrore = false;
 	if (Pagina == EPagina::Racconto && (!bRaccontoToccato || Bozza.Racconto.IsEmpty()))
@@ -858,6 +862,8 @@ bool SValdorsoRegistroColono::PaginaCompleta(EPagina Quale) const
 	{
 	case EPagina::ChiSei:
 		return !Bozza.Sesso.IsEmpty() && Bozza.Eta >= ValdorsoRegistro::EtaMinima && Bozza.Eta <= ValdorsoRegistro::EtaMassima;
+	case EPagina::Volto:
+		return true;
 	case EPagina::Carattere:
 		for (const ValdorsoRegistro::EDomanda Coppia : RegSchermoCarattere)
 		{
@@ -897,6 +903,7 @@ FText SValdorsoRegistroColono::FrasePagina(EPagina Quale) const
 	switch (Quale)
 	{
 	case EPagina::ChiSei: return LOCTEXT("FraseChiSei", "Per ultimi vennero gli uomini, fragili e brevi, ma gli unici capaci di scegliere chi diventare.");
+	case EPagina::Volto: return LOCTEXT("FraseVolto", "Il sacerdote alza la lanterna e ti guarda a lungo: anche il volto si scrive nel registro.");
 	case EPagina::Fede: return LOCTEXT("FraseFede", "Nessun colono pronuncia davanti al sacerdote i nomi che non si pronunciano.");
 	case EPagina::Origine: return LOCTEXT("FraseOrigine", "La Corona ha chiamato coloni da ogni angolo di Aurelia: la valle dell'Orso è di nuovo aperta.");
 	case EPagina::Mestiere: return LOCTEXT("FraseMestiere", "Nella valle nessuno è più quello che era. Ma le mani ricordano.");
@@ -917,6 +924,7 @@ FText SValdorsoRegistroColono::TitoloPagina(EPagina Quale) const
 	switch (Quale)
 	{
 	case EPagina::ChiSei: return LOCTEXT("TitoloChiSei", "Chi sei?");
+	case EPagina::Volto: return LOCTEXT("TitoloVolto", "Che volto hai?");
 	case EPagina::Carattere: return LOCTEXT("TitoloCarattere", "Com'è il tuo carattere?");
 	case EPagina::Racconto: return LOCTEXT("TitoloRacconto", "Il racconto del sacerdote");
 	case EPagina::Storia: return LOCTEXT("TitoloStoria", "La tua storia");
@@ -930,6 +938,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::ContenutoPagina()
 	switch (Pagina)
 	{
 	case EPagina::ChiSei: return PaginaChiSei();
+	case EPagina::Volto: return PaginaVolto();
 	case EPagina::Carattere: return PaginaCarattere();
 	case EPagina::Racconto: return PaginaTesto(true);
 	case EPagina::Storia: return PaginaTesto(false);
@@ -1119,6 +1128,144 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaChiSei()
 		];
 }
 
+TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
+{
+	const bool bDonna = Bozza.Sesso == TEXT("donna");
+	const int32 Teste = UValdorsoAspettoComponent::TesteDisponibili(bDonna);
+	auto Attivo = TAttribute<bool>::CreateLambda([this]() { return !bInFirma && !bFinale && !bInUscita; });
+
+	// La testa base: le frecce passano da un volto all'altro (il palco si aggiorna subito).
+	auto CambiaTesta = [this, Teste](int32 Di)
+	{
+		const int32 Ora = ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("Testa")) % Teste;
+		ValdorsoAspetto::Imposta(Bozza.Aspetto, TEXT("Testa"), static_cast<uint8>((Ora + Di + Teste) % Teste));
+		OnCambia.ExecuteIfBound(Bozza);
+	};
+	TSharedRef<SButton> Dopo = Stile->Pulsante(FText::FromString(TEXT(">")),
+		FSimpleDelegate::CreateLambda([CambiaTesta]() { CambiaTesta(1); }), 18.f, Attivo);
+	PrimoFuoco = Dopo;
+
+	TSharedRef<SVerticalBox> Righe = SNew(SVerticalBox)
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 0.f, 0.f, 6.f))
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("VoltoBase", "Il volto"))
+			.Font(Stile->Caratteri->Testo(22.f, TEXT("SemiBold")))
+			.ColorAndOpacity(ValdorsoTema::Inchiostro())
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 0.f, 0.f, 18.f))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Stile->Pulsante(FText::FromString(TEXT("<")),
+					FSimpleDelegate::CreateLambda([CambiaTesta]() { CambiaTesta(-1); }), 18.f, Attivo)
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this, Teste]()
+				{
+					return FText::Format(LOCTEXT("VoltoNumero", "Volto {0} di {1}"),
+						FText::AsNumber(ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("Testa")) % Teste + 1), FText::AsNumber(Teste));
+				})
+				.Font(Stile->Caratteri->Titolo(24.f, TEXT("Bold")))
+				.ColorAndOpacity(ValdorsoTema::Rubrica())
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Dopo
+			]
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 0.f, 0.f, 6.f))
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("ITratti", "I tratti"))
+			.Font(Stile->Caratteri->Testo(22.f, TEXT("SemiBold")))
+			.ColorAndOpacity(ValdorsoTema::Inchiostro())
+		];
+
+	// Un cursore per ogni tratto del volto nel catalogo (naso, mento, zigomi...): da 0 a 255, 128 nel mezzo.
+	for (const FValdorsoVoceAspetto& Voce : ValdorsoAspetto::Voci())
+	{
+		if (Voce.Gruppo != EValdorsoGruppoAspetto::Volto || !Voce.bCursore)
+		{
+			continue;
+		}
+		const TCHAR* Id = Voce.Id;
+		auto Sposta = [this, Id](int32 Di)
+		{
+			const int32 Nuovo = FMath::Clamp(static_cast<int32>(ValdorsoAspetto::Valore(Bozza.Aspetto, Id)) + Di, 0, 255);
+			ValdorsoAspetto::Imposta(Bozza.Aspetto, Id, static_cast<uint8>(Nuovo));
+			OnCambia.ExecuteIfBound(Bozza);
+		};
+		Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 3.f))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SBox).WidthOverride(190.f)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Voce.Nome))
+					.Font(Stile->Caratteri->Testo(18.f))
+					.ColorAndOpacity(ValdorsoTema::Inchiostro())
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Stile->Pulsante(FText::FromString(TEXT("-")), FSimpleDelegate::CreateLambda([Sposta]() { Sposta(-16); }), 14.f, Attivo)
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center).Padding(FMargin(10.f, 0.f))
+			[
+				SNew(SSlider)
+				.MinValue(0.f)
+				.MaxValue(255.f)
+				.StepSize(1.f)
+				.MouseUsesStep(true)
+				.IsEnabled(Attivo)
+				.SliderBarColor(ValdorsoTema::InchiostroTenue())
+				.SliderHandleColor(ValdorsoTema::Rubrica())
+				.Value_Lambda([this, Id]() { return static_cast<float>(ValdorsoAspetto::Valore(Bozza.Aspetto, Id)); })
+				.OnValueChanged_Lambda([this, Id](float Nuovo)
+				{
+					ValdorsoAspetto::Imposta(Bozza.Aspetto, Id, static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(Nuovo), 0, 255)));
+					OnCambia.ExecuteIfBound(Bozza);
+				})
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Stile->Pulsante(FText::FromString(TEXT("+")), FSimpleDelegate::CreateLambda([Sposta]() { Sposta(16); }), 14.f, Attivo)
+			]
+		];
+	}
+
+	// Tutti i tratti nel mezzo (la testa resta).
+	Righe->AddSlot().AutoHeight().HAlign(HAlign_Left).Padding(FMargin(0.f, 12.f, 0.f, 0.f))
+	[
+		Stile->Pulsante(LOCTEXT("TrattiNelMezzo", "Tratti nel mezzo"), FSimpleDelegate::CreateLambda([this]()
+		{
+			for (const FValdorsoVoceAspetto& Voce : ValdorsoAspetto::Voci())
+			{
+				if (Voce.Gruppo == EValdorsoGruppoAspetto::Volto && Voce.bCursore)
+				{
+					ValdorsoAspetto::Imposta(Bozza.Aspetto, Voce.Id, ValdorsoAspetto::Mezzo);
+				}
+			}
+			OnCambia.ExecuteIfBound(Bozza);
+		}), 16.f, Attivo)
+	];
+	Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 10.f, 0.f, 0.f))
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("SpiegaVolto", "Guarda il ritratto: il colono cambia mentre muovi i cursori. I dadi in basso scelgono un volto a caso."))
+		.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
+		.AutoWrapText(true)
+		.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+	];
+	return Righe;
+}
+
 void SValdorsoRegistroColono::CambiaEta(int32 Di)
 {
 	Bozza.Eta = FMath::Clamp(Bozza.Eta + Di, ValdorsoRegistro::EtaMinima, ValdorsoRegistro::EtaMassima);
@@ -1299,6 +1446,9 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 
 	Riga(LOCTEXT("RigaChi", "Chi sei"), Bozza.Sesso.IsEmpty() ? FString()
 		: FString::Printf(TEXT("%s, %d anni"), *Scelta(ValdorsoRegistro::EDomanda::Sesso), Bozza.Eta), EPagina::ChiSei);
+	Riga(LOCTEXT("RigaVolto", "Il volto"), FString::Printf(TEXT("volto %d di %d"),
+		ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("Testa")) % UValdorsoAspettoComponent::TesteDisponibili(Bozza.Sesso == TEXT("donna")) + 1,
+		UValdorsoAspettoComponent::TesteDisponibili(Bozza.Sesso == TEXT("donna"))), EPagina::Volto);
 	Riga(LOCTEXT("RigaFede", "La fede"), Scelta(ValdorsoRegistro::EDomanda::Fede), EPagina::Fede);
 	Riga(LOCTEXT("RigaOrigine", "Da dove vieni"), Scelta(ValdorsoRegistro::EDomanda::Origine), EPagina::Origine);
 	Riga(LOCTEXT("RigaMestiere", "Cosa facevi"), Scelta(ValdorsoRegistro::EDomanda::Mestiere), EPagina::Mestiere);
@@ -1383,6 +1533,9 @@ void SValdorsoRegistroColono::TiraDadiPagina()
 	case EPagina::ChiSei:
 		ValdorsoRegistro::CasualeUna(Bozza, ValdorsoRegistro::EDomanda::Sesso, Dadi);
 		Bozza.Eta = Dadi.RandRange(ValdorsoRegistro::EtaMinima, 40);
+		break;
+	case EPagina::Volto:
+		ValdorsoAspetto::Casuale(Bozza.Aspetto, Bozza.Sesso, Dadi);
 		break;
 	case EPagina::Carattere:
 		for (const ValdorsoRegistro::EDomanda Coppia : RegSchermoCarattere)

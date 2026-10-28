@@ -636,13 +636,8 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 		{
 			// Finché il giocatore non sceglie l'aspetto (pagina Aspetto, passo 4.4), ogni colono ha comunque un volto
 			// suo: quello "dei dadi", sempre uguale per lo stesso personaggio (non si salva).
-			FValdorsoAspetto Visto = Dati->Registro.Aspetto;
-			if (ValdorsoAspetto::NonScelto(Visto))
-			{
-				FRandomStream Dadi(static_cast<int32>(GetTypeHash(Dati->Id)));
-				ValdorsoAspetto::Casuale(Visto, Dati->Registro.Sesso, Dadi);
-			}
-			AspettoColono->ImpostaAspetto(Visto, Dati->Registro.Sesso);
+			AspettoColono->ImpostaAspetto(ValdorsoAspetto::Visibile(Dati->Registro.Aspetto, Dati->Registro.Sesso, Dati->Id),
+				Dati->Registro.Sesso);
 		}
 	}
 
@@ -922,6 +917,8 @@ void AValdorsoPlayerController::MostraSceltaPersonaggio()
 				FValdorsoRegistro Aspetto;
 				Aspetto.Sesso = Scelto.Sesso;
 				Aspetto.Fede = Scelto.Fede;
+				// (28/10) Con il suo volto, lo stesso che avrà nella valle.
+				Aspetto.Aspetto = ValdorsoAspetto::Visibile(Scelto.Aspetto, Scelto.Sesso, Scelto.Id);
 				Controllore->Palco->Presenta(Aspetto);
 			}
 		}))
@@ -981,8 +978,35 @@ void AValdorsoPlayerController::ChiudiSceltaPersonaggio()
 	ForseTogliPalco();
 }
 
-void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& Risposte)
+void AValdorsoPlayerController::ChiudiProvaRegistro()
 {
+	ChiudiRegistro();
+	RegistroAperto.Empty();
+	SetInputMode(FInputModeGameOnly());
+	bShowMouseCursor = false;
+}
+
+void AValdorsoPlayerController::ProvaRegistro()
+{
+#if WITH_EDITOR
+	if (IsLocalController() && GetWorld() && GetWorld()->IsPlayInEditor())
+	{
+		MostraRegistro(TEXT("prova-registro"), TEXT("Colono di prova"), FValdorsoRegistro());
+	}
+#endif
+}
+
+void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& RisposteServer)
+{
+	// (28/10, passo 4.4) Un registro ancora da firmare parte con il volto "dei dadi" del personaggio (lo stesso che
+	// avrebbe nella valle): il giocatore lo vede sul palco e lo cambia nella pagina del volto.
+	FValdorsoRegistro Risposte = RisposteServer;
+	if (!Risposte.bFirmato && ValdorsoAspetto::NonScelto(Risposte.Aspetto))
+	{
+		Risposte.Aspetto = ValdorsoAspetto::Visibile(Risposte.Aspetto, Risposte.Sesso, IdRegistro);
+		ValdorsoAspetto::Adatta(Risposte.Aspetto, Risposte.Sesso);
+	}
+
 	// Un registro già firmato non si riapre per scriverci (una vista in sola lettura arriverà con l'esame del personaggio).
 	// (06/10, passo 4.5) Tranne quando lo staff chiede di correggere la storia: allora si apre su quella pagina.
 	if (Risposte.bFirmato && !Risposte.bStoriaDaCorreggere)
@@ -1012,10 +1036,31 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 				Controllore->Palco->Aggiorna(Cambiate);
 			}
 		}))
+		.OnPrimoPiano(FValdorsoSuPrimoPiano::CreateLambda([Debole](bool bSulVolto)
+		{
+			AValdorsoPlayerController* Controllore = Debole.Get();
+			if (Controllore && Controllore->Palco.IsValid())
+			{
+				Controllore->Palco->PrimoPiano(bSulVolto);
+			}
+		}))
 		.OnSalva(FValdorsoSuSalvaRegistro::CreateLambda([Debole](const FValdorsoRegistro& Proposto, bool bFirma)
 		{
 			if (AValdorsoPlayerController* Controllore = Debole.Get())
 			{
+				// (28/10) Il Registro di prova (ProvaRegistro) non va al server: va sempre bene.
+				if (Controllore->RegistroAperto == TEXT("prova-registro"))
+				{
+					// La risposta arriva al giro dopo, come farebbe quella del server.
+					Controllore->GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(Controllore, [Controllore, Proposto]()
+					{
+						if (Controllore->SchermataRegistro.IsValid())
+						{
+							Controllore->SchermataRegistro->Esito(FString(), true, Proposto);
+						}
+					}));
+					return;
+				}
 				Controllore->ServerSalvaRegistro(Controllore->RegistroAperto, Proposto, bFirma);
 			}
 		}))
@@ -1024,6 +1069,11 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 			// Il registro resta nero finché il personaggio non nasce (ClientPersonaggioScelto lo chiude).
 			if (AValdorsoPlayerController* Controllore = Debole.Get())
 			{
+				if (Controllore->RegistroAperto == TEXT("prova-registro"))
+				{
+					Controllore->ChiudiProvaRegistro();
+					return;
+				}
 				Controllore->ServerScegliPersonaggio(Controllore->RegistroAperto);
 			}
 		}))
@@ -1031,6 +1081,11 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 		{
 			if (AValdorsoPlayerController* Controllore = Debole.Get())
 			{
+				if (Controllore->RegistroAperto == TEXT("prova-registro"))
+				{
+					Controllore->ChiudiProvaRegistro();
+					return;
+				}
 				Controllore->ServerTornaAllaScelta();
 			}
 		}));

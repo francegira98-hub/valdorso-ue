@@ -20,6 +20,7 @@
 
 class USkeletalMeshComponent;
 class UAnimInstance;
+class USceneCaptureComponent2D;
 
 UCLASS(ClassGroup = (Valdorso), meta = (BlueprintSpawnableComponent))
 class VALDORSO_API UValdorsoAspettoComponent : public UActorComponent
@@ -29,12 +30,15 @@ class VALDORSO_API UValdorsoAspettoComponent : public UActorComponent
 public:
 	UValdorsoAspettoComponent();
 
-	/** Le teste base da uomo (Blueprint MetaHuman montati), nell'ordine delle scelte della voce "Testa". */
-	UPROPERTY(EditDefaultsOnly, Category = "Aspetto")
+	/**
+	 * Le teste base da uomo (Blueprint MetaHuman montati), nell'ordine delle scelte della voce "Testa".
+	 * Le liste si cambiano solo qui nel C++ (costruttore): le leggono anche il Registro e il palco.
+	 */
+	UPROPERTY(VisibleDefaultsOnly, Category = "Aspetto")
 	TArray<TSoftClassPtr<AActor>> TesteUomo;
 
 	/** Le teste base da donna. */
-	UPROPERTY(EditDefaultsOnly, Category = "Aspetto")
+	UPROPERTY(VisibleDefaultsOnly, Category = "Aspetto")
 	TArray<TSoftClassPtr<AActor>> TesteDonna;
 
 	/** La testa di riserva, se quella scelta non c'è su questo PC. */
@@ -44,6 +48,13 @@ public:
 	/** L'animazione del corpo MetaHuman che copia la posa del manichino (Copy Pose From Mesh, Use Attached Parent). */
 	UPROPERTY(EditDefaultsOnly, Category = "Aspetto")
 	TSoftClassPtr<UAnimInstance> AnimazioneCorpo;
+
+	/**
+	 * L'animazione del volto con il nodo Volto Valdorso (i cursori). Le teste montate dal Creator nuovo usano quella del
+	 * plugin MetaHuman, senza il nostro nodo: si mette questa al suo posto.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Aspetto")
+	TSoftClassPtr<UAnimInstance> AnimazioneVolto;
 
 	/** Spento = resta il manichino grigio (utile per le prove). */
 	UPROPERTY(EditDefaultsOnly, Category = "Aspetto")
@@ -57,8 +68,17 @@ public:
 	/** Solo per le prove, su questo PC: cambia un cursore del volto (-1..1) senza toccare l'aspetto vero. */
 	void ProvaCursore(FName Id, float Valore);
 
-	/** Solo per le prove, su questo PC: mette un'altra testa (numero della scelta, da uomo o da donna). */
+	/** Solo per le prove, su questo PC: mette un'altra testa (numero della scelta, da uomo o da donna; -1 = quella vera). */
 	void ProvaTesta(int32 Numero, bool bDiDonna);
+
+	/**
+	 * (28/10) Per il palco del Registro: il MetaHuman si attacca a questo manichino (invece della Mesh del personaggio)
+	 * e lo vede solo questa telecamera (il ritratto).
+	 */
+	void UsaSupporto(USkeletalMeshComponent* Manichino, USceneCaptureComponent2D* Ritratto);
+
+	/** Quante teste base ci sono per un uomo o per una donna (dalle impostazioni di serie del componente). */
+	static int32 TesteDisponibili(bool bPerDonna);
 
 	/** Il volto MetaHuman (nullptr se non c'è). */
 	USkeletalMeshComponent* GetVolto() const { return Volto.Get(); }
@@ -91,6 +111,9 @@ private:
 	/** Toglie il corpo MetaHuman (il manichino torna visibile). */
 	void TogliCorpo();
 
+	/** Il manichino su cui va il MetaHuman (quello del palco, o la Mesh del personaggio). */
+	USkeletalMeshComponent* GetManichino() const;
+
 	/** Scrive i cursori del volto nell'animazione del volto. */
 	void ApplicaVolto();
 
@@ -103,6 +126,9 @@ private:
 	TWeakObjectPtr<USkeletalMeshComponent> Volto;
 
 	bool bIniziato = false;
+
+	TWeakObjectPtr<USkeletalMeshComponent> Supporto;
+	TWeakObjectPtr<USceneCaptureComponent2D> SoloRitratto;
 
 	/** I cursori cambiati con ProvaCursore (vincono sull'aspetto). */
 	TMap<FName, float> CursoriProva;

@@ -36,6 +36,7 @@ class SValdorsoFirma;
 
 DECLARE_DELEGATE_TwoParams(FValdorsoSuSalvaRegistro, const FValdorsoRegistro& /*Risposte*/, bool /*bFirma*/);
 DECLARE_DELEGATE_OneParam(FValdorsoSuCambioRisposte, const FValdorsoRegistro& /*Risposte*/);
+DECLARE_DELEGATE_OneParam(FValdorsoSuPrimoPiano, bool /*bSulVolto*/);
 
 class VALDORSO_API SValdorsoRegistroColono : public SCompoundWidget
 {
@@ -52,6 +53,8 @@ public:
 		SLATE_EVENT(FValdorsoSuCambioRisposte, OnCambia)
 		/** Bozza (bFirma falso) o firma: la risposta del server arriva con Esito. */
 		SLATE_EVENT(FValdorsoSuSalvaRegistro, OnSalva)
+		/** (28/10) Si entra o si esce dalla pagina del volto: il palco va in primo piano sulla faccia. */
+		SLATE_EVENT(FValdorsoSuPrimoPiano, OnPrimoPiano)
 		/** Firmato e finita la dissolvenza: il personaggio può entrare. */
 		SLATE_EVENT(FSimpleDelegate, OnFirmato)
 		/** "Torna ai personaggi" (la bozza è già partita). */
@@ -82,7 +85,7 @@ public:
 	/** Le pagine, nell'ordine. */
 	enum class EPagina : uint8
 	{
-		ChiSei, Fede, Origine, Mestiere, Motivo, Ricordo, Paura, Carattere, Richiamo, Racconto, Storia, Firma, Numero
+		ChiSei, Volto, Fede, Origine, Mestiere, Motivo, Ricordo, Paura, Carattere, Richiamo, Racconto, Storia, Firma, Numero
 	};
 
 private:
@@ -108,6 +111,8 @@ private:
 	TSharedRef<SWidget> ContenutoPagina();
 	TSharedRef<SWidget> Scelte(ValdorsoRegistro::EDomanda Quale, bool bCompatte);
 	TSharedRef<SWidget> PaginaChiSei();
+	/** (28/10, passo 4.4) Il volto: la testa base e i cursori, il colono sul palco cambia mentre li muovi. */
+	TSharedRef<SWidget> PaginaVolto();
 	TSharedRef<SWidget> PaginaCarattere();
 	TSharedRef<SWidget> PaginaTesto(bool bRacconto);
 	TSharedRef<SWidget> PaginaFirma();
@@ -154,6 +159,7 @@ private:
 
 	FValdorsoSuSalvaRegistro OnSalva;
 	FValdorsoSuCambioRisposte OnCambia;
+	FValdorsoSuPrimoPiano OnPrimoPiano;
 	FSimpleDelegate OnFirmato;
 	FSimpleDelegate OnTorna;
 

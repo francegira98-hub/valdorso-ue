@@ -25,6 +25,7 @@ class UAnimSequence;
 class USceneCaptureComponent2D;
 class UPointLightComponent;
 class UTextureRenderTarget2D;
+class UValdorsoAspettoComponent;
 
 UCLASS(NotPlaceable)
 class VALDORSO_API AValdorsoPalcoRegistro : public AActor
@@ -42,6 +43,9 @@ public:
 
 	/** (05/10) Un personaggio diverso sul palco (scelta del personaggio, apertura del Registro): si gira verso di te. */
 	void Presenta(const FValdorsoRegistro& Risposte);
+
+	/** (28/10) Primo piano sul volto (pagina del volto del Registro) o di nuovo il colono intero. */
+	void PrimoPiano(bool bSulVolto);
 
 	/** Il registro è firmato: il frammento batte più forte e le rune si accendono. */
 	void Firmato();
@@ -66,6 +70,10 @@ public:
 	/** Dietro il colono, del colore della sua fede. */
 	UPROPERTY(VisibleAnywhere, Category = "Valdorso|Palco")
 	TObjectPtr<UPointLightComponent> LuceFede;
+
+	/** (28/10) Il colono vero: il MetaHuman con la testa e i cursori del Registro, sopra il manichino nascosto. */
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso|Palco")
+	TObjectPtr<UValdorsoAspettoComponent> Aspetto;
 
 	/** Debole e fredda, perché le ombre non siano nere del tutto. */
 	UPROPERTY(VisibleAnywhere, Category = "Valdorso|Palco")
@@ -97,4 +105,7 @@ private:
 	float Tempo = 0.f;
 	/** Gradi che mancano perché il colono guardi la telecamera (si gira piano fino a 0). */
 	float GiroDaFare = 0.f;
+	/** 0 = colono intero, 1 = primo piano sul volto (si passa piano dall'uno all'altro). */
+	float Vicino = 0.f;
+	float VicinoVoluto = 0.f;
 };

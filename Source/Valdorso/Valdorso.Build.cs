@@ -30,6 +30,9 @@ public class Valdorso : ModuleRules
 
         // Archivista degli account (v0.1.2): file JSON e OpenSSL per le impronte delle password.
         PrivateDependencyModuleNames.AddRange(new string[] { "Json", "JsonUtilities", "NetCore", "ApplicationCore" });
+
+        // (28/10) I capelli dei MetaHuman (GroomComponent), per il ritratto del Registro.
+        PrivateDependencyModuleNames.Add("HairStrandsCore");
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
         PublicIncludePaths.AddRange(new string[] {

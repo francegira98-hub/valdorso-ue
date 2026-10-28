@@ -100,6 +100,12 @@ namespace ValdorsoAspetto
 	 */
 	VALDORSO_API void Adatta(FValdorsoAspetto& Aspetto, const FString& Sesso);
 
+	/**
+	 * (28/10) L'aspetto come si vede: quello scelto, oppure (se non è ancora scelto) quello "dei dadi", sempre uguale
+	 * per lo stesso seme (l'Id del personaggio). Così ogni colono ha un volto suo anche prima della pagina Aspetto.
+	 */
+	VALDORSO_API FValdorsoAspetto Visibile(const FValdorsoAspetto& Aspetto, const FString& Sesso, const FString& Seme);
+
 	/** Vero se i due aspetti sono uguali (non scelto conta come quello di partenza). */
 	VALDORSO_API bool Uguali(const FValdorsoAspetto& A, const FValdorsoAspetto& B);
 }

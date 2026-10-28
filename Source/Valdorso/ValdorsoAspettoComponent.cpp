@@ -4,6 +4,8 @@
 #include "Valdorso.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "GroomComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
@@ -30,6 +32,7 @@ UValdorsoAspettoComponent::UValdorsoAspettoComponent()
 	TesteUomo.Add(ClasseMetaHuman);
 	TesteUomo.Add(Testa(TEXT("/Game/Unpacked/MH_Walter/BP_MH_Walter.BP_MH_Walter_C")));
 	TesteDonna.Add(Testa(TEXT("/Game/Unpacked/MH_Jelena/BP_MH_Jelena.BP_MH_Jelena_C")));
+	AnimazioneVolto = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(TEXT("/Game/MetaHumans/Common/Face/ABP_Face_PostProcess.ABP_Face_PostProcess_C")));
 	AnimazioneCorpo = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(TEXT("/Game/MetaHumans/MH_Prova/ABP_CorpoSegue.ABP_CorpoSegue_C")));
 }
 
@@ -52,6 +55,30 @@ void UValdorsoAspettoComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 	TogliCorpo();
 	bIniziato = false;
 	Super::EndPlay(EndPlayReason);
+}
+
+USkeletalMeshComponent* UValdorsoAspettoComponent::GetManichino() const
+{
+	if (Supporto.IsValid())
+	{
+		return Supporto.Get();
+	}
+	const ACharacter* Personaggio = Cast<ACharacter>(GetOwner());
+	return Personaggio ? Personaggio->GetMesh() : nullptr;
+}
+
+void UValdorsoAspettoComponent::UsaSupporto(USkeletalMeshComponent* Manichino, USceneCaptureComponent2D* Ritratto)
+{
+	TogliCorpo();
+	Supporto = Manichino;
+	SoloRitratto = Ritratto;
+	Aggiorna();
+}
+
+int32 UValdorsoAspettoComponent::TesteDisponibili(bool bPerDonna)
+{
+	const UValdorsoAspettoComponent* Serie = GetDefault<UValdorsoAspettoComponent>();
+	return FMath::Max(1, (bPerDonna ? Serie->TesteDonna : Serie->TesteUomo).Num());
 }
 
 TSoftClassPtr<AActor> UValdorsoAspettoComponent::TestaDaUsare() const
@@ -80,7 +107,9 @@ void UValdorsoAspettoComponent::Aggiorna()
 		return;
 	}
 	const TSoftClassPtr<AActor> Voluta = TestaDaUsare();
-	if (!CorpoMetaHuman || Voluta != TestaAttuale)
+	// Si rifà solo se la testa è cambiata (anche se l'ultima volta non si è potuta caricare: niente nuovi tentativi
+	// a ogni movimento di un cursore).
+	if (Voluta != TestaAttuale || (!CorpoMetaHuman && TestaAttuale.IsNull()))
 	{
 		TogliCorpo();
 		CreaCorpo(Voluta);
@@ -98,14 +127,17 @@ void UValdorsoAspettoComponent::TogliCorpo()
 		{
 			Pezzo->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 		}
+		if (USceneCaptureComponent2D* Ritratto = SoloRitratto.Get())
+		{
+			Ritratto->ShowOnlyActors.Remove(CorpoMetaHuman);
+		}
 		CorpoMetaHuman->Destroy();
 		CorpoMetaHuman = nullptr;
 	}
 	TestaAttuale.Reset();
 	Volto.Reset();
 
-	ACharacter* Personaggio = Cast<ACharacter>(GetOwner());
-	if (USkeletalMeshComponent* Manichino = Personaggio ? Personaggio->GetMesh() : nullptr)
+	if (USkeletalMeshComponent* Manichino = GetManichino())
 	{
 		Manichino->SetVisibility(true, false);
 	}
@@ -113,10 +145,12 @@ void UValdorsoAspettoComponent::TogliCorpo()
 
 void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 {
-	ACharacter* Personaggio = Cast<ACharacter>(GetOwner());
-	USkeletalMeshComponent* Manichino = Personaggio ? Personaggio->GetMesh() : nullptr;
+	// Ricordata anche se non riesce, così non si riprova a ogni aggiornamento.
+	TestaAttuale = Voluta;
+	AActor* Personaggio = GetOwner();
+	USkeletalMeshComponent* Manichino = GetManichino();
 	UWorld* Mondo = GetWorld();
-	if (!Manichino || !Mondo)
+	if (!Personaggio || !Manichino || !Mondo)
 	{
 		return;
 	}
@@ -175,11 +209,58 @@ void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 		return;
 	}
 
+	// Il volto usa sempre la nostra animazione del volto, con il nodo dei cursori.
+	if (USkeletalMeshComponent* Faccia = Volto.Get())
+	{
+		if (UClass* AnimVolto = AnimazioneVolto.LoadSynchronous())
+		{
+			Faccia->SetOverridePostProcessAnimBP(AnimVolto);
+		}
+		else
+		{
+			UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Aspetto: non trovo l'animazione del volto %s (i cursori non si vedranno)."), *AnimazioneVolto.ToString());
+		}
+	}
+
 	// Il corpo si attacca direttamente al manichino: così Copy Pose From Mesh (Use Attached Parent) copia la sua posa.
 	Corpo->AttachToComponent(Manichino, FAttachmentTransformRules::SnapToTargetIncludingScale);
 	Corpo->SetAnimInstanceClass(Animazione);
 	Corpo->AddTickPrerequisiteComponent(Manichino);
-	TestaAttuale = Voluta;
+	// Nel palco del Registro il MetaHuman lo vede solo la telecamera del ritratto.
+	if (USceneCaptureComponent2D* Ritratto = SoloRitratto.Get())
+	{
+		TInlineComponentArray<UPrimitiveComponent*> Forme(CorpoMetaHuman);
+		for (UPrimitiveComponent* Forma : Forme)
+		{
+			// (Non "visibile solo alla telecamera": così i capelli e il volto non comparivano. Il palco è lontano
+			// sopra la mappa: la telecamera del gioco non lo vede comunque.)
+			// Per il primo piano: sempre il dettaglio più alto, e sempre animato (anche se lo vede solo il ritratto).
+			if (USkeletalMeshComponent* Pelle = Cast<USkeletalMeshComponent>(Forma))
+			{
+				Pelle->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+				Pelle->SetForcedLOD(1);
+			}
+			// I capelli nel ritratto: le ciocche a schede (LOD 1), più sicure nella telecamera del palco.
+			if (UGroomComponent* Capelli = Cast<UGroomComponent>(Forma))
+			{
+				Capelli->SetForcedLOD(1);
+			}
+		}
+		// LODSync deciderebbe da solo il dettaglio: lo si ferma al più alto.
+		TArray<UActorComponent*> Altri;
+		CorpoMetaHuman->GetComponents(Altri);
+		for (UActorComponent* Pezzo : Altri)
+		{
+			if (Pezzo && Pezzo->GetClass()->GetName().Contains(TEXT("LODSync")))
+			{
+				if (FIntProperty* Forzato = CastField<FIntProperty>(Pezzo->GetClass()->FindPropertyByName(TEXT("ForcedLOD"))))
+				{
+					Forzato->SetPropertyValue_InContainer(Pezzo, 0);
+				}
+			}
+		}
+		Ritratto->ShowOnlyActors.AddUnique(CorpoMetaHuman);
+	}
 
 	// Il manichino sparisce ma continua ad animarsi (le ossa servono al corpo MetaHuman e alle abilità).
 	Manichino->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
@@ -216,6 +297,12 @@ void UValdorsoAspettoComponent::ProvaCursore(FName Id, float Valore)
 
 void UValdorsoAspettoComponent::ProvaTesta(int32 Numero, bool bDiDonna)
 {
+	if (Numero < 0)
+	{
+		TestaProva.Reset();
+		Aggiorna();
+		return;
+	}
 	const TArray<TSoftClassPtr<AActor>>& Teste = bDiDonna ? TesteDonna : TesteUomo;
 	if (!Teste.IsValidIndex(Numero))
 	{
