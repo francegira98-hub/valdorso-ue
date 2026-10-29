@@ -6,6 +6,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "GroomComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
@@ -18,6 +19,44 @@ namespace
 	{
 		return TSoftClassPtr<AActor>(FSoftObjectPath(Percorso));
 	}
+
+	// (29/10) I colori dei capelli, nell'ordine delle scelte della voce "ColoreCapelli" (12). Sono i parametri del
+	// materiale dei capelli MetaHuman: melanina (0 biondo chiaro, 1 nero), rossore e quanto bianco (i capelli grigi).
+	// La prima scelta lascia il colore che la testa ha già.
+	struct FColoreCapelli
+	{
+		const TCHAR* Nome;
+		float Melanina;
+		float Rossore;
+		float Bianco;
+	};
+	const FColoreCapelli ColoriCapelli[] = {
+		{ TEXT("Come nasce"), 0.f, 0.f, 0.f },
+		{ TEXT("Nero corvino"), 0.95f, 0.10f, 0.f },
+		{ TEXT("Castano scuro"), 0.80f, 0.20f, 0.f },
+		{ TEXT("Castano"), 0.62f, 0.25f, 0.f },
+		{ TEXT("Castano chiaro"), 0.47f, 0.30f, 0.f },
+		{ TEXT("Biondo cenere"), 0.30f, 0.12f, 0.f },
+		{ TEXT("Biondo dorato"), 0.22f, 0.35f, 0.f },
+		{ TEXT("Biondo chiaro"), 0.10f, 0.18f, 0.f },
+		{ TEXT("Rosso fuoco"), 0.28f, 0.90f, 0.f },
+		{ TEXT("Rame scuro"), 0.50f, 0.70f, 0.f },
+		{ TEXT("Brizzolato"), 0.75f, 0.20f, 0.45f },
+		{ TEXT("Bianco"), 0.30f, 0.05f, 0.95f },
+	};
+	constexpr int32 ColoriCapelliNumero = static_cast<int32>(UE_ARRAY_COUNT(ColoriCapelli));
+
+	bool PeloColorabile(const UActorComponent* Pezzo)
+	{
+		const FString Nome = Pezzo->GetName();
+		return Nome.StartsWith(TEXT("Hair")) || Nome.StartsWith(TEXT("Eyebrows")) || Nome.StartsWith(TEXT("Beard"))
+			|| Nome.StartsWith(TEXT("Mustache"));
+	}
+}
+
+FString UValdorsoAspettoComponent::NomeColoreCapelli(int32 Scelta)
+{
+	return ColoriCapelli[FMath::Abs(Scelta) % ColoriCapelliNumero].Nome;
 }
 
 UValdorsoAspettoComponent::UValdorsoAspettoComponent()
@@ -122,8 +161,10 @@ void UValdorsoAspettoComponent::Aggiorna()
 	{
 		TogliCorpo();
 		CreaCorpo(Voluta);
+		ColoreCapelliMesso = INDEX_NONE;
 	}
 	ApplicaVolto();
+	ApplicaColori();
 }
 
 void UValdorsoAspettoComponent::TogliCorpo()
@@ -255,17 +296,14 @@ void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 				Capelli->SetForcedLOD(1);
 			}
 		}
-		// LODSync deciderebbe da solo il dettaglio: lo si ferma al più alto.
+		// LODSync cambierebbe da solo il dettaglio di tutti i pezzi: nel ritratto lo si spegne, valgono i LOD qui sopra.
 		TArray<UActorComponent*> Altri;
 		CorpoMetaHuman->GetComponents(Altri);
 		for (UActorComponent* Pezzo : Altri)
 		{
 			if (Pezzo && Pezzo->GetClass()->GetName().Contains(TEXT("LODSync")))
 			{
-				if (FIntProperty* Forzato = CastField<FIntProperty>(Pezzo->GetClass()->FindPropertyByName(TEXT("ForcedLOD"))))
-				{
-					Forzato->SetPropertyValue_InContainer(Pezzo, 0);
-				}
+				Pezzo->SetComponentTickEnabled(false);
 			}
 		}
 		Ritratto->ShowOnlyActors.AddUnique(CorpoMetaHuman);
@@ -302,6 +340,7 @@ void UValdorsoAspettoComponent::ProvaCursore(FName Id, float Valore)
 {
 	CursoriProva.Add(Id, FMath::Clamp(Valore, -1.f, 1.f));
 	ApplicaVolto();
+	ApplicaColori();
 }
 
 void UValdorsoAspettoComponent::ProvaTesta(int32 Numero, bool bDiDonna)
@@ -351,5 +390,63 @@ void UValdorsoAspettoComponent::ApplicaVolto()
 		{
 			Singolo->SetPropertyValue_InContainer(Animazione, Valore);
 		}
+	}
+}
+
+void UValdorsoAspettoComponent::ApplicaColori()
+{
+	if (!CorpoMetaHuman)
+	{
+		return;
+	}
+
+	// La carnagione: più scura o più chiara della pelle della testa (la luminosità della pelle "cotta" dal Creator).
+	// Va sul volto e sul corpo insieme, così il collo non si vede.
+	const float* ProvaPelle = CursoriProva.Find(TEXT("Carnagione"));
+	const float Pelle = ProvaPelle ? *ProvaPelle : ValdorsoAspetto::Cursore(Aspetto, TEXT("Carnagione"));
+	const float Luce = Pelle < 0.f ? 1.f + 0.55f * Pelle : 1.f + 0.30f * Pelle;
+	const float Colore = Pelle < 0.f ? -0.12f * Pelle : 0.f;
+	TInlineComponentArray<USkeletalMeshComponent*> Pezzi(CorpoMetaHuman);
+	for (USkeletalMeshComponent* Pezzo : Pezzi)
+	{
+		if (Pezzo->GetFName() == TEXT("Face") || Pezzo->GetFName() == TEXT("Body"))
+		{
+			Pezzo->SetScalarParameterValueOnMaterials(TEXT("Basecolor Global Value Post-Bake"), Luce);
+			Pezzo->SetScalarParameterValueOnMaterials(TEXT("Basecolor Global Saturation Post-Bake"), Colore);
+		}
+	}
+
+	// Il colore dei capelli (anche sopracciglia, barba e baffi): si cambia solo quando cambia la scelta.
+	const int32 Scelta = ValdorsoAspetto::Valore(Aspetto, TEXT("ColoreCapelli")) % ColoriCapelliNumero;
+	if (Scelta == ColoreCapelliMesso)
+	{
+		return;
+	}
+	ColoreCapelliMesso = Scelta;
+	const FColoreCapelli& Tinta = ColoriCapelli[Scelta];
+	TInlineComponentArray<UGroomComponent*> Peli(CorpoMetaHuman);
+	for (UGroomComponent* Pelo : Peli)
+	{
+		if (!PeloColorabile(Pelo))
+		{
+			continue;
+		}
+		if (Scelta == 0)
+		{
+			// Come nasce: si tolgono i colori messi prima (torna quello del materiale della testa).
+			for (int32 i = 0; i < Pelo->GetNumMaterials(); ++i)
+			{
+				if (UMaterialInstanceDynamic* Dinamico = Cast<UMaterialInstanceDynamic>(Pelo->GetMaterial(i)))
+				{
+					Dinamico->ClearParameterValues();
+				}
+			}
+			continue;
+		}
+		Pelo->SetScalarParameterValueOnMaterials(TEXT("hairMelanin"), Tinta.Melanina);
+		Pelo->SetScalarParameterValueOnMaterials(TEXT("hairRedness"), Tinta.Rossore);
+		Pelo->SetScalarParameterValueOnMaterials(TEXT("WhiteAmount"), Tinta.Bianco);
+		// Niente tinta artificiale (qualche testa del Creator ha i capelli tinti).
+		Pelo->SetVectorParameterValueOnMaterials(TEXT("hairDye"), FVector(1.f, 1.f, 1.f));
 	}
 }

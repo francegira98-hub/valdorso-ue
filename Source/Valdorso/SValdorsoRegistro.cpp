@@ -1186,13 +1186,9 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 		];
 
 	// Un cursore per ogni tratto del volto nel catalogo (naso, mento, zigomi...): da 0 a 255, 128 nel mezzo.
-	for (const FValdorsoVoceAspetto& Voce : ValdorsoAspetto::Voci())
+	// (29/10) La riga di un cursore: nome, -, il cursore, +. Serve anche per la carnagione.
+	auto AggiungiCursore = [this, &Righe, Attivo](const TCHAR* Id, const TCHAR* Nome)
 	{
-		if (Voce.Gruppo != EValdorsoGruppoAspetto::Volto || !Voce.bCursore)
-		{
-			continue;
-		}
-		const TCHAR* Id = Voce.Id;
 		auto Sposta = [this, Id](int32 Di)
 		{
 			const int32 Nuovo = FMath::Clamp(static_cast<int32>(ValdorsoAspetto::Valore(Bozza.Aspetto, Id)) + Di, 0, 255);
@@ -1207,7 +1203,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 				SNew(SBox).WidthOverride(190.f)
 				[
 					SNew(STextBlock)
-					.Text(FText::FromString(Voce.Nome))
+					.Text(FText::FromString(Nome))
 					.Font(Stile->Caratteri->Testo(18.f))
 					.ColorAndOpacity(ValdorsoTema::Inchiostro())
 				]
@@ -1238,6 +1234,13 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 				Stile->Pulsante(FText::FromString(TEXT("+")), FSimpleDelegate::CreateLambda([Sposta]() { Sposta(16); }), 14.f, Attivo)
 			]
 		];
+	};
+	for (const FValdorsoVoceAspetto& Voce : ValdorsoAspetto::Voci())
+	{
+		if (Voce.Gruppo == EValdorsoGruppoAspetto::Volto && Voce.bCursore)
+		{
+			AggiungiCursore(Voce.Id, Voce.Nome);
+		}
 	}
 
 	// Tutti i tratti nel mezzo (la testa resta).
@@ -1255,6 +1258,56 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 			OnCambia.ExecuteIfBound(Bozza);
 		}), 16.f, Attivo)
 	];
+	// (29/10) La pelle e il colore dei capelli (anche sopracciglia e barba).
+	Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 18.f, 0.f, 6.f))
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("PelleCapelli", "La pelle e i capelli"))
+		.Font(Stile->Caratteri->Testo(22.f, TEXT("SemiBold")))
+		.ColorAndOpacity(ValdorsoTema::Inchiostro())
+	];
+	AggiungiCursore(TEXT("Carnagione"), TEXT("Carnagione"));
+	{
+		const int32 Colori = FMath::Max(1, ValdorsoAspetto::Possibili(ValdorsoAspetto::Voci()[ValdorsoAspetto::Indice(TEXT("ColoreCapelli"))], Bozza.Sesso));
+		auto CambiaColore = [this, Colori](int32 Di)
+		{
+			const int32 Ora = ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("ColoreCapelli")) % Colori;
+			ValdorsoAspetto::Imposta(Bozza.Aspetto, TEXT("ColoreCapelli"), static_cast<uint8>((Ora + Di + Colori) % Colori));
+			OnCambia.ExecuteIfBound(Bozza);
+		};
+		Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 6.f))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SBox).WidthOverride(190.f)
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("ColoreCapelli", "Colore dei capelli"))
+					.Font(Stile->Caratteri->Testo(18.f))
+					.ColorAndOpacity(ValdorsoTema::Inchiostro())
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Stile->Pulsante(FText::FromString(TEXT("<")), FSimpleDelegate::CreateLambda([CambiaColore]() { CambiaColore(-1); }), 14.f, Attivo)
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]()
+				{
+					return FText::FromString(UValdorsoAspettoComponent::NomeColoreCapelli(ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("ColoreCapelli"))));
+				})
+				.Font(Stile->Caratteri->Titolo(20.f, TEXT("Bold")))
+				.ColorAndOpacity(ValdorsoTema::Rubrica())
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Stile->Pulsante(FText::FromString(TEXT(">")), FSimpleDelegate::CreateLambda([CambiaColore]() { CambiaColore(1); }), 14.f, Attivo)
+			]
+		];
+	}
 	Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 10.f, 0.f, 0.f))
 	[
 		SNew(STextBlock)

@@ -80,6 +80,9 @@ public:
 	/** Quante teste base ci sono per un uomo o per una donna (dalle impostazioni di serie del componente). */
 	static int32 TesteDisponibili(bool bPerDonna);
 
+	/** (29/10) Il nome di un colore dei capelli (la scelta della voce "ColoreCapelli"), per il Registro. */
+	static FString NomeColoreCapelli(int32 Scelta);
+
 	/** Il volto MetaHuman (nullptr se non c'è). */
 	USkeletalMeshComponent* GetVolto() const { return Volto.Get(); }
 
@@ -116,6 +119,12 @@ private:
 
 	/** Scrive i cursori del volto nell'animazione del volto. */
 	void ApplicaVolto();
+
+	/** (29/10) La carnagione (pelle di volto e corpo) e il colore di capelli, sopracciglia e barba. */
+	void ApplicaColori();
+
+	/** Il colore dei capelli già messo sul corpo di adesso (INDEX_NONE = ancora nessuno). */
+	int32 ColoreCapelliMesso = INDEX_NONE;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> CorpoMetaHuman;
