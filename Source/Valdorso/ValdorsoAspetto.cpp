@@ -30,7 +30,7 @@ namespace ValdorsoAspetto
 			// Capelli e barba (la barba solo per gli uomini: per le donne c'è solo "nessuna").
 			{ TEXT("Acconciatura"), TEXT("Capelli"), G::Capelli, false, 12, 12, 0 },
 			{ TEXT("ColoreCapelli"), TEXT("Colore dei capelli"), G::Capelli, false, 12, 12, 0 },
-			{ TEXT("Barba"), TEXT("Barba e baffi"), G::Capelli, false, 8, 1, 0 },
+			{ TEXT("Barba"), TEXT("Barba e baffi"), G::Capelli, false, 9, 1, 0 },
 			// Il corpo.
 			{ TEXT("Corporatura"), TEXT("Corporatura"), G::Corpo, true, 0, 0, Mezzo },
 			{ TEXT("Muscoli"), TEXT("Muscoli"), G::Corpo, true, 0, 0, Mezzo },

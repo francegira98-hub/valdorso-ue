@@ -37,6 +37,8 @@ class SValdorsoFirma;
 DECLARE_DELEGATE_TwoParams(FValdorsoSuSalvaRegistro, const FValdorsoRegistro& /*Risposte*/, bool /*bFirma*/);
 DECLARE_DELEGATE_OneParam(FValdorsoSuCambioRisposte, const FValdorsoRegistro& /*Risposte*/);
 DECLARE_DELEGATE_OneParam(FValdorsoSuPrimoPiano, bool /*bSulVolto*/);
+/** (29/10) Il giocatore trascina il ritratto: il colono si gira di tanti gradi (0 col doppio clic = di fronte). */
+DECLARE_DELEGATE_TwoParams(FValdorsoSuGira, float /*Gradi*/, bool /*bDiFronte*/);
 
 class VALDORSO_API SValdorsoRegistroColono : public SCompoundWidget
 {
@@ -55,6 +57,7 @@ public:
 		SLATE_EVENT(FValdorsoSuSalvaRegistro, OnSalva)
 		/** (28/10) Si entra o si esce dalla pagina del volto: il palco va in primo piano sulla faccia. */
 		SLATE_EVENT(FValdorsoSuPrimoPiano, OnPrimoPiano)
+		SLATE_EVENT(FValdorsoSuGira, OnGira)
 		/** Firmato e finita la dissolvenza: il personaggio può entrare. */
 		SLATE_EVENT(FSimpleDelegate, OnFirmato)
 		/** "Torna ai personaggi" (la bozza è già partita). */
@@ -160,6 +163,7 @@ private:
 	FValdorsoSuSalvaRegistro OnSalva;
 	FValdorsoSuCambioRisposte OnCambia;
 	FValdorsoSuPrimoPiano OnPrimoPiano;
+	FValdorsoSuGira OnGira;
 	FSimpleDelegate OnFirmato;
 	FSimpleDelegate OnTorna;
 

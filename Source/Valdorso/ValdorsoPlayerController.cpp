@@ -1044,6 +1044,14 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 				Controllore->Palco->PrimoPiano(bSulVolto);
 			}
 		}))
+		.OnGira(FValdorsoSuGira::CreateLambda([Debole](float Gradi, bool bDiFronte)
+		{
+			AValdorsoPlayerController* Controllore = Debole.Get();
+			if (Controllore && Controllore->Palco.IsValid())
+			{
+				Controllore->Palco->Gira(Gradi, bDiFronte);
+			}
+		}))
 		.OnSalva(FValdorsoSuSalvaRegistro::CreateLambda([Debole](const FValdorsoRegistro& Proposto, bool bFirma)
 		{
 			if (AValdorsoPlayerController* Controllore = Debole.Get())

@@ -21,6 +21,9 @@
 class USkeletalMeshComponent;
 class UAnimInstance;
 class USceneCaptureComponent2D;
+class UGroomAsset;
+class UGroomBindingAsset;
+class UMaterialInterface;
 
 UCLASS(ClassGroup = (Valdorso), meta = (BlueprintSpawnableComponent))
 class VALDORSO_API UValdorsoAspettoComponent : public UActorComponent
@@ -80,8 +83,11 @@ public:
 	/** Quante teste base ci sono per un uomo o per una donna (dalle impostazioni di serie del componente). */
 	static int32 TesteDisponibili(bool bPerDonna);
 
-	/** (29/10) Il nome di un colore dei capelli (la scelta della voce "ColoreCapelli"), per il Registro. */
-	static FString NomeColoreCapelli(int32 Scelta);
+	/**
+	 * (29/10) Il nome di una scelta per il Registro: voci "ColoreCapelli", "Acconciatura", "Barba", "Sopracciglia"
+	 * (le altre: il numero).
+	 */
+	static FString NomeScelta(const TCHAR* Voce, int32 Scelta, bool bDonna);
 
 	/** Il volto MetaHuman (nullptr se non c'è). */
 	USkeletalMeshComponent* GetVolto() const { return Volto.Get(); }
@@ -125,6 +131,27 @@ private:
 
 	/** Il colore dei capelli già messo sul corpo di adesso (INDEX_NONE = ancora nessuno). */
 	int32 ColoreCapelliMesso = INDEX_NONE;
+
+	/** (29/10) Capelli, barba e sopracciglia scelti (i peli della libreria MetaHuman, con i legami fatti dallo script). */
+	void ApplicaPeli();
+
+	/** Mette un pelo su un componente del MetaHuman (Hair, Beard, Mustache, Eyebrows): nullptr = quello della testa, "" = niente. */
+	void MettiPelo(FName Componente, const TCHAR* Pelo);
+
+	/** Il nome della testa di adesso (Lorenzo, Grace...): le cartelle dei legami. */
+	FString NomeTesta;
+
+	/** I peli che la testa ha di suo, per tornare a "Come nasce". */
+	struct FPeloOriginale
+	{
+		TSoftObjectPtr<UGroomAsset> Groom;
+		TSoftObjectPtr<UGroomBindingAsset> Legame;
+		TArray<TSoftObjectPtr<UMaterialInterface>> Materiali;
+	};
+	TMap<FName, FPeloOriginale> PeliOriginali;
+
+	/** La scelta già messa per ogni voce dei peli (Acconciatura, Barba, Sopracciglia). */
+	TMap<FString, int32> PeliMessi;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> CorpoMetaHuman;

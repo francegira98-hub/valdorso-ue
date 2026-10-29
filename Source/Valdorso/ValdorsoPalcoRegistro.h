@@ -47,6 +47,9 @@ public:
 	/** (28/10) Primo piano sul volto (pagina del volto del Registro) o di nuovo il colono intero. */
 	void PrimoPiano(bool bSulVolto);
 
+	/** (29/10) Il giocatore gira il colono trascinando il ritratto (gradi in più; bDiFronte = torna di fronte). */
+	void Gira(float Gradi, bool bDiFronte);
+
 	/** Il registro è firmato: il frammento batte più forte e le rune si accendono. */
 	void Firmato();
 
@@ -105,6 +108,9 @@ private:
 	float Tempo = 0.f;
 	/** Gradi che mancano perché il colono guardi la telecamera (si gira piano fino a 0). */
 	float GiroDaFare = 0.f;
+
+	/** Quanto il giocatore ha girato il colono (gradi). */
+	float GiroGiocatore = 0.f;
 	/** 0 = colono intero, 1 = primo piano sul volto (si passa piano dall'uno all'altro). */
 	float Vicino = 0.f;
 	float VicinoVoluto = 0.f;

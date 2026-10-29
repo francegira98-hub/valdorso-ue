@@ -275,6 +275,11 @@ void AValdorsoPalcoRegistro::PrimoPiano(bool bSulVolto)
 	VicinoVoluto = bSulVolto ? 1.f : 0.f;
 }
 
+void AValdorsoPalcoRegistro::Gira(float Gradi, bool bDiFronte)
+{
+	GiroGiocatore = bDiFronte ? 0.f : FMath::UnwindDegrees(GiroGiocatore + Gradi);
+}
+
 void AValdorsoPalcoRegistro::Firmato()
 {
 	for (AActor* Pezzo : Scena)
@@ -313,7 +318,7 @@ void AValdorsoPalcoRegistro::Tick(float DeltaSeconds)
 
 	// Il colono si volta verso la telecamera.
 	GiroDaFare = FMath::FInterpTo(GiroDaFare, 0.f, DeltaSeconds, 4.f);
-	Colono->SetRelativeRotation(FRotator(0.f, -90.f + GiroDaFare, 0.f));
+	Colono->SetRelativeRotation(FRotator(0.f, -90.f + GiroDaFare + GiroGiocatore, 0.f));
 
 	// La luce della fede cambia colore piano; la luce calda tremola come un fuoco, la luce della fede batte col Cuore.
 	ColoreFede = FMath::Lerp(ColoreFede, ColoreFedeVoluto, FMath::Clamp(DeltaSeconds * 2.5f, 0.f, 1.f));

@@ -6,6 +6,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "GroomComponent.h"
+#include "GroomAsset.h"
+#include "GroomBindingAsset.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -54,9 +56,119 @@ namespace
 	}
 }
 
-FString UValdorsoAspettoComponent::NomeColoreCapelli(int32 Scelta)
+namespace
 {
-	return ColoriCapelli[FMath::Abs(Scelta) % ColoriCapelliNumero].Nome;
+	// (29/10) I peli della libreria MetaHuman che si possono scegliere. Il nome del pelo è anche il nome del legame
+	// (binding) fatto da crea_legami_peli.py in /Game/Peli/<Testa>/<Pelo>: le liste sono le stesse dello
+	// script, se cambiano vanno cambiate insieme. La prima scelta (pelo nullptr) lascia quello che la testa ha già;
+	// un pelo vuoto ("") vuol dire "niente".
+	struct FPeloScelta
+	{
+		const TCHAR* Nome;
+		const TCHAR* Pelo;
+		const TCHAR* Secondo;	// solo per la barba: i baffi che vanno con lei
+	};
+	const FPeloScelta CapelliUomo[] = {
+		{ TEXT("Come nasce"), nullptr, nullptr },
+		{ TEXT("Rasati corti"), TEXT("Hair_S_BuzzCut"), nullptr },
+		{ TEXT("A spazzola"), TEXT("Hair_S_BrushCut"), nullptr },
+		{ TEXT("Corti"), TEXT("Hair_S_Casual"), nullptr },
+		{ TEXT("Spettinati"), TEXT("Hair_S_Messy"), nullptr },
+		{ TEXT("All'indietro"), TEXT("Hair_S_SlickBack"), nullptr },
+		{ TEXT("Raccolti indietro"), TEXT("Hair_S_PulledBack"), nullptr },
+		{ TEXT("Ciuffo di lato"), TEXT("Hair_S_SideSweptFringe"), nullptr },
+		{ TEXT("Scalati"), TEXT("Hair_M_Layered"), nullptr },
+		{ TEXT("Lunghi arruffati"), TEXT("Hair_L_MessyClumps"), nullptr },
+		{ TEXT("Stempiato"), TEXT("Hair_S_RecedeMessy"), nullptr },
+		{ TEXT("Quasi calvo"), TEXT("Hair_S_BaldingStubble"), nullptr },
+	};
+	const FPeloScelta CapelliDonna[] = {
+		{ TEXT("Come nasce"), nullptr, nullptr },
+		{ TEXT("Lunghi lisci"), TEXT("Hair_L_Straight"), nullptr },
+		{ TEXT("Lunghi con frangia"), TEXT("Hair_L_StraightBangs"), nullptr },
+		{ TEXT("Coda bassa"), TEXT("Hair_S_LowPonytail"), nullptr },
+		{ TEXT("Trecce raccolte"), TEXT("Hair_S_UpdoBraids"), nullptr },
+		{ TEXT("Raccolti"), TEXT("Hair_S_Updo"), nullptr },
+		{ TEXT("Crocchie"), TEXT("Hair_S_UpdoBuns"), nullptr },
+		{ TEXT("Treccine"), TEXT("Hair_M_TwistedBraids"), nullptr },
+		{ TEXT("Caschetto spettinato"), TEXT("Hair_M_BobMessy"), nullptr },
+		{ TEXT("Caschetto"), TEXT("Hair_S_BobLayered"), nullptr },
+		{ TEXT("Lunghi arruffati"), TEXT("Hair_L_MessyClumps"), nullptr },
+		{ TEXT("Scalati"), TEXT("Hair_M_Layered"), nullptr },
+	};
+	const FPeloScelta Barbe[] = {
+		{ TEXT("Come nasce"), nullptr, nullptr },
+		{ TEXT("Rasato"), TEXT(""), TEXT("") },
+		{ TEXT("Barba incolta"), TEXT("Beard_S_Stubble"), TEXT("Mustache_S_Stubble") },
+		{ TEXT("Barba corta"), TEXT("Beard_S_Full"), TEXT("Mustache_S_Full") },
+		{ TEXT("Barba lunga"), TEXT("Beard_L_Full"), TEXT("Mustache_L_Full") },
+		{ TEXT("Barba arruffata"), TEXT("Beard_L_Messy"), TEXT("Mustache_L_Messy") },
+		{ TEXT("Pizzetto"), TEXT("Goatee_M_Pointed"), TEXT("Mustache_S_Full") },
+		{ TEXT("Baffoni"), TEXT(""), TEXT("Mustache_L_Handlebar") },
+		{ TEXT("Basettoni"), TEXT("Beard_M_MuttonChops"), TEXT("Mustache_M_Gunslinger") },
+	};
+	const FPeloScelta SopraccigliaUomo[] = {
+		{ TEXT("Come nasce"), nullptr, nullptr },
+		{ TEXT("Naturali"), TEXT("Eyebrows_M_Natural"), nullptr },
+		{ TEXT("Folte"), TEXT("Eyebrows_M_Thick"), nullptr },
+		{ TEXT("Sottili"), TEXT("Eyebrows_M_Thin"), nullptr },
+		{ TEXT("Ribelli"), TEXT("Eyebrows_M_Unruly"), nullptr },
+		{ TEXT("Piene"), TEXT("Eyebrows_M_Full"), nullptr },
+	};
+	const FPeloScelta SopraccigliaDonna[] = {
+		{ TEXT("Come nasce"), nullptr, nullptr },
+		{ TEXT("Naturali"), TEXT("Eyebrows_M_Natural"), nullptr },
+		{ TEXT("Sottili"), TEXT("Eyebrows_M_Thin"), nullptr },
+		{ TEXT("Arcuate"), TEXT("Eyebrows_M_SlightArch"), nullptr },
+		{ TEXT("Fini"), TEXT("Eyebrows_M_Fine"), nullptr },
+		{ TEXT("All'insù"), TEXT("Eyebrows_M_Swept"), nullptr },
+	};
+
+	TArrayView<const FPeloScelta> SceltePeli(const TCHAR* Voce, bool bDonna)
+	{
+		if (FCString::Strcmp(Voce, TEXT("Acconciatura")) == 0)
+		{
+			return bDonna ? MakeArrayView(CapelliDonna) : MakeArrayView(CapelliUomo);
+		}
+		if (FCString::Strcmp(Voce, TEXT("Barba")) == 0)
+		{
+			return bDonna ? MakeArrayView(Barbe, 1) : MakeArrayView(Barbe);
+		}
+		if (FCString::Strcmp(Voce, TEXT("Sopracciglia")) == 0)
+		{
+			return bDonna ? MakeArrayView(SopraccigliaDonna) : MakeArrayView(SopraccigliaUomo);
+		}
+		return TArrayView<const FPeloScelta>();
+	}
+
+	/** Il percorso di un pelo nella libreria MetaHuman (la cartella dal nome: Hair_, Beard_, Goatee_, Mustache_, Eyebrows_). */
+	FString PercorsoPelo(const FString& Pelo)
+	{
+		FString Cartella = TEXT("Hair");
+		if (Pelo.StartsWith(TEXT("Beard")) || Pelo.StartsWith(TEXT("Goatee")))
+		{
+			Cartella = TEXT("Beards");
+		}
+		else if (Pelo.StartsWith(TEXT("Mustache")))
+		{
+			Cartella = TEXT("Mustaches");
+		}
+		else if (Pelo.StartsWith(TEXT("Eyebrows")))
+		{
+			Cartella = TEXT("Eyebrows");
+		}
+		return FString::Printf(TEXT("/MetaHumanCharacter/Optional/Grooms/GroomAssets/%s/%s/%s.%s"), *Cartella, *Pelo, *Pelo, *Pelo);
+	}
+}
+
+FString UValdorsoAspettoComponent::NomeScelta(const TCHAR* Voce, int32 Scelta, bool bDonna)
+{
+	if (FCString::Strcmp(Voce, TEXT("ColoreCapelli")) == 0)
+	{
+		return ColoriCapelli[FMath::Abs(Scelta) % ColoriCapelliNumero].Nome;
+	}
+	const TArrayView<const FPeloScelta> Scelte = SceltePeli(Voce, bDonna);
+	return Scelte.Num() > 0 ? FString(Scelte[FMath::Abs(Scelta) % Scelte.Num()].Nome) : FString::FromInt(Scelta + 1);
 }
 
 UValdorsoAspettoComponent::UValdorsoAspettoComponent()
@@ -164,6 +276,7 @@ void UValdorsoAspettoComponent::Aggiorna()
 		ColoreCapelliMesso = INDEX_NONE;
 	}
 	ApplicaVolto();
+	ApplicaPeli();
 	ApplicaColori();
 }
 
@@ -257,6 +370,25 @@ void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 		CorpoMetaHuman = nullptr;
 		Volto.Reset();
 		return;
+	}
+
+	// (29/10) Il nome della testa (BP_MH_Lorenzo_C -> Lorenzo), per trovare i legami dei peli, e i peli che ha di suo
+	// (per tornare a "Come nasce").
+	NomeTesta = Classe->GetName();
+	NomeTesta.RemoveFromStart(TEXT("BP_MH_"));
+	NomeTesta.RemoveFromEnd(TEXT("_C"));
+	PeliOriginali.Reset();
+	PeliMessi.Reset();
+	TInlineComponentArray<UGroomComponent*> PeliDiSerie(CorpoMetaHuman);
+	for (UGroomComponent* Pelo : PeliDiSerie)
+	{
+		FPeloOriginale& Originale = PeliOriginali.Add(Pelo->GetFName());
+		Originale.Groom = TSoftObjectPtr<UGroomAsset>(Pelo->GroomAsset.Get());
+		Originale.Legame = TSoftObjectPtr<UGroomBindingAsset>(Pelo->BindingAsset.Get());
+		for (const TObjectPtr<UMaterialInterface>& Materiale : Pelo->OverrideMaterials)
+		{
+			Originale.Materiali.Add(TSoftObjectPtr<UMaterialInterface>(Materiale.Get()));
+		}
 	}
 
 	// Il volto usa sempre la nostra animazione del volto, con il nodo dei cursori.
@@ -448,5 +580,110 @@ void UValdorsoAspettoComponent::ApplicaColori()
 		Pelo->SetScalarParameterValueOnMaterials(TEXT("WhiteAmount"), Tinta.Bianco);
 		// Niente tinta artificiale (qualche testa del Creator ha i capelli tinti).
 		Pelo->SetVectorParameterValueOnMaterials(TEXT("hairDye"), FVector(1.f, 1.f, 1.f));
+	}
+}
+
+void UValdorsoAspettoComponent::MettiPelo(FName Componente, const TCHAR* Pelo)
+{
+	if (!CorpoMetaHuman)
+	{
+		return;
+	}
+	UGroomComponent* Bersaglio = nullptr;
+	TInlineComponentArray<UGroomComponent*> Peli(CorpoMetaHuman);
+	for (UGroomComponent* Candidato : Peli)
+	{
+		if (Candidato->GetFName() == Componente)
+		{
+			Bersaglio = Candidato;
+		}
+	}
+	if (!Bersaglio)
+	{
+		return;
+	}
+
+	// Come nasce: il pelo, il legame e i materiali della testa.
+	if (Pelo == nullptr)
+	{
+		if (const FPeloOriginale* Originale = PeliOriginali.Find(Componente))
+		{
+			Bersaglio->EmptyOverrideMaterials();
+			Bersaglio->SetGroomAsset(Originale->Groom.LoadSynchronous(), Originale->Legame.LoadSynchronous());
+			for (int32 i = 0; i < Originale->Materiali.Num(); ++i)
+			{
+				Bersaglio->SetMaterial(i, Originale->Materiali[i].LoadSynchronous());
+			}
+			Bersaglio->SetVisibility(!Originale->Groom.IsNull());
+		}
+		return;
+	}
+	// Niente (rasato, senza baffi).
+	if (*Pelo == 0)
+	{
+		Bersaglio->SetVisibility(false);
+		return;
+	}
+
+	const FString Nome(Pelo);
+	UGroomAsset* Groom = LoadObject<UGroomAsset>(nullptr, *PercorsoPelo(Nome));
+	const FString PercorsoLegame = FString::Printf(TEXT("/Game/Peli/%s/%s.%s"), *NomeTesta, *Nome, *Nome);
+	UGroomBindingAsset* Legame = Groom ? LoadObject<UGroomBindingAsset>(nullptr, *PercorsoLegame) : nullptr;
+	if (!Groom || !Legame)
+	{
+		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Aspetto: manca %s per %s (lancia crea_legami_peli.py)."),
+			Groom ? *PercorsoLegame : *PercorsoPelo(Nome), *NomeTesta);
+		return;
+	}
+	// I materiali della testa erano per il suo pelo: con un pelo nuovo valgono quelli del pelo.
+	Bersaglio->EmptyOverrideMaterials();
+	Bersaglio->SetGroomAsset(Groom, Legame);
+	Bersaglio->SetVisibility(true);
+}
+
+void UValdorsoAspettoComponent::ApplicaPeli()
+{
+	if (!CorpoMetaHuman)
+	{
+		return;
+	}
+	bool bCambiato = false;
+	auto Scelta = [this, &bCambiato](const TCHAR* Voce) -> const FPeloScelta*
+	{
+		const TArrayView<const FPeloScelta> Scelte = SceltePeli(Voce, bDonna);
+		if (Scelte.Num() == 0)
+		{
+			return nullptr;
+		}
+		const int32 Numero = ValdorsoAspetto::Valore(Aspetto, Voce) % Scelte.Num();
+		const int32* Messa = PeliMessi.Find(Voce);
+		// Già messa; oppure il corpo è appena nato e la scelta è "Come nasce" (ha già i suoi peli).
+		if ((Messa && *Messa == Numero) || (!Messa && Numero == 0))
+		{
+			PeliMessi.Add(Voce, Numero);
+			return nullptr;
+		}
+		PeliMessi.Add(Voce, Numero);
+		bCambiato = true;
+		return &Scelte[Numero];
+	};
+
+	if (const FPeloScelta* Capelli = Scelta(TEXT("Acconciatura")))
+	{
+		MettiPelo(TEXT("Hair"), Capelli->Pelo);
+	}
+	if (const FPeloScelta* Barba = Scelta(TEXT("Barba")))
+	{
+		MettiPelo(TEXT("Beard"), Barba->Pelo);
+		MettiPelo(TEXT("Mustache"), Barba->Secondo);
+	}
+	if (const FPeloScelta* Sopracciglia = Scelta(TEXT("Sopracciglia")))
+	{
+		MettiPelo(TEXT("Eyebrows"), Sopracciglia->Pelo);
+	}
+	// Un pelo nuovo ha i suoi materiali: il colore dei capelli va rimesso.
+	if (bCambiato)
+	{
+		ColoreCapelliMesso = INDEX_NONE;
 	}
 }

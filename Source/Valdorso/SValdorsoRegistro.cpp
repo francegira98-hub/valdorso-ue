@@ -125,6 +125,7 @@ void SValdorsoRegistroColono::Construct(const FArguments& InArgs)
 	OnTorna = InArgs._OnTorna;
 	OnCambia = InArgs._OnCambia;
 	OnPrimoPiano = InArgs._OnPrimoPiano;
+	OnGira = InArgs._OnGira;
 	Nome = InArgs._NomePersonaggio;
 
 	// Il ritratto del palco (passo 4.2b): la schermata lo tiene vivo finché si vede.
@@ -1267,15 +1268,22 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 		.ColorAndOpacity(ValdorsoTema::Inchiostro())
 	];
 	AggiungiCursore(TEXT("Carnagione"), TEXT("Carnagione"));
+	// Una scelta con le frecce: capelli, colore, barba, sopracciglia (i nomi li dà il componente dell'aspetto).
+	auto AggiungiScelta = [this, &Righe, Attivo](const TCHAR* Id, const FText& Etichetta)
 	{
-		const int32 Colori = FMath::Max(1, ValdorsoAspetto::Possibili(ValdorsoAspetto::Voci()[ValdorsoAspetto::Indice(TEXT("ColoreCapelli"))], Bozza.Sesso));
-		auto CambiaColore = [this, Colori](int32 Di)
+		const int32 Indice = ValdorsoAspetto::Indice(Id);
+		if (Indice == INDEX_NONE)
 		{
-			const int32 Ora = ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("ColoreCapelli")) % Colori;
-			ValdorsoAspetto::Imposta(Bozza.Aspetto, TEXT("ColoreCapelli"), static_cast<uint8>((Ora + Di + Colori) % Colori));
+			return;
+		}
+		const int32 Scelte = FMath::Max(1, ValdorsoAspetto::Possibili(ValdorsoAspetto::Voci()[Indice], Bozza.Sesso));
+		auto Cambia = [this, Id, Scelte](int32 Di)
+		{
+			const int32 Ora = ValdorsoAspetto::Valore(Bozza.Aspetto, Id) % Scelte;
+			ValdorsoAspetto::Imposta(Bozza.Aspetto, Id, static_cast<uint8>((Ora + Di + Scelte) % Scelte));
 			OnCambia.ExecuteIfBound(Bozza);
 		};
-		Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 6.f))
+		Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 4.f))
 		[
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
@@ -1283,31 +1291,38 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 				SNew(SBox).WidthOverride(190.f)
 				[
 					SNew(STextBlock)
-					.Text(LOCTEXT("ColoreCapelli", "Colore dei capelli"))
+					.Text(Etichetta)
 					.Font(Stile->Caratteri->Testo(18.f))
 					.ColorAndOpacity(ValdorsoTema::Inchiostro())
 				]
 			]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 			[
-				Stile->Pulsante(FText::FromString(TEXT("<")), FSimpleDelegate::CreateLambda([CambiaColore]() { CambiaColore(-1); }), 14.f, Attivo)
+				Stile->Pulsante(FText::FromString(TEXT("<")), FSimpleDelegate::CreateLambda([Cambia]() { Cambia(-1); }), 14.f, Attivo)
 			]
 			+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Center).VAlign(VAlign_Center)
 			[
 				SNew(STextBlock)
-				.Text_Lambda([this]()
+				.Text_Lambda([this, Id]()
 				{
-					return FText::FromString(UValdorsoAspettoComponent::NomeColoreCapelli(ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("ColoreCapelli"))));
+					return FText::FromString(UValdorsoAspettoComponent::NomeScelta(Id, ValdorsoAspetto::Valore(Bozza.Aspetto, Id), Bozza.Sesso == TEXT("donna")));
 				})
 				.Font(Stile->Caratteri->Titolo(20.f, TEXT("Bold")))
 				.ColorAndOpacity(ValdorsoTema::Rubrica())
 			]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 			[
-				Stile->Pulsante(FText::FromString(TEXT(">")), FSimpleDelegate::CreateLambda([CambiaColore]() { CambiaColore(1); }), 14.f, Attivo)
+				Stile->Pulsante(FText::FromString(TEXT(">")), FSimpleDelegate::CreateLambda([Cambia]() { Cambia(1); }), 14.f, Attivo)
 			]
 		];
+	};
+	AggiungiScelta(TEXT("Acconciatura"), LOCTEXT("SceltaCapelli", "Capelli"));
+	AggiungiScelta(TEXT("ColoreCapelli"), LOCTEXT("ColoreCapelli", "Colore dei capelli"));
+	if (!bDonna)
+	{
+		AggiungiScelta(TEXT("Barba"), LOCTEXT("SceltaBarba", "Barba e baffi"));
 	}
+	AggiungiScelta(TEXT("Sopracciglia"), LOCTEXT("SceltaSopracciglia", "Sopracciglia"));
 	Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 10.f, 0.f, 0.f))
 	[
 		SNew(STextBlock)
@@ -1855,6 +1870,26 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Destra()
 			SNew(SBorder)
 			.BorderImage(&PennelloCornice)
 			.Padding(FMargin(TextureCornice.IsValid() ? ValdorsoTema::LarghezzaCornice - 4.f : 6.f))
+			// (29/10) Trascinando il ritratto il colono si gira (per vedere i capelli dietro); doppio clic: di fronte.
+			.Cursor(EMouseCursor::GrabHand)
+			.OnMouseButtonDown_Lambda([](const FGeometry&, const FPointerEvent& Evento)
+			{
+				return Evento.GetEffectingButton() == EKeys::LeftMouseButton ? FReply::Handled() : FReply::Unhandled();
+			})
+			.OnMouseMove_Lambda([this](const FGeometry&, const FPointerEvent& Evento)
+			{
+				if (!Evento.IsMouseButtonDown(EKeys::LeftMouseButton))
+				{
+					return FReply::Unhandled();
+				}
+				OnGira.ExecuteIfBound(Evento.GetCursorDelta().X * 0.6f, false);
+				return FReply::Handled();
+			})
+			.OnMouseDoubleClick_Lambda([this](const FGeometry&, const FPointerEvent&)
+			{
+				OnGira.ExecuteIfBound(0.f, true);
+				return FReply::Handled();
+			})
 			[
 				SNew(SBox).WidthOverride(560.f).HeightOverride(700.f)
 				[
@@ -1867,6 +1902,13 @@ TSharedRef<SWidget> SValdorsoRegistroColono::Destra()
 		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 18.f, 0.f, 0.f))
 		[
 			Stile->Etichetta(LOCTEXT("CuoreRitratto", "IL CUORE BATTE ANCORA"))
+		]
+		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 6.f, 0.f, 0.f))
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("GiraRitratto", "Trascina il ritratto per girare il colono"))
+			.Font(Stile->Caratteri->Testo(15.f, TEXT("Italic")))
+			.ColorAndOpacity(ValdorsoTema::OroChiaro().CopyWithNewOpacity(0.6f))
 		];
 }
 
