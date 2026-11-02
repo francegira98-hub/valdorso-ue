@@ -22,5 +22,8 @@ public:
 	AValdorsoGameMode();
 
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+	/** (03/11, v0.1.3) Se il livello non ha il cielo che gira (AValdorsoCielo), lo fa nascere. */
+	virtual void StartPlay() override;
 	virtual void Logout(AController* Exiting) override;
 };

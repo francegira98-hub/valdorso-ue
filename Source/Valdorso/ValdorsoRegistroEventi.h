@@ -1,8 +1,8 @@
 // Valdorso - Il registro eventi del mondo: primo mattone.
 // Ogni azione che un giorno potrebbe essere un crimine (colpire, rubare, uccidere, entrare dove non si deve)
-// passa da qui, con chi, cosa, dove e quando. Per ora scrive solo una riga nel Registro output
-// (cercare "Registro:"); più avanti diventerà un vero archivio sul server, con i testimoni,
-// letto da leggi, taglie, dicerie e Battito.
+// passa da qui, con chi, cosa, dove e quando. Scrive una riga nel Registro output (cercare "Registro:") e, dal
+// 03/11/2026 (v0.1.3), una riga JSON sul disco del server (Saved/Server/Eventi, un file al giorno). Più avanti avrà
+// anche i testimoni e lo leggeranno leggi, taglie, dicerie e Battito.
 
 #pragma once
 

@@ -3,10 +3,27 @@
 #include "ValdorsoGameMode.h"
 #include "ValdorsoArchivista.h"
 #include "ValdorsoPlayerController.h"
+#include "ValdorsoCielo.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
 
 AValdorsoGameMode::AValdorsoGameMode()
 {
 	// stub
+}
+
+void AValdorsoGameMode::StartPlay()
+{
+	Super::StartPlay();
+	// Il giorno e la notte: uno solo per mondo, deciso dal server e mandato a tutti.
+	UWorld* Mondo = GetWorld();
+	if (Mondo && !TActorIterator<AValdorsoCielo>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.Name = TEXT("ValdorsoCielo");
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoCielo>(AValdorsoCielo::StaticClass(), FTransform::Identity, Parametri);
+	}
 }
 
 void AValdorsoGameMode::PostLogin(APlayerController* NewPlayer)

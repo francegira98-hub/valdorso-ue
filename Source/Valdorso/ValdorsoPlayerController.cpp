@@ -16,6 +16,7 @@
 #include "SValdorsoImpostazioni.h"
 #include "ValdorsoPalcoRegistro.h"
 #include "ValdorsoRegole.h"
+#include "ValdorsoRegistroEventi.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoCharacter.h"
 #include "ValdorsoAspettoComponent.h"
@@ -357,6 +358,11 @@ void AValdorsoPlayerController::CompletaUscita()
 	SalvaPersonaggio();
 	const uint8 Dove = UscitaDove;
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] %s lascia la valle (%d)"), *NomeAccount, Dove);
+	if (APawn* Corpo = GetPawn())
+	{
+		ValdorsoRegistroEventi::Annota(TEXT("Esce"), Corpo, nullptr, Corpo->GetActorLocation(),
+			Dove == static_cast<uint8>(EValdorsoUscita::Personaggi) ? TEXT("ai personaggi") : TEXT("dal gioco"));
+	}
 
 	if (Dove == static_cast<uint8>(EValdorsoUscita::Personaggi) && bPersonaggioScelto)
 	{
@@ -964,6 +970,8 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 	}
 
 	ClientPersonaggioScelto(Dati->Nome);
+	// (03/11, v0.1.3) Nel registro eventi: chi entra nella valle, dove.
+	ValdorsoRegistroEventi::Annota(TEXT("Entra"), GetPawn(), nullptr, GetPawn()->GetActorLocation());
 	GetWorldTimerManager().SetTimer(TimerSalvataggio, this, &AValdorsoPlayerController::SalvaPersonaggio, 60.f, true);
 }
 
