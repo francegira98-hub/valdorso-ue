@@ -1059,12 +1059,15 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 				// (28/10) Il Registro di prova (ProvaRegistro) non va al server: va sempre bene.
 				if (Controllore->RegistroAperto == TEXT("prova-registro"))
 				{
-					// La risposta arriva al giro dopo, come farebbe quella del server.
-					Controllore->GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(Controllore, [Controllore, Proposto]()
+					// La risposta arriva al giro dopo, come farebbe quella del server. (02/11) Come il server, alla firma
+					// segna il registro come firmato: senza, la prova restava ferma su "Il sacerdote firma il registro...".
+					FValdorsoRegistro Risposta = Proposto;
+					Risposta.bFirmato = bFirma;
+					Controllore->GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(Controllore, [Controllore, Risposta]()
 					{
 						if (Controllore->SchermataRegistro.IsValid())
 						{
-							Controllore->SchermataRegistro->Esito(FString(), true, Proposto);
+							Controllore->SchermataRegistro->Esito(FString(), true, Risposta);
 						}
 					}));
 					return;

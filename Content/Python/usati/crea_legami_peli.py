@@ -2,7 +2,7 @@
 # e le teste dei coloni, così il gioco può cambiare acconciatura e barba. Scritto da Claude il 29/10/2026 (terza versione).
 #
 # I peli della libreria sono fatti su una testa modello: il legame li "trasferisce" su ogni volto. Trovate per prova
-# (29/10): barbe, baffi, sopracciglia e capelli da uomo vanno con SKM_Face; i capelli da donna con Legacy01, tranne lo
+# (29/10): barbe, baffi e capelli da uomo vanno con SKM_Face (le sopracciglia con Legacy01, 02/11); i capelli da donna con Legacy01, tranne lo
 # "Scalati" (Hair_M_Layered) che va con Legacy02. MH_Groom_Head non va bene per nessuno (peli sopra la testa).
 # Un legame appena creato non è "costruito": le versioni di prima lo salvavano vuoto (2 KB) e i capelli restavano
 # sospesi sopra la testa. Ora lo fa costruire subito il C++ (UValdorsoStrumenti::CostruisciSubito), poi lo salva
@@ -25,6 +25,10 @@ MODELLO_DONNA_SCALATI = "/MetaHumanCharacter/Optional/Grooms/GroomMesh/SKM_Groom
 
 def modello_per(testa, nome):
     """La testa modello da cui trasferire un pelo su una testa (vedi sopra)."""
+    # (02/11) Le sopracciglia vanno con Legacy01 per tutti: con SKM_Face alcune finivano fuori posto
+    # (rifatte con rifai_sopracciglia.py, provate da Fra).
+    if nome.startswith("Eyebrows_"):
+        return MODELLO_DONNA
     if testa in TESTE_DONNA and nome.startswith("Hair_"):
         return MODELLO_DONNA_SCALATI if nome == "Hair_M_Layered" else MODELLO_DONNA
     return MODELLO
