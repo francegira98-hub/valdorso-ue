@@ -12,6 +12,8 @@
 #include "SValdorsoAccesso.h"
 #include "SValdorsoPersonaggi.h"
 #include "SValdorsoRegistro.h"
+#include "SValdorsoPausa.h"
+#include "SValdorsoImpostazioni.h"
 #include "ValdorsoPalcoRegistro.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoAttributeSet.h"
@@ -20,6 +22,8 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Components/InputComponent.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/Engine.h"
 #include "Engine/NetConnection.h"
@@ -38,6 +42,12 @@ namespace
 
 	/** Richieste massime nell'anticamera prima di essere scollegati. */
 	constexpr int32 RichiesteMassime = 5;
+
+	/** (02/11, passo 6) Quanto resta il colono nella valle dopo aver chiesto di uscire. */
+	constexpr float SecondiUscita = 20.f;
+
+	/** Oltre questa distanza (cm, in piano) dal punto in cui ha chiesto di uscire, l'uscita si annulla. */
+	constexpr float SpostamentoMassimoUscita = 150.f;
 }
 
 void AValdorsoPlayerController::BeginPlay()
@@ -101,6 +111,14 @@ void AValdorsoPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
+	// (02/11, passo 6) La pausa: Esc, F10 (nell'editor Esc ferma il Play) e Start sul controller.
+	if (IsLocalPlayerController() && InputComponent)
+	{
+		InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
+		InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
+		InputComponent->BindKey(EKeys::Gamepad_Special_Right, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
+	}
+
 	// only add IMCs for local player controllers
 	if (IsLocalPlayerController())
 	{
@@ -122,6 +140,291 @@ void AValdorsoPlayerController::SetupInputComponent()
 			}
 		}
 	}
+}
+
+// (02/11, passo 6) La pausa: Esc, F10 (nell'editor Esc ferma il Play) e Start sul controller.
+void AValdorsoPlayerController::TastoPausa()
+{
+	if (Pausa.IsValid())
+	{
+		if (!Pausa->InUscita())
+		{
+			ChiudiPausa();
+		}
+		return;
+	}
+	ApriPausa();
+}
+
+void AValdorsoPlayerController::ApriPausa()
+{
+	// Solo nella valle, con il corpo, e quando non c'è già un'altra schermata (registro, scelta, anticamera, codici).
+	if (Pausa.IsValid() || !GetPawn() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
+		|| SchermataCodici.IsValid())
+	{
+		return;
+	}
+	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!Viewport)
+	{
+		return;
+	}
+	// Chi gioca senza account (in locale o con l'accesso libero dell'editor) non ha personaggi a cui tornare.
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	SAssignNew(Pausa, SValdorsoPausa)
+		.bConPersonaggi(bColonoDelRegistro)
+		.OnRiprendi(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ChiudiPausa();
+			}
+		}))
+		.OnImpostazioni(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ApriImpostazioni();
+			}
+		}))
+		.OnEsci(FValdorsoSuUscita::CreateLambda([Debole](EValdorsoUscita Dove)
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ServerChiediUscita(static_cast<uint8>(Dove));
+			}
+		}))
+		.OnAnnulla(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ServerAnnullaUscita();
+			}
+		}));
+	Viewport->AddViewportWidgetContent(Pausa.ToSharedRef(), 60);
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(Pausa->FuocoIniziale());
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+}
+
+void AValdorsoPlayerController::ApriImpostazioni()
+{
+	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (SchermataImpostazioni.IsValid() || !Viewport)
+	{
+		return;
+	}
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	SAssignNew(SchermataImpostazioni, SValdorsoImpostazioni)
+		.OnChiudi(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ChiudiImpostazioni();
+			}
+		}));
+	Viewport->AddViewportWidgetContent(SchermataImpostazioni.ToSharedRef(), 61);
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(SchermataImpostazioni->FuocoIniziale());
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+}
+
+void AValdorsoPlayerController::ChiudiImpostazioni()
+{
+	if (!SchermataImpostazioni.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(SchermataImpostazioni.ToSharedRef());
+	}
+	SchermataImpostazioni.Reset();
+	// Si torna alla pausa, con il fuoco su di lei.
+	if (Pausa.IsValid())
+	{
+		FInputModeUIOnly Modo;
+		Modo.SetWidgetToFocus(Pausa->FuocoIniziale());
+		SetInputMode(Modo);
+	}
+}
+
+void AValdorsoPlayerController::ChiudiPausa()
+{
+	ChiudiImpostazioni();
+	if (!Pausa.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(Pausa.ToSharedRef());
+	}
+	Pausa.Reset();
+	// Se nel frattempo si è aperta un'altra schermata (per esempio la scelta), il mouse resta a lei.
+	if (!SchermataRegistro.IsValid() && !SceltaPersonaggio.IsValid() && !Anticamera.IsValid() && !SchermataCodici.IsValid())
+	{
+		SetInputMode(FInputModeGameOnly());
+		bShowMouseCursor = false;
+	}
+}
+
+// --- Server: l'uscita con attesa -------------------------------------------------------------------
+
+float AValdorsoPlayerController::SaluteAttuale() const
+{
+	const IAbilitySystemInterface* ConAbilita = Cast<IAbilitySystemInterface>(GetPawn());
+	const UAbilitySystemComponent* Abilita = ConAbilita ? ConAbilita->GetAbilitySystemComponent() : nullptr;
+	return Abilita ? Abilita->GetNumericAttribute(UValdorsoAttributeSet::GetSaluteAttribute()) : 0.f;
+}
+
+void AValdorsoPlayerController::ServerChiediUscita_Implementation(uint8 Dove)
+{
+	if (Dove > static_cast<uint8>(EValdorsoUscita::Gioco) || bInUscita || !bAutenticato || !GetPawn())
+	{
+		return;
+	}
+	if (++RichiesteUscita > 60)
+	{
+		Espelli(TEXT("Troppe richieste: ricollegati."));
+		return;
+	}
+	// Ai personaggi si torna solo con un account (chi gioca senza account torna al menu).
+	if (Dove == static_cast<uint8>(EValdorsoUscita::Personaggi) && !bPersonaggioScelto)
+	{
+		Dove = static_cast<uint8>(EValdorsoUscita::Menu);
+	}
+	bInUscita = true;
+	UscitaDove = Dove;
+	UscitaFine = GetWorld()->GetTimeSeconds() + SecondiUscita;
+	UscitaPartenza = GetPawn()->GetActorLocation();
+	UscitaSalute = SaluteAttuale();
+	GetWorldTimerManager().SetTimer(TimerUscita, this, &AValdorsoPlayerController::ControllaUscita, 0.25f, true);
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] %s chiede di uscire (%d): %.0f secondi"), *NomeAccount, Dove, SecondiUscita);
+	ClientContoUscita(Dove, FMath::CeilToInt(SecondiUscita));
+}
+
+void AValdorsoPlayerController::ServerAnnullaUscita_Implementation()
+{
+	if (bInUscita)
+	{
+		AnnullaUscita(FString());
+	}
+}
+
+void AValdorsoPlayerController::ControllaUscita()
+{
+	APawn* Corpo = GetPawn();
+	if (!bInUscita || !Corpo)
+	{
+		GetWorldTimerManager().ClearTimer(TimerUscita);
+		bInUscita = false;
+		return;
+	}
+	// Colpito: la salute è scesa (mezzo punto di tolleranza per gli arrotondamenti).
+	if (SaluteAttuale() < UscitaSalute - 0.5f)
+	{
+		AnnullaUscita(TEXT("Sei stato colpito: resti nella valle."));
+		return;
+	}
+	// Spostato (spinto, trascinato, caduto): la distanza in piano dal punto di partenza.
+	if (FVector::Dist2D(Corpo->GetActorLocation(), UscitaPartenza) > SpostamentoMassimoUscita)
+	{
+		AnnullaUscita(TEXT("Ti sei spostato: resti nella valle."));
+		return;
+	}
+	if (GetWorld()->GetTimeSeconds() >= UscitaFine)
+	{
+		CompletaUscita();
+	}
+}
+
+void AValdorsoPlayerController::AnnullaUscita(const FString& Motivo)
+{
+	bInUscita = false;
+	GetWorldTimerManager().ClearTimer(TimerUscita);
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Uscita annullata per %s: %s"), *NomeAccount, Motivo.IsEmpty() ? TEXT("resta") : *Motivo);
+	ClientUscitaAnnullata(Motivo);
+}
+
+void AValdorsoPlayerController::CompletaUscita()
+{
+	bInUscita = false;
+	GetWorldTimerManager().ClearTimer(TimerUscita);
+	// Prima di tutto si salva dov'era e com'era.
+	SalvaPersonaggio();
+	const uint8 Dove = UscitaDove;
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] %s lascia la valle (%d)"), *NomeAccount, Dove);
+
+	if (Dove == static_cast<uint8>(EValdorsoUscita::Personaggi) && bPersonaggioScelto)
+	{
+		// Il corpo lascia la valle e si torna alla scelta, restando collegati.
+		GetWorldTimerManager().ClearTimer(TimerSalvataggio);
+		bPersonaggioScelto = false;
+		PersonaggioId.Empty();
+		if (APawn* Corpo = GetPawn())
+		{
+			UnPossess();
+			Corpo->Destroy();
+		}
+		ClientUscitaFatta(Dove);
+		InviaSceltaPersonaggio();
+		return;
+	}
+	// Al menu o fuori dal gioco: il client si scollega da solo (il corpo sparisce quando la connessione si chiude).
+	ClientUscitaFatta(Dove);
+}
+
+// --- Client: le risposte del server ----------------------------------------------------------------
+
+void AValdorsoPlayerController::ClientContoUscita_Implementation(uint8 Dove, int32 Secondi)
+{
+	if (Pausa.IsValid())
+	{
+		Pausa->MostraConto(static_cast<EValdorsoUscita>(FMath::Min<uint8>(Dove, 2)), Secondi);
+	}
+}
+
+void AValdorsoPlayerController::ClientUscitaAnnullata_Implementation(const FString& Motivo)
+{
+	if (Motivo.IsEmpty())
+	{
+		// L'ha annullata il giocatore ("Resta nella valle" o Esc): si torna al gioco.
+		ChiudiPausa();
+		return;
+	}
+	if (!Pausa.IsValid())
+	{
+		ApriPausa();
+	}
+	if (Pausa.IsValid())
+	{
+		Pausa->Annullata(FText::FromString(Motivo));
+	}
+}
+
+void AValdorsoPlayerController::ClientUscitaFatta_Implementation(uint8 Dove)
+{
+	ChiudiPausa();
+	bColonoDelRegistro = false;
+	if (Dove == static_cast<uint8>(EValdorsoUscita::Personaggi))
+	{
+		// Il server manda subito l'elenco dei personaggi (ClientSceltaPersonaggio).
+		return;
+	}
+	// Uscita voluta: niente rientro automatico.
+	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+	{
+		Istanza->DimenticaBiglietto();
+	}
+	if (Dove == static_cast<uint8>(EValdorsoUscita::Gioco))
+	{
+		UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+		return;
+	}
+	ConsoleCommand(TEXT("disconnect"));
 }
 
 bool AValdorsoPlayerController::ShouldUseTouchControls() const
@@ -742,12 +1045,14 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	ChiudiCodiciRecupero();
 	ChiudiRegistro();
 	ChiudiSceltaPersonaggio();
+	ChiudiPausa();
 	// Server che si spegne o cambia mappa: l'ultimo minuto non va perso.
 	SalvaPersonaggio();
 	if (GetWorld())
 	{
 		GetWorldTimerManager().ClearTimer(TimerAnticamera);
 		GetWorldTimerManager().ClearTimer(TimerSalvataggio);
+		GetWorldTimerManager().ClearTimer(TimerUscita);
 	}
 	Super::EndPlay(EndPlayReason);
 }
@@ -895,6 +1200,7 @@ void AValdorsoPlayerController::ClientPersonaggioScelto_Implementation(const FSt
 	ChiudiSceltaPersonaggio();
 	SetInputMode(FInputModeGameOnly());
 	bShowMouseCursor = false;
+	bColonoDelRegistro = true;
 	MostraSulloSchermo(FString::Printf(TEXT("%s entra nella valle."), *Nome), FColor(232, 196, 120));
 }
 

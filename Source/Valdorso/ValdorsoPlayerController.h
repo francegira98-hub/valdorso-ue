@@ -16,6 +16,8 @@ class SValdorsoSceltaPersonaggio;
 class SValdorsoRegistroColono;
 class AValdorsoPalcoRegistro;
 class UUserWidget;
+class SValdorsoPausa;
+class SValdorsoImpostazioni;
 
 /**
  *  Basic PlayerController class for a third person game
@@ -134,6 +136,28 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerCambiaPassword(const FString& Attuale, const FString& Nuova);
 
+	// --- La pausa e l'uscita con attesa (v0.1.2, passo 6) ---------------------------------------------
+
+	/** Il giocatore vuole uscire (0 = ai personaggi, 1 = al menu, 2 = chiude il gioco): il server fa partire l'attesa. */
+	UFUNCTION(Server, Reliable)
+	void ServerChiediUscita(uint8 Dove);
+
+	/** Il giocatore resta nella valle. */
+	UFUNCTION(Server, Reliable)
+	void ServerAnnullaUscita();
+
+	/** L'uscita è partita: tra quanti secondi il colono lascia la valle. */
+	UFUNCTION(Client, Reliable)
+	void ClientContoUscita(uint8 Dove, int32 Secondi);
+
+	/** L'uscita è annullata, con il motivo (vuoto = l'ha annullata il giocatore). */
+	UFUNCTION(Client, Reliable)
+	void ClientUscitaAnnullata(const FString& Motivo);
+
+	/** L'attesa è finita e il personaggio è salvato: il client va dove aveva chiesto. */
+	UFUNCTION(Client, Reliable)
+	void ClientUscitaFatta(uint8 Dove);
+
 	// --- Anticamera: dal server al client ---------------------------------------------------------
 
 	UFUNCTION(Client, Reliable)
@@ -229,4 +253,29 @@ private:
 	FString NomeAccount;
 	EValdorsoRuolo Ruolo = EValdorsoRuolo::Giocatore;
 	FTimerHandle TimerAnticamera;
+
+	/** Client: la pausa (Esc, F10 nell'editor, Start sul controller). */
+	void TastoPausa();
+	void ApriPausa();
+	void ChiudiPausa();
+	TSharedPtr<SValdorsoPausa> Pausa;
+	/** Client: le impostazioni, aperte dalla pausa (passo 6, seconda parte). */
+	void ApriImpostazioni();
+	void ChiudiImpostazioni();
+	TSharedPtr<SValdorsoImpostazioni> SchermataImpostazioni;
+	/** Client: il colono è entrato con un account (dalla scelta dei personaggi): si può tornare ai personaggi. */
+	bool bColonoDelRegistro = false;
+
+	/** Server: l'uscita con attesa. Si annulla se il colono viene spostato o perde salute. */
+	void ControllaUscita();
+	void AnnullaUscita(const FString& Motivo);
+	void CompletaUscita();
+	float SaluteAttuale() const;
+	bool bInUscita = false;
+	uint8 UscitaDove = 0;
+	double UscitaFine = 0.0;
+	FVector UscitaPartenza = FVector::ZeroVector;
+	float UscitaSalute = 0.f;
+	int32 RichiesteUscita = 0;
+	FTimerHandle TimerUscita;
 };

@@ -1,6 +1,7 @@
 // Valdorso - L'istanza del gioco (vedi il .h).
 
 #include "ValdorsoGameInstance.h"
+#include "ValdorsoImpostazioni.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoSicurezza.h"
 #include "Valdorso.h"
@@ -63,6 +64,11 @@ void UValdorsoGameInstance::Init()
 	if (IsDedicatedServerInstance())
 	{
 		PreparaChiaveServer();
+	}
+	else
+	{
+		// (02/11, passo 6) Le impostazioni del giocatore (volume, scritte, colori...) valgono da subito.
+		ValdorsoImpostazioni::Applica();
 	}
 }
 

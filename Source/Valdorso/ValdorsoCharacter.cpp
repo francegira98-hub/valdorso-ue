@@ -2,6 +2,7 @@
 // Modificato per Valdorso: corsa nel componente di movimento, Gameplay Ability System (statistiche e abilità), schivata, pugno.
 
 #include "ValdorsoCharacter.h"
+#include "ValdorsoImpostazioni.h"
 #include "ValdorsoMovementComponent.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoEffetti.h"
@@ -241,9 +242,10 @@ void AValdorsoCharacter::DoLook(float Yaw, float Pitch)
 {
 	if (GetController() != nullptr)
 	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(Yaw);
-		AddControllerPitchInput(Pitch);
+		// (02/11, passo 6) Sensibilità e "inverti su e giù" dalle impostazioni del giocatore.
+		const FValdorsoImpostazioni& Impostazioni = ValdorsoImpostazioni::Correnti();
+		AddControllerYawInput(Yaw * Impostazioni.Sensibilita);
+		AddControllerPitchInput(Pitch * Impostazioni.Sensibilita * (Impostazioni.bInvertiY ? -1.f : 1.f));
 	}
 }
 

@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
 #include "Valdorso.h"
+#include "ValdorsoImpostazioni.h"
 
 namespace ValdorsoSuoni
 {
@@ -44,7 +45,10 @@ namespace ValdorsoSuoni
 		{
 			return nullptr;
 		}
-		return UGameplayStatics::SpawnSound2D(World, Suono, Volume, 1.f, Inizio);
+		// (02/11, passo 6) Il volume delle impostazioni: musica (motivi delle fedi, bordone) o effetti.
+		const FString Chiave(Nome);
+		const bool bMusica = Chiave.StartsWith(TEXT("S_Fede_")) || Chiave.StartsWith(TEXT("S_Bordone"));
+		return UGameplayStatics::SpawnSound2D(World, Suono, Volume * ValdorsoImpostazioni::VolumeSuono(bMusica), 1.f, Inizio);
 	}
 
 	UAudioComponent* SuonaFede(const FString& Chiave, float Volume)
