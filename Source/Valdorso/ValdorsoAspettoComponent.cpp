@@ -14,6 +14,11 @@
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "UObject/UnrealType.h"
+#include "Misc/FileHelper.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
+#include "HAL/IConsoleManager.h"
+#include "UObject/UObjectIterator.h"
 
 namespace
 {
@@ -161,8 +166,113 @@ namespace
 	}
 }
 
+// (02/11) La tavolozza degli occhi: una riga per colore (la scelta 0, "Come nasce", non è nel file).
+// Colonne: Nome, TintaPrimaria, LucePrimaria, TintaSecondaria, LuceSecondaria, Saturazione (numeri del materiale
+// M_eye_eyeball_unified: "Iris Primary Color Hue", "Iris Primary Color Value", "Iris Secondary Color Hue",
+// "Iris Secondary Color Value", "Iris Global Saturation"). Si rilegge quando il file cambia.
+namespace
+{
+	struct FColoreOcchi
+	{
+		FString Nome;
+		float Numeri[5] = { 0.f, 0.f, 0.f, 0.f, 1.f };
+	};
+
+	const TArray<FColoreOcchi>& ColoriOcchi()
+	{
+		static TArray<FColoreOcchi> Tavolozza;
+		static FDateTime Letto;
+		const FString File = FPaths::Combine(FPaths::ProjectPluginsDir(), TEXT("VoltoValdorso/Dati/ColoriOcchi.csv"));
+		const FDateTime Ora = IFileManager::Get().GetTimeStamp(*File);
+		if (Ora == Letto && Tavolozza.Num() > 0)
+		{
+			return Tavolozza;
+		}
+		Letto = Ora;
+		Tavolozza.Reset();
+		TArray<FString> Righe;
+		FFileHelper::LoadFileToStringArray(Righe, *File);
+		for (const FString& Riga : Righe)
+		{
+			TArray<FString> Pezzi;
+			Riga.ParseIntoArray(Pezzi, TEXT(","), false);
+			if (Pezzi.Num() < 6 || Pezzi[0].StartsWith(TEXT("#")) || Pezzi[0] == TEXT("Nome"))
+			{
+				continue;
+			}
+			FColoreOcchi Colore;
+			Colore.Nome = Pezzi[0].TrimStartAndEnd();
+			for (int32 i = 0; i < 5; ++i)
+			{
+				Colore.Numeri[i] = FCString::Atof(*Pezzi[i + 1].TrimStartAndEnd());
+			}
+			Tavolozza.Add(Colore);
+		}
+		if (Tavolozza.Num() == 0)
+		{
+			UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Aspetto: non trovo la tavolozza degli occhi %s."), *File);
+		}
+		return Tavolozza;
+	}
+
+	// Il materiale non cotto degli occhi (quello da cui il Creator cuoce i suoi): accetta i colori dell'iride. Vale per
+	// tutti e due gli occhi: anche il Creator usa il "left" per l'occhio destro (un "right" non esiste, 02/11).
+	const TCHAR* OcchioNonCotto = TEXT("/MetaHumanCharacter/Lookdev_UHM/Eye/Materials/MI_eye_eyeball_unified_MH_preset_left.MI_eye_eyeball_unified_MH_preset_left");
+
+	// (02/11) I capelli della libreria sulle teste da uomo restano un filo sollevati (il legame parte da SKM_Face): si
+	// abbassano di qualche millimetro. Valdorso.Capelli.Abbassa <cm> per provare dal vivo (0 = come prima).
+	float AbbassaCapelliUomo = 0.3f;
+	FAutoConsoleVariableRef VariabileAbbassaCapelli(
+		TEXT("Valdorso.Capelli.Abbassa"),
+		AbbassaCapelliUomo,
+		TEXT("Di quanti centimetri scendono i capelli della libreria sulle teste da uomo (prova: 0.2, 0.3, 0.5)."),
+		FConsoleVariableDelegate::CreateLambda([](IConsoleVariable*)
+		{
+			for (TObjectIterator<UValdorsoAspettoComponent> Componente; Componente; ++Componente)
+			{
+				Componente->ApplicaPosizioneCapelli();
+			}
+		}),
+		ECVF_Default);
+
+	// Valdorso.Occhi.Prova <tinta1> <luce1> <tinta2> <luce2> <saturazione>: prova un colore sugli occhi di tutti i coloni di questo PC.
+	FAutoConsoleCommandWithWorldAndArgs ComandoProvaOcchi(
+		TEXT("Valdorso.Occhi.Prova"),
+		TEXT("Prova un colore degli occhi: Valdorso.Occhi.Prova <tinta primaria> <luce primaria> <tinta secondaria> <luce secondaria> <saturazione> (numeri tra 0 e 1; saturazione anche fino a 2)."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
+		{
+			if (Argomenti.Num() < 5)
+			{
+				// Senza numeri: la prova si toglie e torna il colore scelto nel Registro.
+				for (TObjectIterator<UValdorsoAspettoComponent> Componente; Componente; ++Componente)
+				{
+					if (Componente->GetWorld() == Mondo)
+					{
+						Componente->ProvaOcchi(-1.f, 0.f, 0.f, 0.f, 0.f);
+					}
+				}
+				UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Occhi: prova tolta. Per provare un colore servono 5 numeri (tinta1 luce1 tinta2 luce2 saturazione)."));
+				return;
+			}
+			for (TObjectIterator<UValdorsoAspettoComponent> Componente; Componente; ++Componente)
+			{
+				if (Componente->GetWorld() == Mondo)
+				{
+					Componente->ProvaOcchi(FCString::Atof(*Argomenti[0]), FCString::Atof(*Argomenti[1]), FCString::Atof(*Argomenti[2]),
+						FCString::Atof(*Argomenti[3]), FCString::Atof(*Argomenti[4]));
+				}
+			}
+		}));
+}
+
 FString UValdorsoAspettoComponent::NomeScelta(const TCHAR* Voce, int32 Scelta, bool bDonna)
 {
+	if (FCString::Strcmp(Voce, TEXT("ColoreOcchi")) == 0)
+	{
+		const TArray<FColoreOcchi>& Tavolozza = ColoriOcchi();
+		const int32 Numero = FMath::Abs(Scelta) % (Tavolozza.Num() + 1);
+		return Numero == 0 ? FString(TEXT("Come nasce")) : Tavolozza[Numero - 1].Nome;
+	}
 	if (FCString::Strcmp(Voce, TEXT("ColoreCapelli")) == 0)
 	{
 		return ColoriCapelli[FMath::Abs(Scelta) % ColoriCapelliNumero].Nome;
@@ -274,8 +384,12 @@ void UValdorsoAspettoComponent::Aggiorna()
 		TogliCorpo();
 		CreaCorpo(Voluta);
 		ColoreCapelliMesso = INDEX_NONE;
+		OcchiMessi = INDEX_NONE;
+		OcchiOriginali.Reset();
 	}
 	ApplicaVolto();
+	ApplicaCorpo();
+	ApplicaOcchi();
 	ApplicaPeli();
 	ApplicaColori();
 }
@@ -379,6 +493,7 @@ void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 	NomeTesta.RemoveFromEnd(TEXT("_C"));
 	PeliOriginali.Reset();
 	PeliMessi.Reset();
+	bCapelliPosizioneLetta = false;
 	TInlineComponentArray<UGroomComponent*> PeliDiSerie(CorpoMetaHuman);
 	for (UGroomComponent* Pelo : PeliDiSerie)
 	{
@@ -449,6 +564,7 @@ void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 
 	// L'animazione del volto si prepara al primo aggiornamento: i cursori si scrivono anche al giro dopo.
 	Mondo->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &UValdorsoAspettoComponent::ApplicaVolto));
+	Mondo->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &UValdorsoAspettoComponent::ApplicaCorpo));
 }
 
 void UValdorsoAspettoComponent::ImpostaAspetto(const FValdorsoAspetto& Nuovo, const FString& Sesso)
@@ -472,6 +588,7 @@ void UValdorsoAspettoComponent::ProvaCursore(FName Id, float Valore)
 {
 	CursoriProva.Add(Id, FMath::Clamp(Valore, -1.f, 1.f));
 	ApplicaVolto();
+	ApplicaCorpo();
 	ApplicaColori();
 }
 
@@ -521,6 +638,136 @@ void UValdorsoAspettoComponent::ApplicaVolto()
 		else if (const FFloatProperty* Singolo = CastField<FFloatProperty>(Variabile))
 		{
 			Singolo->SetPropertyValue_InContainer(Animazione, Valore);
+		}
+	}
+}
+
+void UValdorsoAspettoComponent::ProvaOcchi(float TintaPrimaria, float LucePrimaria, float TintaSecondaria, float LuceSecondaria, float Saturazione)
+{
+	// Una tinta negativa toglie la prova (torna il colore scelto nel Registro).
+	if (TintaPrimaria < 0.f)
+	{
+		OcchiProva.Reset();
+	}
+	else
+	{
+		OcchiProva = { TintaPrimaria, LucePrimaria, TintaSecondaria, LuceSecondaria, Saturazione };
+	}
+	OcchiMessi = INDEX_NONE;
+	ApplicaOcchi();
+}
+
+void UValdorsoAspettoComponent::ApplicaOcchi()
+{
+	USkeletalMeshComponent* Faccia = Volto.Get();
+	if (!Faccia)
+	{
+		return;
+	}
+	const TArray<FColoreOcchi>& Tavolozza = ColoriOcchi();
+	const int32 Scelta = OcchiProva.Num() == 5 ? -2 : ValdorsoAspetto::Valore(Aspetto, TEXT("ColoreOcchi")) % (Tavolozza.Num() + 1);
+	if (Scelta == OcchiMessi)
+	{
+		return;
+	}
+	OcchiMessi = Scelta;
+
+	// Gli slot degli occhi del volto (eyeLeft_shader_shader, eyeRight_shader_shader).
+	const TArray<FName> Slot = Faccia->GetMaterialSlotNames();
+	for (int32 i = 0; i < Slot.Num(); ++i)
+	{
+		const FString Nome = Slot[i].ToString();
+		const bool bSinistro = Nome.StartsWith(TEXT("eyeLeft"));
+		const bool bDestro = Nome.StartsWith(TEXT("eyeRight"));
+		if (!bSinistro && !bDestro)
+		{
+			continue;
+		}
+		if (!OcchiOriginali.Contains(i))
+		{
+			OcchiOriginali.Add(i, Faccia->GetMaterial(i));
+		}
+		if (Scelta == 0)
+		{
+			// Come nasce: torna il materiale cotto della testa.
+			if (UMaterialInterface* Originale = OcchiOriginali[i].Get())
+			{
+				Faccia->SetMaterial(i, Originale);
+			}
+			continue;
+		}
+		UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, OcchioNonCotto);
+		if (!Base)
+		{
+			UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Aspetto: non trovo il materiale degli occhi %s."), OcchioNonCotto);
+			return;
+		}
+		UMaterialInstanceDynamic* Occhio = UMaterialInstanceDynamic::Create(Base, Faccia);
+		const float* Numeri = Scelta == -2 ? OcchiProva.GetData() : Tavolozza[Scelta - 1].Numeri;
+		Occhio->SetScalarParameterValue(TEXT("Iris Primary Color Hue"), Numeri[0]);
+		Occhio->SetScalarParameterValue(TEXT("Iris Primary Color Value"), Numeri[1]);
+		Occhio->SetScalarParameterValue(TEXT("Iris Secondary Color Hue"), Numeri[2]);
+		Occhio->SetScalarParameterValue(TEXT("Iris Secondary Color Value"), Numeri[3]);
+		Occhio->SetScalarParameterValue(TEXT("Iris Global Saturation"), Numeri[4]);
+		Occhio->SetScalarParameterValue(TEXT("Iris Color Blend Switch"), 1.f);
+		Occhio->SetVectorParameterValue(TEXT("Iris Color Multiply"), FLinearColor::White);
+		Faccia->SetMaterial(i, Occhio);
+	}
+	if (Scelta == -2)
+	{
+		UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Occhi di prova: %.2f %.2f %.2f %.2f %.2f"), OcchiProva[0], OcchiProva[1], OcchiProva[2], OcchiProva[3], OcchiProva[4]);
+	}
+}
+
+void UValdorsoAspettoComponent::ApplicaCorpo()
+{
+	if (!CorpoMetaHuman)
+	{
+		return;
+	}
+	USkeletalMeshComponent* Corpo = nullptr;
+	TInlineComponentArray<USkeletalMeshComponent*> Pezzi(CorpoMetaHuman);
+	for (USkeletalMeshComponent* Pezzo : Pezzi)
+	{
+		if (Pezzo->GetFName() == TEXT("Body"))
+		{
+			Corpo = Pezzo;
+		}
+	}
+	if (!Corpo)
+	{
+		return;
+	}
+	auto Valore = [this](const TCHAR* Id)
+	{
+		const float* Prova = CursoriProva.Find(FName(Id));
+		return Prova ? *Prova : ValdorsoAspetto::Cursore(Aspetto, Id);
+	};
+
+	// L'altezza: +-6% (circa +-10 cm), dai piedi, perché l'origine del corpo MetaHuman è a terra. Il manichino (la
+	// capsula, le abilità, la rete) non cambia: è solo l'aspetto.
+	Corpo->SetRelativeScale3D(FVector(1.f + ValdorsoAspetto::AltezzaPerUnita * Valore(TEXT("Altezza"))));
+
+	// Corporatura e Muscoli: le variabili Float dell'animazione del corpo con lo stesso nome dell'Id del catalogo.
+	UAnimInstance* Animazione = Corpo->GetAnimInstance();
+	if (!Animazione)
+	{
+		return;
+	}
+	for (const TCHAR* Id : { TEXT("Corporatura"), TEXT("Muscoli") })
+	{
+		const FProperty* Variabile = Animazione->GetClass()->FindPropertyByName(FName(Id));
+		if (const FDoubleProperty* Doppio = CastField<FDoubleProperty>(Variabile))
+		{
+			Doppio->SetPropertyValue_InContainer(Animazione, Valore(Id));
+		}
+		else if (const FFloatProperty* Singolo = CastField<FFloatProperty>(Variabile))
+		{
+			Singolo->SetPropertyValue_InContainer(Animazione, Valore(Id));
+		}
+		else
+		{
+			UE_LOG(LogValdorso, Verbose, TEXT("[Valdorso] Aspetto: in %s manca la variabile Float %s (il cursore non si vede)."), *Animazione->GetClass()->GetName(), Id);
 		}
 	}
 }
@@ -686,4 +933,36 @@ void UValdorsoAspettoComponent::ApplicaPeli()
 	{
 		ColoreCapelliMesso = INDEX_NONE;
 	}
+	ApplicaPosizioneCapelli();
+}
+
+void UValdorsoAspettoComponent::ApplicaPosizioneCapelli()
+{
+	if (!CorpoMetaHuman)
+	{
+		return;
+	}
+	UGroomComponent* Capelli = nullptr;
+	TInlineComponentArray<UGroomComponent*> Peli(CorpoMetaHuman);
+	for (UGroomComponent* Candidato : Peli)
+	{
+		if (Candidato->GetFName() == TEXT("Hair"))
+		{
+			Capelli = Candidato;
+		}
+	}
+	if (!Capelli)
+	{
+		return;
+	}
+	if (!bCapelliPosizioneLetta)
+	{
+		CapelliPosizioneOriginale = Capelli->GetRelativeLocation();
+		bCapelliPosizioneLetta = true;
+	}
+	// Solo uomo con un'acconciatura della libreria (0 = "Come nasce": i capelli della testa stanno già bene).
+	const int32* Acconciatura = PeliMessi.Find(TEXT("Acconciatura"));
+	const bool bAbbassa = !bDonna && Acconciatura && *Acconciatura > 0;
+	const float Centimetri = bAbbassa ? AbbassaCapelliUomo : 0.f;
+	Capelli->SetRelativeLocation(CapelliPosizioneOriginale - FVector(0.f, 0.f, Centimetri));
 }

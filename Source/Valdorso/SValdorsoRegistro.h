@@ -88,7 +88,7 @@ public:
 	/** Le pagine, nell'ordine. */
 	enum class EPagina : uint8
 	{
-		ChiSei, Volto, Fede, Origine, Mestiere, Motivo, Ricordo, Paura, Carattere, Richiamo, Racconto, Storia, Firma, Numero
+		ChiSei, Volto, Corpo, Fede, Origine, Mestiere, Motivo, Ricordo, Paura, Carattere, Richiamo, Racconto, Storia, Firma, Numero
 	};
 
 private:
@@ -116,6 +116,8 @@ private:
 	TSharedRef<SWidget> PaginaChiSei();
 	/** (28/10, passo 4.4) Il volto: la testa base e i cursori, il colono sul palco cambia mentre li muovi. */
 	TSharedRef<SWidget> PaginaVolto();
+	/** (02/11) Il corpo: altezza, peso e muscoli, con il colono intero nel ritratto. */
+	TSharedRef<SWidget> PaginaCorpo();
 	TSharedRef<SWidget> PaginaCarattere();
 	TSharedRef<SWidget> PaginaTesto(bool bRacconto);
 	TSharedRef<SWidget> PaginaFirma();

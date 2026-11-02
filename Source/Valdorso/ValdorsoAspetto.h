@@ -108,4 +108,24 @@ namespace ValdorsoAspetto
 
 	/** Vero se i due aspetti sono uguali (non scelto conta come quello di partenza). */
 	VALDORSO_API bool Uguali(const FValdorsoAspetto& A, const FValdorsoAspetto& B);
+
+	// (02/11) Il corpo in numeri. Il giocatore sceglie altezza, peso e muscoli; la Corporatura (il grasso, quella che
+	// ingrossa le ossa) si calcola dal peso. Nel mondo il peso cambierà con lo stile di vita (cibo, fatica) e i muscoli
+	// con l'allenamento: il corpo li segue da solo. I conti sono semplici e voluti (un indice di massa, come per i medici):
+	// peso = (massa di base + 6 x Corporatura + 2 x Muscoli) x altezza in metri al quadrato.
+
+	/** Di quanto l'Altezza ingrandisce il corpo a cursore pieno (+-6%, circa +-10 cm). */
+	inline constexpr float AltezzaPerUnita = 0.06f;
+
+	/** L'altezza in cm (di base 178 per un uomo, 165 per una donna; sesso vuoto = uomo). */
+	VALDORSO_API float AltezzaCm(const FValdorsoAspetto& Aspetto, const FString& Sesso);
+
+	/** Il peso in kg, da altezza, Corporatura e Muscoli. */
+	VALDORSO_API float PesoKg(const FValdorsoAspetto& Aspetto, const FString& Sesso);
+
+	/** Il peso che si avrebbe con questa Corporatura (-1..1): per i limiti del cursore del peso. */
+	VALDORSO_API float PesoKgCon(const FValdorsoAspetto& Aspetto, const FString& Sesso, float Corporatura);
+
+	/** Mette il peso voluto (in kg): cambia la Corporatura, dentro i limiti di altezza e muscoli. */
+	VALDORSO_API void ImpostaPeso(FValdorsoAspetto& Aspetto, const FString& Sesso, float Kg);
 }

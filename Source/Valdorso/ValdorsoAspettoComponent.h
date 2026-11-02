@@ -71,6 +71,12 @@ public:
 	/** Solo per le prove, su questo PC: cambia un cursore del volto (-1..1) senza toccare l'aspetto vero. */
 	void ProvaCursore(FName Id, float Valore);
 
+	/**
+	 * (02/11) Solo per le prove, su questo PC: un colore degli occhi con i numeri dati (tinta e luce del colore primario
+	 * e secondario dell'iride, saturazione), per trovare quelli giusti per la tavolozza. Comando Valdorso.Occhi.Prova.
+	 */
+	void ProvaOcchi(float TintaPrimaria, float LucePrimaria, float TintaSecondaria, float LuceSecondaria, float Saturazione);
+
 	/** Solo per le prove, su questo PC: mette un'altra testa (numero della scelta, da uomo o da donna; -1 = quella vera). */
 	void ProvaTesta(int32 Numero, bool bDiDonna);
 
@@ -88,6 +94,9 @@ public:
 	 * (le altre: il numero).
 	 */
 	static FString NomeScelta(const TCHAR* Voce, int32 Scelta, bool bDonna);
+
+	/** (02/11) Abbassa un filo i capelli della libreria sulle teste da uomo (variabile Valdorso.Capelli.Abbassa). */
+	void ApplicaPosizioneCapelli();
 
 	/** Il volto MetaHuman (nullptr se non c'è). */
 	USkeletalMeshComponent* GetVolto() const { return Volto.Get(); }
@@ -126,11 +135,34 @@ private:
 	/** Scrive i cursori del volto nell'animazione del volto. */
 	void ApplicaVolto();
 
+	/**
+	 * (02/11) Il corpo: l'Altezza scala tutto il MetaHuman (Body e, attaccati sotto, volto e peli) di +-6% dai piedi;
+	 * Corporatura e Muscoli vanno nelle variabili Float dell'animazione del corpo (ABP_CorpoSegue) con lo stesso nome,
+	 * dove il nodo Volto Valdorso con la tabella DT_CorpoValdorso ingrossa o assottiglia le ossa.
+	 */
+	void ApplicaCorpo();
+
 	/** (29/10) La carnagione (pelle di volto e corpo) e il colore di capelli, sopracciglia e barba. */
 	void ApplicaColori();
 
 	/** Il colore dei capelli già messo sul corpo di adesso (INDEX_NONE = ancora nessuno). */
 	int32 ColoreCapelliMesso = INDEX_NONE;
+
+	/**
+	 * (02/11) Il colore degli occhi (voce ColoreOcchi). 0 = come nasce (il materiale "cotto" della testa); le altre
+	 * scelte mettono sugli occhi il materiale non cotto del MetaHuman con i colori della tavolozza
+	 * Plugins/VoltoValdorso/Dati/ColoriOcchi.csv (si ritocca senza compilare).
+	 */
+	void ApplicaOcchi();
+
+	/** Il colore degli occhi già messo (INDEX_NONE = ancora nessuno; -2 = quello della prova). */
+	int32 OcchiMessi = INDEX_NONE;
+
+	/** I materiali degli occhi della testa, per tornare a "Come nasce" (numero dello slot -> materiale). */
+	TMap<int32, TWeakObjectPtr<UMaterialInterface>> OcchiOriginali;
+
+	/** I numeri della prova (vuoto = nessuna prova). */
+	TArray<float> OcchiProva;
 
 	/** (29/10) Capelli, barba e sopracciglia scelti (i peli della libreria MetaHuman, con i legami fatti dallo script). */
 	void ApplicaPeli();
@@ -149,6 +181,10 @@ private:
 		TArray<TSoftObjectPtr<UMaterialInterface>> Materiali;
 	};
 	TMap<FName, FPeloOriginale> PeliOriginali;
+
+	/** Dove stanno i capelli nel Blueprint della testa (letto una volta per corpo). */
+	FVector CapelliPosizioneOriginale = FVector::ZeroVector;
+	bool bCapelliPosizioneLetta = false;
 
 	/** La scelta già messa per ogni voce dei peli (Acconciatura, Barba, Sopracciglia). */
 	TMap<FString, int32> PeliMessi;

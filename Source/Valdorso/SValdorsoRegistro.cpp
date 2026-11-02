@@ -864,6 +864,7 @@ bool SValdorsoRegistroColono::PaginaCompleta(EPagina Quale) const
 	case EPagina::ChiSei:
 		return !Bozza.Sesso.IsEmpty() && Bozza.Eta >= ValdorsoRegistro::EtaMinima && Bozza.Eta <= ValdorsoRegistro::EtaMassima;
 	case EPagina::Volto:
+	case EPagina::Corpo:
 		return true;
 	case EPagina::Carattere:
 		for (const ValdorsoRegistro::EDomanda Coppia : RegSchermoCarattere)
@@ -905,6 +906,7 @@ FText SValdorsoRegistroColono::FrasePagina(EPagina Quale) const
 	{
 	case EPagina::ChiSei: return LOCTEXT("FraseChiSei", "Per ultimi vennero gli uomini, fragili e brevi, ma gli unici capaci di scegliere chi diventare.");
 	case EPagina::Volto: return LOCTEXT("FraseVolto", "Il sacerdote alza la lanterna e ti guarda a lungo: anche il volto si scrive nel registro.");
+	case EPagina::Corpo: return LOCTEXT("FraseCorpo", "Statura e peso, come per i soldati della Corona: la valle chiede braccia, e il sacerdote prende le misure.");
 	case EPagina::Fede: return LOCTEXT("FraseFede", "Nessun colono pronuncia davanti al sacerdote i nomi che non si pronunciano.");
 	case EPagina::Origine: return LOCTEXT("FraseOrigine", "La Corona ha chiamato coloni da ogni angolo di Aurelia: la valle dell'Orso è di nuovo aperta.");
 	case EPagina::Mestiere: return LOCTEXT("FraseMestiere", "Nella valle nessuno è più quello che era. Ma le mani ricordano.");
@@ -926,6 +928,7 @@ FText SValdorsoRegistroColono::TitoloPagina(EPagina Quale) const
 	{
 	case EPagina::ChiSei: return LOCTEXT("TitoloChiSei", "Chi sei?");
 	case EPagina::Volto: return LOCTEXT("TitoloVolto", "Che volto hai?");
+	case EPagina::Corpo: return LOCTEXT("TitoloCorpo", "Com'è il tuo corpo?");
 	case EPagina::Carattere: return LOCTEXT("TitoloCarattere", "Com'è il tuo carattere?");
 	case EPagina::Racconto: return LOCTEXT("TitoloRacconto", "Il racconto del sacerdote");
 	case EPagina::Storia: return LOCTEXT("TitoloStoria", "La tua storia");
@@ -940,6 +943,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::ContenutoPagina()
 	{
 	case EPagina::ChiSei: return PaginaChiSei();
 	case EPagina::Volto: return PaginaVolto();
+	case EPagina::Corpo: return PaginaCorpo();
 	case EPagina::Carattere: return PaginaCarattere();
 	case EPagina::Racconto: return PaginaTesto(true);
 	case EPagina::Storia: return PaginaTesto(false);
@@ -1318,6 +1322,7 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 	};
 	AggiungiScelta(TEXT("Acconciatura"), LOCTEXT("SceltaCapelli", "Capelli"));
 	AggiungiScelta(TEXT("ColoreCapelli"), LOCTEXT("ColoreCapelli", "Colore dei capelli"));
+	AggiungiScelta(TEXT("ColoreOcchi"), LOCTEXT("ColoreOcchi", "Colore degli occhi"));
 	if (!bDonna)
 	{
 		AggiungiScelta(TEXT("Barba"), LOCTEXT("SceltaBarba", "Barba e baffi"));
@@ -1327,6 +1332,94 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaVolto()
 	[
 		SNew(STextBlock)
 		.Text(LOCTEXT("SpiegaVolto", "Guarda il ritratto: il colono cambia mentre muovi i cursori. I dadi in basso scelgono un volto a caso."))
+		.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
+		.AutoWrapText(true)
+		.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+	];
+	return Righe;
+}
+
+TSharedRef<SWidget> SValdorsoRegistroColono::PaginaCorpo()
+{
+	auto Attivo = TAttribute<bool>::CreateLambda([this]() { return !bInFirma && !bFinale && !bInUscita; });
+	TSharedRef<SVerticalBox> Righe = SNew(SVerticalBox);
+	bool bPrimo = true;
+
+	// Una riga: il nome con il valore (1,78 m, 71 kg), -, il cursore, +. Il cursore muove sempre il byte del catalogo:
+	// per il peso è la Corporatura, e il numero in kg si calcola.
+	auto RigaCorpo = [this, &Righe, &bPrimo, Attivo](const TCHAR* Id, TFunction<FText()> Etichetta)
+	{
+		auto Sposta = [this, Id](int32 Di)
+		{
+			const int32 Nuovo = FMath::Clamp(static_cast<int32>(ValdorsoAspetto::Valore(Bozza.Aspetto, Id)) + Di, 0, 255);
+			ValdorsoAspetto::Imposta(Bozza.Aspetto, Id, static_cast<uint8>(Nuovo));
+			OnCambia.ExecuteIfBound(Bozza);
+		};
+		TSharedRef<SButton> Piu = Stile->Pulsante(FText::FromString(TEXT("+")), FSimpleDelegate::CreateLambda([Sposta]() { Sposta(16); }), 14.f, Attivo);
+		if (bPrimo)
+		{
+			PrimoFuoco = Piu;
+			bPrimo = false;
+		}
+		Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 6.f))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SBox).WidthOverride(230.f)
+				[
+					SNew(STextBlock)
+					.Text_Lambda([Etichetta]() { return Etichetta(); })
+					.Font(Stile->Caratteri->Testo(19.f))
+					.ColorAndOpacity(ValdorsoTema::Inchiostro())
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Stile->Pulsante(FText::FromString(TEXT("-")), FSimpleDelegate::CreateLambda([Sposta]() { Sposta(-16); }), 14.f, Attivo)
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center).Padding(FMargin(10.f, 0.f))
+			[
+				SNew(SSlider)
+				.MinValue(0.f)
+				.MaxValue(255.f)
+				.StepSize(1.f)
+				.MouseUsesStep(true)
+				.IsEnabled(Attivo)
+				.SliderBarColor(ValdorsoTema::InchiostroTenue())
+				.SliderHandleColor(ValdorsoTema::Rubrica())
+				.Value_Lambda([this, Id]() { return static_cast<float>(ValdorsoAspetto::Valore(Bozza.Aspetto, Id)); })
+				.OnValueChanged_Lambda([this, Id](float Nuovo)
+				{
+					ValdorsoAspetto::Imposta(Bozza.Aspetto, Id, static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(Nuovo), 0, 255)));
+					OnCambia.ExecuteIfBound(Bozza);
+				})
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Piu
+			]
+		];
+	};
+
+	RigaCorpo(TEXT("Altezza"), [this]()
+	{
+		const FString Metri = FString::Printf(TEXT("%.2f"), ValdorsoAspetto::AltezzaCm(Bozza.Aspetto, Bozza.Sesso) / 100.f).Replace(TEXT("."), TEXT(","));
+		return FText::Format(LOCTEXT("CorpoAltezza", "Altezza  {0} m"), FText::FromString(Metri));
+	});
+	RigaCorpo(TEXT("Corporatura"), [this]()
+	{
+		return FText::Format(LOCTEXT("CorpoPeso", "Peso  {0} kg"), FText::AsNumber(FMath::RoundToInt(ValdorsoAspetto::PesoKg(Bozza.Aspetto, Bozza.Sesso))));
+	});
+	RigaCorpo(TEXT("Muscoli"), []()
+	{
+		return LOCTEXT("CorpoMuscoli", "Muscoli");
+	});
+
+	Righe->AddSlot().AutoHeight().Padding(FMargin(0.f, 14.f, 0.f, 0.f))
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("SpiegaCorpo", "Nella valle il corpo non resta fermo: il peso cambia con quello che mangi e con quanto fatichi, i muscoli crescono con il lavoro e con le armi. I dadi in basso scelgono un corpo a caso."))
 		.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
 		.AutoWrapText(true)
 		.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
@@ -1517,6 +1610,9 @@ TSharedRef<SWidget> SValdorsoRegistroColono::PaginaFirma()
 	Riga(LOCTEXT("RigaVolto", "Il volto"), FString::Printf(TEXT("volto %d di %d"),
 		ValdorsoAspetto::Valore(Bozza.Aspetto, TEXT("Testa")) % UValdorsoAspettoComponent::TesteDisponibili(Bozza.Sesso == TEXT("donna")) + 1,
 		UValdorsoAspettoComponent::TesteDisponibili(Bozza.Sesso == TEXT("donna"))), EPagina::Volto);
+	Riga(LOCTEXT("RigaCorpo", "Il corpo"), FString::Printf(TEXT("%s m, %d kg"),
+		*FString::Printf(TEXT("%.2f"), ValdorsoAspetto::AltezzaCm(Bozza.Aspetto, Bozza.Sesso) / 100.f).Replace(TEXT("."), TEXT(",")),
+		FMath::RoundToInt(ValdorsoAspetto::PesoKg(Bozza.Aspetto, Bozza.Sesso))), EPagina::Corpo);
 	Riga(LOCTEXT("RigaFede", "La fede"), Scelta(ValdorsoRegistro::EDomanda::Fede), EPagina::Fede);
 	Riga(LOCTEXT("RigaOrigine", "Da dove vieni"), Scelta(ValdorsoRegistro::EDomanda::Origine), EPagina::Origine);
 	Riga(LOCTEXT("RigaMestiere", "Cosa facevi"), Scelta(ValdorsoRegistro::EDomanda::Mestiere), EPagina::Mestiere);
@@ -1603,8 +1699,21 @@ void SValdorsoRegistroColono::TiraDadiPagina()
 		Bozza.Eta = Dadi.RandRange(ValdorsoRegistro::EtaMinima, 40);
 		break;
 	case EPagina::Volto:
+	case EPagina::Corpo:
+	{
+		// (02/11) I dadi del volto non toccano il corpo, e quelli del corpo non toccano il volto.
+		const FValdorsoAspetto Prima = Bozza.Aspetto;
 		ValdorsoAspetto::Casuale(Bozza.Aspetto, Bozza.Sesso, Dadi);
+		for (const FValdorsoVoceAspetto& Voce : ValdorsoAspetto::Voci())
+		{
+			const bool bDelCorpo = Voce.Gruppo == EValdorsoGruppoAspetto::Corpo;
+			if (bDelCorpo != (Pagina == EPagina::Corpo) && !ValdorsoAspetto::NonScelto(Prima))
+			{
+				ValdorsoAspetto::Imposta(Bozza.Aspetto, Voce.Id, ValdorsoAspetto::Valore(Prima, Voce.Id));
+			}
+		}
 		break;
+	}
 	case EPagina::Carattere:
 		for (const ValdorsoRegistro::EDomanda Coppia : RegSchermoCarattere)
 		{

@@ -232,6 +232,44 @@ namespace ValdorsoAspetto
 		Aspetto = MoveTemp(Nuovo);
 	}
 
+	namespace
+	{
+		float AltezzaBase(const FString& Sesso)
+		{
+			return Sesso == TEXT("donna") ? 165.f : 178.f;
+		}
+		float MassaBase(const FString& Sesso)
+		{
+			return Sesso == TEXT("donna") ? 21.5f : 22.5f;
+		}
+		constexpr float GrassoPerUnita = 6.f;
+		constexpr float MuscoliPerUnita = 2.f;
+	}
+
+	float AltezzaCm(const FValdorsoAspetto& Aspetto, const FString& Sesso)
+	{
+		return AltezzaBase(Sesso) * (1.f + AltezzaPerUnita * Cursore(Aspetto, TEXT("Altezza")));
+	}
+
+	float PesoKgCon(const FValdorsoAspetto& Aspetto, const FString& Sesso, float Corporatura)
+	{
+		const float Metri = AltezzaCm(Aspetto, Sesso) / 100.f;
+		const float Indice = MassaBase(Sesso) + GrassoPerUnita * FMath::Clamp(Corporatura, -1.f, 1.f) + MuscoliPerUnita * Cursore(Aspetto, TEXT("Muscoli"));
+		return Indice * Metri * Metri;
+	}
+
+	float PesoKg(const FValdorsoAspetto& Aspetto, const FString& Sesso)
+	{
+		return PesoKgCon(Aspetto, Sesso, Cursore(Aspetto, TEXT("Corporatura")));
+	}
+
+	void ImpostaPeso(FValdorsoAspetto& Aspetto, const FString& Sesso, float Kg)
+	{
+		const float Metri = AltezzaCm(Aspetto, Sesso) / 100.f;
+		const float Corporatura = FMath::Clamp((Kg / (Metri * Metri) - MassaBase(Sesso) - MuscoliPerUnita * Cursore(Aspetto, TEXT("Muscoli"))) / GrassoPerUnita, -1.f, 1.f);
+		Imposta(Aspetto, TEXT("Corporatura"), static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(static_cast<float>(Mezzo) + Corporatura * 127.f), 0, 255)));
+	}
+
 	bool Uguali(const FValdorsoAspetto& A, const FValdorsoAspetto& B)
 	{
 		for (int32 i = 0; i < AspettoNumero; ++i)

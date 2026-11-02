@@ -781,6 +781,22 @@ bool FValdorsoTestAspetto::RunTest(const FString& Parameters)
 	TestFalse(TEXT("cambiare l'aspetto è una bozza nuova"), ValdorsoRegistro::StesseRisposte(Registro, Cambiato));
 	Cambiato.Aspetto.Versione = 99;
 	TestFalse(TEXT("aspetto rotto: non si firma"), ValdorsoRegistro::Problema(Cambiato, true).IsEmpty());
+
+	// (02/11) Il corpo in numeri: altezza e peso credibili, il peso scelto torna (dentro i limiti), più muscoli = più peso.
+	FValdorsoAspetto Corpo;
+	TestTrue(TEXT("uomo nel mezzo: 178 cm"), FMath::IsNearlyEqual(ValdorsoAspetto::AltezzaCm(Corpo, TEXT("uomo")), 178.f, 0.5f));
+	TestTrue(TEXT("donna nel mezzo: 165 cm"), FMath::IsNearlyEqual(ValdorsoAspetto::AltezzaCm(Corpo, TEXT("donna")), 165.f, 0.5f));
+	const float PesoMezzo = ValdorsoAspetto::PesoKg(Corpo, TEXT("uomo"));
+	TestTrue(TEXT("uomo nel mezzo: circa 71 kg"), PesoMezzo > 68.f && PesoMezzo < 74.f);
+	ValdorsoAspetto::ImpostaPeso(Corpo, TEXT("uomo"), 80.f);
+	TestTrue(TEXT("il peso scelto torna"), FMath::Abs(ValdorsoAspetto::PesoKg(Corpo, TEXT("uomo")) - 80.f) < 1.f);
+	ValdorsoAspetto::ImpostaPeso(Corpo, TEXT("uomo"), 500.f);
+	TestTrue(TEXT("il peso ha un massimo"), ValdorsoAspetto::PesoKg(Corpo, TEXT("uomo")) < 110.f);
+	ValdorsoAspetto::ImpostaPeso(Corpo, TEXT("donna"), 1.f);
+	TestTrue(TEXT("il peso ha un minimo"), ValdorsoAspetto::PesoKg(Corpo, TEXT("donna")) > 35.f);
+	FValdorsoAspetto Forte;
+	ValdorsoAspetto::Imposta(Forte, TEXT("Muscoli"), 255);
+	TestTrue(TEXT("più muscoli, più peso"), ValdorsoAspetto::PesoKg(Forte, TEXT("uomo")) > PesoMezzo);
 	return true;
 }
 

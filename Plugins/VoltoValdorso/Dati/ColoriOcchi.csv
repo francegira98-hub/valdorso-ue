@@ -1,0 +1,23 @@
+# Valdorso - La tavolozza del colore degli occhi (voce ColoreOcchi del Registro). Scritta da Claude il 02/11/2026.
+# Una riga per colore, nell'ordine delle scelte (la scelta 0, "Come nasce", non è qui: è il colore della testa).
+# I numeri vanno nel materiale M_eye_eyeball_unified: tinta e luce del colore primario e secondario dell'iride
+# (tra 0 e 1) e la saturazione (1,7 è quella delle teste del Creator). PRIMA VERSIONE, DA TARARE con il comando
+# di console Valdorso.Occhi.Prova: si cambia questo file e il gioco lo rilegge da solo, senza compilare.
+# (02/11, provato da Fra) La tinta del materiale è girata di mezzo giro: per un colore si scrive il suo opposto
+# (tinta vera + 0,5). Esempio: azzurro 0,56 -> 0,06. Qui sotto i numeri sono già girati.
+Nome,TintaPrimaria,LucePrimaria,TintaSecondaria,LuceSecondaria,Saturazione
+Castano scuro,0.55,0.25,0.56,0.18,1.2
+Castano,0.56,0.38,0.57,0.28,1.3
+Nocciola,0.59,0.50,0.70,0.40,1.2
+Ambra,0.60,0.65,0.59,0.50,1.5
+Miele,0.62,0.60,0.61,0.45,1.2
+Verde,0.80,0.50,0.75,0.40,1.2
+Verde scuro,0.83,0.35,0.80,0.28,1.2
+Verde grigio,0.85,0.50,0.90,0.45,0.6
+Grigio,0.08,0.55,0.08,0.45,0.25
+Grigio azzurro,0.07,0.60,0.08,0.50,0.6
+Azzurro,0.06,0.70,0.08,0.55,1.2
+Blu,0.10,0.55,0.12,0.45,1.4
+Blu scuro,0.13,0.35,0.14,0.28,1.4
+Quasi nero,0.55,0.12,0.55,0.10,1.0
+Ghiaccio,0.05,0.85,0.05,0.75,0.4
