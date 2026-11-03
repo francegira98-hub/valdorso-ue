@@ -19,6 +19,7 @@ class UGameplayEffect;
 class UAnimMontage;
 class UMotionWarpingComponent;
 class UValdorsoAspettoComponent;
+class UValdorsoSedutaComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -52,6 +53,10 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	/** (28/10) L'aspetto: il corpo MetaHuman sopra il manichino e i cursori del volto (vedi ValdorsoAspettoComponent.h) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoAspettoComponent* Aspetto;
+
+	/** (03/11) Sedersi sulle panche (vedi ValdorsoSeduta.h) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UValdorsoSedutaComponent* Seduta;
 
 	/** Le statistiche: salute, stamina, mana */
 	UPROPERTY()
@@ -181,6 +186,12 @@ public:
 
 	/** L'aspetto del colono (corpo MetaHuman e volto) */
 	FORCEINLINE UValdorsoAspettoComponent* GetAspetto() const { return Aspetto; }
+
+	/** Il componente delle panche (seduto, si siede, si alza) */
+	FORCEINLINE UValdorsoSedutaComponent* GetSeduta() const { return Seduta; }
+
+	/** (03/11) Vero se è su una panca: niente salti, schivate e pugni */
+	bool SuUnaPanca() const;
 
 	/**
 	 * Solo per le prove (console, ~): cambia un cursore del volto su questo PC, da -1 a 1.

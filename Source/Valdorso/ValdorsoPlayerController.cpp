@@ -28,6 +28,7 @@
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoCharacter.h"
 #include "ValdorsoAspettoComponent.h"
+#include "ValdorsoSeduta.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Kismet/GameplayStatics.h"
@@ -285,6 +286,17 @@ void AValdorsoPlayerController::ChiudiPausa()
 
 // --- Le interazioni (v0.1.3) -------------------------------------------------------------------------
 
+namespace
+{
+	/** (03/11) Vero mentre il colono si sta sedendo o alzando: in quel momento E non fa niente. */
+	bool SullaPancaInMovimento(const APawn* Corpo)
+	{
+		const AValdorsoCharacter* Colono = Cast<AValdorsoCharacter>(Corpo);
+		const UValdorsoSedutaComponent* Seduta = Colono ? Colono->GetSeduta() : nullptr;
+		return Seduta && Seduta->Occupato() && !Seduta->Seduto();
+	}
+}
+
 void AValdorsoPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
@@ -306,7 +318,7 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 
 	// Niente suggerimento mentre c'è una schermata aperta o il colono sta uscendo.
 	const bool bSchermata = Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid();
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SullaPancaInMovimento(GetPawn());
 	AActor* Trovata = (!bSchermata && GetPawn()) ? ValdorsoInterazione::PiuVicina(GetPawn()) : nullptr;
 	CosaVicina = Trovata;
 	const IValdorsoInterattivo* Cosa = Cast<IValdorsoInterattivo>(Trovata);
@@ -413,7 +425,7 @@ void AValdorsoPlayerController::ServerInteragisci_Implementation(AActor* Cosa)
 {
 	APawn* Corpo = GetPawn();
 	IValdorsoInterattivo* Interattivo = Cast<IValdorsoInterattivo>(Cosa);
-	if (!Corpo || !Interattivo || bInUscita)
+	if (!Corpo || !Interattivo || bInUscita || SullaPancaInMovimento(Corpo))
 	{
 		return;
 	}

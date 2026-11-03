@@ -11,6 +11,7 @@
 #include "ValdorsoAbilitaPugno.h"
 #include "MotionWarpingComponent.h"
 #include "ValdorsoAspettoComponent.h"
+#include "ValdorsoSeduta.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
@@ -78,6 +79,7 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 
 	// (28/10) L'aspetto: corpo MetaHuman sopra il manichino, volto con i cursori del Registro.
 	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
+	Seduta = CreateDefaultSubobject<UValdorsoSedutaComponent>(TEXT("Seduta"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -218,8 +220,23 @@ void AValdorsoCharacter::Look(const FInputActionValue& Value)
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
 }
 
+bool AValdorsoCharacter::SuUnaPanca() const
+{
+	return Seduta && Seduta->Occupato();
+}
+
 void AValdorsoCharacter::DoMove(float Right, float Forward)
 {
+	// (03/11) Seduto: muoversi vuol dire alzarsi (il movimento vero riparte quando è in piedi).
+	if (SuUnaPanca())
+	{
+		if (FMath::Abs(Right) + FMath::Abs(Forward) > 0.5f)
+		{
+			Seduta->ChiediDiAlzarti();
+		}
+		return;
+	}
+
 	if (GetController() != nullptr)
 	{
 		// find out which way is forward
@@ -251,6 +268,11 @@ void AValdorsoCharacter::DoLook(float Yaw, float Pitch)
 
 void AValdorsoCharacter::DoJumpStart()
 {
+	if (SuUnaPanca())
+	{
+		return;
+	}
+
 	// Prima prova a scavalcare o salire su un ostacolo; se non c'è, salta come sempre.
 	if (ProvaScavalcare())
 	{
@@ -283,7 +305,7 @@ void AValdorsoCharacter::DoCorsaFine()
 
 void AValdorsoCharacter::DoSchivata()
 {
-	if (AbilitySystemComponent && AbilitaSchivata)
+	if (!SuUnaPanca() && AbilitySystemComponent && AbilitaSchivata)
 	{
 		AbilitySystemComponent->TryActivateAbilityByClass(AbilitaSchivata);
 	}
@@ -291,7 +313,7 @@ void AValdorsoCharacter::DoSchivata()
 
 void AValdorsoCharacter::DoPugno()
 {
-	if (AbilitySystemComponent && AbilitaPugno)
+	if (!SuUnaPanca() && AbilitySystemComponent && AbilitaPugno)
 	{
 		AbilitySystemComponent->TryActivateAbilityByClass(AbilitaPugno);
 	}
