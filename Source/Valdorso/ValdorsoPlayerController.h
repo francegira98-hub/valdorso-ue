@@ -158,6 +158,14 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientUscitaFatta(uint8 Dove);
 
+	// --- Le interazioni (v0.1.3): il tasto E -----------------------------------------------------------
+
+	/** Il colono vuole usare una cosa (porta, poi panche, letti...): il server controlla la distanza e decide. */
+	UFUNCTION(Server, Reliable)
+	void ServerInteragisci(AActor* Cosa);
+
+	virtual void PlayerTick(float DeltaTime) override;
+
 	// --- Anticamera: dal server al client ---------------------------------------------------------
 
 	UFUNCTION(Client, Reliable)
@@ -259,6 +267,15 @@ private:
 	void ApriPausa();
 	void ChiudiPausa();
 	TSharedPtr<SValdorsoPausa> Pausa;
+	/** Client: il tasto E e il suggerimento in basso ("E · Apri la porta"). */
+	void TastoInteragisci();
+	void AggiornaSuggerimento();
+	TWeakObjectPtr<AActor> CosaVicina;
+	FText TestoSuggerimento;
+	TSharedPtr<SWidget> Suggerimento;
+	double ProssimaRicerca = 0.0;
+	int32 RichiesteInterazione = 0;
+	double InizioConteggioInterazioni = 0.0;
 	/** Client: le impostazioni, aperte dalla pausa (passo 6, seconda parte). */
 	void ApriImpostazioni();
 	void ChiudiImpostazioni();

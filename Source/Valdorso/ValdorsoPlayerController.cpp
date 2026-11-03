@@ -17,6 +17,13 @@
 #include "ValdorsoPalcoRegistro.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoInterazione.h"
+#include "ValdorsoTemaUI.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Styling/SlateBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoCharacter.h"
 #include "ValdorsoAspettoComponent.h"
@@ -118,6 +125,9 @@ void AValdorsoPlayerController::SetupInputComponent()
 		InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
 		InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
 		InputComponent->BindKey(EKeys::Gamepad_Special_Right, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
+		// (03/11, v0.1.3) Le interazioni: E, e X (tasto a sinistra) sul controller.
+		InputComponent->BindKey(EKeys::E, IE_Pressed, this, &AValdorsoPlayerController::TastoInteragisci);
+		InputComponent->BindKey(EKeys::Gamepad_FaceButton_Left, IE_Pressed, this, &AValdorsoPlayerController::TastoInteragisci);
 	}
 
 	// only add IMCs for local player controllers
@@ -270,6 +280,115 @@ void AValdorsoPlayerController::ChiudiPausa()
 		SetInputMode(FInputModeGameOnly());
 		bShowMouseCursor = false;
 	}
+}
+
+// --- Le interazioni (v0.1.3) -------------------------------------------------------------------------
+
+void AValdorsoPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+	if (IsLocalController())
+	{
+		AggiornaSuggerimento();
+	}
+}
+
+void AValdorsoPlayerController::AggiornaSuggerimento()
+{
+	// Dieci volte al secondo basta (e costa poco).
+	const double Adesso = FPlatformTime::Seconds();
+	if (Adesso < ProssimaRicerca)
+	{
+		return;
+	}
+	ProssimaRicerca = Adesso + 0.1;
+
+	// Niente suggerimento mentre c'è una schermata aperta o il colono sta uscendo.
+	const bool bSchermata = Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
+		|| SchermataCodici.IsValid();
+	AActor* Trovata = (!bSchermata && GetPawn()) ? ValdorsoInterazione::PiuVicina(GetPawn()) : nullptr;
+	CosaVicina = Trovata;
+	const IValdorsoInterattivo* Cosa = Cast<IValdorsoInterattivo>(Trovata);
+	TestoSuggerimento = Cosa ? Cosa->TestoInterazione(GetPawn()) : FText::GetEmpty();
+
+	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!Viewport)
+	{
+		return;
+	}
+	if (!TestoSuggerimento.IsEmpty() && !Suggerimento.IsValid())
+	{
+		static FValdorsoCaratteri* Caratteri = new FValdorsoCaratteri();
+		static FSlateBrush Fondo = FSlateRoundedBoxBrush(ValdorsoTema::Pannelli().CopyWithNewOpacity(0.85f), 4.f,
+			ValdorsoTema::Oro().CopyWithNewOpacity(0.5f), 1.f);
+		TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+		Suggerimento = SNew(SBox)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Bottom)
+			.Padding(FMargin(0.f, 0.f, 0.f, 120.f))
+			.Visibility(EVisibility::HitTestInvisible)
+			[
+				SNew(SBorder)
+				.BorderImage(&Fondo)
+				.Padding(FMargin(18.f, 8.f))
+				[
+					SNew(STextBlock)
+					.Font(Caratteri->Testo(20.f))
+					.ColorAndOpacity(ValdorsoTema::Pergamena())
+					.Text_Lambda([Debole]()
+					{
+						const AValdorsoPlayerController* Controllore = Debole.Get();
+						return Controllore ? FText::Format(NSLOCTEXT("ValdorsoInterazione", "Tasto", "E  ·  {0}"), Controllore->TestoSuggerimento)
+							: FText::GetEmpty();
+					})
+				]
+			];
+		Viewport->AddViewportWidgetContent(Suggerimento.ToSharedRef(), 40);
+	}
+	else if (TestoSuggerimento.IsEmpty() && Suggerimento.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(Suggerimento.ToSharedRef());
+		Suggerimento.Reset();
+	}
+}
+
+void AValdorsoPlayerController::TastoInteragisci()
+{
+	if (Pausa.IsValid() || !GetPawn())
+	{
+		return;
+	}
+	if (AActor* Cosa = CosaVicina.Get())
+	{
+		ServerInteragisci(Cosa);
+	}
+}
+
+void AValdorsoPlayerController::ServerInteragisci_Implementation(AActor* Cosa)
+{
+	APawn* Corpo = GetPawn();
+	IValdorsoInterattivo* Interattivo = Cast<IValdorsoInterattivo>(Cosa);
+	if (!Corpo || !Interattivo || bInUscita)
+	{
+		return;
+	}
+	// Un limite alle richieste: al massimo 10 al secondo (chi ne manda di più sta barando).
+	const double Adesso = FPlatformTime::Seconds();
+	if (Adesso - InizioConteggioInterazioni > 1.0)
+	{
+		InizioConteggioInterazioni = Adesso;
+		RichiesteInterazione = 0;
+	}
+	if (++RichiesteInterazione > 10)
+	{
+		return;
+	}
+	// Il server non si fida: il colono deve essere davvero vicino.
+	if (FVector::Dist(Corpo->GetActorLocation(), Interattivo->PuntoInterazione()) > ValdorsoInterazione::RaggioServer)
+	{
+		return;
+	}
+	Interattivo->Interagisci(Corpo);
 }
 
 // --- Server: l'uscita con attesa -------------------------------------------------------------------
@@ -1054,6 +1173,14 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	ChiudiRegistro();
 	ChiudiSceltaPersonaggio();
 	ChiudiPausa();
+	if (Suggerimento.IsValid())
+	{
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(Suggerimento.ToSharedRef());
+		}
+		Suggerimento.Reset();
+	}
 	// Server che si spegne o cambia mappa: l'ultimo minuto non va perso.
 	SalvaPersonaggio();
 	if (GetWorld())
