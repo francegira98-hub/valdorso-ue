@@ -18,6 +18,7 @@ class AValdorsoPalcoRegistro;
 class UUserWidget;
 class SValdorsoPausa;
 class SValdorsoImpostazioni;
+class SValdorsoBacheca;
 
 /**
  *  Basic PlayerController class for a third person game
@@ -166,6 +167,10 @@ public:
 
 	virtual void PlayerTick(float DeltaTime) override;
 
+	/** Il server manda gli avvisi della bacheca letta: il PC li mostra su una pergamena. */
+	UFUNCTION(Client, Reliable)
+	void ClientMostraBacheca(const FString& Titolo, const TArray<FString>& Avvisi);
+
 	// --- Anticamera: dal server al client ---------------------------------------------------------
 
 	UFUNCTION(Client, Reliable)
@@ -273,6 +278,8 @@ private:
 	TWeakObjectPtr<AActor> CosaVicina;
 	FText TestoSuggerimento;
 	TSharedPtr<SWidget> Suggerimento;
+	void ChiudiBacheca();
+	TSharedPtr<SValdorsoBacheca> SchermataBacheca;
 	double ProssimaRicerca = 0.0;
 	int32 RichiesteInterazione = 0;
 	double InizioConteggioInterazioni = 0.0;

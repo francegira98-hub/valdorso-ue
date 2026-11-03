@@ -54,6 +54,9 @@ namespace ValdorsoInterazione
 
 	/** La cosa con cui interagire più vicina davanti al colono (nullptr se nessuna). */
 	VALDORSO_API AActor* PiuVicina(const APawn* Chi);
+
+	/** (03/11) Vero se tra il colono e la cosa non c'è un muro: niente porte o imposte usate attraverso le pareti. */
+	VALDORSO_API bool SiVede(const APawn* Chi, const AActor* Cosa);
 }
 
 UCLASS()
@@ -76,6 +79,10 @@ public:
 	UPROPERTY(EditAnywhere, Replicated, Category = "Porta")
 	bool bChiusaAChiave = false;
 
+	/** 0 = si apre dalla parte opposta a chi spinge; 1 o -1 = sempre dalla stessa parte (le imposte, verso fuori). */
+	UPROPERTY(EditAnywhere, Category = "Porta", meta = (ClampMin = "-1", ClampMax = "1"))
+	int32 VersoFisso = 0;
+
 	// IValdorsoInterattivo
 	virtual FText TestoInterazione(const APawn* Chi) const override;
 	virtual void Interagisci(APawn* Chi) override;
@@ -86,6 +93,11 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	/** Le scritte (le imposte le cambiano). */
+	virtual FText TestoApri() const;
+	virtual FText TestoChiudi() const;
+	virtual FText TestoAChiave() const;
 
 	/** La cerniera: l'anta gira intorno a lei. */
 	UPROPERTY(VisibleAnywhere, Category = "Porta")
@@ -105,4 +117,63 @@ private:
 
 	/** L'angolo di adesso (si muove piano verso quello voluto). */
 	float AngoloAttuale = 0.f;
+};
+
+/**
+ * (03/11) Un'imposta di finestra: come la porta, ma più piccola (60 × 4 × 100 cm), si apre sempre verso fuori
+ * (il lato X positivo) e quasi tutta, fino al muro. Per una finestra con due imposte se ne mettono due, una girata.
+ * L'origine è il centro del davanzale: va messa all'altezza della finestra.
+ */
+UCLASS()
+class VALDORSO_API AValdorsoImposta : public AValdorsoPorta
+{
+	GENERATED_BODY()
+
+public:
+	AValdorsoImposta();
+
+	virtual FVector PuntoInterazione() const override;
+
+protected:
+	virtual FText TestoApri() const override;
+	virtual FText TestoChiudi() const override;
+	virtual FText TestoAChiave() const override;
+};
+
+/**
+ * (03/11) La bacheca del villaggio: si legge con E. Gli avvisi si scrivono nei Dettagli (Avvisi) e il server li manda a
+ * chi la legge. Più avanti ci appenderanno gli incarichi la Gilda, il Balivo e i giocatori.
+ */
+UCLASS()
+class VALDORSO_API AValdorsoBacheca : public AActor, public IValdorsoInterattivo
+{
+	GENERATED_BODY()
+
+public:
+	AValdorsoBacheca();
+
+	/** Il nome scritto in cima alla pergamena. */
+	UPROPERTY(EditAnywhere, Category = "Bacheca")
+	FText Titolo;
+
+	/** Gli avvisi appesi (al massimo 20, di 300 lettere l'uno). */
+	UPROPERTY(EditAnywhere, Category = "Bacheca", meta = (MultiLine = "true"))
+	TArray<FString> Avvisi;
+
+	// IValdorsoInterattivo
+	virtual FText TestoInterazione(const APawn* Chi) const override;
+	virtual void Interagisci(APawn* Chi) override;
+	virtual FVector PuntoInterazione() const override;
+
+protected:
+	virtual void BeginPlay() override;
+
+	UPROPERTY(VisibleAnywhere, Category = "Bacheca")
+	TObjectPtr<UStaticMeshComponent> Tavola;
+
+	UPROPERTY(VisibleAnywhere, Category = "Bacheca")
+	TObjectPtr<UStaticMeshComponent> PaloSinistro;
+
+	UPROPERTY(VisibleAnywhere, Category = "Bacheca")
+	TObjectPtr<UStaticMeshComponent> PaloDestro;
 };

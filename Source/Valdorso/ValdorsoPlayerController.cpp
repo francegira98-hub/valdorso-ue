@@ -18,6 +18,7 @@
 #include "ValdorsoRegole.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoInterazione.h"
+#include "SValdorsoBacheca.h"
 #include "ValdorsoTemaUI.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -171,7 +172,7 @@ void AValdorsoPlayerController::ApriPausa()
 {
 	// Solo nella valle, con il corpo, e quando non c'è già un'altra schermata (registro, scelta, anticamera, codici).
 	if (Pausa.IsValid() || !GetPawn() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid())
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid())
 	{
 		return;
 	}
@@ -305,7 +306,7 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 
 	// Niente suggerimento mentre c'è una schermata aperta o il colono sta uscendo.
 	const bool bSchermata = Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid();
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid();
 	AActor* Trovata = (!bSchermata && GetPawn()) ? ValdorsoInterazione::PiuVicina(GetPawn()) : nullptr;
 	CosaVicina = Trovata;
 	const IValdorsoInterattivo* Cosa = Cast<IValdorsoInterattivo>(Trovata);
@@ -352,9 +353,53 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 	}
 }
 
+void AValdorsoPlayerController::ClientMostraBacheca_Implementation(const FString& Titolo, const TArray<FString>& Avvisi)
+{
+	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!Viewport || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid())
+	{
+		return;
+	}
+	ChiudiBacheca();
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	SAssignNew(SchermataBacheca, SValdorsoBacheca)
+		.Titolo(Titolo)
+		.Avvisi(Avvisi)
+		.OnChiudi(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ChiudiBacheca();
+			}
+		}));
+	Viewport->AddViewportWidgetContent(SchermataBacheca.ToSharedRef(), 58);
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(SchermataBacheca->FuocoIniziale());
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+}
+
+void AValdorsoPlayerController::ChiudiBacheca()
+{
+	if (!SchermataBacheca.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(SchermataBacheca.ToSharedRef());
+	}
+	SchermataBacheca.Reset();
+	if (!Pausa.IsValid() && !SchermataRegistro.IsValid() && !SceltaPersonaggio.IsValid() && !Anticamera.IsValid() && !SchermataCodici.IsValid())
+	{
+		SetInputMode(FInputModeGameOnly());
+		bShowMouseCursor = false;
+	}
+}
+
 void AValdorsoPlayerController::TastoInteragisci()
 {
-	if (Pausa.IsValid() || !GetPawn())
+	if (Pausa.IsValid() || SchermataBacheca.IsValid() || !GetPawn())
 	{
 		return;
 	}
@@ -384,7 +429,8 @@ void AValdorsoPlayerController::ServerInteragisci_Implementation(AActor* Cosa)
 		return;
 	}
 	// Il server non si fida: il colono deve essere davvero vicino.
-	if (FVector::Dist(Corpo->GetActorLocation(), Interattivo->PuntoInterazione()) > ValdorsoInterazione::RaggioServer)
+	if (FVector::Dist(Corpo->GetActorLocation(), Interattivo->PuntoInterazione()) > ValdorsoInterazione::RaggioServer
+		|| !ValdorsoInterazione::SiVede(Corpo, Cosa))
 	{
 		return;
 	}
@@ -1173,6 +1219,7 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	ChiudiRegistro();
 	ChiudiSceltaPersonaggio();
 	ChiudiPausa();
+	ChiudiBacheca();
 	if (Suggerimento.IsValid())
 	{
 		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
