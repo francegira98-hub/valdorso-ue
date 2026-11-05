@@ -13,11 +13,15 @@
 # Non usa i livelli di pittura del paesaggio: le maschere vengono dal generatore della valle. Quando servirà dipingere
 # a mano (sentieri nuovi, campi), si aggiungeranno i livelli sopra a questo.
 
+import os
+
 import unreal
 
 CARTELLA_TEXTURE = "V:/Texture/valdorso/terreno"
 MASCHERE = "V:/Texture/valdorso/valle/T_ValleMaschere_3000.png"
 MASCHERE2 = "V:/Texture/valdorso/valle/T_ValleMaschere2_3000.png"      # (07/10) R = bagnato
+# (05/11) Dove l'erba vera NON va (strade, piazza, sotto le case): fatta da Tools/Generatori/villaggio.py. Se manca, niente.
+SENZA_ERBA = "V:/Texture/valdorso/villaggio/T_SenzaErba.png"
 # (07/10) Le funzioni di Unreal che proiettano una texture da tre lati (triplanare): sulle pareti dritte la roccia
 # non si stira più in righe verticali.
 FUNZIONE_TRIPLANARE = "/Engine/Functions/Engine_MaterialFunctions01/Texturing/WorldAlignedTexture.WorldAlignedTexture"
@@ -304,6 +308,7 @@ def esegui():
     variazione = importa(CARTELLA_TEXTURE + "/T_Variazione.png", colore=False)
     maschere = importa(MASCHERE, maschera=True)
     maschere2 = importa(MASCHERE2, maschera=True)
+    senza_erba = importa(SENZA_ERBA, maschera=True) if os.path.exists(SENZA_ERBA) else None
     if maschere is None or None in colori.values() or None in normali.values() or variazione is None:
         unreal.log_error("[Valdorso] Valle: mancano delle texture, il materiale non si crea (vedi gli avvisi sopra).")
         return
@@ -453,6 +458,16 @@ def esegui():
                 collega(resto, "", per, "A")
                 collega(meno, "", per, "B")
                 resto = per
+        if senza_erba is not None:
+            # (05/11) niente erba vera su strade, piazza e sotto le case del villaggio
+            se = campiona(materiale, senza_erba, uv_valle, -700, 1700, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+            via = nodo(materiale, unreal.MaterialExpressionOneMinus, -500, 1700)
+            collega(se, "R", via, "")
+            per_se = nodo(materiale, unreal.MaterialExpressionMultiply, -250, 1650)
+            collega(resto, "", per_se, "A")
+            collega(via, "", per_se, "B")
+            resto = per_se
+            unreal.log("[Valdorso] Valle: niente erba vera dove dice T_SenzaErba (villaggio)")
         uscite = {"Prato": resto}
         if m2 is not None:
             felci = nodo(materiale, unreal.MaterialExpressionMultiply, -100, 1550)
