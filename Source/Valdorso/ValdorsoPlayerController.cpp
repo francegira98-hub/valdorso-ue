@@ -29,6 +29,7 @@
 #include "ValdorsoCharacter.h"
 #include "ValdorsoAspettoComponent.h"
 #include "ValdorsoSeduta.h"
+#include "ValdorsoLetto.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Kismet/GameplayStatics.h"
@@ -293,7 +294,9 @@ namespace
 	{
 		const AValdorsoCharacter* Colono = Cast<AValdorsoCharacter>(Corpo);
 		const UValdorsoSedutaComponent* Seduta = Colono ? Colono->GetSeduta() : nullptr;
-		return Seduta && Seduta->Occupato() && !Seduta->Seduto();
+		const UValdorsoSonnoComponent* Sonno = Colono ? Colono->GetSonno() : nullptr;
+		// (05/11) Anche mentre si corica o si alza dal letto.
+		return (Seduta && Seduta->Occupato() && !Seduta->Seduto()) || (Sonno && Sonno->Occupato() && !Sonno->Dorme());
 	}
 }
 
@@ -425,7 +428,7 @@ void AValdorsoPlayerController::ServerInteragisci_Implementation(AActor* Cosa)
 {
 	APawn* Corpo = GetPawn();
 	IValdorsoInterattivo* Interattivo = Cast<IValdorsoInterattivo>(Cosa);
-	if (!Corpo || !Interattivo || bInUscita || SullaPancaInMovimento(Corpo))
+	if (!Corpo || !Interattivo || bInUscita || SullaPancaInMovimento(Corpo) || !ValdorsoInterazione::PuoUsare(Corpo, Cosa))
 	{
 		return;
 	}

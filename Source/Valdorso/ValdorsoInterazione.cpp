@@ -4,6 +4,8 @@
 #include "Valdorso.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoPlayerController.h"
+#include "ValdorsoSeduta.h"
+#include "ValdorsoLetto.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
@@ -38,6 +40,23 @@ namespace ValdorsoInterazione
 		return !Mondo->LineTraceSingleByChannel(Colpo, Occhi, Interattivo->PuntoInterazione(), ECC_Visibility, Parametri);
 	}
 
+	bool PuoUsare(const APawn* Chi, const AActor* Cosa)
+	{
+		if (!Chi || !Cosa)
+		{
+			return false;
+		}
+		if (const UValdorsoSedutaComponent* Seduta = Chi->FindComponentByClass<UValdorsoSedutaComponent>(); Seduta && Seduta->Occupato())
+		{
+			return Cosa == Seduta->GetPanca();
+		}
+		if (const UValdorsoSonnoComponent* Sonno = Chi->FindComponentByClass<UValdorsoSonnoComponent>(); Sonno && Sonno->Occupato())
+		{
+			return Cosa == Sonno->GetLetto();
+		}
+		return true;
+	}
+
 	AActor* PiuVicina(const APawn* Chi)
 	{
 		UWorld* Mondo = Chi ? Chi->GetWorld() : nullptr;
@@ -58,7 +77,7 @@ namespace ValdorsoInterazione
 		{
 			AActor* Attore = Trovato.GetActor();
 			const IValdorsoInterattivo* Cosa = Cast<IValdorsoInterattivo>(Attore);
-			if (!Cosa || Cosa->TestoInterazione(Chi).IsEmpty())
+			if (!Cosa || !PuoUsare(Chi, Attore) || Cosa->TestoInterazione(Chi).IsEmpty())
 			{
 				continue;
 			}

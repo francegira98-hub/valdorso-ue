@@ -20,6 +20,7 @@ class UAnimMontage;
 class UMotionWarpingComponent;
 class UValdorsoAspettoComponent;
 class UValdorsoSedutaComponent;
+class UValdorsoSonnoComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -57,6 +58,10 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	/** (03/11) Sedersi sulle panche (vedi ValdorsoSeduta.h) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoSedutaComponent* Seduta;
+
+	/** (05/11) Dormire nei letti (vedi ValdorsoLetto.h) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UValdorsoSonnoComponent* Sonno;
 
 	/** Le statistiche: salute, stamina, mana */
 	UPROPERTY()
@@ -190,7 +195,10 @@ public:
 	/** Il componente delle panche (seduto, si siede, si alza) */
 	FORCEINLINE UValdorsoSedutaComponent* GetSeduta() const { return Seduta; }
 
-	/** (03/11) Vero se è su una panca: niente salti, schivate e pugni */
+	/** Il componente dei letti (dorme, si corica, si alza) */
+	FORCEINLINE UValdorsoSonnoComponent* GetSonno() const { return Sonno; }
+
+	/** (03/11) Vero se è su una panca o (05/11) in un letto: niente salti, schivate e pugni */
 	bool SuUnaPanca() const;
 
 	/**

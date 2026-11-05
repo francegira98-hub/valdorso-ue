@@ -12,6 +12,7 @@
 #include "MotionWarpingComponent.h"
 #include "ValdorsoAspettoComponent.h"
 #include "ValdorsoSeduta.h"
+#include "ValdorsoLetto.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
@@ -80,6 +81,7 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	// (28/10) L'aspetto: corpo MetaHuman sopra il manichino, volto con i cursori del Registro.
 	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
 	Seduta = CreateDefaultSubobject<UValdorsoSedutaComponent>(TEXT("Seduta"));
+	Sonno = CreateDefaultSubobject<UValdorsoSonnoComponent>(TEXT("Sonno"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -222,7 +224,7 @@ void AValdorsoCharacter::Look(const FInputActionValue& Value)
 
 bool AValdorsoCharacter::SuUnaPanca() const
 {
-	return Seduta && Seduta->Occupato();
+	return (Seduta && Seduta->Occupato()) || (Sonno && Sonno->Occupato());
 }
 
 void AValdorsoCharacter::DoMove(float Right, float Forward)
@@ -232,7 +234,15 @@ void AValdorsoCharacter::DoMove(float Right, float Forward)
 	{
 		if (FMath::Abs(Right) + FMath::Abs(Forward) > 0.5f)
 		{
-			Seduta->ChiediDiAlzarti();
+			// Ognuno guarda solo il suo stato: si alza dalla panca o dal letto.
+			if (Seduta)
+			{
+				Seduta->ChiediDiAlzarti();
+			}
+			if (Sonno)
+			{
+				Sonno->ChiediDiAlzarti();
+			}
 		}
 		return;
 	}

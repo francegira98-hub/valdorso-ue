@@ -57,6 +57,9 @@ namespace ValdorsoInterazione
 
 	/** (03/11) Vero se tra il colono e la cosa non c'è un muro: niente porte o imposte usate attraverso le pareti. */
 	VALDORSO_API bool SiVede(const APawn* Chi, const AActor* Cosa);
+
+	/** (05/11) Vero se il colono può usare quella cosa adesso: seduto su una panca o in un letto, solo quella. */
+	VALDORSO_API bool PuoUsare(const APawn* Chi, const AActor* Cosa);
 }
 
 UCLASS()
