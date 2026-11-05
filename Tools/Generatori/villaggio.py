@@ -823,12 +823,16 @@ def villaggio(pr, rng):
     casa("Fattoria_Est", 178, 18, 180, 11, 8, piani=1, base="Pietra", sopra="Intonaco", tetto="Paglia", pendenza=45)
     pr.edificio(S, "Fienile_Est", lambda nome, W, D, **kw: ed.fienile(nome, W, D, kw["fondazione"]), *L(180, 34), 180.0, 1000, 600)
 
-    # ---- la palizzata: dal ciglio della gola a nord, intorno, fino al ciglio a sud-ovest; tre porte
+    # ---- la palizzata: dal fiume a nord, intorno, fino al fiume a sud-ovest; quattro porte
     # (05/11) le porte stanno dove passano le strade dipinte: a nord la strada del ponte, a est le due strade
     # (grotta e passo) che partono dalla fine della via maestra, a sud il viottolo del cimitero.
-    giro = [(-57, -150), (-16.0, -155.0), (-9.2, -155.8), (40, -160), (100, -122), (114, -60), (114, -28.6), (114, -22.0),
+    # (06/11) visto da Fra in Play: i due capi a ovest si fermavano a metà della sponda e lasciavano un varco.
+    # Ora scendono fino all'acqua: a nord fino a ~1,5 m sotto il pelo del fiume (-75.3, -152.6); a sud-ovest passano
+    # a valle della capanna e del pontile di Orlando (che restano dentro, a ~20 m) e finiscono nel fiume (-151.8, 53.2).
+    # Misurati sulle altezze vere (Altezze_3000.png) e sul fiume di Acqua_3000.json; nessuna strada dipinta attraversata.
+    giro = [(-75.3, -152.6), (-57, -150), (-16.0, -155.0), (-9.2, -155.8), (40, -160), (100, -122), (114, -60), (114, -28.6), (114, -22.0),
             (114, 13.8), (114, 20.3), (114, 60),
-            (82, 106), (11.3, 117), (4.7, 117), (-30, 112), (-70, 95), (-104, 62)]
+            (82, 106), (11.3, 117), (4.7, 117), (-30, 112), (-70, 95), (-104, 62), (-140.6, 61.6), (-151.8, 53.2)]
     porte = [((-16.0, -155.0), (-9.2, -155.8)), ((114, -28.6), (114, -22.0)), ((114, 13.8), (114, 20.3)), ((11.3, 117), (4.7, 117))]
     pezzi = [[]]
     for p in giro:
