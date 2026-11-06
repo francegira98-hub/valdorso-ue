@@ -45,3 +45,10 @@ Content/Unpacked/
 Content/Legami/
 Content/Peli/
 Content/MH_*.uasset
+# Pezzi del villaggio importati (mesh, materiali, texture): si rifanno con Content/Python/nuovi/crea_villaggio.py
+# da V:\Texture\valdorso\villaggio.zip (Tools/Generatori/villaggio.py). Fuori da GitHub per lo spazio LFS (decisa da Fra, 06/11).
+Content/Valle/Villaggio/
+# Pacchetti di animazioni di Fab (licenza Standard di Fab): mai su GitHub (06/11). Le animazioni adattate al colono
+# stanno in Content/Fab/FreeAnimationLibrary/Movenze (porta_movenze.py).
+Content/FreeAnimationLibrary/
+Content/SampleAnimationPack/
