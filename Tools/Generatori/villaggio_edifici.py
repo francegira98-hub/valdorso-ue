@@ -260,6 +260,40 @@ def palizzata(nome, punti, raggio=13.0, altezza=380.0, affondo=60.0, varchi=(), 
     return m
 
 
+def muro_cinta(nome, punti, altezza=620.0, spessore=180.0, affondo=150.0, passo_merli=150.0, seme=1):
+    """(06/11, fase 3) Muro di cinta di pietra lungo una spezzata di punti (x, y, z_terreno), a gradini che seguono il
+    terreno, con i merli sul lato di fuori (-nrm: fuori dal villaggio se i punti girano in senso orario, come la
+    palizzata) e una cornice. Un blocco ogni tratto: i tratti corti (3 m) fanno i gradini."""
+    rng = np.random.default_rng(seme)
+    m = Mesh(nome)
+    for i in range(len(punti) - 1):
+        a = np.asarray(punti[i], np.float64)
+        b = np.asarray(punti[i + 1], np.float64)
+        d = b[:2] - a[:2]
+        L = float(np.linalg.norm(d))
+        if L < 1:
+            continue
+        u = np.array([d[0] / L, d[1] / L, 0.0])
+        nrm = np.array([-u[1], u[0], 0.0])
+        z0 = min(a[2], b[2]) - affondo
+        z1 = max(a[2], b[2]) + altezza
+        c = (a + b) / 2
+        # il corpo del muro (un poco più lungo, così i tratti si toccano senza fessure)
+        m.scatola("Pietra", [c[0], c[1], (z0 + z1) / 2], u * (L / 2 + 8), nrm * spessore / 2, [0, 0, (z1 - z0) / 2])
+        # la cornice sporgente in cima
+        m.scatola("Pietra", [c[0], c[1], z1 + 15], u * (L / 2 + 8), nrm * (spessore / 2 + 12), [0, 0, 15])
+        # i merli, dalla parte di fuori
+        n = max(1, int(L / passo_merli))
+        for k in range(n):
+            if k % 2:
+                continue
+            p = a[:2] + d * (k + 0.5) / n
+            h = 75.0 * rng.uniform(0.95, 1.05)
+            m.scatola("Pietra", [p[0] - nrm[0] * spessore * 0.3, p[1] - nrm[1] * spessore * 0.3, z1 + 30 + h / 2],
+                      u * min(40.0, L / n / 2), nrm * spessore * 0.2, [0, 0, h / 2])
+    return m
+
+
 def recinto(nome, punti, altezza=110.0, passo=220.0, mat="Trave", chiuso=False):
     """Staccionata: paletti e due correnti, lungo punti (x, y, z_terreno)."""
     m = Mesh(nome)

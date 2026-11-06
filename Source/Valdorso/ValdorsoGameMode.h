@@ -23,7 +23,8 @@ public:
 
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 
-	/** (03/11, v0.1.3) Se il livello non ha il cielo che gira (AValdorsoCielo), lo fa nascere. */
+	/** (03/11, v0.1.3) Se il livello non ha il cielo che gira (AValdorsoCielo), lo fa nascere; (06/11) lo stesso per le
+	 *  fasi del villaggio (AValdorsoFasiVillaggio). */
 	virtual void StartPlay() override;
 	virtual void Logout(AController* Exiting) override;
 };

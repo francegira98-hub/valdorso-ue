@@ -368,6 +368,76 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 	}
 }
 
+void AValdorsoPlayerController::ClientAvviso_Implementation(const FText& Testo, float Secondi, float SecondiFermo)
+{
+	// Lo stordimento: niente movimento per qualche istante (il contatore di Unreal si alza una volta sola).
+	if (SecondiFermo > 0.f)
+	{
+		if (!bFermoPerAvviso)
+		{
+			SetIgnoreMoveInput(true);
+			bFermoPerAvviso = true;
+		}
+		TWeakObjectPtr<AValdorsoPlayerController> DeboleFermo(this);
+		GetWorldTimerManager().SetTimer(TimerFermo, FTimerDelegate::CreateLambda([DeboleFermo]()
+		{
+			if (AValdorsoPlayerController* Controllore = DeboleFermo.Get(); Controllore && Controllore->bFermoPerAvviso)
+			{
+				Controllore->SetIgnoreMoveInput(false);
+				Controllore->bFermoPerAvviso = false;
+			}
+		}), SecondiFermo, false);
+	}
+
+	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!Viewport || Testo.IsEmpty())
+	{
+		return;
+	}
+	TestoAvviso = Testo;
+	if (!Avviso.IsValid())
+	{
+		static FValdorsoCaratteri* Caratteri = new FValdorsoCaratteri();
+		static FSlateBrush Fondo = FSlateRoundedBoxBrush(ValdorsoTema::Pannelli().CopyWithNewOpacity(0.88f), 4.f,
+			ValdorsoTema::Oro().CopyWithNewOpacity(0.6f), 1.f);
+		TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+		Avviso = SNew(SBox)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Top)
+			.Padding(FMargin(0.f, 140.f, 0.f, 0.f))
+			.Visibility(EVisibility::HitTestInvisible)
+			[
+				SNew(SBorder)
+				.BorderImage(&Fondo)
+				.Padding(FMargin(22.f, 10.f))
+				[
+					SNew(STextBlock)
+					.Font(Caratteri->Testo(22.f))
+					.ColorAndOpacity(ValdorsoTema::Pergamena())
+					.Text_Lambda([Debole]()
+					{
+						const AValdorsoPlayerController* Controllore = Debole.Get();
+						return Controllore ? Controllore->TestoAvviso : FText::GetEmpty();
+					})
+				]
+			];
+		Viewport->AddViewportWidgetContent(Avviso.ToSharedRef(), 45);
+	}
+	GetWorldTimerManager().SetTimer(TimerAvviso, this, &AValdorsoPlayerController::ChiudiAvviso, FMath::Max(0.5f, Secondi), false);
+}
+
+void AValdorsoPlayerController::ChiudiAvviso()
+{
+	if (Avviso.IsValid())
+	{
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(Avviso.ToSharedRef());
+		}
+		Avviso.Reset();
+	}
+}
+
 void AValdorsoPlayerController::ClientMostraBacheca_Implementation(const FString& Titolo, const TArray<FString>& Avvisi)
 {
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
@@ -1243,6 +1313,7 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 		}
 		Suggerimento.Reset();
 	}
+	ChiudiAvviso();
 	// Server che si spegne o cambia mappa: l'ultimo minuto non va perso.
 	SalvaPersonaggio();
 	if (GetWorld())

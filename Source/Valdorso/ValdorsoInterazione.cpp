@@ -46,6 +46,12 @@ namespace ValdorsoInterazione
 		{
 			return false;
 		}
+		// (06/11) Una cosa nascosta (per esempio la porta di una casa di una fase del villaggio che non c'è ancora)
+		// non si usa.
+		if (Cosa->IsHidden())
+		{
+			return false;
+		}
 		if (const UValdorsoSedutaComponent* Seduta = Chi->FindComponentByClass<UValdorsoSedutaComponent>(); Seduta && Seduta->Occupato())
 		{
 			return Cosa == Seduta->GetPanca();

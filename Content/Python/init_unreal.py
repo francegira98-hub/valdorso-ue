@@ -25,6 +25,24 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_INVENTARIO)
     valdorso.add_menu_entry("Strumenti", voce)
 
+    # (06/11) il villaggio a fasi: nell'editor si guarda una fase alla volta
+    for fase in (1, 2, 3):
+        voce = unreal.ToolMenuEntry(name="VillaggioFase%d" % fase, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label("Villaggio: mostra la fase %d" % fase)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "",
+                                "import importlib, fasi_villaggio as fv; importlib.reload(fv); fv.mostra(%d)" % fase)
+        valdorso.add_menu_entry("Villaggio", voce)
+
+    # (06/11) le texture vere del villaggio (passo C)
+    for nome, etichetta, funzione in (("TextureElenca", "Villaggio: elenca le superfici", "elenca"),
+                                      ("TextureVere", "Villaggio: metti le texture vere", "metti"),
+                                      ("TextureClaude", "Villaggio: rimetti le texture di Claude", "rimetti_claude")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "",
+                                "import importlib, texture_vere as tv; importlib.reload(tv); tv.%s()" % funzione)
+        valdorso.add_menu_entry("Villaggio", voce)
+
     menu_tool.refresh_all_widgets()
     unreal.log("Valdorso: menu pronto")
 

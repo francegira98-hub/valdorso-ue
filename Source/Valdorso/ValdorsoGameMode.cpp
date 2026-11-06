@@ -4,6 +4,7 @@
 #include "ValdorsoArchivista.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoCielo.h"
+#include "ValdorsoFasiVillaggio.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
@@ -23,6 +24,14 @@ void AValdorsoGameMode::StartPlay()
 		Parametri.Name = TEXT("ValdorsoCielo");
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		Mondo->SpawnActor<AValdorsoCielo>(AValdorsoCielo::StaticClass(), FTransform::Identity, Parametri);
+	}
+	// (06/11) Le fasi del villaggio: una sola per mondo, decisa dal server (se il livello non ha cose a fasi non fa niente).
+	if (Mondo && !TActorIterator<AValdorsoFasiVillaggio>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.Name = TEXT("ValdorsoFasiVillaggio");
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoFasiVillaggio>(AValdorsoFasiVillaggio::StaticClass(), FTransform::Identity, Parametri);
 	}
 }
 

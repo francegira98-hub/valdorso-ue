@@ -171,6 +171,11 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientMostraBacheca(const FString& Titolo, const TArray<FString>& Avvisi);
 
+	/** (06/11) Un avviso breve in alto sullo schermo ("Il sigillo della Corona ti respinge."); con SecondiFermo > 0 il
+	 *  colono resta fermo per quei secondi (un breve stordimento). */
+	UFUNCTION(Client, Reliable)
+	void ClientAvviso(const FText& Testo, float Secondi, float SecondiFermo);
+
 	// --- Anticamera: dal server al client ---------------------------------------------------------
 
 	UFUNCTION(Client, Reliable)
@@ -280,6 +285,13 @@ private:
 	TSharedPtr<SWidget> Suggerimento;
 	void ChiudiBacheca();
 	TSharedPtr<SValdorsoBacheca> SchermataBacheca;
+	/** Client: l'avviso breve in alto (ClientAvviso) e lo stordimento. */
+	void ChiudiAvviso();
+	TSharedPtr<SWidget> Avviso;
+	FText TestoAvviso;
+	FTimerHandle TimerAvviso;
+	FTimerHandle TimerFermo;
+	bool bFermoPerAvviso = false;
 	double ProssimaRicerca = 0.0;
 	int32 RichiesteInterazione = 0;
 	double InizioConteggioInterazioni = 0.0;

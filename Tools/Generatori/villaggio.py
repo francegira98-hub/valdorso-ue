@@ -22,7 +22,9 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw
 
+import sigillo
 import villaggio_edifici as ed
+import villaggio_fasi
 import villaggio_texture
 from villaggio_mesh import Mesh, normalizza
 
@@ -33,6 +35,7 @@ QUOTA_MAX = 80000.0
 
 class Terreno:
     def __init__(self, cartella):
+        self.cartella = cartella
         with open(os.path.join(cartella, "Luoghi_3000.json"), encoding="utf-8") as f:
             self.luoghi = json.load(f)
         with open(os.path.join(cartella, "Acqua_3000.json"), encoding="utf-8") as f:
@@ -74,13 +77,34 @@ class Terreno:
 # --------------------------------------------------------------------------------------------------- il progetto
 
 
+class Disegni(list):
+    """(06/11) L'elenco dei disegni dell'anteprima: per ognuno ricorda anche la fase del progetto in quel momento."""
+
+    def __init__(self, progetto):
+        super().__init__()
+        self.progetto = progetto
+        self.fasi = []
+
+    def append(self, cosa):
+        super().append(cosa)
+        self.fasi.append(tuple(self.progetto.fase))
+
+
+def nella_fase(fase, f):
+    """Vero se una cosa con fase (da, fino_a) c'è nella fase f (fino_a 0 = per sempre)."""
+    return fase[0] <= f and (fase[1] == 0 or f <= fase[1])
+
+
 class Progetto:
     def __init__(self, terreno, uscita):
         self.t = terreno
         self.uscita = uscita
         self.cose = []
         self.mesh_scritte = set()
-        self.disegni = []        # per l'anteprima: (sezione, tipo, punti in cm)
+        # (06/11) il villaggio cresce a fasi: ogni cosa nasce in una fase e, se viene sostituita, finisce in un'altra.
+        # (1, 0) = c'è dalla fase 1 per sempre; (1, 1) = solo nella fase 1 (la palizzata di oggi); (2, 0) = dalla fase 2.
+        self.fase = (1, 0)
+        self.disegni = Disegni(self)        # per l'anteprima: (sezione, tipo, punti in cm)
         self.avvisi = []
         self.zone_senza_erba = []   # (cx, cy, mezzo_x, mezzo_y) in cm
 
@@ -98,6 +122,8 @@ class Progetto:
     def aggiungi(self, sezione, nome, tipo, x, y, z, gradi=0.0, **altro):
         d = {"sezione": sezione, "nome": nome, "tipo": tipo, "pos": [round(float(x), 1), round(float(y), 1), round(float(z), 1)],
              "gradi": round(float(gradi), 2), "terreno": round(float(self.t.quota(x, y)), 1)}
+        if tuple(self.fase) != (1, 0):
+            d["fase"] = [int(self.fase[0]), int(self.fase[1])]
         d.update(altro)
         self.cose.append(d)
         return d
@@ -842,6 +868,8 @@ def villaggio(pr, rng):
         elif any(p == g[1] for g in porte):
             pezzi[-1] = [p]
     pezzi = [pz for pz in pezzi if len(pz) >= 2]
+    # (06/11) la palizzata di oggi e i suoi portali ci sono solo nella fase 1: dalla fase 2 c'è quella più larga
+    pr.fase = (1, 1)
     for k, pz in enumerate(pezzi):
         A = L(*pz[0])
         qa = t.quota(*A)
@@ -873,6 +901,7 @@ def villaggio(pr, rng):
         for s in (-1, 1):
             m.scatola("Assi", [s * (largo / 2 + 10), -largo / 4 - 30, 210], [3 * s, 0, 0], [0, largo / 4, 0], [0, 0, 200])
         pr.metti_mesh(S, "Portale %d" % (k + 1), m, c[0], c[1], max(t.quota(*A), t.quota(*B)), g)
+    pr.fase = (1, 0)
 
     # ---- le strade dentro il villaggio (terra battuta; quelle grandi sono già dipinte sul paesaggio)
     strade = [
@@ -894,6 +923,9 @@ def villaggio(pr, rng):
 
     # il ponte a nord (sulla strada del ponte)
     ponte_su_strada(pr, S, "Ponte a nord", "SM_Villaggio_PonteNord", *L(-42.9, -294.1), (0.416, 0.909), 450)
+
+    # (06/11) le fasi future: fase 2 (anello di case, palizzata più larga) e fase 3 (il muro di pietra)
+    villaggio_fasi.fasi_future(pr, S, L, giro, strade, striscia)
     return [L(x, y) for (x, y) in lotti]
 
 
@@ -939,6 +971,15 @@ def guardia(pr, rng):
     m.cilindro("Stoffa", [-largo / 2 - 60, -300, 100], 9, largo + 120, lati=8, asse=(1, 0, 0))
     m.blocco("Pietra", -largo / 2 - 90, -largo / 2 - 30, -330, -270, 80, 140)    # contrappeso
     pr.metti_mesh(S, "Porta del passo", m, *P(0, 0), gq, gr_traverso)
+    # (06/11) il sigillo della Corona: il velo di rune 6 m dietro la sbarra, verso il passo, da parete a parete.
+    # L'attore (AValdorsoSigillo) guarda verso la valle: la sua X è la strada che scende, la Y è di traverso.
+    vm, dv = sigillo.velo(t, P, -6.0, gq)
+    pr.mesh(vm)
+    X, Y = P(-6.0, 0.0)
+    pr.aggiungi(S, "Sigillo della Corona", "sigillo", X, Y, gq, math.degrees(math.atan2(d[1], d[0])), asset=vm.nome,
+                suolo=True, **dv)
+    pr.disegni.append((S, "linea", [P(-6.0, dv["traverso_da"] / 100.0), P(-6.0, dv["traverso_a"] / 100.0)], "Sigillo"))
+    print("sigillo: largo %.0f m, alto %.0f m" % (dv["larghezza"] / 100, dv["altezza"] / 100))
     # la torre, dalla parte della valle, a sinistra della strada
     X, Y = P(5, -10)
     pr.edificio(S, "Torre_del_passo", lambda nome, W, D, **kw: ed.torre(nome, lato=W, altezza=1400, fondazione=kw["fondazione"]),
@@ -998,7 +1039,8 @@ def prova_assi(pr):
 
 # --------------------------------------------------------------------------------------------------- anteprime
 
-def anteprima(pr, sezione, cx, cy, mezzo, file, px=1400):
+def anteprima(pr, sezione, cx, cy, mezzo, file, px=1400, fase=1):
+    """La pianta di una zona, con le cose che ci sono nella fase indicata (06/11: di serie la fase 1, quella di oggi)."""
     t = pr.t
     S = t.S
     x0, y0 = cx - mezzo, cy - mezzo
@@ -1017,7 +1059,16 @@ def anteprima(pr, sezione, cx, cy, mezzo, file, px=1400):
     pts = [f(p[0], p[1]) for p in t.fiume]
     dr.line(pts, fill=(70, 100, 200), width=5)
     scala = px / (2 * mezzo)
-    for sez, tipo, punti, nome in pr.disegni:
+    for (sez, tipo, punti, nome), fd in zip(pr.disegni, pr.disegni.fasi):
+        if not nella_fase(fd, fase):
+            continue
+        nuova = fd[0] == fase and fase > 1          # le cose nuove di questa fase, in blu
+        if (tipo == "edificio" or tipo == "fab") and nuova:
+            dr.polygon([f(*p) for p in punti], fill=(70, 110, 190), outline=(20, 30, 80))
+            continue
+        if tipo == "muro":
+            dr.line([f(*p) for p in punti], fill=(110, 110, 120), width=7)
+            continue
         if tipo == "edificio" or tipo == "fab":
             dr.polygon([f(*p) for p in punti], fill=(150, 80, 60) if tipo == "edificio" else (120, 60, 120), outline=(40, 20, 10))
             c = np.mean(punti, 0)
@@ -1037,6 +1088,8 @@ def anteprima(pr, sezione, cx, cy, mezzo, file, px=1400):
             r = nome * scala
             dr.ellipse((X - r, Y - r, X + r, Y + r), outline=(40, 40, 120))
     for c in pr.cose:
+        if not nella_fase(c.get("fase", (1, 0)), fase):
+            continue
         X, Y = f(c["pos"][0], c["pos"][1])
         if c["tipo"] == "porta":
             dr.rectangle((X - 3, Y - 3, X + 3, Y + 3), fill=(0, 160, 0) if not c.get("a_chiave") else (200, 0, 0))
@@ -1046,6 +1099,8 @@ def anteprima(pr, sezione, cx, cy, mezzo, file, px=1400):
             dr.ellipse((X - 3, Y - 3, X + 3, Y + 3), fill=(0, 0, 200))
     dr.line([(20, px - 20), (20 + 50 * 100 * scala, px - 20)], fill=(0, 0, 0), width=3)
     dr.text((20, px - 40), "50 m", fill=(0, 0, 0))
+    if fase > 1:
+        dr.text((20, 20), "Fase %d (in blu le cose nuove)" % fase, fill=(0, 0, 0))
     im.save(file)
 
 
@@ -1077,6 +1132,7 @@ def main(cartella_valle, uscita):
     t = Terreno(cartella_valle)
     pr = Progetto(t, uscita)
     villaggio_texture.scrivi_tutte(uscita)
+    sigillo.file_sigillo(uscita)
     rng = np.random.default_rng(2611)
     prova_assi(pr)
     palude(pr, rng)
@@ -1089,10 +1145,17 @@ def main(cartella_valle, uscita):
         json.dump(dati, f, ensure_ascii=False, indent=1)
     P0 = t.luogo("Piazza del villaggio")
     anteprima(pr, "Villaggio", P0[0] + 2000, P0[1], 26000, os.path.join(uscita, "Anteprima_Villaggio.png"))
+    for fase in (2, 3):
+        anteprima(pr, "Villaggio", P0[0] + 2000, P0[1], 26000, os.path.join(uscita, "Anteprima_Villaggio_Fase%d.png" % fase), fase=fase)
     pa = t.luogo("Palude")
     anteprima(pr, "Palude", pa[0] + 2000, pa[1] - 800, 10000, os.path.join(uscita, "Anteprima_Palude.png"))
     g = t.luogo("Posto di guardia del passo")
     anteprima(pr, "Guardia", g[0], g[1], 5000, os.path.join(uscita, "Anteprima_Guardia.png"))
+    conta = {}
+    for c in pr.cose:
+        k = tuple(c.get("fase", (1, 0)))
+        conta[k] = conta.get(k, 0) + 1
+    print("fasi: " + ", ".join("%s: %d" % (("dalla %d" % a) if b == 0 else ("%d-%d" % (a, b)), n) for (a, b), n in sorted(conta.items())))
     print("fatto: %d cose, %d mesh, %d avvisi" % (len(pr.cose), len(pr.mesh_scritte), len(pr.avvisi)))
 
 

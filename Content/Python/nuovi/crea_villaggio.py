@@ -11,6 +11,13 @@
 # (ValdorsoPanca), le bacheche (ValdorsoBacheca), i letti (BP_Letto) e le luci delle lanterne.
 # Cartelle nel Contorno: Valle/Villaggio/<Palude, Villaggio, Guardia>. Resoconto in Saved/Claude/villaggio.txt.
 # Alla fine salva il livello e i pezzi nuovi.
+#
+# (06/11) Le fasi del villaggio: il generatore prepara anche la fase 2 (anello di case, palizzata larga) e la fase 3
+# (muro di pietra). Le cose che non ci sono sempre prendono l'etichetta "ValdorsoFase da-fino" (fino 0 = per sempre)
+# e stanno nelle cartelle "Fase 2", "Fase 3", "Solo fase 1", "Solo fase 2". In gioco le mostra o le nasconde
+# AValdorsoFasiVillaggio (comando Valdorso.Villaggio.Fase N). Nell'editor si vedono solo quelle di FASE_EDITOR
+# (le altre sono nascoste solo per questa sessione dell'editor: per rivederle, Valdorso -> Mostra fase del villaggio,
+# oppure l'occhio nel Contorno).
 
 import json
 import math
@@ -23,6 +30,7 @@ DEST = "/Game/Valle/Villaggio"
 ETICHETTA = "ValdorsoVillaggio"
 QUOTA_MAX_CM = 80000.0          # i 16 bit delle altezze coprono 0-800 m (valle.py)
 REIMPORTA = True                # False: usa i pezzi già importati (più veloce, se il generatore non è cambiato)
+FASE_EDITOR = 1                 # (06/11) la fase del villaggio che si vede nell'editor dopo il lancio
 
 libreria = unreal.EditorAssetLibrary
 strumenti = unreal.AssetToolsHelpers.get_asset_tools()
@@ -146,6 +154,16 @@ def materiale_base(nome, mascherato=False, colore_vertici=False, predefinite=Non
         if predefinite:
             col.set_editor_property("texture", predefinite[0])
             nor.set_editor_property("texture", predefinite[1])
+        # (06/11) "Scala": quante volte si ripete la texture (1 = le nostre; le texture vere di Fab ne vogliono un'altra)
+        scala = nodo(m, unreal.MaterialExpressionScalarParameter, -1200, 100)
+        scala.set_editor_property("parameter_name", "Scala")
+        scala.set_editor_property("default_value", 1.0)
+        uv = nodo(m, unreal.MaterialExpressionTextureCoordinate, -1200, -50)
+        uvs = nodo(m, unreal.MaterialExpressionMultiply, -1000, 0)
+        mel.connect_material_expressions(uv, "", uvs, "A")
+        mel.connect_material_expressions(scala, "", uvs, "B")
+        mel.connect_material_expressions(uvs, "", col, "UVs")
+        mel.connect_material_expressions(uvs, "", nor, "UVs")
         per = nodo(m, unreal.MaterialExpressionMultiply, -400, -200)
         mel.connect_material_expressions(col, "RGB", per, "A")
         mel.connect_material_expressions(tinta, "", per, "B")
@@ -212,7 +230,109 @@ def crea_materiali(tex):
     for n, (c, r, l) in colori.items():
         mat[n] = istanza("MI_Villaggio_" + n, semplice, tinta=c, ruvidezza=r, luce=l)
     scrivi("materiali: %s" % ", ".join(sorted(mat)))
+    # (06/11) le texture vere (passo C): se Fra ne ha scelte in texture_vere_villaggio.json, vanno al posto delle nostre
+    try:
+        import importlib
+        import texture_vere
+        importlib.reload(texture_vere)
+        for riga in texture_vere.applica():
+            scrivi("texture vere: " + riga)
+    except Exception as e:  # noqa: BLE001
+        avviso("texture vere non messe (%s)" % e)
     return mat
+
+
+def materiale_sigillo():
+    """(06/11) M_Sigillo: il velo del sigillo della Corona. Senza luce propria del mondo (unlit), additivo (si somma a
+    quello che c'è dietro, come una luce), a due facce. Due strati di rune (T_SigilloRune) che scorrono piano in su,
+    a velocità e grandezze diverse, più un chiarore di fondo; sfuma con l'alfa dei vertici (in cima e ai lati).
+    Parametri per il C++ (AValdorsoSigillo): Forza (quanto brilla: il battito, la notte) e Colore."""
+    cartella = DEST + "/Texture"
+    f = CARTELLA + "/T_SigilloRune.png"
+    if os.path.exists(f):
+        strumenti.import_asset_tasks([compito(f, cartella)])
+    rune = cerca(cartella, "T_SigilloRune", unreal.Texture2D)
+    if rune is None:
+        avviso("manca T_SigilloRune: il sigillo resta senza rune")
+        return None
+    percorso = "%s/Materiali/M_Sigillo" % DEST
+    m = unreal.load_asset(percorso) if libreria.does_asset_exist(percorso) else None
+    if m is not None:
+        mel.delete_all_material_expressions(m)
+    else:
+        m = strumenti.create_asset("M_Sigillo", DEST + "/Materiali", unreal.Material, unreal.MaterialFactoryNew())
+    m.set_editor_property("two_sided", True)
+    m.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    m.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+
+    def strato(x, y, scala, vx, vy):
+        uv = nodo(m, unreal.MaterialExpressionTextureCoordinate, x - 600, y)
+        uv.set_editor_property("u_tiling", scala)
+        uv.set_editor_property("v_tiling", scala)
+        pan = nodo(m, unreal.MaterialExpressionPanner, x - 400, y)
+        pan.set_editor_property("speed_x", vx)
+        pan.set_editor_property("speed_y", vy)
+        mel.connect_material_expressions(uv, "", pan, "Coordinate")
+        tx = nodo(m, unreal.MaterialExpressionTextureSample, x - 200, y)
+        tx.set_editor_property("texture", rune)
+        mel.connect_material_expressions(pan, "", tx, "UVs")
+        return tx
+
+    a = strato(-600, -300, 1.0, 0.0, -0.035)
+    b = strato(-600, 0, 1.7, 0.012, -0.022)
+    mezzo = nodo(m, unreal.MaterialExpressionConstant, -600, 250)
+    mezzo.set_editor_property("r", 0.45)
+    b2 = nodo(m, unreal.MaterialExpressionMultiply, -400, 100)
+    mel.connect_material_expressions(b, "R", b2, "A")
+    mel.connect_material_expressions(mezzo, "", b2, "B")
+    somma = nodo(m, unreal.MaterialExpressionAdd, -250, -150)
+    mel.connect_material_expressions(a, "R", somma, "A")
+    mel.connect_material_expressions(b2, "", somma, "B")
+    fondo = nodo(m, unreal.MaterialExpressionConstant, -400, 300)
+    fondo.set_editor_property("r", 0.08)
+    chiaro = nodo(m, unreal.MaterialExpressionAdd, -100, -100)
+    mel.connect_material_expressions(somma, "", chiaro, "A")
+    mel.connect_material_expressions(fondo, "", chiaro, "B")
+    colore = nodo(m, unreal.MaterialExpressionVectorParameter, -100, 150)
+    colore.set_editor_property("parameter_name", "Colore")
+    colore.set_editor_property("default_value", unreal.LinearColor(1.0, 0.78, 0.42, 1.0))
+    forza = nodo(m, unreal.MaterialExpressionScalarParameter, -100, 300)
+    forza.set_editor_property("parameter_name", "Forza")
+    forza.set_editor_property("default_value", 1.0)
+    vc = nodo(m, unreal.MaterialExpressionVertexColor, -100, 450)
+    p1 = nodo(m, unreal.MaterialExpressionMultiply, 100, -50)
+    mel.connect_material_expressions(chiaro, "", p1, "A")
+    mel.connect_material_expressions(colore, "", p1, "B")
+    p2 = nodo(m, unreal.MaterialExpressionMultiply, 250, 50)
+    mel.connect_material_expressions(p1, "", p2, "A")
+    mel.connect_material_expressions(forza, "", p2, "B")
+    p3 = nodo(m, unreal.MaterialExpressionMultiply, 400, 150)
+    mel.connect_material_expressions(p2, "", p3, "A")
+    mel.connect_material_expressions(vc, "A", p3, "B")
+    # un poco più di 1: in additivo, con l'esposizione automatica di notte, si vede bene senza accecare
+    luce = nodo(m, unreal.MaterialExpressionConstant, 400, 300)
+    luce.set_editor_property("r", 2.5)
+    p4 = nodo(m, unreal.MaterialExpressionMultiply, 550, 200)
+    mel.connect_material_expressions(p3, "", p4, "A")
+    mel.connect_material_expressions(luce, "", p4, "B")
+    mel.connect_material_property(p4, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    mel.recompile_material(m)
+    libreria.save_loaded_asset(m)
+    scrivi("materiale del sigillo: M_Sigillo")
+    return m
+
+
+def suono_sigillo():
+    """(06/11) S_SigilloRonzio: il ronzio del sigillo, che si ripete (looping)."""
+    f = CARTELLA + "/S_SigilloRonzio.wav"
+    if not os.path.exists(f):
+        return None
+    strumenti.import_asset_tasks([compito(f, DEST + "/Suoni")])
+    s = cerca(DEST + "/Suoni", "S_SigilloRonzio", unreal.SoundWave)
+    if s is not None:
+        s.set_editor_property("looping", True)
+        libreria.save_loaded_asset(s)
+    return s
 
 
 # ------------------------------------------------------------------------------------------------ i pezzi
@@ -327,7 +447,8 @@ def principale():
         z = angolo.z + (valore - 32768.0) * scala.z / 128.0
         return unreal.Vector(angolo.x + p[0], angolo.y + p[1], z)
 
-    classi = {n: getattr(unreal, c, None) for n, c in (("porta", "ValdorsoPorta"), ("panca", "ValdorsoPanca"), ("bacheca", "ValdorsoBacheca"))}
+    classi = {n: getattr(unreal, c, None) for n, c in (("porta", "ValdorsoPorta"), ("panca", "ValdorsoPanca"), ("bacheca", "ValdorsoBacheca"),
+                                                       ("sigillo", "ValdorsoSigillo"))}
     for n, c in classi.items():
         if c is None:
             avviso("manca la classe C++ per %s (compilare Valdorso): non le metto" % n)
@@ -345,6 +466,11 @@ def principale():
     # 2. texture, materiali, pezzi
     tex = importa_texture()
     mat = crea_materiali(tex)
+    # (06/11) il sigillo della Corona: materiale e ronzio
+    m_sig = materiale_sigillo()
+    if m_sig is not None:
+        mat["Sigillo"] = m_sig
+    ronzio = suono_sigillo()
     pezzi = importa_pezzi(dati["mesh"])
     con_collisione = set(c["asset"] for c in dati["cose"] if c["tipo"] == "mesh" and c.get("collisione", True))
     for n, m in pezzi.items():
@@ -384,6 +510,7 @@ def principale():
 
     # 4. si mette tutto
     conti = {}
+    conti_fasi = {}
     mancano = set()
     for i, c in enumerate(dati["cose"]):
         tipo = c["tipo"]
@@ -445,6 +572,28 @@ def principale():
                         a.set_editor_property("titolo", unreal.Text(c["titolo"]))
                     if c.get("avvisi"):
                         a.set_editor_property("avvisi", c["avvisi"])
+            elif tipo == "sigillo":
+                # (06/11) il sigillo della Corona: l'attore C++ con le misure della gola, il velo e il ronzio
+                if classi["sigillo"] is None:
+                    continue
+                a = attori.spawn_actor_from_class(classi["sigillo"], p, rot)
+                # l'etichetta subito: se qualcosa va storto più sotto, il prossimo lancio lo toglie comunque
+                a.set_editor_property("tags", [unreal.Name(ETICHETTA)])
+                for prop, chiave in (("larghezza", "larghezza"), ("altezza", "altezza"), ("base", "base"),
+                                     ("centro_traverso", "centro_traverso")):
+                    a.set_editor_property(prop, float(c.get(chiave, 0.0)))
+                velo = a.get_editor_property("velo")
+                mv = pezzi.get(c.get("asset", ""))
+                if velo and mv:
+                    velo.set_static_mesh(mv)
+                    if specchio < 0:
+                        velo.set_relative_scale3d(unreal.Vector(1, -1, 1))
+                if ronzio is not None:
+                    a.get_editor_property("ronzio").set_sound(ronzio)
+                try:
+                    a.rerun_construction_scripts()      # di solito basta già set_editor_property
+                except Exception:  # noqa: BLE001
+                    pass
             elif tipo == "letto":
                 if classe_letto is None:
                     mancano.add("/Game/Fab/Letto/BP_Letto")
@@ -470,11 +619,31 @@ def principale():
             avviso("%s (%s): non messo" % (c["nome"], tipo))
             continue
         a.set_actor_label(c["nome"])
-        a.set_folder_path("Valle/Villaggio/%s" % c["sezione"])
-        a.set_editor_property("tags", list(a.get_editor_property("tags")) + [unreal.Name(ETICHETTA)])
+        fase = c.get("fase", [1, 0])
+        etichette = [e for e in a.get_editor_property("tags") if str(e) != ETICHETTA] + [unreal.Name(ETICHETTA)]
+        cartella = "Valle/Villaggio/%s" % c["sezione"]
+        if list(fase) != [1, 0]:
+            # (06/11) la fase: "ValdorsoFase 2-0" = dalla fase 2 per sempre, "ValdorsoFase 1-1" = solo nella fase 1
+            etichette.append(unreal.Name("ValdorsoFase %d-%d" % (fase[0], fase[1])))
+            # fuori dagli HLOD (i modelli semplici da lontano di World Partition): da lontano si vedrebbero tutte le fasi
+            try:
+                a.set_editor_property("enable_auto_lod_generation", False)
+            except Exception:  # noqa: BLE001
+                pass
+            cartella += "/" + (("Fase %d" % fase[0]) if fase[1] == 0 else ("Solo fase %d" % fase[0]) if fase[0] == fase[1]
+                               else ("Fasi %d-%d" % (fase[0], fase[1])))
+        a.set_folder_path(cartella)
+        a.set_editor_property("tags", etichette)
+        visibile = fase[0] <= FASE_EDITOR and (fase[1] == 0 or FASE_EDITOR <= fase[1])
+        if not visibile:
+            a.set_is_temporarily_hidden_in_editor(True)
+        chiave = "fase %d%s" % (fase[0], "" if fase[1] == 0 else ("-%d" % fase[1]))
+        conti_fasi[chiave] = conti_fasi.get(chiave, 0) + 1
         conti[c["sezione"]] = conti.get(c["sezione"], 0) + 1
     for k, v in sorted(conti.items()):
         scrivi("%s: %d attori" % (k, v))
+    scrivi("fasi: " + ", ".join("%s: %d" % (k, v) for k, v in sorted(conti_fasi.items())) +
+           " (nell'editor si vede la fase %d)" % FASE_EDITOR)
     for m in sorted(mancano):
         avviso("manca nel progetto: %s (quelle cose non ci sono)" % m)
     for a in dati.get("avvisi", []):
