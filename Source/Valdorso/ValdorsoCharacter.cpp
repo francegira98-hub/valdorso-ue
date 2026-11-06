@@ -14,6 +14,7 @@
 #include "ValdorsoSeduta.h"
 #include "ValdorsoLetto.h"
 #include "ValdorsoScala.h"
+#include "ValdorsoMovenze.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
@@ -84,6 +85,7 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	Seduta = CreateDefaultSubobject<UValdorsoSedutaComponent>(TEXT("Seduta"));
 	Sonno = CreateDefaultSubobject<UValdorsoSonnoComponent>(TEXT("Sonno"));
 	Scalata = CreateDefaultSubobject<UValdorsoScalataComponent>(TEXT("Scalata"));
+	Movenze = CreateDefaultSubobject<UValdorsoMovenzeComponent>(TEXT("Movenze"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)

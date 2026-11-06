@@ -11,11 +11,22 @@
 #include "EngineUtils.h"
 #include "GameFramework/GameStateBase.h"
 #include "HAL/IConsoleManager.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/UObjectIterator.h"
 
 namespace
 {
+	/** (06/11) Le ombre delle nuvole sul terreno: 1 accese, 0 spente (PC deboli). */
+	TAutoConsoleVariable<int32> CVarOmbreNuvole(
+		TEXT("Valdorso.Nuvole.Ombre"),
+		1,
+		TEXT("Le ombre delle nuvole che passano sul terreno: 1 accese, 0 spente."),
+		ECVF_Default);
+
+	const TCHAR* PercorsoOmbreNuvole = TEXT("/Game/Valle/Tempo/M_OmbreNuvole.M_OmbreNuvole");
+
 	/** Valdorso.Ora 21: mette l'ora in tutti i mondi con il cielo (il server la manda poi a tutti). */
 	FAutoConsoleCommand ComandoOra(
 		TEXT("Valdorso.Ora"),
@@ -186,6 +197,18 @@ void AValdorsoCielo::TrovaLuci()
 			Sole = Luce;
 			IntensitaSole = Luce->Intensity;
 			Luce->SetAtmosphereSunLightIndex(0);
+			// (06/11) Le ombre delle nuvole (M_OmbreNuvole, da crea_tempo.py): valgono per tutta la valle (3 km),
+			// quindi la luce non le spegne con la distanza.
+			if (UMaterialInterface* Materiale = LoadObject<UMaterialInterface>(nullptr, PercorsoOmbreNuvole, nullptr, LOAD_NoWarn))
+			{
+				OmbreNuvole = UMaterialInstanceDynamic::Create(Materiale, this);
+				Luce->SetLightFunctionFadeDistance(2000000.f);
+				Luce->SetLightFunctionDisabledBrightness(1.f);
+			}
+			else
+			{
+				UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Cielo: manca M_OmbreNuvole (lanciare crea_tempo.py): niente ombre delle nuvole"));
+			}
 		}
 	}
 	else
@@ -234,6 +257,21 @@ void AValdorsoCielo::Tick(float DeltaSeconds)
 		}
 		const float Nuvole = Tempo.IsValid() ? Tempo->LuceSole() : 1.f;
 		Luce->SetIntensity(IntensitaSole * Giorno * Nuvole);
+
+		// (06/11) Le ombre delle nuvole: accese o spente col comando, e i numeri secondo il tempo.
+		const bool bVoglioOmbre = OmbreNuvole != nullptr && CVarOmbreNuvole.GetValueOnGameThread() != 0;
+		if (bVoglioOmbre != bOmbreAccese)
+		{
+			bOmbreAccese = bVoglioOmbre;
+			Luce->SetLightFunctionMaterial(bOmbreAccese ? OmbreNuvole.Get() : nullptr);
+		}
+		if (bOmbreAccese)
+		{
+			const FValdorsoOmbreNuvole Ombre = ValdorsoTempo::OmbreNuvole(Tempo.IsValid() ? Tempo->AriaAdesso() : FValdorsoAria());
+			OmbreNuvole->SetScalarParameterValue(TEXT("Soglia"), Ombre.Soglia);
+			OmbreNuvole->SetScalarParameterValue(TEXT("Morbidezza"), Ombre.Morbidezza);
+			OmbreNuvole->SetScalarParameterValue(TEXT("LuceSotto"), Ombre.LuceSotto);
+		}
 	}
 	if (Luna)
 	{

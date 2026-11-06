@@ -22,6 +22,7 @@ class UValdorsoAspettoComponent;
 class UValdorsoSedutaComponent;
 class UValdorsoSonnoComponent;
 class UValdorsoScalataComponent;
+class UValdorsoMovenzeComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -67,6 +68,10 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	/** (06/11) Salire e scendere le scale a pioli (vedi ValdorsoScala.h) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoScalataComponent* Scalata;
+
+	/** (06/11) Le animazioni sulla scala e in acqua (vedi ValdorsoMovenze.h): solo aspetto, su ogni PC. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UValdorsoMovenzeComponent* Movenze;
 
 	/** Le statistiche: salute, stamina, mana */
 	UPROPERTY()

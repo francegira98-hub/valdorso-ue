@@ -98,6 +98,16 @@ namespace ValdorsoTempo
 		return FMath::Clamp(1.f - 0.75f * A.Nuvole - 0.35f * A.Pioggia - 0.15f * A.Nebbia, 0.05f, 1.f);
 	}
 
+	FValdorsoOmbreNuvole OmbreNuvole(const FValdorsoAria& A)
+	{
+		FValdorsoOmbreNuvole O;
+		const float Copertura = FMath::Clamp(0.22f + 0.6f * A.Nuvole, 0.f, 0.95f);   // sereno 22%, nuvoloso 64%, pioggia 76%
+		O.Soglia = 1.f - Copertura;
+		O.Morbidezza = FMath::Clamp(0.08f + 0.35f * A.Pioggia + 0.1f * A.Nebbia, 0.02f, 1.f);
+		O.LuceSotto = FMath::Clamp(0.35f + 0.3f * A.Pioggia + 0.2f * A.Nebbia, 0.f, 1.f);
+		return O;
+	}
+
 	float Cupo(const FValdorsoAria& A)
 	{
 		return FMath::Clamp(0.35f * A.Nuvole + 0.65f * A.Pioggia + 0.15f * A.Nebbia, 0.f, 1.f);

@@ -9,6 +9,9 @@
 //   luce fredda e debole che aggiunge questo attore. La Sky Atmosphere colora il cielo da sola (alba, tramonto, notte).
 // - La modalità di gioco lo fa nascere da sola se nel livello non ce n'è uno: per cambiarne i numeri (ora di partenza,
 //   durata del giorno, luce della luna) si può anche metterlo a mano nel livello.
+// - (06/11) Le ombre delle nuvole: sul sole c'è M_OmbreNuvole (una Light Function fatta da crea_tempo.py), macchie grandi
+//   che scorrono col vento; quante sono e quanto morbide lo dice il tempo (AValdorsoTempo). Valdorso.Nuvole.Ombre 0 le
+//   spegne (per i PC deboli).
 // Comandi di console (per le prove): Valdorso.Ora 21 (mette le 21), Valdorso.Giorno.Minuti 2 (un giorno in 2 minuti).
 
 #pragma once
@@ -20,6 +23,7 @@
 class UDirectionalLightComponent;
 class USkyLightComponent;
 class AValdorsoTempo;
+class UMaterialInstanceDynamic;
 
 UCLASS()
 class VALDORSO_API AValdorsoCielo : public AActor
@@ -95,4 +99,9 @@ private:
 	/** (06/11) Il tempo della valle: quanta luce del sole passa tra le nuvole. */
 	TWeakObjectPtr<AValdorsoTempo> Tempo;
 	double ProssimaRicercaTempo = 0.0;
+
+	/** (06/11) Le ombre delle nuvole sul sole (M_OmbreNuvole) e se sono accese adesso. */
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> OmbreNuvole;
+	bool bOmbreAccese = false;
 };

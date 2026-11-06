@@ -9,6 +9,9 @@
 # invisibile di giorno e troppo chiaro di notte), a due facce; le gocce scendono (parametro Velocita:
 # se in gioco salgono invece di scendere, mettere Velocita negativa nel materiale), Pioggia (0..1) e Scala li cambia
 # AValdorsoTempo (C++), che mette sei tende di gocce intorno alla telecamera (da 1,5 m a 26 m).
+# (06/11) Le ombre delle nuvole: T_NuvoleOmbra.png -> /Game/Valle/Tempo/T_NuvoleOmbra e il materiale M_OmbreNuvole
+# (dominio Light Function): le macchie della texture, grandi 3 km, scorrono col vento sul mondo; Soglia, Morbidezza e
+# LuceSotto li cambia AValdorsoCielo (C++) secondo il tempo, e lo mette sul sole.
 
 import os
 
@@ -123,7 +126,91 @@ def esegui():
         libreria.save_loaded_asset(tenda)
     else:
         unreal.log_warning("[Valdorso] Tempo: SM_TendaPioggia non importata: si usa il cilindro di Unreal")
-    unreal.log("[Valdorso] Tempo: FATTO, M_Pioggia, T_Pioggia e S_Pioggia in %s. In gioco: Valdorso.Tempo Pioggia" % DEST)
+    ombre_nuvole()
+    unreal.log("[Valdorso] Tempo: FATTO, M_Pioggia, T_Pioggia, S_Pioggia e M_OmbreNuvole in %s. In gioco: Valdorso.Tempo Pioggia" % DEST)
+
+
+def parametro(m, nome, valore, x, y):
+    p = nodo(m, unreal.MaterialExpressionScalarParameter, x, y)
+    p.set_editor_property("parameter_name", nome)
+    p.set_editor_property("default_value", valore)
+    return p
+
+
+def ombre_nuvole():
+    file = os.path.join(CARTELLA, "T_NuvoleOmbra.png")
+    if not os.path.exists(file):
+        unreal.log_warning("[Valdorso] Tempo: manca %s: niente ombre delle nuvole" % file)
+        return
+    importa(file)
+    tex = unreal.load_asset(DEST + "/T_NuvoleOmbra")
+    tex.set_editor_property("srgb", False)              # sono numeri (0..1 uniforme), non un colore
+    tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_GRAYSCALE)
+    libreria.save_loaded_asset(tex)
+
+    percorso = DEST + "/M_OmbreNuvole"
+    m = unreal.load_asset(percorso) if libreria.does_asset_exist(percorso) else None
+    if m is not None:
+        mel.delete_all_material_expressions(m)
+    else:
+        m = strumenti.create_asset("M_OmbreNuvole", DEST, unreal.Material, unreal.MaterialFactoryNew())
+    m.set_editor_property("material_domain", unreal.MaterialDomain.MD_LIGHT_FUNCTION)
+
+    # dove cade la luce (X, Y del mondo, cm) + il vento che sposta le nuvole, diviso la grandezza della texture
+    pos = nodo(m, unreal.MaterialExpressionWorldPosition, -1600, 0)
+    xy = nodo(m, unreal.MaterialExpressionComponentMask, -1400, 0)
+    xy.set_editor_property("r", True)
+    xy.set_editor_property("g", True)
+    mel.connect_material_expressions(pos, "", xy, "")
+    tempo = nodo(m, unreal.MaterialExpressionTime, -1600, 200)
+    vento = nodo(m, unreal.MaterialExpressionVectorParameter, -1600, 300)
+    vento.set_editor_property("parameter_name", "Vento")
+    vento.set_editor_property("default_value", unreal.LinearColor(700.0, 300.0, 0.0, 0.0))   # cm/s
+    vxy = nodo(m, unreal.MaterialExpressionComponentMask, -1400, 300)
+    vxy.set_editor_property("r", True)
+    vxy.set_editor_property("g", True)
+    mel.connect_material_expressions(vento, "", vxy, "")
+    spinta = nodo(m, unreal.MaterialExpressionMultiply, -1200, 250)
+    mel.connect_material_expressions(tempo, "", spinta, "A")
+    mel.connect_material_expressions(vxy, "", spinta, "B")
+    somma = nodo(m, unreal.MaterialExpressionSubtract, -1000, 100)
+    mel.connect_material_expressions(xy, "", somma, "A")
+    mel.connect_material_expressions(spinta, "", somma, "B")
+    grandezza = parametro(m, "Dimensione", 300000.0, -1000, 300)
+    uv = nodo(m, unreal.MaterialExpressionDivide, -800, 150)
+    mel.connect_material_expressions(somma, "", uv, "A")
+    mel.connect_material_expressions(grandezza, "", uv, "B")
+    tx = nodo(m, unreal.MaterialExpressionTextureSample, -600, 150)
+    tx.set_editor_property("texture", tex)
+    tx.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE)
+    mel.connect_material_expressions(uv, "", tx, "UVs")
+
+    # nuvola = saturate((valore - Soglia) / Morbidezza + 0.5); luce = lerp(1, LuceSotto, nuvola)
+    soglia = parametro(m, "Soglia", 0.75, -600, 400)
+    meno = nodo(m, unreal.MaterialExpressionSubtract, -400, 200)
+    mel.connect_material_expressions(tx, "R", meno, "A")
+    mel.connect_material_expressions(soglia, "", meno, "B")
+    morbido = parametro(m, "Morbidezza", 0.08, -400, 400)
+    diviso = nodo(m, unreal.MaterialExpressionDivide, -250, 250)
+    mel.connect_material_expressions(meno, "", diviso, "A")
+    mel.connect_material_expressions(morbido, "", diviso, "B")
+    mezzo = nodo(m, unreal.MaterialExpressionConstant, -250, 400)
+    mezzo.set_editor_property("r", 0.5)
+    piu = nodo(m, unreal.MaterialExpressionAdd, -100, 300)
+    mel.connect_material_expressions(diviso, "", piu, "A")
+    mel.connect_material_expressions(mezzo, "", piu, "B")
+    nuvola = nodo(m, unreal.MaterialExpressionSaturate, 50, 300)
+    mel.connect_material_expressions(piu, "", nuvola, "")
+    uno = nodo(m, unreal.MaterialExpressionConstant, 50, 150)
+    uno.set_editor_property("r", 1.0)
+    sotto = parametro(m, "LuceSotto", 0.35, 50, 450)
+    luce = nodo(m, unreal.MaterialExpressionLinearInterpolate, 250, 250)
+    mel.connect_material_expressions(uno, "", luce, "A")
+    mel.connect_material_expressions(sotto, "", luce, "B")
+    mel.connect_material_expressions(nuvola, "", luce, "Alpha")
+    mel.connect_material_property(luce, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    mel.recompile_material(m)
+    libreria.save_loaded_asset(m)
 
 
 esegui()

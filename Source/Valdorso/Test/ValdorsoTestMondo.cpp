@@ -10,6 +10,7 @@
 #include "ValdorsoScala.h"
 #include "ValdorsoAcque.h"
 #include "ValdorsoTempo.h"
+#include "ValdorsoMovenze.h"
 
 namespace ValdorsoTestMondo
 {
@@ -167,6 +168,33 @@ bool FValdorsoTestTempo::RunTest(const FString& Parameters)
 	TestTrue(TEXT("nebbia 10 m più su"), FMath::IsNearlyEqual(ValdorsoTempo::DensitaPerAltezza(0.2f, 1.f, 1000.f), 0.4f, 0.0001f));
 	TestTrue(TEXT("e il contrario torna indietro"), FMath::IsNearlyEqual(
 		ValdorsoTempo::DensitaPerAltezza(ValdorsoTempo::DensitaPerAltezza(0.05f, 0.2f, -30000.f), 0.2f, 30000.f), 0.05f, 0.0001f));
+	// le ombre delle nuvole: col sereno poche (più di 3/4 del terreno al sole), con la pioggia quasi tutto coperto e più morbido
+	const FValdorsoOmbreNuvole OmbreSereno = ValdorsoTempo::OmbreNuvole(Sereno);
+	const FValdorsoOmbreNuvole OmbrePioggia = ValdorsoTempo::OmbreNuvole(Pioggia);
+	TestTrue(TEXT("col sereno poche nuvole"), OmbreSereno.Soglia > 0.7f);
+	TestTrue(TEXT("con la pioggia quasi tutto coperto"), OmbrePioggia.Soglia < 0.3f);
+	TestTrue(TEXT("con la pioggia le ombre sono più morbide"), OmbrePioggia.Morbidezza > OmbreSereno.Morbidezza);
+	return true;
+}
+
+// (06/11) Le movenze: sulla scala dalla velocità in su, in acqua da dove va il colono.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestMovenze, "Valdorso.Mondo.Movenze", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestMovenze::RunTest(const FString& Parameters)
+{
+	TestTrue(TEXT("sale"), ValdorsoMovenze::Scala(140.f) == EValdorsoMovenza::ScalaSu);
+	TestTrue(TEXT("scende"), ValdorsoMovenze::Scala(-140.f) == EValdorsoMovenza::ScalaGiu);
+	TestTrue(TEXT("fermo sulla scala"), ValdorsoMovenze::Scala(5.f) == EValdorsoMovenza::ScalaFerma);
+	TestTrue(TEXT("a galla"), ValdorsoMovenze::Nuoto(FVector(10.0, 5.0, 0.0)) == EValdorsoMovenza::NuotoFermo);
+	TestTrue(TEXT("nuota avanti"), ValdorsoMovenze::Nuoto(FVector(250.0, 30.0, 0.0)) == EValdorsoMovenza::NuotoAvanti);
+	TestTrue(TEXT("nuota a destra"), ValdorsoMovenze::Nuoto(FVector(20.0, 200.0, 0.0)) == EValdorsoMovenza::NuotoDestra);
+	TestTrue(TEXT("nuota a sinistra"), ValdorsoMovenze::Nuoto(FVector(20.0, -200.0, 0.0)) == EValdorsoMovenza::NuotoSinistra);
+	// stendersi nuotando: se l'animazione è già stesa di 30 gradi se ne aggiungono 45; mai all'indietro
+	TestTrue(TEXT("si aggiunge quello che manca"), FMath::IsNearlyEqual(ValdorsoMovenze::Inclinazione(75.f, 30.f), 45.f, 0.001f));
+	TestTrue(TEXT("già steso: niente"), FMath::IsNearlyEqual(ValdorsoMovenze::Inclinazione(75.f, 85.f), 0.f, 0.001f));
+	// inclinato di 90 gradi intorno al centro: la testa (1 m sopra) va 1 m avanti
+	const FTransform Testa(FRotator::ZeroRotator, FVector(0.0, 0.0, 100.0));
+	const FVector Dove = ValdorsoMovenze::Inclinato(Testa, 90.f, FVector::ZeroVector).GetLocation();
+	TestTrue(TEXT("la testa va avanti"), Dove.Equals(FVector(100.0, 0.0, 0.0), 0.01));
 	return true;
 }
 

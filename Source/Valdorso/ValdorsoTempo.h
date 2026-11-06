@@ -51,8 +51,22 @@ struct FValdorsoAria
 	float Pioggia = 0.f;
 };
 
+/** (06/11) Le ombre delle nuvole sul terreno (M_OmbreNuvole sul sole): quanta parte è in ombra e come. */
+struct FValdorsoOmbreNuvole
+{
+	/** Sopra questo valore della texture c'è nuvola: 1 - la parte di terreno in ombra. */
+	float Soglia = 0.8f;
+	/** Quanto sono sfumati i bordi delle ombre. */
+	float Morbidezza = 0.08f;
+	/** Quanta luce del sole passa sotto una nuvola. */
+	float LuceSotto = 0.35f;
+};
+
 namespace ValdorsoTempo
 {
+	/** Le ombre delle nuvole per un tempo: col sereno poche nuvole sparse, con la pioggia quasi tutto coperto e morbido. */
+	VALDORSO_API FValdorsoOmbreNuvole OmbreNuvole(const FValdorsoAria& Aria);
+
 	/** Le quantità di un tempo. */
 	VALDORSO_API FValdorsoAria Aria(EValdorsoTempo Tempo);
 

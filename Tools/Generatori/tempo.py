@@ -4,6 +4,8 @@
 #   S_Pioggia.wav    la pioggia che si ripete senza scatti (12 s): fruscio filtrato e gocce
 #   SM_TendaPioggia.glb  la tenda su cui scendono le gocce: un tubo senza tappi (diametro 1 m, alto 1 m, centro nel
 #                    mezzo, come il cilindro di Unreal), così guardando in alto non si vede un disco di pioggia
+#   T_NuvoleOmbra.png (06/11) le ombre delle nuvole sul terreno (1024 x 1024, si ripete senza cuciture): macchie
+#                    morbide di tutte le grandezze, con i valori distribuiti in modo uniforme (così "Soglia" = 1 - copertura)
 # Li importa e li usa Content/Python/nuovi/crea_tempo.py (materiale M_Pioggia); la logica è in AValdorsoTempo (C++).
 # Uso: python tempo.py <uscita>
 
@@ -64,6 +66,23 @@ def suono_pioggia(file, secondi=12.0, seme=5):
     wavfile.write(file, SR, (x * 32767).astype(np.int16))
 
 
+def texture_nuvole(file, n=1024, seme=31):
+    """Rumore che si ripete (fatto nelle frequenze, quindi senza cuciture), con più grandezze di macchia; poi
+    i valori sono messi in fila (0..1 uniforme): la parte sopra 1 - c copre esattamente la frazione c."""
+    rng = np.random.default_rng(seme)
+    fx = np.fft.fftfreq(n)[:, None]
+    fy = np.fft.fftfreq(n)[None, :]
+    f = np.sqrt(fx * fx + fy * fy)
+    f[0, 0] = 1.0
+    spettro = (rng.standard_normal((n, n)) + 1j * rng.standard_normal((n, n))) / f ** 2.0
+    spettro[f < 1.5 / n] = 0.0          # niente macchia più grande di tutta la texture
+    spettro *= np.exp(-(f / 0.05) ** 2)  # pochi dettagli fini: le ombre delle nuvole hanno i bordi morbidi
+    campo = np.real(np.fft.ifft2(spettro))
+    ordine = campo.ravel().argsort().argsort()
+    uniforme = (ordine / (ordine.size - 1)).reshape(n, n)
+    Image.fromarray((uniforme * 255).round().astype(np.uint8), "L").save(file)
+
+
 def tenda(file, lati=32):
     m = Mesh("SM_TendaPioggia")
     r = 50.0
@@ -85,4 +104,5 @@ if __name__ == "__main__":
     texture_pioggia(os.path.join(uscita, "T_Pioggia.png"))
     suono_pioggia(os.path.join(uscita, "S_Pioggia.wav"))
     tenda(os.path.join(uscita, "SM_TendaPioggia.glb"))
+    texture_nuvole(os.path.join(uscita, "T_NuvoleOmbra.png"))
     print("tempo: T_Pioggia.png e S_Pioggia.wav in", uscita)
