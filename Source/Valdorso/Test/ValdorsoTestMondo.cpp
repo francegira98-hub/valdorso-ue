@@ -14,6 +14,7 @@
 #include "ValdorsoAmbiente.h"
 #include "ValdorsoCampane.h"
 #include "ValdorsoValleViva.h"
+#include "ValdorsoRovine.h"
 
 namespace ValdorsoTestMondo
 {
@@ -246,6 +247,20 @@ bool FValdorsoTestValleViva::RunTest(const FString& Parameters)
 	TestTrue(TEXT("le rane tacciono"), ValdorsoAmbiente::RaneSpaventate(800.f, 300.f));
 	TestFalse(TEXT("lontano cantano"), ValdorsoAmbiente::RaneSpaventate(3000.f, 300.f));
 	TestFalse(TEXT("fermo cantano"), ValdorsoAmbiente::RaneSpaventate(800.f, 0.f));
+	return true;
+}
+
+// (06/11) Le rune delle rovine: battono due volte e poi tacciono, di giorno sono spente.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestRune, "Valdorso.Mondo.Rune", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestRune::RunTest(const FString& Parameters)
+{
+	TestTrue(TEXT("il primo colpo"), ValdorsoRune::Battito(0.1f) > 0.9f);
+	TestTrue(TEXT("il secondo colpo"), ValdorsoRune::Battito(0.38f) > 0.6f);
+	TestTrue(TEXT("la pausa"), ValdorsoRune::Battito(1.0f) < 0.05f);
+	TestTrue(TEXT("si ripete"), FMath::IsNearlyEqual(ValdorsoRune::Battito(1.7f), ValdorsoRune::Battito(0.1f), 0.001f));
+	TestTrue(TEXT("di giorno spente"), ValdorsoRune::Luce(0.f, 1.f) < 0.001f);
+	TestTrue(TEXT("di notte accese"), ValdorsoRune::Luce(1.f, 0.f) > 1.f);
+	TestTrue(TEXT("sul colpo più forti"), ValdorsoRune::Luce(1.f, 1.f) > ValdorsoRune::Luce(1.f, 0.f));
 	return true;
 }
 

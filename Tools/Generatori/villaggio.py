@@ -26,6 +26,7 @@ import sigillo
 import villaggio_edifici as ed
 import villaggio_fasi
 import villaggio_milizia
+import villaggio_rovine
 import villaggio_texture
 from villaggio_mesh import Mesh, normalizza
 
@@ -1147,6 +1148,7 @@ def main(cartella_valle, uscita):
     palude(pr, rng)
     villaggio(pr, rng)
     guardia(pr, rng)
+    villaggio_rovine.rovine(pr, rng)
     senza_erba(pr, os.path.join(uscita, "T_SenzaErba.png"))
     dati = {"nota": "Fatto da Tools/Generatori/villaggio.py: cm dall'angolo nord-ovest del paesaggio, Z = quota vera in cm.",
             "cose": pr.cose, "mesh": sorted(pr.mesh_scritte), "avvisi": pr.avvisi}
@@ -1164,6 +1166,8 @@ def main(cartella_valle, uscita):
         anteprima(pr, "Villaggio", P0[0] + 2000, P0[1], 26000, os.path.join(uscita, "Anteprima_Villaggio_Fase%d.png" % fase), fase=fase)
     pa = t.luogo("Palude")
     anteprima(pr, "Palude", pa[0] + 2000, pa[1] - 800, 10000, os.path.join(uscita, "Anteprima_Palude.png"))
+    ro = t.luogo("Rovine degli Antichi")
+    anteprima(pr, "Rovine", ro[0], ro[1], 5000, os.path.join(uscita, "Anteprima_Rovine.png"))
     g = t.luogo("Posto di guardia del passo")
     anteprima(pr, "Guardia", g[0], g[1], 5000, os.path.join(uscita, "Anteprima_Guardia.png"))
     conta = {}

@@ -227,6 +227,8 @@ def crea_materiali(tex):
         "Acqua": ((0.03, 0.04, 0.025), 0.18, 0.0), "Fango": ((0.10, 0.08, 0.05), 0.5, 0.0),
         "Canna": ((1.0, 1.0, 1.0), 0.85, 0.0), "Verde": ((0.16, 0.30, 0.09), 0.8, 0.0),
         "Fiamma": ((1.0, 0.45, 0.12), 0.9, 25.0), "Stoffa": ((0.42, 0.10, 0.07), 0.9, 0.0),
+        # (06/11) le rune delle rovine: azzurre, spente (Luce 0); di notte le accende il C++ (AValdorsoRuneNotte)
+        "Runa": ((0.30, 0.72, 1.0), 0.6, 0.0),
     }
     for n, (c, r, l) in colori.items():
         mat[n] = istanza("MI_Villaggio_" + n, semplice, tinta=c, ruvidezza=r, luce=l)
@@ -449,7 +451,8 @@ def principale():
         return unreal.Vector(angolo.x + p[0], angolo.y + p[1], z)
 
     classi = {n: getattr(unreal, c, None) for n, c in (("porta", "ValdorsoPorta"), ("panca", "ValdorsoPanca"), ("bacheca", "ValdorsoBacheca"),
-                                                       ("sigillo", "ValdorsoSigillo"), ("scala", "ValdorsoScala"))}
+                                                       ("sigillo", "ValdorsoSigillo"), ("scala", "ValdorsoScala"),
+                                                       ("iscrizione", "ValdorsoIscrizione"))}
     for n, c in classi.items():
         if c is None:
             avviso("manca la classe C++ per %s (compilare Valdorso): non le metto" % n)
@@ -561,7 +564,7 @@ def principale():
                     comp = a.get_component_by_class(unreal.StaticMeshComponent)
                     if comp:
                         comp.set_collision_profile_name("NoCollision")
-            elif tipo in ("porta", "panca", "bacheca"):
+            elif tipo in ("porta", "panca", "bacheca", "iscrizione"):
                 if classi[tipo] is None:
                     continue
                 a = attori.spawn_actor_from_class(classi[tipo], p, rot)
@@ -574,7 +577,7 @@ def principale():
                     for comp in a.get_components_by_class(unreal.StaticMeshComponent):
                         if "Trave" in mat:
                             comp.set_material(0, mat["Trave"])
-                elif tipo == "bacheca":
+                elif tipo in ("bacheca", "iscrizione"):
                     if c.get("titolo"):
                         a.set_editor_property("titolo", unreal.Text(c["titolo"]))
                     if c.get("avvisi"):
@@ -636,6 +639,9 @@ def principale():
         a.set_actor_label(c["nome"])
         fase = c.get("fase", [1, 0])
         etichette = [e for e in a.get_editor_property("tags") if str(e) != ETICHETTA] + [unreal.Name(ETICHETTA)]
+        if c.get("rune"):
+            # (06/11) le rune delle rovine: di notte le accende AValdorsoRuneNotte (C++)
+            etichette.append(unreal.Name("ValdorsoRune"))
         cartella = "Valle/Villaggio/%s" % c["sezione"]
         if list(fase) != [1, 0]:
             # (06/11) la fase: "ValdorsoFase 2-0" = dalla fase 2 per sempre, "ValdorsoFase 1-1" = solo nella fase 1

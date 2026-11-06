@@ -8,6 +8,7 @@
 #include "ValdorsoTempo.h"
 #include "ValdorsoAmbiente.h"
 #include "ValdorsoValleViva.h"
+#include "ValdorsoRovine.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
@@ -59,6 +60,14 @@ void AValdorsoGameMode::StartPlay()
 		Parametri.Name = TEXT("ValdorsoValleViva");
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		Mondo->SpawnActor<AValdorsoValleViva>(AValdorsoValleViva::StaticClass(), FTransform::Identity, Parametri);
+	}
+	// (06/11) Le rune delle rovine che di notte si accendono (ogni PC le accende da sé, dall'ora del cielo).
+	if (Mondo && !TActorIterator<AValdorsoRuneNotte>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.Name = TEXT("ValdorsoRuneNotte");
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoRuneNotte>(AValdorsoRuneNotte::StaticClass(), FTransform::Identity, Parametri);
 	}
 }
 
