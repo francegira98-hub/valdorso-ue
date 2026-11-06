@@ -10,6 +10,8 @@
 # (ValdorsoPorta: le case private sono chiuse a chiave, locanda, Gilda, tempio e fucina sono aperte), le panche
 # (ValdorsoPanca), le bacheche (ValdorsoBacheca), i letti (BP_Letto), le luci delle lanterne e (06/11) le scale a pioli
 # delle torri (ValdorsoScala).
+# (06/11, sera) Anche la grotta est (Tools/Generatori/villaggio_grotta.py): la rupe con la grotta, la porta degli Antichi,
+# il muschio che fa luce, le iscrizioni, i massi; texture nuova T_Roccia (MI_Villaggio_Roccia).
 # Cartelle nel Contorno: Valle/Villaggio/<Palude, Villaggio, Guardia>. Resoconto in Saved/Claude/villaggio.txt.
 # Alla fine salva il livello e i pezzi nuovi.
 #
@@ -82,7 +84,7 @@ def cerca(cartella, nome, classe):
 
 
 def importa_texture():
-    nomi = ["Pietra", "Intonaco", "Assi", "Trave", "Coppi", "Paglia", "Ciottoli", "Terra"]
+    nomi = ["Pietra", "Intonaco", "Assi", "Trave", "Coppi", "Paglia", "Ciottoli", "Terra", "Roccia"]
     cartella = DEST + "/Texture"
     compiti = []
     for n in nomi:
@@ -215,7 +217,7 @@ def crea_materiali(tex):
     suolo = materiale_base("M_VillaggioSuolo", mascherato=True, predefinite=tex.get("Terra"))
     semplice = materiale_base("M_VillaggioColore", colore_vertici=True)
     mat = {}
-    ruvidi = {"Pietra": 0.9, "Intonaco": 0.92, "Assi": 0.8, "Trave": 0.75, "Coppi": 0.7, "Paglia": 0.95}
+    ruvidi = {"Pietra": 0.9, "Intonaco": 0.92, "Assi": 0.8, "Trave": 0.75, "Coppi": 0.7, "Paglia": 0.95, "Roccia": 0.93}
     for n, r in ruvidi.items():
         if n in tex:
             mat[n] = istanza("MI_Villaggio_" + n, base, tex[n][0], tex[n][1], ruvidezza=r)
@@ -229,6 +231,8 @@ def crea_materiali(tex):
         "Fiamma": ((1.0, 0.45, 0.12), 0.9, 25.0), "Stoffa": ((0.42, 0.10, 0.07), 0.9, 0.0),
         # (06/11) le rune delle rovine: azzurre, spente (Luce 0); di notte le accende il C++ (AValdorsoRuneNotte)
         "Runa": ((0.30, 0.72, 1.0), 0.6, 0.0),
+        # (06/11, sera) il muschio che fa luce nella grotta est: verde-azzurro, sempre un poco acceso
+        "Muschio": ((0.30, 0.85, 0.55), 0.9, 1.6),
     }
     for n, (c, r, l) in colori.items():
         mat[n] = istanza("MI_Villaggio_" + n, semplice, tinta=c, ruvidezza=r, luce=l)
@@ -629,7 +633,8 @@ def principale():
                 lc.set_attenuation_radius(float(c.get("raggio", 1000.0)))
                 col = c.get("colore", [1.0, 0.62, 0.32])
                 lc.set_light_color(unreal.LinearColor(col[0], col[1], col[2], 1.0))
-                lc.set_cast_shadows(False)
+                # (06/11, sera) le luci della grotta fanno ombra: senza, passerebbero attraverso la roccia
+                lc.set_cast_shadows(bool(c.get("ombre", False)))
         except Exception as e:  # noqa: BLE001
             avviso("%s (%s): %s" % (c["nome"], tipo, e))
             continue
@@ -640,8 +645,9 @@ def principale():
         fase = c.get("fase", [1, 0])
         etichette = [e for e in a.get_editor_property("tags") if str(e) != ETICHETTA] + [unreal.Name(ETICHETTA)]
         if c.get("rune"):
-            # (06/11) le rune delle rovine: di notte le accende AValdorsoRuneNotte (C++)
-            etichette.append(unreal.Name("ValdorsoRune"))
+            # (06/11) le rune delle rovine: di notte le accende AValdorsoRuneNotte (C++);
+            # (06/11, sera) "sempre": quelle della porta in fondo alla grotta est battono giorno e notte
+            etichette.append(unreal.Name("ValdorsoRuneSempre" if c.get("rune") == "sempre" else "ValdorsoRune"))
         cartella = "Valle/Villaggio/%s" % c["sezione"]
         if list(fase) != [1, 0]:
             # (06/11) la fase: "ValdorsoFase 2-0" = dalla fase 2 per sempre, "ValdorsoFase 1-1" = solo nella fase 1

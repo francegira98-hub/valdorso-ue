@@ -9,6 +9,7 @@
 #   Paglia    tetto di paglia a strati (2 m; V scende lungo la falda)
 #   Ciottoli  selciato di ciottoli (2 m)
 #   Terra     terra battuta con sassolini (4 m); nell'alfa un rumore per i bordi sfrangiati delle strade
+#   Roccia    (06/11, sera) roccia viva della grotta e delle rupi: grigio caldo a strati, fratture, licheni (4 m)
 
 import os
 
@@ -339,6 +340,41 @@ def terra(rng):
     return col, alt, 2.0, alfa
 
 
+def roccia(rng):
+    """(06/11, sera) Roccia viva (4 m): strati inclinati, fratture irregolari (creste del rumore, non una rete), venature,
+    licheni e sporco negli incavi. Per la grotta est e le rupi (villaggio_grotta.py)."""
+    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32)
+    grosso = rumore(rng, 256, esponente=2.2)
+    medio = rumore(rng, 64, esponente=2.0)
+    fine = rumore(rng, 8, esponente=1.6)
+    # gli strati: bande lungo y, deformate e di spessore diverso (periodiche: 5 per lato)
+    fase = (yy / N * 5 + grosso * 0.22 + medio * 0.03) % 1.0
+    gradino = np.clip(np.abs(fase - 0.5) * 2, 0, 1)
+    strati = np.clip((gradino - 0.82) / 0.18, 0, 1)                 # il giunto tra uno strato e l'altro
+    # le fratture: creste del rumore (|r| piccolo), solo dove un'altra macchia lo permette
+    frattura = np.zeros((N, N), np.float32)
+    for scala, peso in ((180, 1.0), (90, 0.7)):
+        r = rumore(rng, scala, esponente=2.3)
+        linea = np.clip(1 - np.abs(r) / 0.06, 0, 1) ** 2
+        frattura = np.maximum(frattura, linea * np.clip(morbido(rng, 4) + 0.3, 0, 1) * peso)
+    alt = 0.6 + grosso * 0.18 + medio * 0.10 + fine * 0.035 - strati * 0.25 - frattura * 0.45
+    base = np.array([0.43, 0.41, 0.38])
+    col = np.ones((N, N, 3), np.float32) * base
+    col *= (1 + 0.14 * grosso + 0.08 * medio + 0.06 * fine)[..., None]
+    banda = np.floor((yy / N * 5 + grosso * 0.22) % 5)
+    col *= (1 + (np.sin(banda * 2.4) * 0.06))[..., None]           # ogni strato un poco diverso
+    col *= (1 - strati * 0.35 - frattura * 0.5)[..., None]
+    vena = np.clip(1 - np.abs(rumore(rng, 128, esponente=2.4)) / 0.04, 0, 1) * np.clip(morbido(rng, 3), 0, 1)
+    col = col * (1 - vena[..., None] * 0.4) + np.array([0.68, 0.66, 0.61]) * vena[..., None] * 0.4
+    ruggine = np.clip(morbido(rng, 6) - 1.3, 0, 1)
+    col = col * (1 - ruggine[..., None] * 0.35) + np.array([0.42, 0.29, 0.18]) * ruggine[..., None] * 0.35
+    lic = np.clip((morbido(rng, 16) * 0.7 + fine * 0.3 - 1.0) * 2.0, 0, 1) * np.clip(alt * 1.5 - 0.5, 0, 1)
+    col = col * (1 - lic[..., None] * 0.45) + np.array([0.47, 0.50, 0.38]) * lic[..., None] * 0.45
+    incavo = np.clip(0.40 - sfoca(alt, 8), 0, 1)
+    col *= (1 - incavo[..., None] * 0.45)
+    return col, alt, 3.0
+
+
 TUTTE = {
     "Pietra": pietra,
     "Intonaco": intonaco,
@@ -348,6 +384,7 @@ TUTTE = {
     "Paglia": paglia,
     "Ciottoli": ciottoli,
     "Terra": terra,
+    "Roccia": roccia,
 }
 
 

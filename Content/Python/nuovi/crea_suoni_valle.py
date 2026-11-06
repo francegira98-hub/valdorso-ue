@@ -5,7 +5,8 @@
 #    in /Game/Valle/Suoni; quelli che girano li mette "in giro" (Looping). Il vento, gli uccelli, i grilli, il fiume,
 #    la riva e le rane li suona AValdorsoAmbiente (C++) intorno al colono: qui basta importarli.
 # 2. Mette nella valle i suoni fermi (AValdorsoSorgenteSuono): la cascata, la fucina di Marta (in orario di lavoro),
-#    la locanda di Bruno (piena di sera), il mulino, le rane della palude (di notte).
+#    la locanda di Bruno (piena di sera), il mulino, le rane della palude (di notte); (06/11, sera) le gocce nella
+#    grotta est e i martelli sotto la frana della grotta nord (di notte).
 # 3. Mette la campana in cima al campanile del Tempio del Cuore (AValdorsoCampane): suona le ore canoniche.
 # Le posizioni vengono dagli stessi dati del villaggio e della valle (Villaggio_3000.json, Luoghi_3000.json).
 # Serve aver compilato Valdorso (le classi ValdorsoSorgenteSuono e ValdorsoCampane).
@@ -22,7 +23,8 @@ FILE_VILLAGGIO = "V:/Texture/valdorso/villaggio/Villaggio_3000.json"
 FILE_LUOGHI = "V:/Texture/valdorso/valle/Luoghi_3000.json"
 ETICHETTA = "ValdorsoSuoniValle"
 QUOTA_MAX_CM = 80000.0
-IN_GIRO = ["S_Vento", "S_Uccelli", "S_Grilli", "S_Rane", "S_Fiume", "S_Lago", "S_Cascata", "S_Fucina", "S_Locanda", "S_Mulino"]
+IN_GIRO = ["S_Vento", "S_Uccelli", "S_Grilli", "S_Rane", "S_Fiume", "S_Lago", "S_Cascata", "S_Fucina", "S_Locanda", "S_Mulino",
+           "S_Grotta", "S_Martelli"]
 UN_COLPO = ["S_CampanaTempio"]
 
 libreria = unreal.EditorAssetLibrary
@@ -154,6 +156,14 @@ def esegui():
         metti_sorgente("Rane della palude", nel_mondo(mx, my, mz + 50.0), "S_Rane", Q.NOTTE, 1500, 6000, tace_vicino=True)
     else:
         avviso("nel villaggio non trovo la palude")
+
+    # (06/11, sera) le grotte: le gocce nella grotta est (sempre), i martelli sotto la frana della grotta nord (di notte)
+    dove = da_villaggio("Luce del muschio 1", 0.0)
+    if dove:
+        metti_sorgente("Gocce della grotta est", dove, "S_Grotta", Q.SEMPRE, 300, 2200, 0.8)
+    dove = da_villaggio("Iscrizione della frana", 400.0)
+    if dove:
+        metti_sorgente("Martelli sotto la montagna", dove, "S_Martelli", Q.NOTTE, 600, 3500, 0.9)
 
     # la campana: in cima al campanile (villaggio_edifici.tempio: campanile a (W/2 + 205, D/2 - 325) con W 1200, D 2200,
     # campana a 1550 + 120 cm dal pavimento), girata come il tempio

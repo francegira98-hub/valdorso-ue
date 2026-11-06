@@ -1,6 +1,7 @@
 # Valdorso - Le texture vere del villaggio (passo C, 06/11/2026, scritto da Claude).
 #
-# Il villaggio usa 8 superfici fatte da Claude da zero (Pietra, Intonaco, Assi, Trave, Coppi, Paglia, Ciottoli, Terra),
+# Il villaggio usa 9 superfici fatte da Claude da zero (Pietra, Intonaco, Assi, Trave, Coppi, Paglia, Ciottoli, Terra,
+# e dal 06/11 Roccia, la roccia viva della grotta est),
 # ognuna in un'istanza /Game/Valle/Villaggio/Materiali/MI_Villaggio_<Nome>. Per passare a texture vere (Megascans o
 # altre di Fab) non si tocca niente nel livello: si cambiano le due texture (colore e rilievo) di quell'istanza, e
 # tutte le case cambiano insieme.
@@ -22,7 +23,7 @@ import os
 import unreal
 
 DEST = "/Game/Valle/Villaggio"
-SUPERFICI = ["Pietra", "Intonaco", "Assi", "Trave", "Coppi", "Paglia", "Ciottoli", "Terra"]
+SUPERFICI = ["Pietra", "Intonaco", "Assi", "Trave", "Coppi", "Paglia", "Ciottoli", "Terra", "Roccia"]
 COLORE = ("_d", "_basecolor", "_base_color", "_albedo", "_diffuse", "_diff", "_col", "_color", "_bc")
 RILIEVO = ("_n", "_normal", "_nor", "_nor_dx", "_normaldx", "_nrm")
 

@@ -6,6 +6,8 @@
 //   l'etichetta "ValdorsoRune" (le mette crea_villaggio.py), e di notte accende le parti fatte con il materiale delle
 //   rune (MI_Villaggio_Runa: il suo parametro "Luce") e le loro luci, a tempo con il battito del Cuore: due colpi e
 //   una pausa. Di giorno sono spente. Le cerca di nuovo ogni tanto (con World Partition arrivano quando ci si avvicina).
+//   (06/11, sera) Con l'etichetta "ValdorsoRuneSempre" (la porta degli Antichi in fondo alla grotta est) battono sempre,
+//   giorno e notte.
 // - AValdorsoIscrizione: una bacheca senza la tavola di legno (si vede la pietra delle rovine): si legge con E
 //   ("Leggi l'iscrizione") e mostra il testo come la bacheca.
 // Comando di console: Valdorso.Rune.Accese 1 le accende anche di giorno (per le prove; 0 di serie).
@@ -48,12 +50,19 @@ private:
 	{
 		TWeakObjectPtr<ULightComponent> Luce;
 		float Intensita = 0.f;
+		bool bSempre = false;
+	};
+
+	struct FMaterialeRuna
+	{
+		TWeakObjectPtr<UMaterialInstanceDynamic> Materiale;
+		bool bSempre = false;
 	};
 
 	void Cerca();
 
 	TSet<TWeakObjectPtr<AActor>> Trovati;
-	TArray<TWeakObjectPtr<UMaterialInstanceDynamic>> Materiali;
+	TArray<FMaterialeRuna> Materiali;
 	TArray<FLuceRuna> Luci;
 	TWeakObjectPtr<AValdorsoCielo> Cielo;
 	double ProssimaRicerca = 0.0;

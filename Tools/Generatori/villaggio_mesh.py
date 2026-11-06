@@ -15,6 +15,7 @@ TILE = {
     "Pietra": 200.0, "Intonaco": 200.0, "Assi": 200.0, "Trave": 100.0, "Coppi": 200.0, "Paglia": 200.0,
     "Ciottoli": 200.0, "Terra": 400.0, "Vetro": 100.0, "Ferro": 100.0, "Acqua": 400.0, "Fango": 400.0,
     "Canna": 100.0, "Verde": 100.0, "Fiamma": 100.0, "Stoffa": 200.0,
+    "Roccia": 400.0, "Muschio": 100.0, "Runa": 100.0,
 }
 
 

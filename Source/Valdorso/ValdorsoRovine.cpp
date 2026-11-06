@@ -1,4 +1,4 @@
-// Valdorso - Le Rovine degli Antichi (vedi il .h). Scritto da Claude il 06/11/2026.
+// Valdorso - Le Rovine degli Antichi (vedi il .h). Scritto da Claude il 06/11/2026; (06/11, sera) le rune "sempre" della grotta est.
 
 #include "ValdorsoRovine.h"
 #include "Valdorso.h"
@@ -22,6 +22,7 @@ namespace
 		ECVF_Default);
 
 	const FName EtichettaRune(TEXT("ValdorsoRune"));
+	const FName EtichettaRuneSempre(TEXT("ValdorsoRuneSempre"));
 }
 
 namespace ValdorsoRune
@@ -70,7 +71,8 @@ void AValdorsoRuneNotte::Cerca()
 	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
 	{
 		AActor* Attore = *It;
-		if (!Attore->ActorHasTag(EtichettaRune) || Trovati.Contains(Attore))
+		const bool bSempre = Attore->ActorHasTag(EtichettaRuneSempre);
+		if ((!bSempre && !Attore->ActorHasTag(EtichettaRune)) || Trovati.Contains(Attore))
 		{
 			continue;
 		}
@@ -86,7 +88,10 @@ void AValdorsoRuneNotte::Cerca()
 				{
 					if (UMaterialInstanceDynamic* Dinamico = Pezzo->CreateDynamicMaterialInstance(i))
 					{
-						Materiali.Add(Dinamico);
+						FMaterialeRuna R;
+						R.Materiale = Dinamico;
+						R.bSempre = bSempre;
+						Materiali.Add(R);
 					}
 				}
 			}
@@ -98,6 +103,7 @@ void AValdorsoRuneNotte::Cerca()
 			FLuceRuna L;
 			L.Luce = Lampada;
 			L.Intensita = Lampada->Intensity;
+			L.bSempre = bSempre;
 			Lampada->SetIntensity(0.f);
 			Luci.Add(L);
 		}
@@ -131,18 +137,19 @@ void AValdorsoRuneNotte::Tick(float DeltaSeconds)
 	Notte = FMath::FInterpTo(Notte, Voluta, DeltaSeconds, 1.f);
 	const float B = ValdorsoRune::Battito(static_cast<float>(Adesso));
 	const float Valore = ValdorsoRune::Luce(Notte, B);
-	for (const TWeakObjectPtr<UMaterialInstanceDynamic>& M : Materiali)
+	const float ValoreSempre = ValdorsoRune::Luce(1.f, B);
+	for (const FMaterialeRuna& M : Materiali)
 	{
-		if (UMaterialInstanceDynamic* Dinamico = M.Get())
+		if (UMaterialInstanceDynamic* Dinamico = M.Materiale.Get())
 		{
-			Dinamico->SetScalarParameterValue(TEXT("Luce"), Valore);
+			Dinamico->SetScalarParameterValue(TEXT("Luce"), M.bSempre ? ValoreSempre : Valore);
 		}
 	}
 	for (const FLuceRuna& L : Luci)
 	{
 		if (ULightComponent* Lampada = L.Luce.Get())
 		{
-			Lampada->SetIntensity(L.Intensita * Notte * (0.45f + 0.55f * B));
+			Lampada->SetIntensity(L.Intensita * (L.bSempre ? 1.f : Notte) * (0.45f + 0.55f * B));
 		}
 	}
 }

@@ -3,6 +3,7 @@
 #   2D, stereo, intorno al colono:  S_Vento, S_Uccelli (giorno), S_Grilli (notte)
 #   3D, mono, nel punto giusto:     S_Fiume, S_Lago (la riva), S_Rane, S_Cascata, S_Fucina, S_Locanda, S_Mulino
 #   un colpo solo:                  S_CampanaTempio (la campana del Tempio del Cuore)
+#   (06/11, sera) 3D, nelle grotte:  S_Grotta (gocce e eco nella grotta est), S_Martelli (sotto la frana, di notte)
 # Li importa e li mette nella valle Content/Python/nuovi/crea_suoni_valle.py; la logica (giorno, notte, pioggia, campane che
 # suonano le ore) è in ValdorsoAmbiente.h/.cpp e ValdorsoCampane.h/.cpp. Se un giorno ci sono suoni veri migliori (Fab),
 # basta mettere un file con lo stesso nome e rilanciare crea_suoni_valle.py.
@@ -423,6 +424,57 @@ def campana(secondi=9.0, seme=11, nota=310.0):
     return x * attacco
 
 
+# ------------------------------------------------------------------------------------------------ le grotte (06/11, sera)
+
+def goccia(rng, forza=1.0):
+    """Una goccia che cade in una pozza: un 'plin' che sale di tono, cortissimo."""
+    d = 0.12
+    m = int(d * SR)
+    tt = np.arange(m) / SR
+    f0 = rng.uniform(1100, 2600)
+    f = f0 * (1 + 0.9 * (1 - np.exp(-tt / 0.012)))
+    x = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt / rng.uniform(0.018, 0.035))
+    x += rng.standard_normal(m) * np.exp(-tt / 0.002) * 0.15
+    return x * forza
+
+
+def grotta(secondi=32.0, seme=12):
+    """S_Grotta: dentro la grotta est. Un fondo cupo che quasi non si sente, gocce lontane e vicine (alcune tornano
+    sempre dallo stesso punto, a ritmo), e l'eco lunga della roccia."""
+    rng = np.random.default_rng(seme)
+    n = int(secondi * SR)
+    s = int(SR * 1.5)
+    fondo = giro(passa_basso(marrone(n + s, rng), 140), s) * 0.05 * lento(n, rng, 3.0, 0.3)
+    x = fondo.copy()
+    # tre gocce "fisse" con il loro ritmo, più qualche goccia sparsa
+    for periodo, forza in ((2.7, 0.9), (4.1, 0.5), (6.3, 0.35)):
+        t = rng.uniform(0, periodo)
+        f = rng.uniform(0.85, 1.15)
+        while t < secondi:
+            aggiungi(x, goccia(np.random.default_rng(int(periodo * 100)), forza * f * rng.uniform(0.85, 1.1)), int(t * SR))
+            t += periodo * rng.uniform(0.92, 1.08)
+    for _ in range(int(secondi / 2.5)):
+        aggiungi(x, goccia(rng, rng.uniform(0.1, 0.4)), int(rng.uniform(0, n)))
+    return eco(eco(x, 1.4, 0.9, rng), 0.25, 0.4, rng)
+
+
+def martelli(secondi=48.0, seme=13):
+    """S_Martelli: sotto la montagna, di notte (dalla lore: dal 309 i martelli dei nani). Colpi d'incudine lontani e
+    soffocati dalla roccia: un colpo, poi niente, poi un altro. Quattro colpi in 48 secondi, mai a ritmo."""
+    rng = np.random.default_rng(seme)
+    n = int(secondi * SR)
+    s = int(SR * 1.5)
+    x = giro(passa_basso(marrone(n + s, rng), 90), s) * 0.02
+    t = rng.uniform(1.0, 3.0)
+    while t < secondi - 2.0:
+        colpo = passa_basso(colpo_incudine(rng, rng.uniform(0.7, 1.0)), 700, 4)
+        tonfo = passa_basso(rng.standard_normal(int(0.25 * SR)), 120) * np.exp(-np.arange(int(0.25 * SR)) / (0.06 * SR)) * 3.0
+        aggiungi(x, colpo, int(t * SR))
+        aggiungi(x, tonfo, int(t * SR))
+        t += rng.uniform(7.0, 15.0)
+    return eco(x, 1.8, 1.2, rng)
+
+
 if __name__ == "__main__":
     uscita = sys.argv[1] if len(sys.argv) > 1 else "."
     os.makedirs(uscita, exist_ok=True)
@@ -438,3 +490,5 @@ if __name__ == "__main__":
     scrivi(uscita, "S_Locanda", locanda(), 0.7)
     scrivi(uscita, "S_Mulino", mulino(), 0.7)
     scrivi(uscita, "S_CampanaTempio", campana(), 0.9)
+    scrivi(uscita, "S_Grotta", grotta(), 0.6)
+    scrivi(uscita, "S_Martelli", martelli(), 0.7)

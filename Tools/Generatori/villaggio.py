@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw
 import sigillo
 import villaggio_edifici as ed
 import villaggio_fasi
+import villaggio_grotta
 import villaggio_milizia
 import villaggio_rovine
 import villaggio_texture
@@ -1149,6 +1150,8 @@ def main(cartella_valle, uscita):
     villaggio(pr, rng)
     guardia(pr, rng)
     villaggio_rovine.rovine(pr, rng)
+    villaggio_grotta.grotta(pr, rng)
+    villaggio_grotta.frana(pr, rng)
     senza_erba(pr, os.path.join(uscita, "T_SenzaErba.png"))
     dati = {"nota": "Fatto da Tools/Generatori/villaggio.py: cm dall'angolo nord-ovest del paesaggio, Z = quota vera in cm.",
             "cose": pr.cose, "mesh": sorted(pr.mesh_scritte), "avvisi": pr.avvisi}
@@ -1168,6 +1171,10 @@ def main(cartella_valle, uscita):
     anteprima(pr, "Palude", pa[0] + 2000, pa[1] - 800, 10000, os.path.join(uscita, "Anteprima_Palude.png"))
     ro = t.luogo("Rovine degli Antichi")
     anteprima(pr, "Rovine", ro[0], ro[1], 5000, os.path.join(uscita, "Anteprima_Rovine.png"))
+    ge = t.luogo("Grotta est")
+    anteprima(pr, "Grotta", ge[0] + 400, ge[1] - 2000, 7000, os.path.join(uscita, "Anteprima_Grotta.png"))
+    gn = t.luogo("Grotta nord")
+    anteprima(pr, "Grotta nord", gn[0], gn[1], 3000, os.path.join(uscita, "Anteprima_Grotta_Nord.png"))
     g = t.luogo("Posto di guardia del passo")
     anteprima(pr, "Guardia", g[0], g[1], 5000, os.path.join(uscita, "Anteprima_Guardia.png"))
     conta = {}
