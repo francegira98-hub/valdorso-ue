@@ -155,7 +155,10 @@ class Progetto:
         for cosa in info.get("cose", []):
             tipo, lx, ly, lg = cosa[:4]
             px, py = self.al_mondo(x, y, gradi, lx, ly)
-            self.aggiungi(sezione, "%s %s" % (nome, tipo), tipo, px, py, pavimento + (cosa[4] if len(cosa) > 4 else 0.0), gradi + lg)
+            # (06/11) cosa[5]: dati in più per il JSON (per esempio l'altezza di una scala a pioli)
+            altro = cosa[5] if len(cosa) > 5 else {}
+            self.aggiungi(sezione, "%s %s" % (nome, tipo), tipo, px, py, pavimento + (cosa[4] if len(cosa) > 4 else 0.0), gradi + lg,
+                          **altro)
         self.disegni.append((sezione, "edificio", self.rettangolo(x, y, W, D, gradi), nome))
         return pavimento, gradi, info
 
@@ -856,7 +859,10 @@ def villaggio(pr, rng):
     # Ora scendono fino all'acqua: a nord fino a ~1,5 m sotto il pelo del fiume (-75.3, -152.6); a sud-ovest passano
     # a valle della capanna e del pontile di Orlando (che restano dentro, a ~20 m) e finiscono nel fiume (-151.8, 53.2).
     # Misurati sulle altezze vere (Altezze_3000.png) e sul fiume di Acqua_3000.json; nessuna strada dipinta attraversata.
-    giro = [(-75.3, -152.6), (-57, -150), (-16.0, -155.0), (-9.2, -155.8), (40, -160), (100, -122), (114, -60), (114, -28.6), (114, -22.0),
+    # (06/11, visto da Fra in Play) la palizzata passava dentro la torre della milizia (centro (114, -18.2), lato 5,5 m
+    # più lo zoccolo): dopo la porta est di nord-est ripartiva da (114, -22.0). Ora riparte dall'altro lato della torre
+    # (114, -15.2): la torre chiude lei il varco tra il portale e la palizzata.
+    giro = [(-75.3, -152.6), (-57, -150), (-16.0, -155.0), (-9.2, -155.8), (40, -160), (100, -122), (114, -60), (114, -28.6), (114, -15.2),
             (114, 13.8), (114, 20.3), (114, 60),
             (82, 106), (11.3, 117), (4.7, 117), (-30, 112), (-70, 95), (-104, 62), (-140.6, 61.6), (-151.8, 53.2)]
     porte = [((-16.0, -155.0), (-9.2, -155.8)), ((114, -28.6), (114, -22.0)), ((114, 13.8), (114, 20.3)), ((11.3, 117), (4.7, 117))]
@@ -1143,6 +1149,12 @@ def main(cartella_valle, uscita):
             "cose": pr.cose, "mesh": sorted(pr.mesh_scritte), "avvisi": pr.avvisi}
     with open(os.path.join(uscita, "Villaggio_3000.json"), "w", encoding="utf-8") as f:
         json.dump(dati, f, ensure_ascii=False, indent=1)
+    # (06/11) la pianta (case, strade, cinte) per la mappa di carta: la disegna mappa.py
+    pianta = [{"sezione": sez, "tipo": tipo, "punti": [[round(float(p[0]), 1), round(float(p[1]), 1)] for p in punti],
+               "nome": nome if isinstance(nome, str) else "", "larga": nome if isinstance(nome, (int, float)) else 0,
+               "fase": list(fd)} for (sez, tipo, punti, nome), fd in zip(pr.disegni, pr.disegni.fasi) if tipo != "cerchio"]
+    with open(os.path.join(uscita, "Pianta_3000.json"), "w", encoding="utf-8") as f:
+        json.dump(pianta, f, ensure_ascii=False)
     P0 = t.luogo("Piazza del villaggio")
     anteprima(pr, "Villaggio", P0[0] + 2000, P0[1], 26000, os.path.join(uscita, "Anteprima_Villaggio.png"))
     for fase in (2, 3):

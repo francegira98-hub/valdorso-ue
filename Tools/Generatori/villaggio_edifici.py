@@ -196,10 +196,33 @@ def torre(nome, lato=500.0, altezza=1200.0, fondazione=150.0, tetto="Coppi", bas
     if porta:
         info["porte"].append((0.0, -lato / 2 + T / 2, 0.0, "fronte"))
         m.trave("Trave", [-PORTA_L / 2 - 15, -lato / 2 - 3, PORTA_H + 9], [PORTA_L / 2 + 15, -lato / 2 - 3, PORTA_H + 9], 10, 18, su=[0, -1, 0])
-    # cornice di pietra e ballatoio di legno sporgente
-    m.blocco("Pietra", -lato / 2 - 25, lato / 2 + 25, -lato / 2 - 25, lato / 2 + 25, altezza - 30, altezza)
+    # (06/11) la scala a pioli: dentro, contro il muro di fondo, dal pavimento fino al ballatoio, che ha una botola.
+    # Il colono sale con la faccia al muro, 50 cm davanti ai montanti (vedi AValdorsoScala).
+    buchi = []
+    if porta:
+        y_scala = lato / 2 - T - 8                     # i montanti, 8 cm davanti al muro di fondo
+        buchi = [(-60.0, 60.0, y_scala - 110.0, y_scala + 5.0)]
+        for sx in (-1, 1):
+            m.blocco("Trave", sx * 25 - 4, sx * 25 + 4, y_scala - 4, y_scala + 4, 0, altezza + 20)
+        z = 30.0
+        while z < altezza + 10:
+            m.cilindro("Trave", [-25, y_scala, z], 2.5, 50, lati=6, asse=(1, 0, 0))
+            z += 30.0
+        # (06/11) intorno alla botola, sul ballatoio, una ringhiera di legno su tre lati: resta aperto solo il lato
+        # da cui si esce (verso -Y), così non ci si cade dentro camminando
+        zb = altezza + 20
+        y0, y1 = y_scala - 110.0, y_scala + 5.0
+        for x in (-64.0, 64.0):
+            m.blocco("Trave", x - 4, x + 4, y0 - 4, y1 + 4, zb, zb + 100)
+        m.blocco("Trave", -68, 68, y1, y1 + 8, zb, zb + 100)
+        for x in (-64.0, 64.0):
+            m.blocco("Trave", x - 5, x + 5, y0 - 5, y0 + 5, zb, zb + 110)
+        # la scala guarda verso -Y (verso il colono): in gradi locali -90; l'uscita in cima, 170 cm davanti ai montanti
+        info["cose"].append(("scala", 0.0, y_scala, -90.0, 0.0, {"altezza": round(altezza + 20.0, 1), "uscita_cima": 170.0}))
+    # cornice di pietra e ballatoio di legno sporgente (con la botola sopra la scala)
+    m.lastra("Pietra", -lato / 2 - 25, lato / 2 + 25, -lato / 2 - 25, lato / 2 + 25, altezza - 30, altezza, buchi)
     sb = lato / 2 + 90
-    m.blocco({"altri": "Trave", "+z": "Assi", "-z": "Assi"}, -sb, sb, -sb, sb, altezza, altezza + 20)
+    m.lastra({"altri": "Trave", "+z": "Assi", "-z": "Assi"}, -sb, sb, -sb, sb, altezza, altezza + 20, buchi)
     for sx in (-1, 1):
         for sy in (-1, 1):
             # mensole sotto il ballatoio

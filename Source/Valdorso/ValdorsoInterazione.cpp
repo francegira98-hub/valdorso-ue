@@ -6,6 +6,7 @@
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoSeduta.h"
 #include "ValdorsoLetto.h"
+#include "ValdorsoScala.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
@@ -37,7 +38,7 @@ namespace ValdorsoInterazione
 		Parametri.AddIgnoredActors(Attaccati);
 		FHitResult Colpo;
 		const FVector Occhi = Chi->GetActorLocation() + FVector(0.f, 0.f, 60.f);
-		return !Mondo->LineTraceSingleByChannel(Colpo, Occhi, Interattivo->PuntoInterazione(), ECC_Visibility, Parametri);
+		return !Mondo->LineTraceSingleByChannel(Colpo, Occhi, Interattivo->PuntoInterazionePer(Chi), ECC_Visibility, Parametri);
 	}
 
 	bool PuoUsare(const APawn* Chi, const AActor* Cosa)
@@ -59,6 +60,11 @@ namespace ValdorsoInterazione
 		if (const UValdorsoSonnoComponent* Sonno = Chi->FindComponentByClass<UValdorsoSonnoComponent>(); Sonno && Sonno->Occupato())
 		{
 			return Cosa == Sonno->GetLetto();
+		}
+		// (06/11) Sulla scala a pioli: solo la scala (per lasciarla).
+		if (const UValdorsoScalataComponent* Scalata = Chi->FindComponentByClass<UValdorsoScalataComponent>(); Scalata && Scalata->Sale())
+		{
+			return Cosa == Scalata->GetScala();
 		}
 		return true;
 	}
@@ -87,7 +93,7 @@ namespace ValdorsoInterazione
 			{
 				continue;
 			}
-			const FVector Verso = Cosa->PuntoInterazione() - Centro;
+			const FVector Verso = Cosa->PuntoInterazionePer(Chi) - Centro;
 			const float Distanza = Verso.Size2D();
 			if (Distanza > Raggio || !SiVede(Chi, Attore))
 			{

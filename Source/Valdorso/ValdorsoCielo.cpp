@@ -1,6 +1,7 @@
 // Valdorso - Il giorno e la notte (vedi il .h). Scritto da Claude il 03/11/2026.
 
 #include "ValdorsoCielo.h"
+#include "ValdorsoTempo.h"
 #include "Valdorso.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -198,6 +199,14 @@ void AValdorsoCielo::TrovaLuci()
 	}
 }
 
+float AValdorsoCielo::LuceDelGiorno() const
+{
+	const float Giro = (Ora() - 6.f) / 12.f;
+	const float Altezza = FMath::Sin(Giro * PI) * AltezzaMassimaSole;
+	// Il sole sfuma tra 4 gradi sotto e 4 gradi sopra l'orizzonte (niente luce da sotto la terra).
+	return FMath::Clamp((Altezza + 4.f) / 8.f, 0.f, 1.f);
+}
+
 void AValdorsoCielo::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -209,16 +218,22 @@ void AValdorsoCielo::Tick(float DeltaSeconds)
 	const float Adesso = Ora();
 	// Dalle 6 alle 18 il sole fa mezzo giro da est a ovest; di notte è sotto l'orizzonte e la luna è dall'altra parte.
 	const float Giro = (Adesso - 6.f) / 12.f;                                 // 0 all'alba, 1 al tramonto
-	const float Altezza = FMath::Sin(Giro * PI) * AltezzaMassimaSole;           // gradi sopra l'orizzonte (negativi di notte)
 	const float Direzione = DirezioneAlba + Giro * 180.f;
-	// Il sole sfuma tra 4 gradi sotto e 4 gradi sopra l'orizzonte (niente luce da sotto la terra).
-	const float Giorno = FMath::Clamp((Altezza + 4.f) / 8.f, 0.f, 1.f);
+	const float Altezza = FMath::Sin(Giro * PI) * AltezzaMassimaSole;           // gradi sopra l'orizzonte (negativi di notte)
+	const float Giorno = LuceDelGiorno();
 
 	if (UDirectionalLightComponent* Luce = Sole.Get())
 	{
 		// La luce va dal sole verso il basso: pitch negativo dell'altezza, girata di 180 gradi rispetto a dov'è il sole.
 		Luce->SetWorldRotation(FRotator(-Altezza, Direzione + 180.f, 0.f));
-		Luce->SetIntensity(IntensitaSole * Giorno);
+		// (06/11) Con le nuvole, la nebbia e la pioggia passa meno sole (AValdorsoTempo).
+		if (!Tempo.IsValid() && GetWorld()->GetTimeSeconds() >= ProssimaRicercaTempo)
+		{
+			ProssimaRicercaTempo = GetWorld()->GetTimeSeconds() + 2.0;
+			Tempo = AValdorsoTempo::Di(GetWorld());
+		}
+		const float Nuvole = Tempo.IsValid() ? Tempo->LuceSole() : 1.f;
+		Luce->SetIntensity(IntensitaSole * Giorno * Nuvole);
 	}
 	if (Luna)
 	{

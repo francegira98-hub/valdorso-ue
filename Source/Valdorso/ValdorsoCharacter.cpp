@@ -13,6 +13,7 @@
 #include "ValdorsoAspettoComponent.h"
 #include "ValdorsoSeduta.h"
 #include "ValdorsoLetto.h"
+#include "ValdorsoScala.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
@@ -82,6 +83,7 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
 	Seduta = CreateDefaultSubobject<UValdorsoSedutaComponent>(TEXT("Seduta"));
 	Sonno = CreateDefaultSubobject<UValdorsoSonnoComponent>(TEXT("Sonno"));
+	Scalata = CreateDefaultSubobject<UValdorsoScalataComponent>(TEXT("Scalata"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -224,11 +226,18 @@ void AValdorsoCharacter::Look(const FInputActionValue& Value)
 
 bool AValdorsoCharacter::SuUnaPanca() const
 {
-	return (Seduta && Seduta->Occupato()) || (Sonno && Sonno->Occupato());
+	return (Seduta && Seduta->Occupato()) || (Sonno && Sonno->Occupato()) || (Scalata && Scalata->Sale());
 }
 
 void AValdorsoCharacter::DoMove(float Right, float Forward)
 {
+	// (06/11) Sulla scala a pioli: avanti e indietro vogliono dire su e giù (il resto non conta).
+	if (Scalata && Scalata->Sale())
+	{
+		AddMovementInput(FVector::UpVector, Forward);
+		return;
+	}
+
 	// (03/11) Seduto: muoversi vuol dire alzarsi (il movimento vero riparte quando è in piedi).
 	if (SuUnaPanca())
 	{
@@ -278,6 +287,12 @@ void AValdorsoCharacter::DoLook(float Yaw, float Pitch)
 
 void AValdorsoCharacter::DoJumpStart()
 {
+	// (06/11) Sulla scala a pioli: Spazio la lascia (e si cade).
+	if (Scalata && Scalata->Sale())
+	{
+		Scalata->ChiediDiLasciare();
+		return;
+	}
 	if (SuUnaPanca())
 	{
 		return;

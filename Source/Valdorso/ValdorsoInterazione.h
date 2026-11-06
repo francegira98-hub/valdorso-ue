@@ -42,6 +42,10 @@ public:
 
 	/** Il punto da cui misurare la distanza (di solito il centro della cosa). */
 	virtual FVector PuntoInterazione() const = 0;
+
+	/** (06/11) Il punto da cui misurare la distanza per quel colono: di serie lo stesso per tutti. Le cose lunghe (le
+	 *  scale a pioli, alte più di dieci metri) danno il punto alla sua altezza. */
+	virtual FVector PuntoInterazionePer(const APawn* Chi) const { return PuntoInterazione(); }
 };
 
 namespace ValdorsoInterazione

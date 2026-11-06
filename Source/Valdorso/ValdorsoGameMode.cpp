@@ -5,6 +5,7 @@
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoCielo.h"
 #include "ValdorsoFasiVillaggio.h"
+#include "ValdorsoTempo.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
@@ -32,6 +33,14 @@ void AValdorsoGameMode::StartPlay()
 		Parametri.Name = TEXT("ValdorsoFasiVillaggio");
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		Mondo->SpawnActor<AValdorsoFasiVillaggio>(AValdorsoFasiVillaggio::StaticClass(), FTransform::Identity, Parametri);
+	}
+	// (06/11) Il tempo della valle (sereno, nuvoloso, nebbia, pioggia, temporale), deciso dal server.
+	if (Mondo && !TActorIterator<AValdorsoTempo>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.Name = TEXT("ValdorsoTempo");
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoTempo>(AValdorsoTempo::StaticClass(), FTransform::Identity, Parametri);
 	}
 }
 

@@ -19,6 +19,7 @@ class UUserWidget;
 class SValdorsoPausa;
 class SValdorsoImpostazioni;
 class SValdorsoBacheca;
+class SValdorsoMappa;
 
 /**
  *  Basic PlayerController class for a third person game
@@ -284,6 +285,10 @@ private:
 	FText TestoSuggerimento;
 	TSharedPtr<SWidget> Suggerimento;
 	void ChiudiBacheca();
+	/** (06/11) Client: la mappa di carta (tasto M). */
+	void TastoMappa();
+	void ChiudiMappa();
+	TSharedPtr<SValdorsoMappa> SchermataMappa;
 	TSharedPtr<SValdorsoBacheca> SchermataBacheca;
 	/** Client: l'avviso breve in alto (ClientAvviso) e lo stordimento. */
 	void ChiudiAvviso();

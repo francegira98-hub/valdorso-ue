@@ -37,7 +37,8 @@ namespace ValdorsoSigillo
 	 */
 	VALDORSO_API FVector Spinta(const FTransform& Sigillo, const FVector& Punto, float Forza, float Su);
 
-	/** Quanto brilla il velo (1 = di giorno, a riposo): battito in due colpi ogni 1,6 s, più forte di notte. */
+	/** Quanto brilla il velo (1 = di giorno, a riposo): battito in due colpi ogni 1,6 s; di notte la luce vera è più
+	 *  bassa (l'occhio si abitua al buio e lo vede lo stesso più forte). */
 	VALDORSO_API float Luminosita(float Secondi, float Ora);
 }
 

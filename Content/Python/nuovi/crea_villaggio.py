@@ -8,7 +8,8 @@
 #   Villaggio_3000.json -> dove va ogni cosa (posizioni in cm dall'angolo del paesaggio, quota vera)
 # e mette nel livello: le mesh, i modelli di Fab (case, mercato, botti, felci, rocce), le porte vere
 # (ValdorsoPorta: le case private sono chiuse a chiave, locanda, Gilda, tempio e fucina sono aperte), le panche
-# (ValdorsoPanca), le bacheche (ValdorsoBacheca), i letti (BP_Letto) e le luci delle lanterne.
+# (ValdorsoPanca), le bacheche (ValdorsoBacheca), i letti (BP_Letto), le luci delle lanterne e (06/11) le scale a pioli
+# delle torri (ValdorsoScala).
 # Cartelle nel Contorno: Valle/Villaggio/<Palude, Villaggio, Guardia>. Resoconto in Saved/Claude/villaggio.txt.
 # Alla fine salva il livello e i pezzi nuovi.
 #
@@ -448,7 +449,7 @@ def principale():
         return unreal.Vector(angolo.x + p[0], angolo.y + p[1], z)
 
     classi = {n: getattr(unreal, c, None) for n, c in (("porta", "ValdorsoPorta"), ("panca", "ValdorsoPanca"), ("bacheca", "ValdorsoBacheca"),
-                                                       ("sigillo", "ValdorsoSigillo"))}
+                                                       ("sigillo", "ValdorsoSigillo"), ("scala", "ValdorsoScala"))}
     for n, c in classi.items():
         if c is None:
             avviso("manca la classe C++ per %s (compilare Valdorso): non le metto" % n)
@@ -509,13 +510,19 @@ def principale():
         scrivi("quote: controllo saltato (%s)" % e)
 
     # 4. si mette tutto
+    indice_nome = {c["nome"]: k for k, c in enumerate(dati["cose"])}
     conti = {}
     conti_fasi = {}
     mancano = set()
     for i, c in enumerate(dati["cose"]):
         tipo = c["tipo"]
         p = nel_mondo(c["pos"])
-        if i in correzioni:
+        if tipo == "scala":
+            # (06/11) la scala si sposta come la sua torre, non per conto suo (i pioli sono nella mesh della torre)
+            torre = indice_nome.get(c["nome"].rsplit(" scala", 1)[0])
+            if torre in correzioni:
+                p = unreal.Vector(p.x, p.y, p.z + correzioni[torre])
+        elif i in correzioni:
             p = unreal.Vector(p.x, p.y, p.z + correzioni[i])
         rot = unreal.Rotator(roll=0.0, pitch=0.0, yaw=c["gradi"])
         a = None
@@ -594,6 +601,14 @@ def principale():
                     a.rerun_construction_scripts()      # di solito basta già set_editor_property
                 except Exception:  # noqa: BLE001
                     pass
+            elif tipo == "scala":
+                # (06/11) la scala a pioli delle torri: i pioli sono nella mesh della torre, qui l'attore che fa salire
+                if classi["scala"] is None:
+                    continue
+                a = attori.spawn_actor_from_class(classi["scala"], p, rot)
+                a.set_editor_property("tags", [unreal.Name(ETICHETTA)])
+                a.set_editor_property("altezza", float(c.get("altezza", 1200.0)))
+                a.set_editor_property("uscita_cima", float(c.get("uscita_cima", 170.0)))
             elif tipo == "letto":
                 if classe_letto is None:
                     mancano.add("/Game/Fab/Letto/BP_Letto")

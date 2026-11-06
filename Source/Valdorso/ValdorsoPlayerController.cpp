@@ -19,6 +19,7 @@
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoInterazione.h"
 #include "SValdorsoBacheca.h"
+#include "SValdorsoMappa.h"
 #include "ValdorsoTemaUI.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -131,6 +132,9 @@ void AValdorsoPlayerController::SetupInputComponent()
 		// (03/11, v0.1.3) Le interazioni: E, e X (tasto a sinistra) sul controller.
 		InputComponent->BindKey(EKeys::E, IE_Pressed, this, &AValdorsoPlayerController::TastoInteragisci);
 		InputComponent->BindKey(EKeys::Gamepad_FaceButton_Left, IE_Pressed, this, &AValdorsoPlayerController::TastoInteragisci);
+		// (06/11) la mappa di carta
+		InputComponent->BindKey(EKeys::M, IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
+		InputComponent->BindKey(EKeys::Gamepad_Special_Left, IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
 	}
 
 	// only add IMCs for local player controllers
@@ -321,7 +325,7 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 
 	// Niente suggerimento mentre c'è una schermata aperta o il colono sta uscendo.
 	const bool bSchermata = Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SullaPancaInMovimento(GetPawn());
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid() || SullaPancaInMovimento(GetPawn());
 	AActor* Trovata = (!bSchermata && GetPawn()) ? ValdorsoInterazione::PiuVicina(GetPawn()) : nullptr;
 	CosaVicina = Trovata;
 	const IValdorsoInterattivo* Cosa = Cast<IValdorsoInterattivo>(Trovata);
@@ -482,6 +486,55 @@ void AValdorsoPlayerController::ChiudiBacheca()
 	}
 }
 
+void AValdorsoPlayerController::TastoMappa()
+{
+	// La mappa si apre solo in gioco, con il colono nella valle e nessun'altra schermata aperta.
+	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!Viewport || !GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid()
+		|| Anticamera.IsValid() || SchermataCodici.IsValid() || SchermataBacheca.IsValid())
+	{
+		return;
+	}
+	if (SchermataMappa.IsValid())
+	{
+		ChiudiMappa();
+		return;
+	}
+	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+	SAssignNew(SchermataMappa, SValdorsoMappa)
+		.OnChiudi(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoPlayerController* Controllore = Debole.Get())
+			{
+				Controllore->ChiudiMappa();
+			}
+		}));
+	Viewport->AddViewportWidgetContent(SchermataMappa.ToSharedRef(), 57);
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(SchermataMappa);
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+}
+
+void AValdorsoPlayerController::ChiudiMappa()
+{
+	if (!SchermataMappa.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(SchermataMappa.ToSharedRef());
+	}
+	SchermataMappa.Reset();
+	if (!Pausa.IsValid() && !SchermataRegistro.IsValid() && !SceltaPersonaggio.IsValid() && !Anticamera.IsValid() && !SchermataCodici.IsValid()
+		&& !SchermataBacheca.IsValid())
+	{
+		SetInputMode(FInputModeGameOnly());
+		bShowMouseCursor = false;
+	}
+}
+
 void AValdorsoPlayerController::TastoInteragisci()
 {
 	if (Pausa.IsValid() || SchermataBacheca.IsValid() || !GetPawn())
@@ -514,7 +567,7 @@ void AValdorsoPlayerController::ServerInteragisci_Implementation(AActor* Cosa)
 		return;
 	}
 	// Il server non si fida: il colono deve essere davvero vicino.
-	if (FVector::Dist(Corpo->GetActorLocation(), Interattivo->PuntoInterazione()) > ValdorsoInterazione::RaggioServer
+	if (FVector::Dist(Corpo->GetActorLocation(), Interattivo->PuntoInterazionePer(Corpo)) > ValdorsoInterazione::RaggioServer
 		|| !ValdorsoInterazione::SiVede(Corpo, Cosa))
 	{
 		return;
@@ -1305,6 +1358,7 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	ChiudiSceltaPersonaggio();
 	ChiudiPausa();
 	ChiudiBacheca();
+	ChiudiMappa();
 	if (Suggerimento.IsValid())
 	{
 		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)

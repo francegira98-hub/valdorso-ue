@@ -55,7 +55,9 @@ namespace ValdorsoSigillo
 		{
 			Notte = 1.f - (Ora - 4.f) / 2.f;
 		}
-		return (1.f + 1.4f * Notte) * (1.f + 0.35f * (Colpo1 + Colpo2));
+		// (06/11, visto da Fra alle 23: un muro bianco che acceca) Di notte l'occhio (l'esposizione automatica) si abitua
+		// al buio e il velo sembra già molto più forte: la luce vera va abbassata, non alzata.
+		return (1.f - 0.75f * Notte) * (1.f + 0.35f * (Colpo1 + Colpo2));
 	}
 }
 
@@ -72,6 +74,10 @@ namespace
 			}
 		}
 	}
+
+	/** (06/11) Quanto brilla il velo, per tararlo a occhio in gioco: Valdorso.Sigillo.Luce 0.5 (di serie 0.5). */
+	TAutoConsoleVariable<float> CVarLuceSigillo(TEXT("Valdorso.Sigillo.Luce"), 0.5f,
+		TEXT("Quanto brilla il velo del sigillo della Corona (di serie 0.5; 1 = come la prima prova del 06/11)."));
 
 	FAutoConsoleCommand ComandoSigilloApri(TEXT("Valdorso.Sigillo.Apri"), TEXT("Apre il sigillo della Corona sul passo (si passa)."),
 		FConsoleCommandDelegate::CreateLambda([]() { ApriOChiudiSigillo(true); }));
@@ -319,7 +325,7 @@ void AValdorsoSigillo::Tick(float DeltaSeconds)
 	}
 	if (MaterialeVelo)
 	{
-		MaterialeVelo->SetScalarParameterValue(TEXT("Forza"), Luce);
+		MaterialeVelo->SetScalarParameterValue(TEXT("Forza"), Luce * CVarLuceSigillo.GetValueOnGameThread());
 		MaterialeVelo->SetVectorParameterValue(TEXT("Colore"), Colore);
 	}
 	Ronzio->SetVolumeMultiplier(FMath::Clamp(0.45f + 0.25f * Luce, 0.2f, 1.3f));

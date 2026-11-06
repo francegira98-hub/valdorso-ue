@@ -1,7 +1,10 @@
 // Valdorso - Componente di movimento del personaggio (vedi il .h).
 
 #include "ValdorsoMovementComponent.h"
+#include "ValdorsoAcque.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/PhysicsVolume.h"
 
 // Una "mossa salvata": ogni passo del giocatore viene ricordato insieme allo stato della corsa,
 // così se il server corregge la posizione il PC rifà i passi alla velocità giusta, senza scatti.
@@ -85,6 +88,82 @@ UValdorsoMovementComponent::UValdorsoMovementComponent()
 {
 	bVuoleCorrere = false;
 	MaxWalkSpeed = VelocitaCamminata;
+	// (06/11) Il nuoto: a galla con la testa fuori (con 1 starebbe tutto sotto), non troppo veloce.
+	Buoyancy = 1.12f;
+	MaxSwimSpeed = 220.f;
+	NavAgentProps.bCanSwim = true;
+}
+
+float UValdorsoMovementComponent::ImmersioneNellaValle() const
+{
+	const UWorld* Mondo = GetWorld();
+	if (!Mondo || !UpdatedComponent)
+	{
+		return 0.f;
+	}
+	if (!Acque.IsValid())
+	{
+		const double Ora = Mondo->GetTimeSeconds();
+		if (Ora < ProssimaRicercaAcque)
+		{
+			return 0.f;
+		}
+		ProssimaRicercaAcque = Ora + 2.0;
+		Acque = AValdorsoAcque::Di(Mondo);
+		if (!Acque.IsValid())
+		{
+			return 0.f;
+		}
+	}
+	const FVector Dove = UpdatedComponent->GetComponentLocation();
+	float Pelo = 0.f;
+	if (!Acque->PeloQui(FVector2D(Dove), Pelo))
+	{
+		return 0.f;
+	}
+	const float Mezza = CharacterOwner && CharacterOwner->GetCapsuleComponent()
+		? CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.f;
+	return ValdorsoAcqua::Immersione(Pelo, static_cast<float>(Dove.Z), Mezza);
+}
+
+bool UValdorsoMovementComponent::IsInWater() const
+{
+	if (Super::IsInWater())
+	{
+		return true;
+	}
+	// Chi nuota smette quando l'acqua scende sotto AcquaPerUscire; chi cammina comincia sopra AcquaPerNuotare.
+	const float Immersione = ImmersioneNellaValle();
+	return MovementMode == MOVE_Swimming ? Immersione >= AcquaPerUscire : Immersione >= AcquaPerNuotare;
+}
+
+float UValdorsoMovementComponent::ImmersionDepth() const
+{
+	const APhysicsVolume* Volume = GetPhysicsVolume();
+	if (Volume && Volume->bWaterVolume)
+	{
+		return Super::ImmersionDepth();
+	}
+	return ImmersioneNellaValle();
+}
+
+void UValdorsoMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
+{
+	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
+	if (!CanEverSwim() || !UpdatedComponent)
+	{
+		return;
+	}
+	// Solo tra camminare, cadere e nuotare: sulla scala (volo), seduti o a letto (fermi) non si tocca niente.
+	const bool bATerra = MovementMode == MOVE_Walking || MovementMode == MOVE_NavWalking || MovementMode == MOVE_Falling;
+	if (bATerra && IsInWater())
+	{
+		SetMovementMode(MOVE_Swimming);
+	}
+	else if (MovementMode == MOVE_Swimming && !IsInWater())
+	{
+		SetMovementMode(MOVE_Falling);
+	}
 }
 
 void UValdorsoMovementComponent::ImpostaCorsa(bool bCorrere)
@@ -117,4 +196,17 @@ FNetworkPredictionData_Client* UValdorsoMovementComponent::GetPredictionData_Cli
 		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_Valdorso(*this);
 	}
 	return ClientPredictionData;
+}
+
+void UValdorsoMovementComponent::PhysSwimming(float deltaTime, int32 Iterations)
+{
+	Super::PhysSwimming(deltaTime, Iterations);
+	// Il motore, alla fine del passo a nuoto, mette "cadere" se il Physics Volume non è d'acqua (e qui non lo è mai:
+	// l'acqua la dice AValdorsoAcque). Se il corpo è ancora abbastanza sott'acqua, si continua a nuotare: così ogni
+	// passo finisce a nuoto per le animazioni, la rete e la soglia per uscire.
+	const APhysicsVolume* Volume = GetPhysicsVolume();
+	if (MovementMode == MOVE_Falling && !(Volume && Volume->bWaterVolume) && ImmersioneNellaValle() >= AcquaPerUscire)
+	{
+		SetMovementMode(MOVE_Swimming);
+	}
 }

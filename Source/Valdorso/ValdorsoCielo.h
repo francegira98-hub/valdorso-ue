@@ -19,6 +19,7 @@
 
 class UDirectionalLightComponent;
 class USkyLightComponent;
+class AValdorsoTempo;
 
 UCLASS()
 class VALDORSO_API AValdorsoCielo : public AActor
@@ -50,6 +51,9 @@ public:
 
 	/** L'ora di adesso (0..24), uguale su server e PC. */
 	float Ora() const;
+
+	/** (06/11) Quanto è giorno (0 di notte, 1 col sole sopra l'orizzonte; sfuma all'alba e al tramonto). */
+	float LuceDelGiorno() const;
 
 	/** Solo sul server: mette un'ora (per le prove e, più avanti, per lo staff). */
 	void ImpostaOra(float NuovaOra);
@@ -87,4 +91,8 @@ private:
 	float IntensitaSole = 10.f;
 	bool bLuciCercate = false;
 	double ProssimaCattura = 0.0;
+
+	/** (06/11) Il tempo della valle: quanta luce del sole passa tra le nuvole. */
+	TWeakObjectPtr<AValdorsoTempo> Tempo;
+	double ProssimaRicercaTempo = 0.0;
 };
