@@ -11,6 +11,9 @@
 #include "ValdorsoAcque.h"
 #include "ValdorsoTempo.h"
 #include "ValdorsoMovenze.h"
+#include "ValdorsoAmbiente.h"
+#include "ValdorsoCampane.h"
+#include "ValdorsoValleViva.h"
 
 namespace ValdorsoTestMondo
 {
@@ -195,6 +198,54 @@ bool FValdorsoTestMovenze::RunTest(const FString& Parameters)
 	const FTransform Testa(FRotator::ZeroRotator, FVector(0.0, 0.0, 100.0));
 	const FVector Dove = ValdorsoMovenze::Inclinato(Testa, 90.f, FVector::ZeroVector).GetLocation();
 	TestTrue(TEXT("la testa va avanti"), Dove.Equals(FVector(100.0, 0.0, 0.0), 0.01));
+	return true;
+}
+
+// (06/11) I suoni della valle e le campane: quando si sentono, e il punto d'acqua più vicino.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestSuoniValle, "Valdorso.Mondo.SuoniValle", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestSuoniValle::RunTest(const FString& Parameters)
+{
+	// le campane: solo le ore canoniche, tanti rintocchi quante le ore (a mezzogiorno 12)
+	TestEqual(TEXT("prima: 6 rintocchi"), ValdorsoCampane::Rintocchi(6), 6);
+	TestEqual(TEXT("mezzogiorno: 12"), ValdorsoCampane::Rintocchi(12), 12);
+	TestEqual(TEXT("compieta: 9"), ValdorsoCampane::Rintocchi(21), 9);
+	TestEqual(TEXT("alle 7 tace"), ValdorsoCampane::Rintocchi(7), 0);
+	TestEqual(TEXT("di notte tace"), ValdorsoCampane::Rintocchi(3), 0);
+	// quando si sentono
+	TestTrue(TEXT("la fucina a mezzogiorno"), ValdorsoAmbiente::Volume(EValdorsoQuando::Lavoro, 12.f, 1.f, 0.f) > 0.99f);
+	TestTrue(TEXT("la fucina alle 3 tace"), ValdorsoAmbiente::Volume(EValdorsoQuando::Lavoro, 3.f, 0.f, 0.f) < 0.01f);
+	TestTrue(TEXT("la locanda di sera è piena"), ValdorsoAmbiente::Volume(EValdorsoQuando::Sera, 21.f, 0.f, 0.f) > 0.99f);
+	TestTrue(TEXT("i grilli di giorno tacciono"), ValdorsoAmbiente::Grilli(1.f, 0.f) < 0.01f);
+	TestTrue(TEXT("gli uccelli con la pioggia tacciono"), ValdorsoAmbiente::Uccelli(10.f, 1.f, 0.8f) < 0.01f);
+	TestTrue(TEXT("con la pioggia c'è più vento"), ValdorsoAmbiente::Vento(0.9f, 0.7f) > ValdorsoAmbiente::Vento(0.f, 0.f));
+	// il punto più vicino sul fiume: sulla linea, con il pelo di lì
+	FVector Q;
+	const TArray<FVector> Linea = { FVector(0.0, 0.0, 100.0), FVector(1000.0, 0.0, 200.0) };
+	TestTrue(TEXT("c'è un punto"), ValdorsoAmbiente::PiuVicinoSuLinea(Linea, FVector(500.0, 300.0, 5000.0), Q));
+	TestTrue(TEXT("il punto è a metà, con il pelo a metà"), Q.Equals(FVector(500.0, 0.0, 150.0), 0.01));
+	const TArray<FVector2D> Riva = { FVector2D(0.0, 0.0), FVector2D(100.0, 0.0), FVector2D(100.0, 100.0), FVector2D(0.0, 100.0) };
+	TestTrue(TEXT("sulla riva"), ValdorsoAmbiente::PiuVicinoSuRiva(Riva, 50.f, FVector(-30.0, 50.0, 0.0), Q) && Q.Equals(FVector(0.0, 50.0, 50.0), 0.01));
+	return true;
+}
+
+// (06/11) La valle che reagisce: da quanto lontano scappano gli uccelli, quando saltano i pesci, l'arco del salto.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestValleViva, "Valdorso.Mondo.ValleViva", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestValleViva::RunTest(const FString& Parameters)
+{
+	TestTrue(TEXT("chi corre li spaventa da più lontano"), ValdorsoValleViva::DistanzaSpavento(500.f) > ValdorsoValleViva::DistanzaSpavento(150.f));
+	TestTrue(TEXT("chi è fermo deve andarci vicino"), ValdorsoValleViva::DistanzaSpavento(0.f) < 400.f);
+	TestTrue(TEXT("al tramonto saltano"), ValdorsoValleViva::OraDeiPesci(18.5f));
+	TestTrue(TEXT("all'alba saltano"), ValdorsoValleViva::OraDeiPesci(6.f));
+	TestFalse(TEXT("a mezzogiorno no"), ValdorsoValleViva::OraDeiPesci(12.f));
+	const FVector Inizio(0.0, 0.0, 100.0);
+	const FVector Meta = ValdorsoValleViva::Salto(Inizio, FVector(1.0, 0.0, 0.0), 120.f, 80.f, 0.5f);
+	TestTrue(TEXT("a metà salto è in alto e a metà strada"), Meta.Equals(FVector(60.0, 0.0, 180.0), 0.01));
+	const FVector Fine = ValdorsoValleViva::Salto(Inizio, FVector(1.0, 0.0, 0.0), 120.f, 80.f, 1.f);
+	TestTrue(TEXT("alla fine rientra"), Fine.Equals(FVector(120.0, 0.0, 100.0), 0.01));
+	// le rane: tacciono se passi vicino muovendoti, non se sei lontano o fermo
+	TestTrue(TEXT("le rane tacciono"), ValdorsoAmbiente::RaneSpaventate(800.f, 300.f));
+	TestFalse(TEXT("lontano cantano"), ValdorsoAmbiente::RaneSpaventate(3000.f, 300.f));
+	TestFalse(TEXT("fermo cantano"), ValdorsoAmbiente::RaneSpaventate(800.f, 0.f));
 	return true;
 }
 

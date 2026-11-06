@@ -5,7 +5,7 @@
 #   Fase 1  il villaggio di oggi, con la palizzata stretta (che c'è solo nella fase 1).
 #   Fase 2  un anello di case lungo le strade, fuori dalla palizzata di oggi; la palizzata più larga (fino a circa
 #           200 m dalla piazza, con dentro le fattorie di sud-est), con le porte dove passano le strade, le lanterne
-#           alle porte e la torre del nord.
+#           alle porte e la torre del nord (solo nella fase 2).
 #   Fase 3  il muro di pietra sulla stessa linea della palizzata larga (che c'è solo nella fase 2), con due torri
 #           a ogni porta e le torri d'angolo.
 #
@@ -21,6 +21,7 @@ from PIL import Image, ImageDraw
 from scipy import ndimage
 
 import villaggio_edifici as ed
+import villaggio_milizia
 from villaggio_mesh import Mesh
 
 # Le strade dipinte sul paesaggio (linee di mezzo misurate sullo strato Strade il 06/11, metri dalla piazza)
@@ -57,25 +58,51 @@ def _incrocio(a, b, c, d):
 
 
 def con_porte(percorso, strade, largo=LARGHEZZA_PORTA):
-    """Mette le porte dove la linea incrocia le strade: ogni porta = due punti, larghi 'largo' metri."""
-    fuori = [tuple(percorso[0])]
-    porte = []
-    for a, b in zip(percorso[:-1], percorso[1:]):
-        A, B = np.asarray(a, np.float64), np.asarray(b, np.float64)
-        lung = float(np.linalg.norm(B - A))
-        colpi = []
-        for s in strade:
-            for c, d in zip(s[:-1], s[1:]):
-                t = _incrocio(A, B, c, d)
+    """Mette le porte dove la linea incrocia le strade: ogni porta = due punti sulla linea, a 'largo' metri di cammino
+    l'uno dall'altro, centrati sull'incrocio.
+    (06/11, visto da Fra in Play) Prima la porta restava dentro il tratto dell'incrocio: se la strada passava vicino a
+    un angolo della linea la porta veniva stretta (4-5 m invece di 7) e spostata, e la strada finiva nel muro e sotto
+    una torre (le due porte di est). Ora la porta si misura lungo la linea, anche oltre l'angolo, e i punti della linea
+    che cadono dentro la porta si tolgono."""
+    P = [np.asarray(p, np.float64) for p in percorso]
+    cum = [0.0]
+    for a, b in zip(P[:-1], P[1:]):
+        cum.append(cum[-1] + float(np.linalg.norm(b - a)))
+
+    def punto(sv):
+        i = max(0, min(len(P) - 2, int(np.searchsorted(cum, sv, side="right")) - 1))
+        lung = max(1e-9, cum[i + 1] - cum[i])
+        return tuple((P[i] + (P[i + 1] - P[i]) * (sv - cum[i]) / lung).round(2))
+
+    centri = []
+    for i, (a, b) in enumerate(zip(P[:-1], P[1:])):
+        for st in strade:
+            for c, d in zip(st[:-1], st[1:]):
+                t = _incrocio(a, b, c, d)
                 if t is not None:
-                    colpi.append(t)
-        for t in sorted(colpi):
-            dt = largo / 2 / lung
-            g0 = tuple((A + (B - A) * max(0.0, t - dt)).round(2))
-            g1 = tuple((A + (B - A) * min(1.0, t + dt)).round(2))
-            fuori += [g0, g1]
+                    centri.append(cum[i] + t * (cum[i + 1] - cum[i]))
+    centri = sorted(set(round(c, 3) for c in centri))
+    tagli = [(max(0.0, c - largo / 2), min(cum[-1], c + largo / 2)) for c in centri]
+    fuori = []
+    porte = []
+    k = 0
+    for i, p in enumerate(P):
+        # le porte che cominciano prima di questo punto
+        while k < len(tagli) and tagli[k][0] <= cum[i]:
+            g0, g1 = punto(tagli[k][0]), punto(tagli[k][1])
+            if not fuori or fuori[-1] != g0:
+                fuori.append(g0)
+            fuori.append(g1)
             porte.append((g0, g1))
-        fuori.append(tuple(b))
+            k += 1
+        if porte and cum[i] <= tagli[k - 1][1]:
+            continue                      # questo punto della linea cade dentro l'ultima porta: via
+        fuori.append(tuple(np.round(p, 2)))
+    while k < len(tagli):
+        g0, g1 = punto(tagli[k][0]), punto(tagli[k][1])
+        fuori += [g0, g1]
+        porte.append((g0, g1))
+        k += 1
     return fuori, porte
 
 
@@ -254,8 +281,9 @@ def _rettangolo_m(c, W, D, guarda):
 
 # ------------------------------------------------------------------------------------------------ le fasi
 
-def fasi_future(pr, S, L, giro_oggi, strade_villaggio, striscia):
-    """striscia: la funzione di villaggio.py che fa una strada che segue il terreno."""
+def fasi_future(pr, S, L, giro_oggi, strade_villaggio, striscia, lastricato=None):
+    """striscia: la funzione di villaggio.py che fa una strada che segue il terreno; lastricato: quella che fa una
+    superficie che segue il terreno (la terra battuta del campo della milizia)."""
     t = pr.t
     rng = np.random.default_rng(206)          # un seme suo: le cose delle altre sezioni restano uguali
     P0 = np.array(L(0, 0), np.float64)
@@ -321,8 +349,12 @@ def fasi_future(pr, S, L, giro_oggi, strade_villaggio, striscia):
         guarda = math.degrees(math.atan2(nrm[1], nrm[0]))
         if mappa.libero(_rettangolo_m(c, 5.5, 5.5, guarda)):
             X, Y = L(*c)
+            # (06/11, visto da Fra) solo nella fase 2: nella fase 3 la porta nord ha le sue due torri di pietra e la
+            # torre del nord restava sola accanto a loro
+            pr.fase = (2, 2)
             pr.edificio(S, "Torre_del_Nord", lambda nome, W, D, **kw: ed.torre(nome, lato=W, altezza=1150, fondazione=kw["fondazione"]),
                         X, Y, guarda, 550, 550, chiave=False)
+            pr.fase = (2, 0)
             mappa.occupa(_rettangolo_m(c, 5.5, 5.5, guarda))
             torre_ok = True
             break
@@ -388,6 +420,10 @@ def fasi_future(pr, S, L, giro_oggi, strade_villaggio, striscia):
             mappa.occupato |= np.array(im) > 0
         pr.al_suolo(S, "Via dell'anello", sm, P0[0], P0[1], oz)
     print("fase 2: via dell'anello in %d pezzi (%s m)" % (len(pezzi_via), ", ".join("%.0f" % (len(p) * 3) for p in pezzi_via)))
+
+    # (06/11) la zona della milizia (fasi 2 e 3): prima delle case dell'anello, così il suo posto resta libero
+    if lastricato is not None:
+        villaggio_milizia.zona(pr, S, L, t, mappa, lastricato, _rettangolo_m, dentro, poli_largo, poli_oggi)
 
     # l'anello di case: lungo le strade, fuori dalla palizzata di oggi e dentro quella larga
     strade_case = [(STRADA_NORD, 4.5), (STRADA_NORDEST, 4.5), (STRADA_SUDEST, 4.5)] + [(sc, 3.5) for sc in strada_cimitero] \

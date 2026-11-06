@@ -6,6 +6,8 @@
 #include "ValdorsoCielo.h"
 #include "ValdorsoFasiVillaggio.h"
 #include "ValdorsoTempo.h"
+#include "ValdorsoAmbiente.h"
+#include "ValdorsoValleViva.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
@@ -41,6 +43,22 @@ void AValdorsoGameMode::StartPlay()
 		Parametri.Name = TEXT("ValdorsoTempo");
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		Mondo->SpawnActor<AValdorsoTempo>(AValdorsoTempo::StaticClass(), FTransform::Identity, Parametri);
+	}
+	// (06/11) I suoni della valle intorno al colono (vento, uccelli, grilli, l'acqua più vicina): ogni PC li suona da sé.
+	if (Mondo && !TActorIterator<AValdorsoAmbiente>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.Name = TEXT("ValdorsoAmbiente");
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoAmbiente>(AValdorsoAmbiente::StaticClass(), FTransform::Identity, Parametri);
+	}
+	// (06/11) La valle che reagisce: stormi che si alzano, pesci che saltano (ogni PC per il suo colono).
+	if (Mondo && !TActorIterator<AValdorsoValleViva>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.Name = TEXT("ValdorsoValleViva");
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoValleViva>(AValdorsoValleViva::StaticClass(), FTransform::Identity, Parametri);
 	}
 }
 

@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw
 import sigillo
 import villaggio_edifici as ed
 import villaggio_fasi
+import villaggio_milizia
 import villaggio_texture
 from villaggio_mesh import Mesh, normalizza
 
@@ -639,6 +640,8 @@ def villaggio(pr, rng):
     X, Y = L(114, -18.2)
     pr.edificio(S, "Torre_della_Milizia", lambda nome, W, D, **kw: ed.torre(nome, lato=W, altezza=1300, fondazione=kw["fondazione"]),
                 X, Y, 180.0, 550, 550, chiave=False)
+    # (06/11) il cortile della milizia: due fantocci e una rastrelliera tra la casa della milizia e la palizzata
+    villaggio_milizia.cortile_fase1(pr, S, L, t)
     # ---- strada del ponte (a nord) e il lavatoio
     def x_strada_nord(y):
         # (05/11) la linea di mezzo vera della strada dipinta (misurata sullo strato Strade, da y -35 a -165)
@@ -931,7 +934,7 @@ def villaggio(pr, rng):
     ponte_su_strada(pr, S, "Ponte a nord", "SM_Villaggio_PonteNord", *L(-42.9, -294.1), (0.416, 0.909), 450)
 
     # (06/11) le fasi future: fase 2 (anello di case, palizzata più larga) e fase 3 (il muro di pietra)
-    villaggio_fasi.fasi_future(pr, S, L, giro, strade, striscia)
+    villaggio_fasi.fasi_future(pr, S, L, giro, strade, striscia, lastricato)
     return [L(x, y) for (x, y) in lotti]
 
 
