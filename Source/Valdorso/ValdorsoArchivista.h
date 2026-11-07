@@ -24,6 +24,7 @@
 #include "Tasks/Task.h"
 #include "Containers/Ticker.h"
 #include "ValdorsoRegistro.h"
+#include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoArchivista.generated.h"
 
 UENUM(BlueprintType)
@@ -233,6 +234,11 @@ struct FValdorsoPersonaggio
 	/** Il Registro di Val d'Orso (versione 2). */
 	UPROPERTY()
 	FValdorsoRegistro Registro;
+
+	/** (07/11) Il taccuino di viaggio: i luoghi scoperti e le iscrizioni lette (ValdorsoTaccuinoDati.h). Lo tiene il
+	 *  server; nei file di prima manca e si legge vuoto (non serve cambiare VersioneSchema). */
+	UPROPERTY()
+	FValdorsoTaccuino Taccuino;
 };
 
 /** Quello che il giocatore vede nella scelta del personaggio (viaggia dal server al client). */

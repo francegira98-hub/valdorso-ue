@@ -21,6 +21,14 @@ public:
 
 	TSharedPtr<SWidget> FuocoIniziale() const { return PulsanteChiudi; }
 
+	/**
+	 * (07/11) Le righe scritte sulla pergamena, una sotto l'altra con il separatore in mezzo: le righe "rune:" con le
+	 * rune disegnate, quelle che cominciano con la minuscola unite alla frase di prima. Le usa anche il taccuino di
+	 * viaggio (le iscrizioni rilette e il quaderno delle rune). StileRighe deve vivere quanto i widget che ne escono.
+	 * (Non si chiama Stile: nasconderebbe il membro Stile, e con gli avvisi C4458 trattati come errori non compila.)
+	 */
+	static TSharedRef<SWidget> ScriviRighe(const TArray<FString>& Avvisi, FValdorsoStileAccesso& StileRighe);
+
 	virtual bool SupportsKeyboardFocus() const override { return true; }
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;

@@ -8,6 +8,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "ValdorsoArchivista.h"
+#include "ValdorsoDialoghi.h"
 #include "ValdorsoPlayerController.generated.h"
 
 class UInputMappingContext;
@@ -20,6 +21,8 @@ class SValdorsoPausa;
 class SValdorsoImpostazioni;
 class SValdorsoBacheca;
 class SValdorsoMappa;
+class SValdorsoDialogo;
+class UValdorsoTaccuinoComponent;
 
 /**
  *  Basic PlayerController class for a third person game
@@ -62,6 +65,12 @@ protected:
 	bool ShouldUseTouchControls() const;
 
 public:
+
+	AValdorsoPlayerController();
+
+	/** (07/11) Il taccuino di viaggio e la bussola (ValdorsoTaccuino.h): lo tiene il server, arriva solo a questo giocatore. */
+	UPROPERTY(VisibleAnywhere, Category = "Taccuino")
+	TObjectPtr<UValdorsoTaccuinoComponent> Taccuino;
 
 	/**
 	 * (28/10) Solo per le prove nell'editor (console): apre il Registro di Val d'Orso su un colono di prova, con il
@@ -177,6 +186,14 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientAvviso(const FText& Testo, float Secondi, float SecondiFermo);
 
+	/** (07/11) Il dialogo con un PNG: il server manda la battuta di adesso (bChiudi = via la pergamena). */
+	UFUNCTION(Client, Reliable)
+	void ClientMostraDialogo(AActor* Chi, const FValdorsoBattuta& Battuta);
+
+	/** (07/11) La risposta scelta alla battuta numero Passo (INDEX_NONE = il colono se ne va). */
+	UFUNCTION(Server, Reliable)
+	void ServerScegliDialogo(AActor* Chi, int32 Passo, int32 Scelta);
+
 	// --- Anticamera: dal server al client ---------------------------------------------------------
 
 	UFUNCTION(Client, Reliable)
@@ -291,9 +308,16 @@ private:
 	void TastoFoto();
 	/** (07/11) R: il quaderno delle rune (l'alfabeto e le parole delle Cronache), nella bacheca. */
 	void TastoQuaderno();
+	/** (07/11) J: il taccuino di viaggio (luoghi, iscrizioni, rune). */
+	void TastoTaccuino();
 	void ChiudiMappa();
 	TSharedPtr<SValdorsoMappa> SchermataMappa;
 	TSharedPtr<SValdorsoBacheca> SchermataBacheca;
+	/** (07/11) Client: il dialogo con un PNG (SValdorsoDialogo); bAvvisaServer = il colono se ne va. */
+	void ChiudiDialogo(bool bAvvisaServer);
+	TSharedPtr<SValdorsoDialogo> SchermataDialogo;
+	TWeakObjectPtr<AActor> DialogoCon;
+	int32 DialogoPasso = 0;
 	/** Client: l'avviso breve in alto (ClientAvviso) e lo stordimento. */
 	void ChiudiAvviso();
 	TSharedPtr<SWidget> Avviso;

@@ -7,6 +7,7 @@
 #include "ValdorsoSeduta.h"
 #include "ValdorsoLetto.h"
 #include "ValdorsoScala.h"
+#include "ValdorsoTaccuino.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
@@ -381,6 +382,8 @@ void AValdorsoBacheca::Interagisci(APawn* Chi)
 	if (AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(Chi->GetController()))
 	{
 		Controllore->ClientMostraBacheca(Titolo.ToString().Left(60), DaMandare);
+		// (07/11) quello che si legge si ricopia nel taccuino di viaggio del personaggio (lo tiene il server)
+		ValdorsoTaccuino::AnnotaLettura(Controllore, Titolo.ToString().Left(60), DaMandare);
 	}
 }
 

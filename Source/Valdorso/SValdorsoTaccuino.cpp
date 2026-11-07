@@ -1,0 +1,659 @@
+// Valdorso - Bussola e taccuino di viaggio: quello che si vede (vedi il .h). Scritto da Claude il 07/11/2026.
+
+#include "SValdorsoTaccuino.h"
+#include "ValdorsoTaccuino.h"
+#include "ValdorsoTaccuinoDati.h"
+#include "SValdorsoAccesso.h"
+#include "SValdorsoBacheca.h"
+#include "ValdorsoModoFoto.h"
+#include "ValdorsoRune.h"
+#include "ValdorsoTemaUI.h"
+#include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Fonts/FontMeasure.h"
+#include "Framework/Application/SlateApplication.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "HAL/IConsoleManager.h"
+#include "Input/Events.h"
+#include "InputCoreTypes.h"
+#include "Rendering/DrawElements.h"
+#include "Rendering/SlateRenderer.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SScrollBox.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/SOverlay.h"
+#include "Widgets/Text/STextBlock.h"
+
+#define LOCTEXT_NAMESPACE "ValdorsoTaccuino"
+
+namespace
+{
+	TAutoConsoleVariable<int32> CVarBussola(
+		TEXT("Valdorso.Bussola"),
+		1,
+		TEXT("1: la bussola in alto sullo schermo (di serie). 0: niente bussola."),
+		ECVF_Default);
+
+	/** Le misure della bussola: la fascia scura con le lettere, sotto i segni dei luoghi e il nome. */
+	constexpr float BussolaAltezzaFascia = 30.f;
+	constexpr float BussolaAltezza = 64.f;
+	/** Entro quanti gradi dal centro un luogo mostra il nome. */
+	constexpr float BussolaGradiNome = 9.f;
+	/** Più vicino di così (cm) il segno del luogo sparisce: ci si è dentro. */
+	constexpr double BussolaVicinoCm = 1500.0;
+
+	/** La rotta di chi guarda: la telecamera (se c'è), se no il controllore. */
+	float BussolaRottaGuardata(const APlayerController* Controllore)
+	{
+		const float Imbardata = Controllore->PlayerCameraManager
+			? static_cast<float>(Controllore->PlayerCameraManager->GetCameraRotation().Yaw)
+			: static_cast<float>(Controllore->GetControlRotation().Yaw);
+		return ValdorsoBussola::Rotta(Imbardata);
+	}
+
+	/** Un testo con un'ombra scura sotto (si legge sopra il cielo e sopra la neve). */
+	void BussolaScrivi(FSlateWindowElementList& Elementi, int32 Strato, const FGeometry& Geometria, const FString& Testo,
+		const FSlateFontInfo& Font, const FVector2f& Centro, const FLinearColor& Colore)
+	{
+		if (!FSlateApplication::IsInitialized() || !FSlateApplication::Get().GetRenderer())
+		{
+			return;
+		}
+		const TSharedRef<FSlateFontMeasure> Misuratore = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+		const FVector2f Misura = FVector2f(Misuratore->Measure(Testo, Font));
+		const FVector2f Inizio = Centro - Misura * 0.5f;
+		FSlateDrawElement::MakeText(Elementi, Strato,
+			Geometria.ToPaintGeometry(FVector2D(Misura), FSlateLayoutTransform(1.f, FVector2D(Inizio + FVector2f(1.f, 1.f)))),
+			Testo, Font, ESlateDrawEffect::None, FLinearColor(0.f, 0.f, 0.f, 0.6f * Colore.A));
+		FSlateDrawElement::MakeText(Elementi, Strato + 1,
+			Geometria.ToPaintGeometry(FVector2D(Misura), FSlateLayoutTransform(1.f, FVector2D(Inizio))),
+			Testo, Font, ESlateDrawEffect::None, Colore);
+	}
+
+	/** "Scoperto il 07/11/2026, al tramonto" (la data sul fuso di questo PC). */
+	FText TaccuinoQuando(const FValdorsoLuogoScoperto& Luogo)
+	{
+		if (Luogo.Quando <= 0)
+		{
+			return FText::GetEmpty();
+		}
+		const FDateTime Qui = FDateTime::FromUnixTimestamp(Luogo.Quando) + (FDateTime::Now() - FDateTime::UtcNow());
+		const FText Giorno = FText::FromString(Qui.ToString(TEXT("%d/%m/%Y")));
+		const FText Momento = ValdorsoTaccuino::Momento(Luogo.Ora);
+		return Momento.IsEmpty() ? FText::Format(LOCTEXT("ScopertoIl", "Scoperto il {0}"), Giorno)
+			: FText::Format(LOCTEXT("ScopertoIlMomento", "Scoperto il {0}, {1}"), Giorno, Momento);
+	}
+}
+
+// ------------------------------------------------------------------------------------------------- la bussola
+
+void SValdorsoBussola::Construct(const FArguments& InArgs)
+{
+	Controllore = InArgs._Controllore;
+	Taccuino = InArgs._Taccuino;
+	Caratteri = MakeShared<FValdorsoCaratteri>();
+	Pieno = FSlateColorBrush(FLinearColor::White);
+	Fascia = FSlateRoundedBoxBrush(ValdorsoTema::Pannelli().CopyWithNewOpacity(0.62f), 4.f,
+		ValdorsoTema::Oro().CopyWithNewOpacity(0.4f), 1.f);
+	SetVisibility(EVisibility::HitTestInvisible);
+	RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoBussola::Anima));
+}
+
+bool SValdorsoBussola::DaMostrare() const
+{
+	const APlayerController* Chi = Controllore.Get();
+	// una schermata aperta (pausa, mappa, bacheca, registro...) mostra il mouse: allora la bussola si toglie di mezzo
+	return CVarBussola.GetValueOnGameThread() != 0 && Chi && Chi->GetPawn() && !Chi->bShowMouseCursor
+		&& !ValdorsoFoto::Aperta(Chi) && !ValdorsoTaccuino::Aperto(Chi);
+}
+
+EActiveTimerReturnType SValdorsoBussola::Anima(double Tempo, float Delta)
+{
+	Presenza = FMath::FInterpConstantTo(Presenza, DaMostrare() ? 1.f : 0.f, Delta, 4.f);
+	return EActiveTimerReturnType::Continue;
+}
+
+FVector2D SValdorsoBussola::ComputeDesiredSize(float) const
+{
+	return FVector2D(Larghezza, BussolaAltezza);
+}
+
+int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+	FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
+{
+	const APlayerController* Chi = Controllore.Get();
+	if (Presenza <= 0.01f || !Chi)
+	{
+		return LayerId;
+	}
+	const float Alfa = Presenza * InWidgetStyle.GetColorAndOpacityTint().A;
+	const float Guardata = BussolaRottaGuardata(Chi);
+	const float Mezzo = Larghezza * 0.5f;
+	// verso i bordi tutto sfuma: la striscia sembra un pezzo di un cerchio che gira
+	auto Sfuma = [](float ScartoGradi)
+	{
+		const float T = FMath::Clamp(FMath::Abs(ScartoGradi) / (Campo * 0.5f), 0.f, 1.f);
+		return 1.f - T * T;
+	};
+
+	// la fascia
+	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+		AllottedGeometry.ToPaintGeometry(FVector2f(Larghezza, BussolaAltezzaFascia), FSlateLayoutTransform(FVector2f(0.f, 0.f))),
+		&Fascia, ESlateDrawEffect::None, FLinearColor(1.f, 1.f, 1.f, Alfa));
+
+	// le tacche ogni 15 gradi e le lettere ogni 45
+	const FSlateFontInfo FontCardinale = Caratteri->Titolo(15.f, TEXT("Bold"));
+	const FSlateFontInfo FontIntermedio = Caratteri->Titolo(11.f, TEXT("Regular"));
+	for (int32 k = 0; k < 24; ++k)
+	{
+		const float Rotta = k * 15.f;
+		const float Scarto = ValdorsoBussola::Scarto(Guardata, Rotta);
+		float X = 0.f;
+		if (!ValdorsoBussola::SullaStriscia(Scarto, Larghezza, Campo, X))
+		{
+			continue;
+		}
+		const float Forza = Sfuma(Scarto) * Alfa;
+		if (k % 3 == 0)
+		{
+			const int32 Punto = k / 3;
+			const bool bCardinale = Punto % 2 == 0;
+			const FLinearColor Colore = Punto == 0 ? ValdorsoTema::OroChiaro()
+				: (bCardinale ? ValdorsoTema::Oro() : ValdorsoTema::TestoSecondario());
+			BussolaScrivi(OutDrawElements, LayerId + 1, AllottedGeometry, ValdorsoBussola::Sigla(Punto),
+				bCardinale ? FontCardinale : FontIntermedio, FVector2f(X, BussolaAltezzaFascia * 0.5f + 1.f),
+				Colore.CopyWithNewOpacity(Forza));
+		}
+		else
+		{
+			FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(),
+				TArray<FVector2f>{ FVector2f(X, BussolaAltezzaFascia - 9.f), FVector2f(X, BussolaAltezzaFascia - 4.f) },
+				ESlateDrawEffect::None, ValdorsoTema::Oro().CopyWithNewOpacity(0.55f * Forza), true, 1.f);
+		}
+	}
+
+	// il segno di dove si guarda: un piccolo triangolo d'oro che punta in giù, sul bordo alto
+	FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 3, AllottedGeometry.ToPaintGeometry(),
+		TArray<FVector2f>{ FVector2f(Mezzo - 5.f, 1.f), FVector2f(Mezzo + 5.f, 1.f), FVector2f(Mezzo, 7.f), FVector2f(Mezzo - 5.f, 1.f) },
+		ESlateDrawEffect::None, ValdorsoTema::OroChiaro().CopyWithNewOpacity(Alfa), true, 1.5f);
+
+	// i luoghi già scoperti: un rombo sotto la fascia; quello più davanti a sé ha il nome e la distanza
+	const UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
+	const APawn* Colono = Chi->GetPawn();
+	if (Diario && Colono)
+	{
+		const FVector Qui = Colono->GetActorLocation();
+		const FValdorsoLuogo* Davanti = nullptr;
+		float ScartoDavanti = BussolaGradiNome;
+		const float YRombo = BussolaAltezzaFascia + 7.f;
+		for (const FValdorsoLuogoScoperto& Scoperto : Diario->LuoghiScoperti())
+		{
+			const FValdorsoLuogo* Luogo = ValdorsoLuoghi::Trova(Scoperto.Nome);
+			if (!Luogo)
+			{
+				continue;
+			}
+			const double Distanza = FVector2D::Distance(FVector2D(Qui.X, Qui.Y), FVector2D(Luogo->Posizione.X, Luogo->Posizione.Y));
+			if (Distanza < BussolaVicinoCm)
+			{
+				continue;
+			}
+			const float Scarto = ValdorsoBussola::Scarto(Guardata, ValdorsoBussola::RottaVerso(Qui, Luogo->Posizione));
+			float X = 0.f;
+			if (!ValdorsoBussola::SullaStriscia(Scarto, Larghezza, Campo, X))
+			{
+				continue;
+			}
+			const FLinearColor Colore = ValdorsoTema::Pergamena().CopyWithNewOpacity(Sfuma(Scarto) * Alfa);
+			FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(),
+				TArray<FVector2f>{ FVector2f(X, YRombo - 4.f), FVector2f(X + 4.f, YRombo), FVector2f(X, YRombo + 4.f),
+					FVector2f(X - 4.f, YRombo), FVector2f(X, YRombo - 4.f) },
+				ESlateDrawEffect::None, Colore, true, 1.5f);
+			if (FMath::Abs(Scarto) < FMath::Abs(ScartoDavanti))
+			{
+				ScartoDavanti = Scarto;
+				Davanti = Luogo;
+			}
+		}
+		if (Davanti)
+		{
+			const double Distanza = FVector2D::Distance(FVector2D(Qui.X, Qui.Y), FVector2D(Davanti->Posizione.X, Davanti->Posizione.Y));
+			float X = Mezzo;
+			ValdorsoBussola::SullaStriscia(ScartoDavanti, Larghezza, Campo, X);
+			const FString Testo = FString::Printf(TEXT("%s  ·  %s"), *Davanti->Nome, *ValdorsoBussola::TestoDistanza(Distanza));
+			BussolaScrivi(OutDrawElements, LayerId + 2, AllottedGeometry, Testo, Caratteri->Testo(15.f, TEXT("Italic")),
+				FVector2f(X, YRombo + 15.f), ValdorsoTema::Pergamena().CopyWithNewOpacity(Alfa));
+		}
+	}
+	return LayerId + 4;
+}
+
+// ------------------------------------------------------------------------------------------------- il taccuino
+
+void SValdorsoTaccuino::Construct(const FArguments& InArgs)
+{
+	Controllore = InArgs._Controllore;
+	Taccuino = InArgs._Taccuino;
+	OnChiudi = InArgs._OnChiudi;
+	Stile = MakeShared<FValdorsoStileAccesso>();
+	// la carta: la stessa pergamena della bacheca
+	Carta = FSlateRoundedBoxBrush(ValdorsoTema::Pergamena(), 4.f, ValdorsoTema::OroScuro(), 2.f);
+	Trasparente = FSlateColorBrush(FLinearColor::Transparent);
+	StileLinguetta = FButtonStyle()
+		.SetNormal(Trasparente)
+		.SetHovered(Trasparente)
+		.SetPressed(Trasparente)
+		.SetDisabled(Trasparente)
+		.SetNormalPadding(FMargin(14.f, 4.f))
+		.SetPressedPadding(FMargin(14.f, 5.f, 14.f, 3.f));
+
+	FSlateFontInfo FontTitolo = Stile->Caratteri->Titolo(26.f, TEXT("Bold"));
+	FontTitolo.LetterSpacing = 20;
+
+	TSharedRef<SButton> Chiudi = Stile->Pulsante(LOCTEXT("Chiudi", "Chiudi"),
+		FSimpleDelegate::CreateLambda([this]() { OnChiudi.ExecuteIfBound(); }), 18.f);
+
+	ChildSlot
+	[
+		SNew(SOverlay)
+		+ SOverlay::Slot()
+		[
+			SNew(SImage).Image(&Stile->Velo)
+		]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(FMargin(20.f, 30.f))
+		[
+			SNew(SBorder)
+			.BorderImage(&Carta)
+			.Padding(FMargin(44.f, 28.f))
+			[
+				SNew(SBox).WidthOverride(860.f).HeightOverride(700.f)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("Titolo", "Taccuino di viaggio"))
+						.Font(FontTitolo)
+						.ColorAndOpacity(ValdorsoTema::Rubrica())
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 10.f, 0.f, 0.f))
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().AutoWidth() [ Linguetta(0, LOCTEXT("SchedaLuoghi", "Luoghi")) ]
+						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center) [ Stile->Diamante(6.f, FSlateColor(ValdorsoTema::OroScuro())) ]
+						+ SHorizontalBox::Slot().AutoWidth() [ Linguetta(1, LOCTEXT("SchedaIscrizioni", "Iscrizioni")) ]
+						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center) [ Stile->Diamante(6.f, FSlateColor(ValdorsoTema::OroScuro())) ]
+						+ SHorizontalBox::Slot().AutoWidth() [ Linguetta(2, LOCTEXT("SchedaRune", "Rune")) ]
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 6.f, 0.f, 14.f))
+					[
+						Stile->Separatore(320.f, ValdorsoTema::OroScuro())
+					]
+					+ SVerticalBox::Slot().FillHeight(1.f)
+					[
+						SAssignNew(Contenuto, SBox)
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 16.f, 0.f, 0.f))
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+						[
+							SNew(STextBlock)
+							.Text(LOCTEXT("Aiuto", "J: chiudi  ·  1, 2, 3: le schede"))
+							.Font(Stile->Caratteri->Testo(15.f, TEXT("Italic")))
+							.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+						]
+						+ SHorizontalBox::Slot().AutoWidth()
+						[
+							SNew(SBox).WidthOverride(200.f) [ Chiudi ]
+						]
+						+ SHorizontalBox::Slot().FillWidth(1.f)
+					]
+				]
+			]
+		]
+	];
+
+	MostraScheda(0);
+	RegisterActiveTimer(0.25f, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoTaccuino::Controlla));
+}
+
+TSharedRef<SWidget> SValdorsoTaccuino::Linguetta(int32 Indice, const FText& Testo)
+{
+	TSharedRef<TWeakPtr<SButton>> Riferimento = MakeShared<TWeakPtr<SButton>>();
+	TSharedRef<SButton> Pulsante = SNew(SButton)
+		.ButtonStyle(&StileLinguetta)
+		.IsFocusable(false)
+		.OnClicked_Lambda([this, Indice]() { MostraScheda(Indice); return FReply::Handled(); })
+		[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(Testo)
+				.Font(Stile->Caratteri->Titolo(17.f, TEXT("Bold")))
+				.ColorAndOpacity_Lambda([this, Indice, Riferimento]()
+				{
+					const TSharedPtr<SButton> P = Riferimento->Pin();
+					if (Scheda == Indice)
+					{
+						return FSlateColor(ValdorsoTema::Rubrica());
+					}
+					return FSlateColor(P.IsValid() && P->IsHovered() ? ValdorsoTema::Inchiostro() : ValdorsoTema::InchiostroTenue());
+				})
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f, 0.f, 0.f))
+			[
+				SNew(SBox).HeightOverride(2.f)
+				[
+					SNew(SImage)
+					.Image(&Stile->Pieno)
+					.ColorAndOpacity(ValdorsoTema::Rubrica().CopyWithNewOpacity(0.8f))
+					.Visibility_Lambda([this, Indice]() { return Scheda == Indice ? EVisibility::Visible : EVisibility::Hidden; })
+				]
+			]
+		];
+	*Riferimento = Pulsante;
+	return Pulsante;
+}
+
+void SValdorsoTaccuino::MostraScheda(int32 Nuova)
+{
+	Scheda = FMath::Clamp(Nuova, 0, 2);
+	Rifai();
+}
+
+void SValdorsoTaccuino::Rifai()
+{
+	const UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
+	CambiamentiVisti = Diario ? Diario->Cambiamenti() : -1;
+	bAttendeTesto = false;
+	if (!Contenuto.IsValid())
+	{
+		return;
+	}
+	if (Scheda == 1)
+	{
+		Contenuto->SetContent(PaginaIscrizioni());
+	}
+	else if (Scheda == 2)
+	{
+		Contenuto->SetContent(PaginaRune());
+	}
+	else
+	{
+		Contenuto->SetContent(PaginaLuoghi());
+	}
+}
+
+EActiveTimerReturnType SValdorsoTaccuino::Controlla(double Tempo, float Delta)
+{
+	UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
+	if (!Diario)
+	{
+		return EActiveTimerReturnType::Continue;
+	}
+	if (Diario->Cambiamenti() != CambiamentiVisti)
+	{
+		Rifai();
+	}
+	else if (bAttendeTesto && Scheda == 1)
+	{
+		// ancora niente: se la richiesta si è persa, la rifà (la pagina si rifà quando il testo arriva)
+		Diario->RigheIscrizione(IscrizioneScelta);
+	}
+	return EActiveTimerReturnType::Continue;
+}
+
+TSharedRef<SWidget> SValdorsoTaccuino::PaginaLuoghi()
+{
+	const UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
+	TSharedRef<SVerticalBox> Pagina = SNew(SVerticalBox);
+	const int32 Scoperti = Diario ? Diario->LuoghiScoperti().Num() : 0;
+	if (Scoperti == 0)
+	{
+		Pagina->AddSlot().AutoHeight().Padding(FMargin(0.f, 30.f, 0.f, 0.f))
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("NessunLuogo", "Il taccuino è ancora bianco. Cammina per la valle: i luoghi che trovi si annotano qui da soli, e da quel giorno la bussola li ricorda."))
+			.Font(Stile->Caratteri->Testo(20.f, TEXT("Italic")))
+			.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+			.Justification(ETextJustify::Center)
+			.AutoWrapText(true)
+		];
+		return Pagina;
+	}
+	const TWeakObjectPtr<APlayerController> DeboleControllore = Controllore;
+	for (const FValdorsoLuogoScoperto& Scoperto : Diario->LuoghiScoperti())
+	{
+		const FValdorsoLuogo* Luogo = ValdorsoLuoghi::Trova(Scoperto.Nome);
+		const bool bHaPosto = Luogo != nullptr;
+		const FVector Posto = bHaPosto ? Luogo->Posizione : FVector::ZeroVector;
+		Pagina->AddSlot().AutoHeight().Padding(FMargin(0.f, 6.f))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(4.f, 0.f, 16.f, 0.f))
+			[
+				Stile->Diamante(8.f, FSlateColor(ValdorsoTema::OroScuro()))
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Scoperto.Nome))
+					.Font(Stile->Caratteri->Titolo(18.f, TEXT("Bold")))
+					.ColorAndOpacity(ValdorsoTema::Inchiostro())
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(TaccuinoQuando(Scoperto))
+					.Font(Stile->Caratteri->Testo(16.f, TEXT("Italic")))
+					.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(16.f, 0.f, 4.f, 0.f))
+			[
+				// quanto è lontano adesso e verso dove (si aggiorna camminando)
+				SNew(STextBlock)
+				.Font(Stile->Caratteri->Testo(18.f))
+				.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+				.Text_Lambda([DeboleControllore, bHaPosto, Posto]()
+				{
+					const APlayerController* Chi = DeboleControllore.Get();
+					const APawn* Colono = Chi ? Chi->GetPawn() : nullptr;
+					if (!Colono || !bHaPosto)
+					{
+						return FText::GetEmpty();
+					}
+					const FVector Qui = Colono->GetActorLocation();
+					const double Distanza = FVector2D::Distance(FVector2D(Qui.X, Qui.Y), FVector2D(Posto.X, Posto.Y));
+					if (Distanza < BussolaVicinoCm)
+					{
+						return LOCTEXT("SeiQui", "sei qui");
+					}
+					const FString Verso = ValdorsoBussola::Sigla(ValdorsoBussola::PuntoCardinale(ValdorsoBussola::RottaVerso(Qui, Posto)));
+					return FText::FromString(FString::Printf(TEXT("%s  ·  %s"), *ValdorsoBussola::TestoDistanza(Distanza), *Verso));
+				})
+			]
+		];
+	}
+	// quanti ne mancano (contando solo i luoghi che la valle ha davvero)
+	int32 Conosciuti = 0;
+	for (const FValdorsoLuogoScoperto& Scoperto : Diario->LuoghiScoperti())
+	{
+		Conosciuti += ValdorsoLuoghi::Trova(Scoperto.Nome) ? 1 : 0;
+	}
+	const int32 Mancano = FMath::Max(0, ValdorsoLuoghi::Tutti().Num() - Conosciuti);
+	Pagina->AddSlot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 14.f, 0.f, 6.f))
+	[
+		Stile->Separatore(160.f, ValdorsoTema::OroScuro())
+	];
+	Pagina->AddSlot().AutoHeight().HAlign(HAlign_Center)
+	[
+		SNew(STextBlock)
+		.Text(Mancano > 1
+			? FText::Format(LOCTEXT("Mancano", "Nella valle restano {0} luoghi da trovare."), FText::AsNumber(Mancano))
+			: (Mancano == 1 ? LOCTEXT("MancaUno", "Nella valle resta un ultimo luogo da trovare.")
+				: LOCTEXT("TuttiTrovati", "Hai trovato tutti i luoghi della valle.")))
+		.Font(Stile->Caratteri->Testo(17.f, TEXT("Italic")))
+		.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+	];
+	return SNew(SScrollBox) + SScrollBox::Slot() [ Pagina ];
+}
+
+TSharedRef<SWidget> SValdorsoTaccuino::PaginaIscrizioni()
+{
+	UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
+	const TArray<FString> Titoli = Diario ? Diario->TitoliIscrizioni() : TArray<FString>();
+	if (Titoli.Num() == 0)
+	{
+		return SNew(SBox).Padding(FMargin(0.f, 30.f, 0.f, 0.f))
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("NessunaIscrizione", "Nessuna iscrizione ricopiata. Le bacheche del villaggio e le pietre incise degli Antichi, una volta lette, restano qui da rileggere."))
+				.Font(Stile->Caratteri->Testo(20.f, TEXT("Italic")))
+				.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+				.Justification(ETextJustify::Center)
+				.AutoWrapText(true)
+			];
+	}
+	if (!Titoli.IsValidIndex(IscrizioneScelta))
+	{
+		IscrizioneScelta = Titoli.Num() - 1;  // di serie l'ultima letta
+	}
+
+	// a sinistra l'elenco, dalla più nuova alla più vecchia
+	TSharedRef<SVerticalBox> Elenco = SNew(SVerticalBox);
+	for (int32 i = Titoli.Num() - 1; i >= 0; --i)
+	{
+		Elenco->AddSlot().AutoHeight()
+		[
+			SNew(SButton)
+			.ButtonStyle(&StileLinguetta)
+			.IsFocusable(false)
+			.OnClicked_Lambda([this, i]() { IscrizioneScelta = i; Rifai(); return FReply::Handled(); })
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(Titoli[i]))
+				.Font(Stile->Caratteri->Testo(18.f, i == IscrizioneScelta ? TEXT("SemiBold") : TEXT("Regular")))
+				.ColorAndOpacity(i == IscrizioneScelta ? ValdorsoTema::Rubrica() : ValdorsoTema::Inchiostro())
+				.AutoWrapText(true)
+			]
+		];
+	}
+
+	// a destra il testo, come sulla pergamena della bacheca
+	TSharedRef<SVerticalBox> Testo = SNew(SVerticalBox);
+	Testo->AddSlot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 0.f, 0.f, 12.f))
+	[
+		SNew(STextBlock)
+		.Text(FText::FromString(Titoli[IscrizioneScelta]))
+		.Font(Stile->Caratteri->Titolo(20.f, TEXT("Bold")))
+		.ColorAndOpacity(ValdorsoTema::Rubrica())
+		.Justification(ETextJustify::Center)
+		.AutoWrapText(true)
+	];
+	if (const TArray<FString>* Righe = Diario->RigheIscrizione(IscrizioneScelta))
+	{
+		Testo->AddSlot().AutoHeight()
+		[
+			SValdorsoBacheca::ScriviRighe(*Righe, *Stile)
+		];
+	}
+	else
+	{
+		bAttendeTesto = true;
+		Testo->AddSlot().AutoHeight().HAlign(HAlign_Center)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("Ricopio", "Sfogli le pagine..."))
+			.Font(Stile->Caratteri->Testo(18.f, TEXT("Italic")))
+			.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+		];
+	}
+
+	return SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().AutoWidth()
+		[
+			SNew(SBox).WidthOverride(250.f)
+			[
+				SNew(SScrollBox) + SScrollBox::Slot() [ Elenco ]
+			]
+		]
+		+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(18.f, 0.f))
+		[
+			SNew(SBox).WidthOverride(1.f)
+			[
+				SNew(SImage).Image(&Stile->Pieno).ColorAndOpacity(ValdorsoTema::OroScuro().CopyWithNewOpacity(0.5f))
+			]
+		]
+		+ SHorizontalBox::Slot().FillWidth(1.f)
+		[
+			SNew(SScrollBox) + SScrollBox::Slot() [ Testo ]
+		];
+}
+
+TSharedRef<SWidget> SValdorsoTaccuino::PaginaRune()
+{
+	return SNew(SScrollBox)
+		+ SScrollBox::Slot()
+		[
+			SValdorsoBacheca::ScriviRighe(ValdorsoRune::RigheQuaderno(), *Stile)
+		];
+}
+
+void SValdorsoTaccuino::ScorriIscrizioni(int32 Verso)
+{
+	const UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
+	const int32 Numero = Diario ? Diario->TitoliIscrizioni().Num() : 0;
+	if (Scheda != 1 || Numero == 0)
+	{
+		return;
+	}
+	// l'elenco va dalla più nuova (in alto) alla più vecchia: giù = più vecchia
+	const int32 Adesso = Diario->TitoliIscrizioni().IsValidIndex(IscrizioneScelta) ? IscrizioneScelta : Numero - 1;
+	IscrizioneScelta = FMath::Clamp(Adesso - Verso, 0, Numero - 1);
+	Rifai();
+}
+
+FReply SValdorsoTaccuino::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
+{
+	const FKey Tasto = InKeyEvent.GetKey();
+	if (Tasto == EKeys::J || Tasto == EKeys::Escape || Tasto == EKeys::F10 || Tasto == EKeys::E
+		|| Tasto == EKeys::Gamepad_FaceButton_Right || Tasto == EKeys::Gamepad_Special_Right)
+	{
+		OnChiudi.ExecuteIfBound();
+		return FReply::Handled();
+	}
+	if (Tasto == EKeys::One || Tasto == EKeys::Two || Tasto == EKeys::Three)
+	{
+		MostraScheda(Tasto == EKeys::One ? 0 : (Tasto == EKeys::Two ? 1 : 2));
+		return FReply::Handled();
+	}
+	if (Tasto == EKeys::Gamepad_LeftShoulder || Tasto == EKeys::Gamepad_RightShoulder)
+	{
+		MostraScheda((Scheda + (Tasto == EKeys::Gamepad_RightShoulder ? 1 : 2)) % 3);
+		return FReply::Handled();
+	}
+	if (Tasto == EKeys::Down || Tasto == EKeys::Gamepad_DPad_Down || Tasto == EKeys::Up || Tasto == EKeys::Gamepad_DPad_Up)
+	{
+		ScorriIscrizioni(Tasto == EKeys::Down || Tasto == EKeys::Gamepad_DPad_Down ? 1 : -1);
+		return FReply::Handled();
+	}
+	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
+}
+
+FReply SValdorsoTaccuino::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	return FReply::Handled().SetUserFocus(SharedThis(this), EFocusCause::Mouse);
+}
+
+#undef LOCTEXT_NAMESPACE

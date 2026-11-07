@@ -19,6 +19,9 @@
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoInterazione.h"
 #include "SValdorsoBacheca.h"
+#include "SValdorsoDialogo.h"
+#include "ValdorsoPNG.h"
+#include "ValdorsoTaccuino.h"
 #include "ValdorsoRune.h"
 #include "SValdorsoMappa.h"
 #include "ValdorsoModoFoto.h"
@@ -62,6 +65,12 @@ namespace
 
 	/** Oltre questa distanza (cm, in piano) dal punto in cui ha chiesto di uscire, l'uscita si annulla. */
 	constexpr float SpostamentoMassimoUscita = 150.f;
+}
+
+AValdorsoPlayerController::AValdorsoPlayerController()
+{
+	// (07/11) il taccuino di viaggio e la bussola (ValdorsoTaccuino.h)
+	Taccuino = CreateDefaultSubobject<UValdorsoTaccuinoComponent>(TEXT("Taccuino"));
 }
 
 void AValdorsoPlayerController::BeginPlay()
@@ -140,6 +149,8 @@ void AValdorsoPlayerController::SetupInputComponent()
 		// (07/11) la modalità foto (dentro la foto i tasti li prende lo schermo della foto: P o Esc per uscire)
 		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AValdorsoPlayerController::TastoFoto);
 		InputComponent->BindKey(EKeys::R, IE_Pressed, this, &AValdorsoPlayerController::TastoQuaderno);
+		// (07/11) il taccuino di viaggio
+		InputComponent->BindKey(EKeys::J, IE_Pressed, this, &AValdorsoPlayerController::TastoTaccuino);
 	}
 
 	// only add IMCs for local player controllers
@@ -183,7 +194,7 @@ void AValdorsoPlayerController::ApriPausa()
 {
 	// Solo nella valle, con il corpo, e quando non c'è già un'altra schermata (registro, scelta, anticamera, codici).
 	if (Pausa.IsValid() || !GetPawn() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || ValdorsoFoto::Aperta(this))
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoFoto::Aperta(this))
 	{
 		return;
 	}
@@ -330,7 +341,7 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 
 	// Niente suggerimento mentre c'è una schermata aperta o il colono sta uscendo.
 	const bool bSchermata = Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid() || SullaPancaInMovimento(GetPawn())
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || SchermataMappa.IsValid() || SullaPancaInMovimento(GetPawn())
 		|| ValdorsoFoto::Aperta(this);
 	AActor* Trovata = (!bSchermata && GetPawn()) ? ValdorsoInterazione::PiuVicina(GetPawn()) : nullptr;
 	CosaVicina = Trovata;
@@ -452,6 +463,7 @@ void AValdorsoPlayerController::ClientMostraBacheca_Implementation(const FString
 {
 	// (07/11) una schermata che arriva dal server chiude prima la modalità foto (che tiene tastiera e mouse)
 	ValdorsoFoto::Chiudi(this);
+	ValdorsoTaccuino::Chiudi(this);
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid())
 	{
@@ -498,7 +510,7 @@ void AValdorsoPlayerController::ChiudiBacheca()
 void AValdorsoPlayerController::TastoFoto()
 {
 	if (!GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid() || SchermataImpostazioni.IsValid())
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || SchermataMappa.IsValid() || SchermataImpostazioni.IsValid())
 	{
 		return;
 	}
@@ -519,7 +531,7 @@ void AValdorsoPlayerController::TastoQuaderno()
 	{
 		return;
 	}
-	if (SchermataBacheca.IsValid())
+	if (SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this))
 	{
 		return;  // una bacheca (o il quaderno) è già aperta: si chiude con Esc, E o R dal suo tasto Chiudi
 	}
@@ -528,12 +540,112 @@ void AValdorsoPlayerController::TastoQuaderno()
 		ValdorsoRune::RigheQuaderno());
 }
 
+// (07/11) J: il taccuino di viaggio, solo in gioco e senza altre schermate aperte (dentro, J lo chiude da sé).
+void AValdorsoPlayerController::TastoTaccuino()
+{
+	if (!GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
+		|| SchermataImpostazioni.IsValid() || ValdorsoFoto::Aperta(this))
+	{
+		return;
+	}
+	ValdorsoTaccuino::Alterna(this);
+}
+
+// --- (07/11) Il dialogo con i PNG ------------------------------------------------------------------
+
+void AValdorsoPlayerController::ClientMostraDialogo_Implementation(AActor* Chi, const FValdorsoBattuta& Battuta)
+{
+	// Il server ha chiuso la conversazione (il colono si è allontanato, o ha scelto di andarsene).
+	if (Battuta.bChiudi)
+	{
+		ChiudiDialogo(false);
+		return;
+	}
+	ValdorsoFoto::Chiudi(this);
+	ValdorsoTaccuino::Chiudi(this);
+	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	if (!Viewport || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid())
+	{
+		// Adesso non si può mostrare: il server chiude la conversazione.
+		ServerScegliDialogo(Chi, Battuta.Passo, INDEX_NONE);
+		return;
+	}
+	DialogoCon = Chi;
+	DialogoPasso = Battuta.Passo;
+	if (SchermataDialogo.IsValid())
+	{
+		SchermataDialogo->Mostra(Battuta);
+	}
+	else
+	{
+		TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
+		SAssignNew(SchermataDialogo, SValdorsoDialogo)
+			.Battuta(Battuta)
+			.OnScelta(FValdorsoSuSceltaDialogo::CreateLambda([Debole](int32 Scelta)
+			{
+				AValdorsoPlayerController* Controllore = Debole.Get();
+				if (!Controllore)
+				{
+					return;
+				}
+				if (Scelta == INDEX_NONE)
+				{
+					Controllore->ChiudiDialogo(true);
+				}
+				else
+				{
+					Controllore->ServerScegliDialogo(Controllore->DialogoCon.Get(), Controllore->DialogoPasso, Scelta);
+				}
+			}));
+		Viewport->AddViewportWidgetContent(SchermataDialogo.ToSharedRef(), 58);
+	}
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(SchermataDialogo->FuocoIniziale());
+	SetInputMode(Modo);
+	bShowMouseCursor = true;
+}
+
+void AValdorsoPlayerController::ServerScegliDialogo_Implementation(AActor* Chi, int32 Passo, int32 Scelta)
+{
+	// Il PNG controlla tutto (conversazione aperta, numero della battuta, distanza).
+	if (AValdorsoPNG* Png = Cast<AValdorsoPNG>(Chi))
+	{
+		Png->Scegli(this, Passo, Scelta);
+	}
+}
+
+void AValdorsoPlayerController::ChiudiDialogo(bool bAvvisaServer)
+{
+	if (bAvvisaServer && DialogoCon.IsValid())
+	{
+		ServerScegliDialogo(DialogoCon.Get(), DialogoPasso, INDEX_NONE);
+	}
+	DialogoCon.Reset();
+	if (!SchermataDialogo.IsValid())
+	{
+		return;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(SchermataDialogo.ToSharedRef());
+	}
+	SchermataDialogo.Reset();
+	if (!Pausa.IsValid() && !SchermataRegistro.IsValid() && !SceltaPersonaggio.IsValid() && !Anticamera.IsValid() && !SchermataCodici.IsValid()
+		&& !SchermataBacheca.IsValid() && !SchermataMappa.IsValid())
+	{
+		SetInputMode(FInputModeGameOnly());
+		bShowMouseCursor = false;
+	}
+}
+
 void AValdorsoPlayerController::TastoMappa()
 {
 	// La mappa si apre solo in gioco, con il colono nella valle e nessun'altra schermata aperta.
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || !GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid()
-		|| Anticamera.IsValid() || SchermataCodici.IsValid() || SchermataBacheca.IsValid() || ValdorsoFoto::Aperta(this))
+		|| Anticamera.IsValid() || SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoFoto::Aperta(this))
 	{
 		return;
 	}
@@ -579,7 +691,7 @@ void AValdorsoPlayerController::ChiudiMappa()
 
 void AValdorsoPlayerController::TastoInteragisci()
 {
-	if (Pausa.IsValid() || SchermataBacheca.IsValid() || !GetPawn())
+	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || !GetPawn())
 	{
 		return;
 	}
@@ -1248,6 +1360,11 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 
 	PersonaggioId = Dati->Id;
 	bPersonaggioScelto = true;
+	// (07/11) il taccuino di viaggio del personaggio (luoghi scoperti, iscrizioni lette)
+	if (Taccuino)
+	{
+		Taccuino->Carica(Dati->Taccuino);
+	}
 	UltimoSalvataggio = FPlatformTime::Seconds();
 	Dati->UltimoGioco = FDateTime::UtcNow().ToUnixTimestamp();
 	Archivista->SalvaPersonaggio(*Dati);
@@ -1351,6 +1468,11 @@ void AValdorsoPlayerController::SalvaPersonaggio()
 			Dati->Mana = Abilita->GetNumericAttributeBase(UValdorsoAttributeSet::GetManaAttribute());
 		}
 	}
+	// (07/11) il taccuino di viaggio va nel file con il resto
+	if (Taccuino)
+	{
+		Dati->Taccuino = Taccuino->Dati();
+	}
 	Archivista->SalvaPersonaggio(*Dati);
 }
 
@@ -1400,6 +1522,7 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	ChiudiSceltaPersonaggio();
 	ChiudiPausa();
 	ChiudiBacheca();
+	ChiudiDialogo(false);
 	ChiudiMappa();
 	ValdorsoFoto::Chiudi(this);
 	if (Suggerimento.IsValid())
@@ -1573,6 +1696,7 @@ void AValdorsoPlayerController::MostraSceltaPersonaggio()
 {
 	// (07/11) una schermata che arriva dal server chiude prima la modalità foto (che tiene tastiera e mouse)
 	ValdorsoFoto::Chiudi(this);
+	ValdorsoTaccuino::Chiudi(this);
 	if (SceltaPersonaggio.IsValid())
 	{
 		return;
@@ -1673,6 +1797,7 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 {
 	// (07/11) una schermata che arriva dal server chiude prima la modalità foto (che tiene tastiera e mouse)
 	ValdorsoFoto::Chiudi(this);
+	ValdorsoTaccuino::Chiudi(this);
 	// (28/10, passo 4.4) Un registro ancora da firmare parte con il volto "dei dadi" del personaggio (lo stesso che
 	// avrebbe nella valle): il giocatore lo vede sul palco e lo cambia nella pagina del volto.
 	FValdorsoRegistro Risposte = RisposteServer;
