@@ -33,7 +33,8 @@ class UExponentialHeightFogComponent;
 class UMaterialInstanceDynamic;
 class UStaticMeshComponent;
 
-UENUM()
+// (07/11) ScriptName: in Python la classe AValdorsoTempo e questo enum si chiamavano tutti e due "ValdorsoTempo"
+UENUM(meta = (ScriptName = "ValdorsoTipoDiTempo"))
 enum class EValdorsoTempo : uint8
 {
 	Sereno,

@@ -96,6 +96,10 @@ def materiale_base():
         p = mel.create_material_expression(m, unreal.MaterialExpressionTextureSampleParameter2D, x, y)
         p.set_editor_property("parameter_name", nome)
         p.set_editor_property("sampler_type", tipo)
+        # (07/11) la texture di prova di serie è a colori: con Normale e Ruvidita il materiale non si compilava.
+        # Per la normale c'è DefaultNormal; per la ruvidità la mette giusta nuovi/sistema_valle.py (una roccia vera).
+        if nome == "Normale" and libreria.does_asset_exist("/Engine/EngineMaterials/DefaultNormal"):
+            p.set_editor_property("texture", unreal.load_asset("/Engine/EngineMaterials/DefaultNormal"))
         return p
 
     colore = parametro_texture("Colore", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -800, -200)

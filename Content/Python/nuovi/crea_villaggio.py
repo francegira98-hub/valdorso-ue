@@ -10,6 +10,8 @@
 # (ValdorsoPorta: le case private sono chiuse a chiave, locanda, Gilda, tempio e fucina sono aperte), le panche
 # (ValdorsoPanca), le bacheche (ValdorsoBacheca), i letti (BP_Letto), le luci delle lanterne e (06/11) le scale a pioli
 # delle torri (ValdorsoScala).
+# (07/11) Sull'altare del Tempio del Cuore la pietra di Val d'Orso (ValdorsoPietraVillaggio: il frammento del Cuore che
+# batte; con E si legge il territorio). Per metterla senza rifare il villaggio: nuovi/metti_pietra_tempio.py.
 # (06/11, sera) Anche la grotta est (Tools/Generatori/villaggio_grotta.py): la rupe con la grotta, la porta degli Antichi,
 # il muschio che fa luce, le iscrizioni, i massi; texture nuova T_Roccia (MI_Villaggio_Roccia).
 # Cartelle nel Contorno: Valle/Villaggio/<Palude, Villaggio, Guardia>. Resoconto in Saved/Claude/villaggio.txt.
@@ -368,6 +370,41 @@ def importa_pezzi(nomi):
     return pezzi
 
 
+# (07/11 sera) la piazza, le strade e il piazzale delle carovane stanno 5-8 cm sopra il terreno: senza collisione i
+# piedi affondavano nei ciottoli. Ora ci si cammina sopra (anche se il villaggio.json li dà senza collisione).
+SUOLO_CALPESTABILE = ("SM_Villaggio_Piazza", "SM_Villaggio_Strade", "SM_Villaggio_Carovane")
+
+
+LUCE_ALTARE = 2.5
+
+
+def calpestabile(c):
+    return c.get("collisione", True) or c.get("asset", "").startswith(SUOLO_CALPESTABILE)
+
+
+def nanite_giusto(mesh):
+    """(07/11 sera) Nanite spento sui materiali trasparenti (non li disegna: il sigillo, l'acqua), acceso su tutti gli
+    altri pezzi del villaggio (senza Nanite le ombre virtuali si intasano: "Eccedenza coda processi non Nanite")."""
+    try:
+        ns = mesh.get_editor_property("nanite_settings")
+        trasparente = False
+        for s in mesh.get_editor_property("static_materials"):
+            mi = s.get_editor_property("material_interface")
+            base = mi.get_base_material() if mi is not None else None
+            if base is not None and base.get_editor_property("blend_mode") not in (
+                    unreal.BlendMode.BLEND_OPAQUE, unreal.BlendMode.BLEND_MASKED):
+                trasparente = True
+                break
+        if mesh.get_name().startswith(SUOLO_CALPESTABILE):
+            trasparente = True  # (non è trasparente, ma con Nanite la collisione si farebbe sulla copia semplificata)
+        if ns.get_editor_property("enabled") == (not trasparente):
+            return
+        ns.set_editor_property("enabled", not trasparente)
+        mesh.set_editor_property("nanite_settings", ns)
+    except Exception as e:  # noqa: BLE001
+        avviso("%s: Nanite non controllato (%s)" % (mesh.get_name(), e))
+
+
 def veste(mesh, mat, collisione):
     """Mette i nostri materiali negli slot (il nome dello slot è MV_<Materiale>) e la collisione."""
     materiali = mesh.get_editor_property("static_materials")
@@ -386,9 +423,13 @@ def veste(mesh, mat, collisione):
         if bs is not None:
             bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE
                                    if collisione else unreal.CollisionTraceFlag.CTF_USE_DEFAULT)
+            # (07/11 sera) i pezzi fatti da noi (la piazza, le strade) possono avere i triangoli girati verso il basso:
+            # il materiale è a due facce e si vedono, ma la collisione guardava solo una faccia e i piedi ci passavano
+            bs.set_editor_property("double_sided_geometry", bool(collisione))
             mesh.set_editor_property("body_setup", bs)
     except Exception as e:  # noqa: BLE001
         avviso("%s: collisione non impostata (%s)" % (mesh.get_name(), e))
+    nanite_giusto(mesh)
     libreria.save_loaded_asset(mesh)
 
 
@@ -473,6 +514,10 @@ def principale():
     for n, c in classi.items():
         if c is None:
             avviso("manca la classe C++ per %s (compilare Valdorso): non le metto" % n)
+    # (07/11) la pietra di Val d'Orso sull'altare
+    classe_pietra = getattr(unreal, "ValdorsoPietraVillaggio", None)
+    if classe_pietra is None:
+        avviso("manca la classe C++ ValdorsoPietraVillaggio (compilare Valdorso): niente pietra sull'altare")
     letto = unreal.load_asset("/Game/Fab/Letto/BP_Letto")
     classe_letto = letto.generated_class() if letto else None
 
@@ -497,7 +542,7 @@ def principale():
         mat["Sigillo"] = m_sig
     ronzio = suono_sigillo()
     pezzi = importa_pezzi(dati["mesh"])
-    con_collisione = set(c["asset"] for c in dati["cose"] if c["tipo"] == "mesh" and c.get("collisione", True))
+    con_collisione = set(c["asset"] for c in dati["cose"] if c["tipo"] == "mesh" and calpestabile(c))
     for n, m in pezzi.items():
         veste(m, mat, n in con_collisione)
     specchio = controlla_assi(pezzi)
@@ -560,7 +605,7 @@ def principale():
                     a.set_actor_scale3d(unreal.Vector(1, -1, 1))
                 comp = a.get_component_by_class(unreal.StaticMeshComponent) if a else None
                 if comp:
-                    if not c.get("collisione", True):
+                    if not calpestabile(c):
                         comp.set_collision_profile_name("NoCollision")
                     if c["asset"].startswith(("SM_Villaggio_Strade", "SM_Villaggio_Piazza", "SM_Villaggio_Carovane", "SM_Palude_Pozze")):
                         comp.set_editor_property("cast_shadow", False)
@@ -652,6 +697,17 @@ def principale():
                 lc.set_light_color(unreal.LinearColor(col[0], col[1], col[2], 1.0))
                 # (06/11, sera) le luci della grotta fanno ombra: senza, passerebbero attraverso la roccia
                 lc.set_cast_shadows(bool(c.get("ombre", False)))
+                # (07/11) la pietra di Val d'Orso: la luce dell'altare sta 260 cm sopra il pavimento, l'altare è alto 118
+                if c["nome"] == "Altare del Cuore (luce)" and classe_pietra is not None:
+                    pietra = attori.spawn_actor_from_class(classe_pietra, unreal.Vector(p.x, p.y, p.z - 142.0), rot)
+                    if pietra:
+                        # (07/11 sera) la pietra ha la sua luce: quella dell'altare si abbassa (il tempio era accecante)
+                        lc.set_intensity(LUCE_ALTARE)
+                        lc.set_editor_property("volumetric_scattering_intensity", 0.3)
+                        pietra.set_actor_label("La pietra di Val d'Orso")
+                        pietra.set_folder_path("Valle/Villaggio/%s" % c["sezione"])
+                        pietra.set_editor_property("tags", [unreal.Name(ETICHETTA)])
+                        scrivi("la pietra di Val d'Orso è sull'altare del Tempio del Cuore")
         except Exception as e:  # noqa: BLE001
             avviso("%s (%s): %s" % (c["nome"], tipo, e))
             continue
@@ -703,6 +759,17 @@ def principale():
             scrivi("materiale della valle rifatto: niente erba vera su strade, piazza e sotto le case")
         except Exception as e:  # noqa: BLE001
             avviso("materiale della valle non rifatto (%s): lanciare a mano usati/crea_materiale_valle.py" % e)
+
+    # (07/11 sera) le sistemazioni dopo la prova di Fra: piazza calpestabile, tende a terra e con la porta, luci del
+    # tempio, Nanite giusto (nuovi/sistema_valle.py, che si può lanciare anche da solo)
+    sistema = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()),
+                           "Python", "nuovi", "sistema_valle.py")
+    try:
+        with open(sistema, "r", encoding="utf-8") as f:
+            exec(compile(f.read(), sistema, "exec"), {"__name__": "__main__"})
+        scrivi("sistemazioni fatte (Saved/Claude/sistema_valle.txt)")
+    except Exception as e:  # noqa: BLE001
+        avviso("sistemazioni non fatte (%s): lanciare a mano nuovi/sistema_valle.py" % e)
 
     # 6. si salva
     try:

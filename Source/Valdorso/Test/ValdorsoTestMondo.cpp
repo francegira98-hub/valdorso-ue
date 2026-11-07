@@ -15,6 +15,9 @@
 #include "ValdorsoCampane.h"
 #include "ValdorsoValleViva.h"
 #include "ValdorsoRovine.h"
+#include "ValdorsoStatoMondo.h"
+#include "ValdorsoTerritorio.h"
+#include "ValdorsoModoFoto.h"
 
 namespace ValdorsoTestMondo
 {
@@ -261,6 +264,113 @@ bool FValdorsoTestRune::RunTest(const FString& Parameters)
 	TestTrue(TEXT("di giorno spente"), ValdorsoRune::Luce(0.f, 1.f) < 0.001f);
 	TestTrue(TEXT("di notte accese"), ValdorsoRune::Luce(1.f, 0.f) > 1.f);
 	TestTrue(TEXT("sul colpo più forti"), ValdorsoRune::Luce(1.f, 1.f) > ValdorsoRune::Luce(1.f, 0.f));
+	return true;
+}
+
+// (07/11) Lo stato del mondo che il server racconta: il JSON va e torna uguale, l'ora, l'indirizzo della pagina, la notizia.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestStatoMondo, "Valdorso.Mondo.StatoMondo", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestStatoMondo::RunTest(const FString& Parameters)
+{
+	FValdorsoStatoMondo Stato;
+	Stato.Versione = TEXT("0.1.3");
+	Stato.NomeVersione = TEXT("La valle");
+	Stato.Ora = 18.67f;
+	Stato.Tempo = TEXT("Sereno");
+	Stato.Stagione = TEXT("autunno");
+	Stato.Coloni = 3;
+	Stato.Posti = 64;
+	Stato.Notizia = TEXT("Stasera alla locanda si canta: \"la notte dei morti\".");
+	Stato.Aggiornato = TEXT("2026-11-07T20:00:00.000Z");
+	FValdorsoStatoMondo Letto;
+	TestTrue(TEXT("il JSON si rilegge"), ValdorsoStatoMondo::DaJson(ValdorsoStatoMondo::InJson(Stato), Letto));
+	TestEqual(TEXT("versione"), Letto.Versione, Stato.Versione);
+	TestTrue(TEXT("ora"), FMath::IsNearlyEqual(Letto.Ora, 18.67f, 0.01f));
+	TestEqual(TEXT("tempo"), Letto.Tempo, Stato.Tempo);
+	TestEqual(TEXT("coloni"), Letto.Coloni, 3);
+	TestEqual(TEXT("posti"), Letto.Posti, 64);
+	TestEqual(TEXT("la notizia con le virgolette"), Letto.Notizia, Stato.Notizia);
+	TestTrue(TEXT("aperto"), Letto.bAperto);
+	TestFalse(TEXT("un JSON di un altro gioco non vale"), ValdorsoStatoMondo::DaJson(TEXT("{\"gioco\":\"Altro\"}"), Letto));
+	TestFalse(TEXT("un testo rotto non vale"), ValdorsoStatoMondo::DaJson(TEXT("<html>"), Letto));
+
+	TestEqual(TEXT("18,67 = 18:40"), ValdorsoStatoMondo::OraLeggibile(18.67f), FString(TEXT("18:40")));
+	TestEqual(TEXT("7,1 = 07:06"), ValdorsoStatoMondo::OraLeggibile(7.1f), FString(TEXT("07:06")));
+	TestEqual(TEXT("23,999 = 23:59"), ValdorsoStatoMondo::OraLeggibile(23.999f), FString(TEXT("23:59")));
+	TestTrue(TEXT("ora sconosciuta = niente"), ValdorsoStatoMondo::OraLeggibile(-1.f).IsEmpty());
+
+	TestEqual(TEXT("indirizzo con porta"), ValdorsoStatoMondo::IndirizzoStato(TEXT("127.0.0.1:7777")), FString(TEXT("http://127.0.0.1:7780/stato")));
+	TestEqual(TEXT("nome senza porta"), ValdorsoStatoMondo::IndirizzoStato(TEXT("valle.example.org")), FString(TEXT("http://valle.example.org:7780/stato")));
+	TestEqual(TEXT("con unreal://"), ValdorsoStatoMondo::IndirizzoStato(TEXT("unreal://10.0.0.5:7777")), FString(TEXT("http://10.0.0.5:7780/stato")));
+	TestTrue(TEXT("vuoto = vuoto"), ValdorsoStatoMondo::IndirizzoStato(TEXT("  ")).IsEmpty());
+
+	TestEqual(TEXT("vale l'ultima riga scritta"), ValdorsoStatoMondo::NotiziaDaFile(TEXT("# commento\nPrima notizia\nSeconda notizia\n\n# altro commento\n")), FString(TEXT("Seconda notizia")));
+	TestTrue(TEXT("solo commenti = niente"), ValdorsoStatoMondo::NotiziaDaFile(TEXT("# solo\n#commenti")).IsEmpty());
+
+	TestEqual(TEXT("novembre = autunno"), ValdorsoStatoMondo::StagioneDi(FDateTime(2026, 11, 7)), FString(TEXT("autunno")));
+	TestEqual(TEXT("gennaio = inverno"), ValdorsoStatoMondo::StagioneDi(FDateTime(2027, 1, 15)), FString(TEXT("inverno")));
+	TestTrue(TEXT("la riga dice l'ora"), ValdorsoStatoMondo::Riga(Stato).ToString().Contains(TEXT("18:40")));
+	Stato.bAperto = false;
+	TestTrue(TEXT("valle chiusa"), ValdorsoStatoMondo::Riga(Stato).ToString().Contains(TEXT("chiusa")));
+	return true;
+}
+
+// (07/11) La valle come territorio e il battito della pietra del villaggio.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestTerritorio, "Valdorso.Mondo.Territorio", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestTerritorio::RunTest(const FString& Parameters)
+{
+	TestEqual(TEXT("la piazza è in Val d'Orso"), ValdorsoTerritori::IdDi(FVector(150000.0, 150000.0, 5000.0)), FString(TEXT("valdorso")));
+	TestEqual(TEXT("anche il passo"), ValdorsoTerritori::IdDi(FVector(262680.0, 250319.0, 6739.0)), FString(TEXT("valdorso")));
+	TestTrue(TEXT("il signore è la Corona"), ValdorsoTerritori::ValDOrso().Signore.ToString().Contains(TEXT("Corona")));
+	TestEqual(TEXT("forza 1 = piena"), ValdorsoTerritori::ParolaForza(1.f).ToString(), FString(TEXT("piena")));
+	TestEqual(TEXT("forza 0,4 = debole"), ValdorsoTerritori::ParolaForza(0.4f).ToString(), FString(TEXT("debole")));
+
+	// sopra metà forza il battito non salta mai; a forza 0 salta circa un giro su due
+	int32 SaltiForte = 0;
+	int32 SaltiVuota = 0;
+	for (int64 Giro = 0; Giro < 2000; ++Giro)
+	{
+		SaltiForte += ValdorsoTerritori::SaltaIlBattito(Giro, 0.6f) ? 1 : 0;
+		SaltiVuota += ValdorsoTerritori::SaltaIlBattito(Giro, 0.f) ? 1 : 0;
+	}
+	TestEqual(TEXT("forte: nessun salto"), SaltiForte, 0);
+	TestTrue(TEXT("vuota: circa metà dei giri saltano"), SaltiVuota > 800 && SaltiVuota < 1200);
+	TestTrue(TEXT("uguale per tutti"), ValdorsoTerritori::SaltaIlBattito(77, 0.1f) == ValdorsoTerritori::SaltaIlBattito(77, 0.1f));
+
+	TestTrue(TEXT("il primo colpo"), ValdorsoTerritori::Battito(0.1, 1.f) > 0.9f);
+	TestTrue(TEXT("il secondo colpo"), ValdorsoTerritori::Battito(0.42, 1.f) > 0.6f);
+	TestTrue(TEXT("la pausa"), ValdorsoTerritori::Battito(1.1, 1.f) < 0.05f);
+	// un giro saltato: niente colpo
+	int64 Saltato = -1;
+	for (int64 Giro = 0; Giro < 200 && Saltato < 0; ++Giro)
+	{
+		if (ValdorsoTerritori::SaltaIlBattito(Giro, 0.f))
+		{
+			Saltato = Giro;
+		}
+	}
+	TestTrue(TEXT("c'è un giro saltato"), Saltato >= 0);
+	if (Saltato >= 0)
+	{
+		TestTrue(TEXT("nel giro saltato non batte"), ValdorsoTerritori::Battito(Saltato * 1.6 + 0.1, 0.f) < 0.001f);
+	}
+	return true;
+}
+
+// (07/11) La modalità foto: la telecamera non va oltre 30 m dal colono, lo zoom resta tra 15 e 100 gradi.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestFoto, "Valdorso.Mondo.Foto", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestFoto::RunTest(const FString& Parameters)
+{
+	const FVector Colono(1000.0, 2000.0, 300.0);
+	const FVector Vicino = Colono + FVector(1000.0, 0.0, 500.0);
+	TestTrue(TEXT("dentro il raggio non cambia"), ValdorsoFoto::DentroIlRaggio(Colono, Vicino, 3000.f).Equals(Vicino, 0.01));
+	const FVector Lontano = Colono + FVector(8000.0, 6000.0, 0.0);
+	const FVector Fermato = ValdorsoFoto::DentroIlRaggio(Colono, Lontano, 3000.f);
+	TestTrue(TEXT("fuori dal raggio si ferma a 30 m"), FMath::IsNearlyEqual(FVector::Dist(Colono, Fermato), 3000.0, 0.1));
+	TestTrue(TEXT("nella stessa direzione"), FVector::DotProduct((Fermato - Colono).GetSafeNormal(), (Lontano - Colono).GetSafeNormal()) > 0.999);
+	TestTrue(TEXT("zoom avanti stringe"), ValdorsoFoto::CampoDopoZoom(90.f, 1.f) < 90.f);
+	TestTrue(TEXT("zoom indietro allarga"), ValdorsoFoto::CampoDopoZoom(60.f, -1.f) > 60.f);
+	TestEqual(TEXT("mai sotto 15 gradi"), ValdorsoFoto::CampoDopoZoom(20.f, 50.f), 15.f);
+	TestEqual(TEXT("mai sopra 100 gradi"), ValdorsoFoto::CampoDopoZoom(90.f, -50.f), 100.f);
 	return true;
 }
 

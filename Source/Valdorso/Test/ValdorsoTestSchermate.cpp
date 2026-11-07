@@ -23,6 +23,7 @@
 #include "SValdorsoPersonaggi.h"
 #include "SValdorsoRegistro.h"
 #include "SValdorsoVolo.h"
+#include "SValdorsoAvvio.h"
 #include "ValdorsoRegistro.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoTemaUI.h"
@@ -393,6 +394,11 @@ struct FValdorsoProvaSchermate
 		// (05/10) Il menu parte trasparente e appare con un timer: nelle foto restava invisibile.
 		Schermata->SetRenderOpacity(1.f);
 		Misura(Schermata, TEXT("menu"));
+		// (07/11) con lo stato del mondo dal server (il caso più lungo) e la notizia al posto della voce
+		Schermata->ImpostaStatoMondo(
+			FText::FromString(TEXT("Nella valle sono le 23:59 \u00B7 temporale \u00B7 primavera \u00B7 128 coloni")),
+			FText::FromString(TEXT("Stanotte la Gilda paga doppio chi torna dai pascoli di sud-est con una pelle di lupo: Lucia aspetta all'ufficio fino all'ultima campana.")));
+		Misura(Schermata, TEXT("menu con lo stato del mondo"));
 		Schermata->MostraImpostazioni();
 		Misura(Schermata, TEXT("Impostazioni"));
 		Schermata->MostraRiconoscimenti();
@@ -544,6 +550,20 @@ struct FValdorsoProvaSchermate
 		}
 	}
 
+	void Avvio()
+	{
+		// (07/11) La schermata d'avvio: ogni momento a metà, con le scritte già comparse.
+		TSharedRef<SValdorsoAvvio> Schermata = SNew(SValdorsoAvvio);
+		Schermata->InizioMomento = FPlatformTime::Seconds() - 2.0;
+		Misura(Schermata, TEXT("logo"));
+		Schermata->VaiA(SValdorsoAvvio::EMomento::Avviso);
+		Schermata->InizioMomento = FPlatformTime::Seconds() - 3.0;
+		Misura(Schermata, TEXT("prima di partire"));
+		Schermata->VaiA(SValdorsoAvvio::EMomento::Titolo);
+		Schermata->InizioMomento = FPlatformTime::Seconds() - 3.0;
+		Misura(Schermata, TEXT("premi un tasto"));
+	}
+
 	void Volo()
 	{
 		TSharedRef<SValdorsoVolo> Schermata = SNew(SValdorsoVolo);
@@ -578,6 +598,7 @@ VALDORSO_TEST_SCHERMATA(FValdorsoTestSchermataCodici, "CodiciRecupero", CodiciRe
 VALDORSO_TEST_SCHERMATA(FValdorsoTestSchermataPersonaggi, "RegistroDeiColoni", Personaggi)
 VALDORSO_TEST_SCHERMATA(FValdorsoTestSchermataRegistro, "RegistroDiValdOrso", Registro)
 VALDORSO_TEST_SCHERMATA(FValdorsoTestSchermataVolo, "Volo", Volo)
+VALDORSO_TEST_SCHERMATA(FValdorsoTestSchermataAvvio, "Avvio", Avvio)
 
 #undef VALDORSO_TEST_SCHERMATA
 #undef LOCTEXT_NAMESPACE

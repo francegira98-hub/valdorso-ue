@@ -9,6 +9,7 @@
 #include "ValdorsoAmbiente.h"
 #include "ValdorsoValleViva.h"
 #include "ValdorsoRovine.h"
+#include "ValdorsoStatoMondo.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
@@ -68,6 +69,14 @@ void AValdorsoGameMode::StartPlay()
 		Parametri.Name = TEXT("ValdorsoRuneNotte");
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		Mondo->SpawnActor<AValdorsoRuneNotte>(AValdorsoRuneNotte::StaticClass(), FTransform::Identity, Parametri);
+	}
+	// (07/11) Lo stato del mondo che il server racconta al menu e al launcher (ora, tempo, coloni, notizia): solo il server.
+	if (Mondo && GetNetMode() != NM_Client && !TActorIterator<AValdorsoStatoMondo>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.Name = TEXT("ValdorsoStatoMondo");
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoStatoMondo>(AValdorsoStatoMondo::StaticClass(), FTransform::Identity, Parametri);
 	}
 }
 

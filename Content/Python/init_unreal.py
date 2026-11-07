@@ -17,6 +17,13 @@ COMANDO_VILLAGGIO = (
     "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'SOLO_VILLAGGIO': %s})"
 )
 
+# (07/11) un altro script di Content/Python/nuovi, lanciato così com'è
+COMANDO_SCRIPT = (
+    "import os, unreal; "
+    "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', '%s'); "
+    "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__'})"
+)
+
 
 def crea_menu_valdorso():
     menu_tool = unreal.ToolMenus.get()
@@ -58,6 +65,18 @@ def crea_menu_valdorso():
         voce.set_label(etichetta)
         voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_VILLAGGIO % repr(sezioni))
         valdorso.add_menu_entry("Villaggio", voce)
+
+    # (07/11) la pietra di Val d'Orso sull'altare del tempio, senza rifare il villaggio
+    voce = unreal.ToolMenuEntry(name="PietraTempio", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Tempio: metti la pietra di Val d'Orso")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "metti_pietra_tempio.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (07/11 sera) i piedi in piazza, il materiale delle rocce, Nanite sui trasparenti
+    voce = unreal.ToolMenuEntry(name="SistemaValle", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Valle: sistema (piedi, materiali, Nanite)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "sistema_valle.py")
+    valdorso.add_menu_entry("Villaggio", voce)
 
     menu_tool.refresh_all_widgets()
     unreal.log("Valdorso: menu pronto")

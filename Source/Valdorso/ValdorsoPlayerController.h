@@ -287,6 +287,8 @@ private:
 	void ChiudiBacheca();
 	/** (06/11) Client: la mappa di carta (tasto M). */
 	void TastoMappa();
+	/** (07/11) Client: la modalità foto (tasto P; ValdorsoModoFoto.h). */
+	void TastoFoto();
 	void ChiudiMappa();
 	TSharedPtr<SValdorsoMappa> SchermataMappa;
 	TSharedPtr<SValdorsoBacheca> SchermataBacheca;

@@ -20,6 +20,7 @@
 #include "ValdorsoInterazione.h"
 #include "SValdorsoBacheca.h"
 #include "SValdorsoMappa.h"
+#include "ValdorsoModoFoto.h"
 #include "ValdorsoTemaUI.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -135,6 +136,8 @@ void AValdorsoPlayerController::SetupInputComponent()
 		// (06/11) la mappa di carta
 		InputComponent->BindKey(EKeys::M, IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
 		InputComponent->BindKey(EKeys::Gamepad_Special_Left, IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
+		// (07/11) la modalità foto (dentro la foto i tasti li prende lo schermo della foto: P o Esc per uscire)
+		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AValdorsoPlayerController::TastoFoto);
 	}
 
 	// only add IMCs for local player controllers
@@ -178,7 +181,7 @@ void AValdorsoPlayerController::ApriPausa()
 {
 	// Solo nella valle, con il corpo, e quando non c'è già un'altra schermata (registro, scelta, anticamera, codici).
 	if (Pausa.IsValid() || !GetPawn() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid())
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || ValdorsoFoto::Aperta(this))
 	{
 		return;
 	}
@@ -325,7 +328,8 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 
 	// Niente suggerimento mentre c'è una schermata aperta o il colono sta uscendo.
 	const bool bSchermata = Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid() || SullaPancaInMovimento(GetPawn());
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid() || SullaPancaInMovimento(GetPawn())
+		|| ValdorsoFoto::Aperta(this);
 	AActor* Trovata = (!bSchermata && GetPawn()) ? ValdorsoInterazione::PiuVicina(GetPawn()) : nullptr;
 	CosaVicina = Trovata;
 	const IValdorsoInterattivo* Cosa = Cast<IValdorsoInterattivo>(Trovata);
@@ -444,6 +448,8 @@ void AValdorsoPlayerController::ChiudiAvviso()
 
 void AValdorsoPlayerController::ClientMostraBacheca_Implementation(const FString& Titolo, const TArray<FString>& Avvisi)
 {
+	// (07/11) una schermata che arriva dal server chiude prima la modalità foto (che tiene tastiera e mouse)
+	ValdorsoFoto::Chiudi(this);
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid())
 	{
@@ -486,12 +492,30 @@ void AValdorsoPlayerController::ChiudiBacheca()
 	}
 }
 
+// (07/11) La modalità foto: solo in gioco, con il colono nella valle e nessun'altra schermata aperta.
+void AValdorsoPlayerController::TastoFoto()
+{
+	if (!GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid() || SchermataImpostazioni.IsValid())
+	{
+		return;
+	}
+	if (ValdorsoFoto::Aperta(this))
+	{
+		ValdorsoFoto::Chiudi(this);
+	}
+	else
+	{
+		ValdorsoFoto::Apri(this);
+	}
+}
+
 void AValdorsoPlayerController::TastoMappa()
 {
 	// La mappa si apre solo in gioco, con il colono nella valle e nessun'altra schermata aperta.
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || !GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid()
-		|| Anticamera.IsValid() || SchermataCodici.IsValid() || SchermataBacheca.IsValid())
+		|| Anticamera.IsValid() || SchermataCodici.IsValid() || SchermataBacheca.IsValid() || ValdorsoFoto::Aperta(this))
 	{
 		return;
 	}
@@ -1359,6 +1383,7 @@ void AValdorsoPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	ChiudiPausa();
 	ChiudiBacheca();
 	ChiudiMappa();
+	ValdorsoFoto::Chiudi(this);
 	if (Suggerimento.IsValid())
 	{
 		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
@@ -1528,6 +1553,8 @@ void AValdorsoPlayerController::ClientPersonaggioScelto_Implementation(const FSt
 
 void AValdorsoPlayerController::MostraSceltaPersonaggio()
 {
+	// (07/11) una schermata che arriva dal server chiude prima la modalità foto (che tiene tastiera e mouse)
+	ValdorsoFoto::Chiudi(this);
 	if (SceltaPersonaggio.IsValid())
 	{
 		return;
@@ -1626,6 +1653,8 @@ void AValdorsoPlayerController::ProvaRegistro()
 
 void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const FString& NomePersonaggio, const FValdorsoRegistro& RisposteServer)
 {
+	// (07/11) una schermata che arriva dal server chiude prima la modalità foto (che tiene tastiera e mouse)
+	ValdorsoFoto::Chiudi(this);
 	// (28/10, passo 4.4) Un registro ancora da firmare parte con il volto "dei dadi" del personaggio (lo stesso che
 	// avrebbe nella valle): il giocatore lo vede sul palco e lo cambia nella pagina del volto.
 	FValdorsoRegistro Risposte = RisposteServer;

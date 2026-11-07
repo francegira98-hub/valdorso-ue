@@ -60,6 +60,17 @@ public:
 	UPROPERTY(Config)
 	bool bAccessoLiberoNellEditor = true;
 
+	/** (07/11) La pagina dello stato del mondo (http://host:7780/stato). Vuoto = dall'indirizzo del server, porta 7780.
+	 *  Il launcher può darla con -ValdorsoStato=..., come l'indirizzo con -ValdorsoServer=host:porta. */
+	UPROPERTY(Config)
+	FString IndirizzoStato;
+
+	/** L'indirizzo della pagina dello stato, pronto per il menu (vuoto se non c'è un server). */
+	FString IndirizzoDelloStato() const;
+
+	/** (07/11) La schermata d'avvio (SValdorsoAvvio) si vede una volta sola per avvio del gioco. */
+	bool bAvvioMostrato = false;
+
 	virtual void Init() override;
 	virtual void Shutdown() override;
 	virtual void ReceivedNetworkEncryptionToken(const FString& EncryptionToken, const FOnEncryptionKeyResponse& Delegate) override;

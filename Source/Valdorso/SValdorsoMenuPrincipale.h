@@ -74,6 +74,8 @@ public:
 	SLATE_BEGIN_ARGS(SValdorsoMenuPrincipale) {}
 		SLATE_EVENT(FSimpleDelegate, OnEntra)
 		SLATE_EVENT(FSimpleDelegate, OnEsci)
+		/** (07/11) "Impostazioni": se c'è, apre le impostazioni vere (le stesse della pausa); se no, il pannello. */
+		SLATE_EVENT(FSimpleDelegate, OnImpostazioni)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -82,6 +84,13 @@ public:
 	TSharedPtr<SWidget> GetPrimoPulsante() const { return PrimoPulsante; }
 
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
+
+	/**
+	 * (07/11) Lo stato del mondo arrivato dal server (ValdorsoStatoMondo): la riga in basso a destra ("Nella valle sono
+	 * le 18:40 · sereno · autunno · 3 coloni") e l'ultima notizia, che prende il posto della voce della locanda.
+	 * Riga vuota = non si scrive niente.
+	 */
+	void ImpostaStatoMondo(const FText& Riga, const FText& UltimaNotizia);
 
 private:
 	TSharedRef<SButton> CreaPulsante(const FText& Testo, FSimpleDelegate Azione, float Dimensione = 28.f);
@@ -98,6 +107,12 @@ private:
 
 	FSimpleDelegate OnEntra;
 	FSimpleDelegate OnEsci;
+	FSimpleDelegate OnImpostazioni;
+
+	/** (07/11) La voce della locanda di questo avvio, la riga dello stato e la notizia del server. */
+	FText Voce;
+	FText RigaStato;
+	FText Notizia;
 
 	TSharedPtr<FValdorsoCaratteri> Caratteri;
 	FButtonStyle StilePulsante;

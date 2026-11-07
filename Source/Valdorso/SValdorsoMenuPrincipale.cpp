@@ -2,6 +2,7 @@
 
 #include "SValdorsoMenuPrincipale.h"
 #include "ValdorsoTemaUI.h"
+#include "ValdorsoVersione.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Layout/SBox.h"
@@ -135,6 +136,7 @@ void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 {
 	OnEntra = InArgs._OnEntra;
 	OnEsci = InArgs._OnEsci;
+	OnImpostazioni = InArgs._OnImpostazioni;
 	Caratteri = MakeShared<FValdorsoCaratteri>();
 
 	Pieno = FSlateColorBrush(FLinearColor::White);
@@ -158,7 +160,7 @@ void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 		LOCTEXT("Voce5", "Gaspare il cacciatore parla di un'ombra d'orso tra gli alberi, nelle notti di nebbia."),
 		LOCTEXT("Voce6", "Qualcuno ha sentito la campana del tempio suonare da sola, dopo mezzanotte.")
 	};
-	const FText Voce = Voci[FMath::RandRange(0, Voci.Num() - 1)];
+	Voce = Voci[FMath::RandRange(0, Voci.Num() - 1)];
 
 	// I due pulsanti che ricevono il fuoco del controller: "Entra nella valle" e "Chiudi" del pannello.
 	const TSharedRef<SButton> PulsanteEntra = CreaPulsante(LOCTEXT("Entra", "Entra nella valle"),
@@ -234,7 +236,14 @@ void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f))
 			[
 				CreaPulsante(LOCTEXT("Impostazioni", "Impostazioni"),
-					FSimpleDelegate::CreateSP(this, &SValdorsoMenuPrincipale::MostraImpostazioni))
+					FSimpleDelegate::CreateLambda([this]()
+					{
+						// (07/11) le impostazioni vere, se il controllore del menu le sa aprire
+						if (!OnImpostazioni.ExecuteIfBound())
+						{
+							MostraImpostazioni();
+						}
+					}))
 			]
 
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f))
@@ -261,7 +270,7 @@ void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 			+ SVerticalBox::Slot().AutoHeight()
 			[
 				SNew(STextBlock)
-				.Text(LOCTEXT("VociTitolo", "VOCI DALLA LOCANDA"))
+				.Text_Lambda([this]() { return Notizia.IsEmpty() ? LOCTEXT("VociTitolo", "VOCI DALLA LOCANDA") : LOCTEXT("NotiziaTitolo", "DALLA VALLE"); })
 				.Font(FontEtichetta)
 				.ColorAndOpacity(ValdorsoTema::Oro().CopyWithNewOpacity(0.85f))
 			]
@@ -271,7 +280,7 @@ void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 				SNew(SBox).WidthOverride(720.f)
 				[
 					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("VoceFormato", "«{0}»"), Voce))
+					.Text_Lambda([this]() { return FText::Format(LOCTEXT("VoceFormato", "«{0}»"), Notizia.IsEmpty() ? Voce : Notizia); })
 					.Font(Caratteri->Testo(22.f, TEXT("Italic")))
 					.ColorAndOpacity(ValdorsoTema::Pergamena().CopyWithNewOpacity(0.85f))
 					.AutoWrapText(true)
@@ -279,16 +288,38 @@ void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// La versione.
+		// La versione e, sopra, lo stato del mondo (07/11: dal server, se risponde).
 		+ SOverlay::Slot()
 		.HAlign(HAlign_Right)
 		.VAlign(VAlign_Bottom)
 		.Padding(FMargin(0.f, 0.f, 64.f, 54.f))
 		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("Versione", "v0.1.2 · la valle in costruzione"))
-			.Font(Caratteri->Testo(19.f, TEXT("Italic")))
-			.ColorAndOpacity(ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.75f))
+			SNew(SVerticalBox)
+
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right)
+			[
+				SNew(SBox).MaxDesiredWidth(760.f)
+				.Padding(FMargin(0.f, 0.f, 0.f, 6.f))
+				.Visibility_Lambda([this]() { return RigaStato.IsEmpty() ? EVisibility::Collapsed : EVisibility::HitTestInvisible; })
+				[
+					SNew(STextBlock)
+					.Text_Lambda([this]() { return RigaStato; })
+					.Font(Caratteri->Testo(21.f))
+					.ColorAndOpacity(ValdorsoTema::Pergamena().CopyWithNewOpacity(0.85f))
+					.Justification(ETextJustify::Right)
+					.AutoWrapText(true)
+					.ShadowOffset(FVector2D(0.f, 2.f))
+					.ShadowColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.7f))
+				]
+			]
+
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right)
+			[
+				SNew(STextBlock)
+				.Text(FText::Format(LOCTEXT("Versione", "{0} · la valle in costruzione"), FText::FromString(ValdorsoVersione::PerScritte())))
+				.Font(Caratteri->Testo(19.f, TEXT("Italic")))
+				.ColorAndOpacity(ValdorsoTema::TestoSecondario().CopyWithNewOpacity(0.75f))
+			]
 		]
 
 		// Il pannello (Impostazioni, Riconoscimenti).
@@ -467,6 +498,12 @@ void SValdorsoMenuPrincipale::MostraRiconoscimenti()
 			"Caratteri Cinzel ed EB Garamond, licenza SIL Open Font License 1.1.\n"
 			"Codice scritto con l'aiuto di Claude, di Anthropic.\n\n"
 			"Grazie alla community del Discord di Valdorso."));
+}
+
+void SValdorsoMenuPrincipale::ImpostaStatoMondo(const FText& Riga, const FText& UltimaNotizia)
+{
+	RigaStato = Riga;
+	Notizia = UltimaNotizia;
 }
 
 FReply SValdorsoMenuPrincipale::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)

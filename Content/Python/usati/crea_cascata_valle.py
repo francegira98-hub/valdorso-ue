@@ -316,6 +316,13 @@ def esegui():
         coppie.append((arco, materiale_arcobaleno()))
     for mesh, mat in coppie:
         mesh.set_material(0, mat)
+        # (07/11) Nanite non disegna i materiali trasparenti: sui veli, la schiuma e l'arcobaleno si spegne
+        try:
+            ns = mesh.get_editor_property("nanite_settings")
+            ns.set_editor_property("enabled", False)
+            mesh.set_editor_property("nanite_settings", ns)
+        except Exception as e:  # noqa: BLE001
+            avviso("%s: Nanite non spento (%s)" % (mesh.get_name(), e))
         libreria.save_loaded_asset(mesh)
 
     # 3. Nel livello.

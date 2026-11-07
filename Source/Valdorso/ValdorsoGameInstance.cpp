@@ -13,6 +13,9 @@
 #include "Misc/FileHelper.h"
 #include "Misc/OutputDevice.h"
 #include "Misc/Paths.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "ValdorsoStatoMondo.h"
 
 namespace
 {
@@ -58,6 +61,19 @@ void UValdorsoGameInstance::Init()
 	if (GEngine)
 	{
 		ManigliaErroreDiRete = GEngine->OnNetworkFailure().AddUObject(this, &UValdorsoGameInstance::SuErroreDiRete);
+	}
+
+	// (07/11) Dal launcher: -ValdorsoServer=host:porta e -ValdorsoStato=http://host:7780/stato valgono più del file.
+	FString DaRiga;
+	if (FParse::Value(FCommandLine::Get(), TEXT("ValdorsoServer="), DaRiga) && !DaRiga.TrimStartAndEnd().IsEmpty())
+	{
+		IndirizzoServer = DaRiga.TrimStartAndEnd();
+		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Server dal launcher: %s"), *IndirizzoServer);
+	}
+	DaRiga.Reset();
+	if (FParse::Value(FCommandLine::Get(), TEXT("ValdorsoStato="), DaRiga) && !DaRiga.TrimStartAndEnd().IsEmpty())
+	{
+		IndirizzoStato = DaRiga.TrimStartAndEnd();
 	}
 
 	// Un server vero prepara subito la sua chiave (al primo avvio la crea).
@@ -420,3 +436,13 @@ namespace
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&ComandoCambiaPassword));
 }
 #endif
+
+FString UValdorsoGameInstance::IndirizzoDelloStato() const
+{
+	const FString Scritto = IndirizzoStato.TrimStartAndEnd();
+	if (!Scritto.IsEmpty())
+	{
+		return Scritto;
+	}
+	return ValdorsoStatoMondo::IndirizzoStato(IndirizzoServer);
+}

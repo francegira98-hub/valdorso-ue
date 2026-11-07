@@ -33,6 +33,9 @@ public class Valdorso : ModuleRules
 
         // (28/10) I capelli dei MetaHuman (GroomComponent), per il ritratto del Registro.
         PrivateDependencyModuleNames.Add("HairStrandsCore");
+
+        // (07/11) Lo stato del mondo: il server lo dà a una pagina (HTTPServer), il menu la legge (HTTP).
+        PrivateDependencyModuleNames.AddRange(new string[] { "HTTP", "HTTPServer" });
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
         PublicIncludePaths.AddRange(new string[] {

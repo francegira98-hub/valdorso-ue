@@ -1,6 +1,10 @@
 // Valdorso - Il controllore del menu principale: mostra il menu "Oro e brace", guarda la scena
 // dalla telecamera con l'etichetta MenuCamera (che ondeggia piano), e porta nella valle o chiude il gioco.
 //
+// (07/11/2026) Prima del menu, una volta per avvio, la schermata d'avvio (SValdorsoAvvio: logo, avviso, "premi un
+// tasto"); nel menu "Impostazioni" apre le impostazioni vere e in basso a destra c'è lo stato del mondo chiesto al
+// server (ValdorsoStatoMondo), richiesto di nuovo ogni 30 secondi.
+//
 // L'ingresso nella valle (v0.1.2, passo 2.5, 04/10/2026): prima il volo, poi il collegamento.
 //   - Ogni volta: il volo corto verso il frammento (2,4 s), il nero, e solo allora parte il collegamento al server.
 //   - Al primo ingresso (con l'invito): il volo lungo lungo la curva AValdorsoVoloIngresso (circa 7 s),
@@ -16,6 +20,8 @@
 #include "ValdorsoMenuController.generated.h"
 
 class SValdorsoMenuPrincipale;
+class SValdorsoAvvio;
+class SValdorsoImpostazioni;
 class SValdorsoPrimaDiEntrare;
 class SValdorsoVolo;
 class AValdorsoVoloIngresso;
@@ -50,6 +56,23 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	// --- (07/11) L'avvio, le impostazioni e lo stato del mondo ------------------------------------
+	void MostraAvvio();
+	void FineAvvio();
+	/** Il menu sopra la scena, con il fuoco sul primo pulsante; poi i messaggi di ritorno dal server. */
+	void CreaMenu();
+	void ControllaRitorno();
+	void ApriImpostazioni();
+	void ChiudiImpostazioni();
+	void ChiediStatoMondo();
+	TSharedPtr<SValdorsoAvvio> Avvio;
+	TSharedPtr<SValdorsoImpostazioni> Impostazioni;
+	float AttesaStato = 0.f;
+	bool bStatoInViaggio = false;
+	/** L'ultima risposta (arriva anche durante l'avvio, prima che il menu ci sia). */
+	FText UltimaRigaStato;
+	FText UltimaNotiziaStato;
+
 	void EntraNellaValle();
 	void Esci();
 

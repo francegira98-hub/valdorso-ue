@@ -4,6 +4,10 @@
 #include "Valdorso.h"
 #include "ValdorsoRegistroEventi.h"
 #include "Components/LightComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/CollisionProfile.h"
+#include "Engine/StaticMesh.h"
+#include "PhysicsEngine/BodySetup.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -99,6 +103,61 @@ namespace
 			Luce->SetVisibility(bVisibile);
 		}
 	}
+
+	/** (07/11 sera) La piazza, le strade e il piazzale delle carovane si calpestano: collisione vera, da tutte e due le
+	 *  facce, anche se il livello è stato salvato senza (i piedi del colono affondavano nei ciottoli). Vale su server e
+	 *  PC, anche per i pezzi che arrivano dopo con World Partition. Vero se l'attore è uno di questi. */
+	bool RendiSuoloVillaggioCalpestabile(AActor* Attore)
+	{
+		bool bSuolo = false;
+		TInlineComponentArray<UStaticMeshComponent*> Pezzi(Attore);
+		for (UStaticMeshComponent* Pezzo : Pezzi)
+		{
+			UStaticMesh* Mesh = Pezzo ? Pezzo->GetStaticMesh() : nullptr;
+			if (!Mesh)
+			{
+				continue;
+			}
+			const FString Nome = Mesh->GetName();
+			if (!Nome.StartsWith(TEXT("SM_Villaggio_Piazza")) && !Nome.StartsWith(TEXT("SM_Villaggio_Strade"))
+				&& !Nome.StartsWith(TEXT("SM_Villaggio_Carovane")))
+			{
+				continue;
+			}
+			bSuolo = true;
+			bool bRifai = false;
+			if (UBodySetup* Corpo = Mesh->GetBodySetup())
+			{
+				if (Corpo->CollisionTraceFlag != CTF_UseComplexAsSimple || !Corpo->bDoubleSidedGeometry)
+				{
+					Corpo->CollisionTraceFlag = CTF_UseComplexAsSimple;
+					Corpo->bDoubleSidedGeometry = true;
+					bRifai = true;
+				}
+			}
+			if (Pezzo->GetCollisionProfileName() != UCollisionProfile::BlockAll_ProfileName)
+			{
+				Pezzo->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+				bRifai = true;
+			}
+			Pezzo->CanCharacterStepUpOn = ECB_Yes;
+			// la prima volta che si vede questo pezzo si rifà sempre la sua fisica (la forma della mesh è condivisa: se
+			// l'ha già sistemata un altro pezzo, qui i valori sembrano giusti ma la fisica è ancora quella vecchia)
+			static const FName Segno(TEXT("ValdorsoCalpestabile"));
+			const bool bPrimaVolta = !Pezzo->ComponentHasTag(Segno);
+			if (!bRifai && !bPrimaVolta)
+			{
+				continue;
+			}
+			Pezzo->ComponentTags.AddUnique(Segno);
+			Pezzo->RecreatePhysicsState();
+			UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Villaggio: %s calpestabile (%s, collisione %s%s)"), *Nome,
+				bRifai ? TEXT("sistemata adesso") : TEXT("era già a posto"),
+				Pezzo->IsCollisionEnabled() ? TEXT("accesa") : TEXT("SPENTA"),
+				Attore->GetActorEnableCollision() ? TEXT("") : TEXT(", ma l'attore ha la collisione spenta"));
+		}
+		return bSuolo;
+	}
 }
 
 AValdorsoFasiVillaggio::AValdorsoFasiVillaggio()
@@ -190,7 +249,12 @@ void AValdorsoFasiVillaggio::Applica(ULevel* SoloLivello)
 	{
 		int32 Da = 1;
 		int32 Fino = 0;
-		if (!IsValid(Attore) || !ValdorsoFasi::FaseDiAttore(Attore, Da, Fino))
+		if (!IsValid(Attore))
+		{
+			return;
+		}
+		RendiSuoloVillaggioCalpestabile(Attore);
+		if (!ValdorsoFasi::FaseDiAttore(Attore, Da, Fino))
 		{
 			return;
 		}

@@ -3,6 +3,7 @@
 // una riga JSON per evento (un file al giorno, ora UTC). È la base per leggi, taglie, dicerie e Battito.
 
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoTerritorio.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
@@ -62,12 +63,15 @@ namespace ValdorsoRegistroEventi
 		const float Quando = Mondo ? Mondo->GetTimeSeconds() : 0.f;
 		const FString NomeChi = NomeNelRegistro(Chi);
 		const FString NomeBersaglio = NomeNelRegistro(Bersaglio);
+		// (07/11) In quale territorio è successo (per ora sempre "valdorso"): lo chiede il Design, per leggi e conquiste.
+		const FString Territorio = ValdorsoTerritori::IdDi(Dove);
 
-		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro: %s | chi %s | bersaglio %s | dove %s | quando %.2f s | %s"),
+		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Registro: %s | chi %s | bersaglio %s | dove %s (%s) | quando %.2f s | %s"),
 			*Tipo,
 			*NomeChi,
 			Bersaglio ? *NomeBersaglio : TEXT("nessuno"),
 			*Dove.ToCompactString(),
+			*Territorio,
 			Quando,
 			*Dettagli);
 
@@ -83,7 +87,7 @@ namespace ValdorsoRegistroEventi
 			bCartellaPronta = IFileManager::Get().MakeDirectory(*FPaths::GetPath(FileDelGiorno(Adesso)), true);
 		}
 		const FString Riga = FString::Printf(
-			TEXT("{\"utc\":\"%s\",\"mappa\":\"%s\",\"tempo\":%.2f,\"tipo\":\"%s\",\"chi\":\"%s\",\"bersaglio\":\"%s\",\"dove\":[%.0f,%.0f,%.0f],\"dettagli\":\"%s\"}%s"),
+			TEXT("{\"utc\":\"%s\",\"mappa\":\"%s\",\"tempo\":%.2f,\"tipo\":\"%s\",\"chi\":\"%s\",\"bersaglio\":\"%s\",\"dove\":[%.0f,%.0f,%.0f],\"territorio\":\"%s\",\"dettagli\":\"%s\"}%s"),
 			*Adesso.ToIso8601(),
 			*PerJson(Mondo->GetMapName()),
 			Quando,
@@ -91,6 +95,7 @@ namespace ValdorsoRegistroEventi
 			*PerJson(NomeChi),
 			*PerJson(NomeBersaglio),
 			Dove.X, Dove.Y, Dove.Z,
+			*PerJson(Territorio),
 			*PerJson(Dettagli),
 			LINE_TERMINATOR);
 		// (Per ora la scrittura è immediata: gli eventi sono pochi. Con molti giocatori andrà in coda, come l'Archivista.)

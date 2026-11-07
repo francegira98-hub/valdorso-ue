@@ -6,6 +6,12 @@
 #include "ValdorsoGameInstance.h"
 #include "SValdorsoAccesso.h"
 #include "SValdorsoVolo.h"
+#include "SValdorsoAvvio.h"
+#include "SValdorsoImpostazioni.h"
+#include "ValdorsoStatoMondo.h"
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
 #include "ValdorsoVoloIngresso.h"
 #include "Camera/CameraComponent.h"
 #include "HAL/IConsoleManager.h"
@@ -32,6 +38,15 @@ namespace
 		0,
 		TEXT("0 = il volo lungo solo al primo ingresso (normale); 1 = sempre, anche con Entra e con \"prova senza server\"."));
 #endif
+
+	/** (07/11) La schermata d'avvio: 1 = una volta per avvio del gioco (normale), 0 = mai (per le prove veloci). */
+	TAutoConsoleVariable<int32> CVarAvvio(
+		TEXT("Valdorso.Avvio"),
+		1,
+		TEXT("1 = la schermata d'avvio (logo, avviso, premi un tasto) una volta per avvio del gioco; 0 = mai."));
+
+	/** (07/11) Ogni quanti secondi il menu richiede lo stato del mondo al server. */
+	constexpr float OgniQuantoLoStato = 30.f;
 
 	bool VoloLungoSempre()
 	{
@@ -93,14 +108,73 @@ void AValdorsoMenuController::BeginPlay()
 		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Menu: nessuna telecamera MenuCamera nel livello"));
 	}
 
+	// (07/11) Una volta per avvio del gioco, prima del menu, la schermata d'avvio. Tornando dal server (messaggio,
+	// rientro) l'istanza del gioco è la stessa e l'avvio è già stato visto: si va dritti al menu.
+	UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
+	if (Istanza && !Istanza->bAvvioMostrato && CVarAvvio.GetValueOnGameThread() != 0)
+	{
+		Istanza->bAvvioMostrato = true;
+		MostraAvvio();
+	}
+	else
+	{
+		CreaMenu();
+		ControllaRitorno();
+	}
+}
+
+void AValdorsoMenuController::MostraAvvio()
+{
+	SAssignNew(Avvio, SValdorsoAvvio)
+		.OnFine(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::FineAvvio));
+	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
+	{
+		Viewport->AddViewportWidgetContent(Avvio.ToSharedRef(), 30);
+	}
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(Avvio);
+	Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Modo);
+	bShowMouseCursor = false;
+	// lo stato del mondo si chiede già adesso: quando compare il menu, la riga è pronta
+	ChiediStatoMondo();
+}
+
+void AValdorsoMenuController::FineAvvio()
+{
+	if (Avvio.IsValid())
+	{
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(Avvio.ToSharedRef());
+		}
+		Avvio.Reset();
+	}
+	bShowMouseCursor = true;
+	CreaMenu();
+	ControllaRitorno();
+}
+
+void AValdorsoMenuController::CreaMenu()
+{
+	if (Menu.IsValid())
+	{
+		return;
+	}
 	// Il menu, sopra la scena.
 	SAssignNew(Menu, SValdorsoMenuPrincipale)
 		.OnEntra(FSimpleDelegate::CreateWeakLambda(this, [this]() { MostraAccesso(FText::GetEmpty()); }))
-		.OnEsci(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::Esci));
+		.OnEsci(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::Esci))
+		.OnImpostazioni(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ApriImpostazioni));
 
 	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
 	{
 		Viewport->AddViewportWidgetContent(Menu.ToSharedRef(), 10);
+	}
+	// la risposta arrivata durante l'avvio è già pronta
+	if (!UltimaRigaStato.IsEmpty())
+	{
+		Menu->ImpostaStatoMondo(UltimaRigaStato, UltimaNotiziaStato);
 	}
 
 	FInputModeUIOnly Modo;
@@ -109,6 +183,13 @@ void AValdorsoMenuController::BeginPlay()
 	SetInputMode(Modo);
 	bShowMouseCursor = true;
 
+	// lo stato del mondo: subito (se non è già in viaggio), poi ogni 30 secondi dal Tick
+	AttesaStato = 0.f;
+	ChiediStatoMondo();
+}
+
+void AValdorsoMenuController::ControllaRitorno()
+{
 	// Tornando dal server (password sbagliata, espulsione, server spento) si riapre "Prima di entrare" con il motivo.
 	// Se invece il collegamento si è solo interrotto e c'è il biglietto, si rientra da soli (fino a 3 volte).
 	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
@@ -125,6 +206,85 @@ void AValdorsoMenuController::BeginPlay()
 			MostraAccesso(FText::FromString(Messaggio));
 		}
 	}
+}
+
+void AValdorsoMenuController::ApriImpostazioni()
+{
+	if (Impostazioni.IsValid() || bInTransizione)
+	{
+		return;
+	}
+	TWeakObjectPtr<AValdorsoMenuController> Debole(this);
+	SAssignNew(Impostazioni, SValdorsoImpostazioni)
+		.OnChiudi(FSimpleDelegate::CreateLambda([Debole]()
+		{
+			if (AValdorsoMenuController* Controllore = Debole.Get())
+			{
+				Controllore->ChiudiImpostazioni();
+			}
+		}));
+	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
+	{
+		Viewport->AddViewportWidgetContent(Impostazioni.ToSharedRef(), 25);
+	}
+	if (Menu.IsValid())
+	{
+		Menu->SetEnabled(false);
+	}
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(Impostazioni->FuocoIniziale());
+	Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Modo);
+}
+
+void AValdorsoMenuController::ChiudiImpostazioni()
+{
+	if (Impostazioni.IsValid())
+	{
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(Impostazioni.ToSharedRef());
+		}
+		Impostazioni.Reset();
+	}
+	if (Menu.IsValid() && !bInTransizione)
+	{
+		Menu->SetEnabled(true);
+		FInputModeUIOnly Modo;
+		Modo.SetWidgetToFocus(Menu->GetPrimoPulsante());
+		Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(Modo);
+	}
+}
+
+void AValdorsoMenuController::ChiediStatoMondo()
+{
+	const UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
+	const FString Indirizzo = Istanza ? Istanza->IndirizzoDelloStato() : FString();
+	if (bStatoInViaggio || Indirizzo.IsEmpty() || !FHttpModule::Get().IsHttpEnabled())
+	{
+		return;
+	}
+	bStatoInViaggio = true;
+	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Richiesta = FHttpModule::Get().CreateRequest();
+	Richiesta->SetURL(Indirizzo);
+	Richiesta->SetVerb(TEXT("GET"));
+	Richiesta->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	Richiesta->SetTimeout(5.f);
+	Richiesta->OnProcessRequestComplete().BindWeakLambda(this, [this](FHttpRequestPtr, FHttpResponsePtr Risposta, bool bRiuscita)
+	{
+		bStatoInViaggio = false;
+		FValdorsoStatoMondo Stato;
+		const bool bLetto = bRiuscita && Risposta.IsValid() && Risposta->GetResponseCode() == 200
+			&& ValdorsoStatoMondo::DaJson(Risposta->GetContentAsString(), Stato);
+		UltimaRigaStato = bLetto ? ValdorsoStatoMondo::Riga(Stato) : LOCTEXT("ValleDorme", "La valle dorme: il server non risponde.");
+		UltimaNotiziaStato = bLetto ? FText::FromString(Stato.Notizia) : FText::GetEmpty();
+		if (Menu.IsValid())
+		{
+			Menu->ImpostaStatoMondo(UltimaRigaStato, UltimaNotiziaStato);
+		}
+	});
+	Richiesta->ProcessRequest();
 }
 
 void AValdorsoMenuController::MostraAccesso(const FText& Messaggio)
@@ -352,6 +512,17 @@ void AValdorsoMenuController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	ChiudiAccesso();
 	RichiestaDaMandare.Reset();
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	// (07/11) l'avvio e le impostazioni, se erano ancora aperti
+	if (Viewport && Avvio.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(Avvio.ToSharedRef());
+	}
+	Avvio.Reset();
+	if (Viewport && Impostazioni.IsValid())
+	{
+		Viewport->RemoveViewportWidgetContent(Impostazioni.ToSharedRef());
+	}
+	Impostazioni.Reset();
 	if (Menu.IsValid())
 	{
 		if (Viewport)
@@ -396,6 +567,17 @@ void AValdorsoMenuController::Tick(float DeltaSeconds)
 			AvanzaTransizione(DeltaSeconds);
 		}
 		return;
+	}
+
+	// (07/11) Lo stato del mondo, ogni 30 secondi mentre si sta nel menu.
+	if (Menu.IsValid())
+	{
+		AttesaStato += DeltaSeconds;
+		if (AttesaStato >= OgniQuantoLoStato)
+		{
+			AttesaStato = 0.f;
+			ChiediStatoMondo();
+		}
 	}
 
 	// La telecamera respira: si sposta e gira di pochissimo, lentamente.

@@ -1,0 +1,226 @@
+# Valdorso - Le immagini del launcher: lo sfondo (la valle al tramonto, dipinta da zero), l'icona e i caratteri.
+# Scritto da Claude il 07/11/2026. Richiede Pillow e numpy (come logo.py).
+#
+# Uso:  python launcher_immagini.py <cartella dei caratteri> <cartella di uscita>
+#   sul PC: python Tools\Generatori\launcher_immagini.py V:\Font V:\Valdorso\Build\Launcher\risorse
+# Fa:   sfondo.jpg (2200 x 1280), icona.ico (16-256 px), anteprima_icona.png e copia Cinzel ed EB Garamond
+#       (licenza SIL OFL 1.1: si possono dare insieme al launcher, con la licenza) accanto, per la finestra.
+# Cerca i caratteri sia come file statici (Cinzel/static/Cinzel-Bold.ttf) sia come file variabili (Cinzel.ttf).
+
+import math
+import os
+import random
+import shutil
+import sys
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+FONDO = (14, 11, 9)
+ORO = (212, 175, 55)
+OROC = (243, 220, 140)
+BRACE = (217, 119, 43)
+
+
+def trova(cartella, nomi):
+    for radice, _, files in os.walk(cartella):
+        for n in nomi:
+            if n in files:
+                return os.path.join(radice, n)
+    return None
+
+
+def cresta(n, rng, ruvido, base, ampiezza):
+    """Una linea di monti: spostamento del punto medio (frattale), da 0 a 1 in altezza."""
+    lati = 2 ** int(math.ceil(math.log2(n)))
+    y = np.zeros(lati + 1)
+    y[0], y[-1] = rng.random(), rng.random()
+    passo, scala = lati, 1.0
+    while passo > 1:
+        meta = passo // 2
+        for i in range(meta, lati, passo):
+            y[i] = (y[i - meta] + y[i + meta]) / 2 + (rng.random() - 0.5) * scala
+        scala *= ruvido
+        passo = meta
+    y = y[:n]
+    y = (y - y.min()) / max(1e-6, y.max() - y.min())
+    return base - y * ampiezza
+
+
+def sfondo(W=2200, H=1280, seme=312):
+    rng = random.Random(seme)
+    yy = np.linspace(0, 1, H)[:, None]
+    xx = np.linspace(0, 1, W)[None, :]
+    sole = (0.70, 0.50)
+    # il cielo: in alto viola notte, poi rosa e oro verso l'orizzonte
+    alto = np.array([28, 22, 44], float)
+    medio = np.array([120, 58, 62], float)
+    basso = np.array([238, 150, 70], float)
+    t = np.clip(yy / 0.56, 0, 1)
+    sopra = alto + (medio - alto) * np.clip(t / 0.55, 0, 1) ** 1.2
+    sotto = medio + (basso - medio) * np.clip((t - 0.55) / 0.45, 0, 1) ** 0.9
+    cielo = np.where(t < 0.55, sopra, sotto)                      # (H, 3)
+    img = np.broadcast_to(cielo[:, None, :], (H, W, 3)).copy()
+    # il bagliore del sole
+    d = np.sqrt(((xx - sole[0]) * W / H) ** 2 + (yy - sole[1]) ** 2)
+    img += (np.exp(-(d / 0.09) ** 2) * 255 + np.exp(-(d / 0.35) ** 2) * 70)[..., None] * np.array([1.0, 0.78, 0.45])
+    # nuvole sottili, allungate, illuminate da sotto
+    nuvole = Image.new("L", (W, H), 0)
+    dn = ImageDraw.Draw(nuvole)
+    for _ in range(26):
+        cx, cy = rng.uniform(0, W), rng.uniform(H * 0.12, H * 0.44)
+        lw, lh = rng.uniform(180, 620), rng.uniform(8, 26)
+        dn.ellipse([cx - lw, cy - lh, cx + lw, cy + lh], fill=int(rng.uniform(40, 110)))
+    nuvole = np.asarray(nuvole.filter(ImageFilter.GaussianBlur(14))).astype(float)[..., None] / 255
+    img = img * (1 - nuvole * 0.5) + nuvole * 0.5 * np.array([250, 170, 120])
+
+    # i monti: 5 creste dalla più lontana (chiara, velata) alla più vicina (scura)
+    colonne = np.arange(W)
+    piani = [
+        (0.585, 0.20, 0.55, (150, 92, 96), 0.80),
+        (0.625, 0.22, 0.58, (104, 62, 74), 0.62),
+        (0.680, 0.20, 0.60, (66, 40, 50), 0.42),
+        (0.760, 0.17, 0.62, (36, 24, 28), 0.22),
+        (0.860, 0.14, 0.64, (18, 13, 13), 0.0),
+    ]
+    for k, (base, amp, ruvido, colore, velo) in enumerate(piani):
+        linea = cresta(W, rng, ruvido, base, amp) * H
+        # la valle: una conca al centro destro, dove scende il fiume verso il lago
+        conca = np.exp(-((colonne / W - 0.66) / 0.16) ** 2) * (0.06 + 0.03 * k) * H
+        linea = linea + conca
+        maschera = yy * H >= linea[None, :]
+        tono = np.array(colore, float)
+        # i monti lontani prendono il colore del cielo (aria), i vicini restano scuri; i bordi dal sole un filo d'oro
+        tinta = tono * (1 - velo) + img * velo
+        img = np.where(maschera[..., None], tinta, img)
+        bordo = np.abs(yy * H - linea[None, :]) < 2.2
+        luce_bordo = np.exp(-((colonne / W - sole[0]) / 0.25) ** 2)[None, :]
+        img = np.where(bordo[..., None], img + (luce_bordo * 50)[..., None] * np.array([1.0, 0.75, 0.4]), img)
+
+    # il lago in basso al centro destro, che riflette il sole
+    lago_y0, lago_y1 = int(H * 0.835), int(H * 0.875)
+    for y in range(lago_y0, lago_y1):
+        a = (y - lago_y0) / max(1, lago_y1 - lago_y0)
+        larg = 0.13 * (1 - abs(a - 0.5) * 1.6)
+        x0, x1 = int(W * (0.66 - larg)), int(W * (0.66 + larg))
+        if x1 > x0:
+            riflesso = np.exp(-((np.arange(x0, x1) / W - sole[0]) / 0.03) ** 2)[:, None] * np.array([240, 170, 90])
+            img[y, x0:x1] = img[y, x0:x1] * 0.35 + np.array([70, 48, 52]) * 0.5 + riflesso * 0.6
+
+    # le luci del villaggio, piccole e calde, sulla riva
+    luci = Image.new("RGB", (W, H), (0, 0, 0))
+    dl = ImageDraw.Draw(luci)
+    for _ in range(38):
+        x = rng.gauss(W * 0.61, W * 0.035)
+        y = rng.gauss(H * 0.818, H * 0.008)
+        r = rng.uniform(1.2, 2.6)
+        dl.ellipse([x - r, y - r, x + r, y + r], fill=(255, int(rng.uniform(150, 200)), 80))
+    luci = np.asarray(luci.filter(ImageFilter.GaussianBlur(1.6))).astype(float) * 1.6
+    img = img + luci
+
+    # le braci che salgono e la vignettatura
+    img = np.clip(img, 0, 255)
+    im = Image.fromarray(img.astype(np.uint8), "RGB").convert("RGBA")
+    braci = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    db = ImageDraw.Draw(braci)
+    for _ in range(140):
+        x = rng.uniform(0, W)
+        y = H * (0.55 + rng.random() * 0.45)
+        r = rng.uniform(0.8, 2.6)
+        db.ellipse([x - r, y - r, x + r, y + r], fill=(255, int(rng.uniform(120, 190)), int(rng.uniform(40, 90)), int(rng.uniform(60, 200) * (y / H))))
+    im.alpha_composite(braci.filter(ImageFilter.GaussianBlur(3)))
+    im.alpha_composite(braci)
+    arr = np.asarray(im.convert("RGB")).astype(float)
+    vign = np.clip(1 - 0.55 * ((xx - 0.55) * 1.5) ** 2 - 0.5 * ((yy - 0.45) * 1.4) ** 2, 0.35, 1)[..., None]
+    arr = arr * vign
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
+
+
+def gradiente_oro(maschera):
+    w, h = maschera.size
+    y = np.linspace(0, 1, h)[:, None]
+    a = np.array(OROC, float)
+    b = np.array(ORO, float)
+    c = np.array((150, 110, 35), float)
+    col = np.where(y < 0.55, a + (b - a) * (y / 0.55), b + (c - b) * ((y - 0.55) / 0.45))
+    arr = np.repeat(col[:, None, :], w, axis=1).astype(np.uint8)
+    img = Image.fromarray(arr, "RGB").convert("RGBA")
+    img.putalpha(maschera)
+    return img
+
+
+def icona(cinzel, N=256, S=4):
+    """Come l'icona del gioco (logo.py): la V d'oro su fondo scuro con il bordo d'oro e il rombo di brace."""
+    n = N * S
+    im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    m = Image.new("L", (n, n), 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, n - 1, n - 1], radius=int(n * 0.2), fill=255)
+    yy = np.linspace(0, 1, n)[:, None]
+    xx = np.linspace(-1, 1, n)[None, :]
+    g = np.exp(-((xx / 0.8) ** 2 + ((yy - 0.95) / 0.45) ** 2))
+    base = np.array(FONDO, float)[None, None, :] + g[..., None] * np.array([70, 30, 8])[None, None, :]
+    fondo = Image.fromarray(np.clip(base, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+    fondo.putalpha(m)
+    im.alpha_composite(fondo)
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([int(n * 0.03)] * 2 + [n - 1 - int(n * 0.03)] * 2, radius=int(n * 0.18), outline=ORO + (255,), width=int(n * 0.025))
+    r = int(n * 0.36)
+    c = n // 2
+    d.ellipse([c - r, c - r + int(n * 0.02), c + r, c + r + int(n * 0.02)], outline=ORO + (150,), width=int(n * 0.012))
+    f = ImageFont.truetype(cinzel, int(n * 0.66))
+    try:
+        f.set_variation_by_name("Bold")
+    except Exception:  # noqa: BLE001
+        pass
+    mm = Image.new("L", (n, n), 0)
+    dm = ImageDraw.Draw(mm)
+    bb = f.getbbox("V")
+    vw, vh = bb[2] - bb[0], bb[3] - bb[1]
+    dm.text((c - vw / 2 - bb[0], c - vh / 2 - bb[1] + int(n * 0.01)), "V", font=f, fill=255)
+    al = mm.filter(ImageFilter.GaussianBlur(n * 0.04)).point(lambda v: int(v * 0.6))
+    s = Image.new("RGBA", (n, n), BRACE + (0,))
+    s.putalpha(al)
+    im.alpha_composite(s)
+    bx = mm.getbbox()
+    sub = mm.crop((0, bx[1], n, bx[3]))
+    im.alpha_composite(gradiente_oro(sub), (0, bx[1]))
+    rr = int(n * 0.04)
+    y0 = int(n * 0.80)
+    d = ImageDraw.Draw(im)
+    d.polygon([(c, y0 - rr), (c + rr, y0), (c, y0 + rr), (c - rr, y0)], fill=(240, 150, 60, 255))
+    return im.resize((N, N), Image.LANCZOS)
+
+
+def principale():
+    caratteri = sys.argv[1] if len(sys.argv) > 1 else "V:/Font"
+    uscita = sys.argv[2] if len(sys.argv) > 2 else "risorse"
+    os.makedirs(uscita, exist_ok=True)
+
+    sfondo().save(os.path.join(uscita, "sfondo.jpg"), quality=90, optimize=True)
+    print("sfondo.jpg fatto")
+
+    cinzel = trova(caratteri, ["Cinzel-Bold.ttf", "Cinzel.ttf", "Cinzel-VariableFont_wght.ttf"])
+    garamond = trova(caratteri, ["EBGaramond-Regular.ttf", "EBGaramond.ttf", "EBGaramond-VariableFont_wght.ttf"])
+    corsivo = trova(caratteri, ["EBGaramond-Italic.ttf", "EBGaramond-Italic-VariableFont_wght.ttf"])
+    if cinzel:
+        ic = icona(cinzel)
+        ic.save(os.path.join(uscita, "anteprima_icona.png"))
+        ic.save(os.path.join(uscita, "icona.ico"), sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+        print("icona.ico fatta")
+    else:
+        print("ATTENZIONE: Cinzel non trovato in %s: niente icona" % caratteri)
+    for sorgente, nome in ((cinzel, "Cinzel.ttf"), (garamond, "EBGaramond.ttf"), (corsivo, "EBGaramond-Italic.ttf")):
+        if sorgente:
+            shutil.copyfile(sorgente, os.path.join(uscita, nome))
+            print("copiato %s" % nome)
+        else:
+            print("ATTENZIONE: %s non trovato: la finestra userà Georgia" % nome)
+    # le licenze dei caratteri (SIL OFL 1.1) vanno insieme ai caratteri
+    licenze = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Licenze")
+    for nome in ("OFL_Cinzel.txt", "OFL_EBGaramond.txt"):
+        if os.path.isfile(os.path.join(licenze, nome)):
+            shutil.copyfile(os.path.join(licenze, nome), os.path.join(uscita, nome))
+
+
+if __name__ == "__main__":
+    principale()
