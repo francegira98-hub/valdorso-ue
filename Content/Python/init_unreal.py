@@ -10,6 +10,13 @@ COMANDO_INVENTARIO = (
     "importlib.reload(inv); inv.esegui()"
 )
 
+# (06/11, sera) crea_villaggio.py con le sezioni da rifare (SOLO_VILLAGGIO; [] = tutto)
+COMANDO_VILLAGGIO = (
+    "import os, unreal; "
+    "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_villaggio.py'); "
+    "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'SOLO_VILLAGGIO': %s})"
+)
+
 
 def crea_menu_valdorso():
     menu_tool = unreal.ToolMenus.get()
@@ -41,6 +48,15 @@ def crea_menu_valdorso():
         voce.set_label(etichetta)
         voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "",
                                 "import importlib, texture_vere as tv; importlib.reload(tv); tv.%s()" % funzione)
+        valdorso.add_menu_entry("Villaggio", voce)
+
+    # (06/11, sera) rifare solo alcune sezioni del villaggio (più veloce: il resto non si tocca e non si reimporta)
+    for nome, etichetta, sezioni in (("VillaggioTutto", "Villaggio: rifai tutto", []),
+                                     ("VillaggioRovineGrotte", "Villaggio: rifai solo rovine, grotte e belvedere",
+                                      ["Rovine", "Grotta", "Grotta nord", "Belvedere"])):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_VILLAGGIO % repr(sezioni))
         valdorso.add_menu_entry("Villaggio", voce)
 
     menu_tool.refresh_all_widgets()

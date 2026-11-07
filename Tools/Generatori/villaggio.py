@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw
 
 import sigillo
 import villaggio_edifici as ed
+import villaggio_belvedere
 import villaggio_fasi
 import villaggio_grotta
 import villaggio_milizia
@@ -1152,6 +1153,7 @@ def main(cartella_valle, uscita):
     villaggio_rovine.rovine(pr, rng)
     villaggio_grotta.grotta(pr, rng)
     villaggio_grotta.frana(pr, rng)
+    villaggio_belvedere.belvedere(pr, rng)
     senza_erba(pr, os.path.join(uscita, "T_SenzaErba.png"))
     dati = {"nota": "Fatto da Tools/Generatori/villaggio.py: cm dall'angolo nord-ovest del paesaggio, Z = quota vera in cm.",
             "cose": pr.cose, "mesh": sorted(pr.mesh_scritte), "avvisi": pr.avvisi}
@@ -1175,6 +1177,9 @@ def main(cartella_valle, uscita):
     anteprima(pr, "Grotta", ge[0] + 400, ge[1] - 2000, 7000, os.path.join(uscita, "Anteprima_Grotta.png"))
     gn = t.luogo("Grotta nord")
     anteprima(pr, "Grotta nord", gn[0], gn[1], 3000, os.path.join(uscita, "Anteprima_Grotta_Nord.png"))
+    bv = [c for c in pr.cose if c["nome"] == "Belvedere"]
+    if bv:
+        anteprima(pr, "Belvedere", bv[0]["pos"][0], bv[0]["pos"][1], 2500, os.path.join(uscita, "Anteprima_Belvedere.png"))
     g = t.luogo("Posto di guardia del passo")
     anteprima(pr, "Guardia", g[0], g[1], 5000, os.path.join(uscita, "Anteprima_Guardia.png"))
     conta = {}

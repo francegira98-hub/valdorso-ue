@@ -103,6 +103,31 @@ def _griglia(m, mat, G, N, UV, chiudi=False):
     m.triangoli(mat, P, N.reshape(-1, 3), UV.reshape(-1, 2), T)
 
 
+def _griglia_tri(m, mat, G, N, tile):
+    """(06/11, sera) Come _griglia, ma con le UV "a tre piani": ogni triangolo prende la texture dal piano più vicino
+    al suo (dall'alto, da est o da sud), così la roccia non si stira mai (prima, vicino alla bocca, faceva strisce).
+    Le normali restano quelle lisce della griglia; i vertici non si condividono (le cuciture la roccia le nasconde)."""
+    ns, nr = G.shape[:2]
+    P = G.reshape(-1, 3)
+    Nn = N.reshape(-1, 3)
+    T = []
+    for i in range(ns - 1):
+        for j in range(nr - 1):
+            a = i * nr + j
+            T += [[a, a + 1, a + nr], [a + 1, a + nr + 1, a + nr]]
+    T = np.array(T)
+    A, B, C = P[T[:, 0]], P[T[:, 1]], P[T[:, 2]]
+    fn = np.abs(np.cross(B - A, C - A))
+    asse = np.argmax(fn, axis=1)
+    PP = P[T].reshape(-1, 3)
+    NN = Nn[T].reshape(-1, 3)
+    asse3 = np.repeat(asse, 3)
+    U = np.where(asse3 == 0, PP[:, 1], PP[:, 0])
+    V = np.where(asse3 == 2, PP[:, 1], -PP[:, 2])          # sulle pareti la v scende con la quota: strati orizzontali
+    UV = np.stack([U / tile, V / tile], -1)
+    m.triangoli(mat, PP, NN, UV, np.arange(len(PP)).reshape(-1, 3))
+
+
 def _uv(G, tile):
     """UV: u lungo l'anello (lunghezza vera), v lungo il percorso."""
     ns, nr = G.shape[:2]
@@ -209,7 +234,7 @@ def grotta(pr, rng):
     dentro += rad * (nz * amp[:, None] * piedi[None, :])[..., None]
     Nd = _normali_griglia(dentro, lambda i, j: centri[i, j] - dentro[i, j])
     m = Mesh("SM_Grotta_Est")
-    _griglia(m, "Roccia", dentro, Nd, _uv(dentro, TILE_ROCCIA))
+    _griglia_tri(m, "Roccia", dentro, Nd, TILE_ROCCIA)
 
     # ---- il pavimento: terra nella grotta, lastre (Pietra) nel cunicolo e nella sala
     M = 6
@@ -271,7 +296,7 @@ def grotta(pr, rng):
         for j in (0, 1, K - 1, K):
             fuori[i, j, 2] = min(fuori[i, j, 2], zt(fuori[i, j, 0], fuori[i, j, 1]) - 80.0)
     Nf = _normali_griglia(fuori, lambda i, j: fuori[i, j] - asse[i])
-    _griglia(m, "Roccia", fuori, Nf, _uv(fuori, TILE_ROCCIA))
+    _griglia_tri(m, "Roccia", fuori, Nf, TILE_ROCCIA)
 
     # ---- la bocca: il labbro tra la parete di dentro e la rupe (tre anelli in mezzo, frastagliati verso fuori)
     anelli = [dentro[0]]
@@ -283,7 +308,7 @@ def grotta(pr, rng):
     anelli.append(fuori[0])
     labbro = np.array(anelli)
     Nl = np.tile(-T[0], (labbro.shape[0], labbro.shape[1], 1))
-    _griglia(m, "Roccia", labbro, Nl, _uv(labbro, TILE_ROCCIA))
+    _griglia_tri(m, "Roccia", labbro, Nl, TILE_ROCCIA)
     # sotto il pavimento della bocca: la faccia giù fino al terreno, e i due triangoli ai lati
     giu0 = min(zt(*dentro[0, 0, :2]), zt(*dentro[0, K, :2])) - 80.0
     a0, aK = dentro[0, 0], dentro[0, K]
@@ -403,7 +428,7 @@ def grotta(pr, rng):
         pr.aggiungi(S, "Luce del muschio %d" % k, "luce", gx + p[0], gy + p[1], q0 + p[2], suolo=True, intensita=2.5, raggio=800.0,
                     colore=[0.45, 1.0, 0.72], ombre=True)
     lp = fondo + av * 160.0 + np.array([0, 0, 260.0])
-    d = pr.aggiungi(S, "Luce della porta", "luce", gx + lp[0], gy + lp[1], q0 + lp[2], suolo=True, intensita=5.0, raggio=1100.0,
+    d = pr.aggiungi(S, "Luce della porta", "luce", gx + lp[0], gy + lp[1], q0 + lp[2], suolo=True, intensita=1.8, raggio=900.0,
                     colore=[0.35, 0.7, 1.0], ombre=True)
     d["rune"] = "sempre"
     # le iscrizioni: la tavola invisibile (si tocca con E) contro la parete, girata verso chi legge (+X = davanti)
@@ -566,7 +591,7 @@ def frana(pr, rng):
     G[..., 1] = np.minimum(G[..., 1], yf - 100.0)           # davanti, dove sta il portale, la rupe è tagliata
     Ng = _normali_griglia(G, lambda i, j: G[i, j] - cr)
     Ng[0], Ng[-1] = (0.0, 0.0, -1.0), (0.0, 0.0, 1.0)          # i poli (lì la griglia non dà una normale)
-    _griglia(m, "Roccia", G, Ng, _uv(G, TILE_ROCCIA))
+    _griglia_tri(m, "Roccia", G, Ng, TILE_ROCCIA)
 
     # ---- il portale dei nani (Pietra): zoccolo, pilastri, architrave spezzato, cornice rotta
     def blocco(cx, cy, cz, hx, hy, hz, mat="Pietra", mesh=m):
@@ -623,8 +648,7 @@ def frana(pr, rng):
     dzy = np.gradient(F[..., 2], axis=0) / 25.0
     Nr[..., 0], Nr[..., 1], Nr[..., 2] = -dzx, -dzy, 1.0
     Nr /= np.linalg.norm(Nr, axis=2, keepdims=True)
-    UVr = np.stack([F[..., 0] / TILE_ROCCIA, F[..., 1] / TILE_ROCCIA], -1)
-    _griglia(m, "Roccia", F, Nr, UVr)
+    _griglia_tri(m, "Roccia", F, Nr, TILE_ROCCIA)
     # i massi sopra la frana
     sassi = 0
     for k in range(60):

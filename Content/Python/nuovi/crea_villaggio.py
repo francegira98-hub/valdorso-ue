@@ -34,6 +34,11 @@ ETICHETTA = "ValdorsoVillaggio"
 QUOTA_MAX_CM = 80000.0          # i 16 bit delle altezze coprono 0-800 m (valle.py)
 REIMPORTA = True                # False: usa i pezzi già importati (più veloce, se il generatore non è cambiato)
 FASE_EDITOR = 1                 # (06/11) la fase del villaggio che si vede nell'editor dopo il lancio
+# (06/11, sera) SOLO: le sezioni da rifare (le altre restano come sono, e i loro pezzi non si reimportano). Vuoto = tutto.
+# Sezioni: "Villaggio", "Palude", "Guardia", "Rovine", "Grotta", "Grotta nord", "Belvedere". Dal menu Valdorso c'è
+# anche "Villaggio: rifai solo rovine, grotte e belvedere", che passa SOLO_VILLAGGIO senza toccare questo file.
+SOLO = []
+SOLO = list(globals().get("SOLO_VILLAGGIO", SOLO))
 
 libreria = unreal.EditorAssetLibrary
 strumenti = unreal.AssetToolsHelpers.get_asset_tools()
@@ -218,9 +223,11 @@ def crea_materiali(tex):
     semplice = materiale_base("M_VillaggioColore", colore_vertici=True)
     mat = {}
     ruvidi = {"Pietra": 0.9, "Intonaco": 0.92, "Assi": 0.8, "Trave": 0.75, "Coppi": 0.7, "Paglia": 0.95, "Roccia": 0.93}
+    # (06/11, sera) la roccia della grotta più scura: al sole usciva quasi bianca (foto di Fra)
+    tinte = {"Roccia": (0.55, 0.53, 0.50)}
     for n, r in ruvidi.items():
         if n in tex:
-            mat[n] = istanza("MI_Villaggio_" + n, base, tex[n][0], tex[n][1], ruvidezza=r)
+            mat[n] = istanza("MI_Villaggio_" + n, base, tex[n][0], tex[n][1], ruvidezza=r, tinta=tinte.get(n))
     for n in ("Ciottoli", "Terra"):
         if n in tex:
             mat[n] = istanza("MI_Villaggio_" + n, suolo, tex[n][0], tex[n][1], ruvidezza=0.9)
@@ -442,6 +449,12 @@ def principale():
     scompatta()
     with open(CARTELLA + "/Villaggio_3000.json", "r", encoding="utf-8") as f:
         dati = json.load(f)
+    if SOLO:
+        # (06/11, sera) solo alcune sezioni: le loro cose e i loro pezzi; il resto non si tocca
+        dati["cose"] = [c for c in dati["cose"] if c.get("sezione") in SOLO]
+        usati = set(c["asset"] for c in dati["cose"] if c["tipo"] in ("mesh", "sigillo") and c.get("asset"))
+        dati["mesh"] = [n for n in dati["mesh"] if n in usati or n == "SM_Villaggio_ProvaAssi"]
+        scrivi("SOLO le sezioni %s: %d cose, %d pezzi" % (", ".join(SOLO), len(dati["cose"]), len(dati["mesh"])))
     paesaggi = [a for a in attori.get_all_level_actors() if isinstance(a, unreal.Landscape)]
     if not paesaggi:
         unreal.log_error("[Valdorso] Villaggio: nel livello aperto non c'è un Landscape. Apri L_Valle.")
@@ -467,6 +480,10 @@ def principale():
     tolti = 0
     for a in attori.get_all_level_actors():
         if a.actor_has_tag(ETICHETTA):
+            if SOLO:
+                cartella = str(a.get_folder_path())
+                if not any(cartella == "Valle/Villaggio/" + sz or cartella.startswith("Valle/Villaggio/%s/" % sz) for sz in SOLO):
+                    continue
             attori.destroy_actor(a)
             tolti += 1
     scrivi("tolti %d attori del lancio precedente" % tolti)
