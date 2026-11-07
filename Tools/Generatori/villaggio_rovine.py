@@ -20,9 +20,16 @@ import math
 
 import numpy as np
 
+import alfabeto_rune as ar
 from villaggio_mesh import Mesh
 
 S = "Rovine"
+
+# (07/11 sera) Le rune vere (alfabeto_rune.py, dalle Cronache): ogni pietra del cerchio porta il suo elemento e una
+# parola che protegge, letta dall'alto in basso; sulla pietra piatta, accanto a ogni punta della stella, l'elemento
+# della pietra che le sta davanti; sull'architrave della cripta Ur, da sola; sulla lastra tre parole che fermano.
+PAROLE_PIETRE = ["Aeth-Ka-Vel", "Nir-Ren-Ka", "Dorn-Ka-Ren", "Sil-Ka-Ren", "Lume-Ren-Ka"]
+PAROLE_LASTRA = ["Lume-Tor", "Dorn-Tor", "Sil-Tor"]  # dall'alto in basso
 
 
 def rovine(pr, rng):
@@ -109,11 +116,9 @@ def rovine(pr, rng):
         su = su / np.linalg.norm(su)
         centro = np.array([p[0] * 100, p[1] * 100, zz - 30 + alto / 2])
         m.scatola("Pietra", list(centro), list(lato * 45), list(verso * 28), list(su * alto / 2))
-        # la fascia di rune sulla faccia verso il centro: tre segni uno sopra l'altro
-        for j in range(3):
-            h = alto * (0.55 + 0.13 * j) - alto / 2
-            c = centro + su * h + verso * 29.5
-            _runa(rune, c, lato, su, 16.0, k * 3 + j)
+        # la fascia di rune sulla faccia verso il centro: la parola della pietra, in colonna (l'elemento in cima)
+        c = centro + su * (alto * 0.68 - alto / 2) + verso * 29.5
+        _incidi(rune, c, verso, su, 11.0, PAROLE_PIETRE[k], verticale=True)
     # la pietra piatta al centro (altare basso) e il pentagono di rune
     zz = z(*cc)
     m.cilindro("Pietra", [cc[0] * 100, cc[1] * 100, zz - 30], 170, 65, lati=20)
@@ -124,6 +129,11 @@ def rovine(pr, rng):
     for k in range(5):
         _linea_runa(rune, vertici[k], vertici[(k + 2) % 5], 5.0)        # la stella
         _linea_runa(rune, vertici[k], vertici[(k + 1) % 5], 4.0)        # il giro
+    for k in range(5):
+        # l'elemento della pietra davanti alla punta, sulla pietra piatta, letto da chi sta al centro guardando fuori
+        fuori_ = (vertici[k] - np.array([cc[0] * 100, cc[1] * 100, zz + 35.5]))
+        fuori_ = fuori_ / np.linalg.norm(fuori_)
+        _incidi(rune, vertici[k] + fuori_ * 22.0, np.array([0.0, 0.0, 1.0]), fuori_, 8.5, ar.ELEMENTI[k])
     pr.disegni.append((S, "cerchio", [R(*cc)], raggio * 100 + 100))
 
     # ---- il tumulo con l'ingresso della cripta, contro il muro di nord-est
@@ -139,12 +149,10 @@ def rovine(pr, rng):
         m.scatola("Pietra", list(fronte + la * s * 110 + [0, 0, 120]), list(av * 45), list(la * 30), [0, 0, 160])
     m.scatola("Pietra", list(fronte + [0, 0, 300]), list(av * 55), list(la * 150), [0, 0, 30])        # architrave
     m.scatola("Pietra", list(fronte - av * 25 + [0, 0, 110]), list(av * 12), list(la * 80), [0, 0, 120])  # la lastra
-    for j in range(4):
-        _runa(rune, fronte + av * 56 + [0, 0, 300] + la * (-90 + j * 60), la, np.array([0, 0, 1.0]), 14.0, 20 + j)
-    for j in range(6):
-        r_ = j // 2
-        c_ = j % 2
-        _runa(rune, fronte - av * 12.5 + [0, 0, 60 + r_ * 55] + la * (-28 + c_ * 56), la, np.array([0, 0, 1.0]), 15.0, 30 + j)
+    # Ur sull'architrave, da sola (la runa del custode); sulla lastra le tre parole che fermano
+    _incidi(rune, fronte + av * 56 + [0, 0, 300], av, np.array([0, 0, 1.0]), 19.0, "Ur")
+    for j, parola in enumerate(PAROLE_LASTRA):
+        _incidi(rune, fronte - av * 12.5 + [0, 0, 170 - j * 55], av, np.array([0, 0, 1.0]), 11.0, parola)
     # tre gradini davanti
     for k in range(3):
         m.scatola("Pietra", list(fronte + av * (80 + k * 45) + [0, 0, -10 - k * 10]), list(av * 22), list(la * (110 - k * 5)), [0, 0, 18])
@@ -167,6 +175,7 @@ def rovine(pr, rng):
     pr.aggiungi(S, "Iscrizione del cerchio", "iscrizione", X, Y, t.quota(X, Y), -90.0,
                 titolo="Le rune del cerchio",
                 avvisi=["Sulla pietra piatta, intorno alla stella, corrono segni che nessuno sa più leggere del tutto.",
+                        "rune: Aeth Nir Dorn Sil Lume",
                         "Qualcuno, tanto tempo fa, ha inciso sotto le rune la parte che si capiva:",
                         "\"Qui stava l'Orso, il più grande dei Vecchi Dei, custode dei boschi e dei cicli.\"",
                         "\"Davanti agli eserciti del Senza Nome tenne la valle per sette giorni e sette notti,\"",
@@ -179,6 +188,10 @@ def rovine(pr, rng):
     pr.aggiungi(S, "Iscrizione della lastra", "iscrizione", X, Y, t.quota(X, Y), math.degrees(g),
                 titolo="La lastra della cripta",
                 avvisi=["Una lastra di pietra chiude la scala che scende sotto le rovine. Non c'è maniglia, né serratura.",
+                        "Sull'architrave, un segno solo:",
+                        "rune: Ur",
+                        "Sulla lastra, tre righe di due segni. Il secondo è sempre lo stesso: i vecchi lo chiamano Tor, la parola del muro.",
+                        "rune: Lume-Tor Dorn-Tor Sil-Tor",
                         "Le rune incise sulla lastra e sull'architrave si accendono di notte, a tempo con un battito lento: due colpi e una pausa.",
                         "Spingere non serve. Qualunque cosa ci sia sotto, per ora resta chiusa."])
     # una zona senza erba vera intorno al cerchio e davanti al tumulo (il resto delle rovine resta nel bosco)
@@ -204,6 +217,13 @@ def _runa(m, centro, lato, su, misura, seme):
         A = c + lato * a[0] * misura + su * a[1] * misura
         B = c + lato * b[0] * misura + su * b[1] * misura
         _tratto(m, A, B, normale, 2.2)
+
+
+def _incidi(m, centro, normale, su, misura, parola, verticale=False, largo=None):
+    """Incide una parola di rune vere (alfabeto_rune.py) su una faccia di pietra, nel materiale Runa."""
+    n = np.asarray(normale, np.float64)
+    spessore = largo if largo is not None else max(1.6, misura * 0.2)
+    ar.incidi(lambda a, b: _tratto(m, a, b, n, spessore), centro, n, su, misura, parola, verticale)
 
 
 def _linea_runa(m, a, b, largo):

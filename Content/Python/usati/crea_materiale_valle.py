@@ -66,6 +66,12 @@ def importa(file, colore=True, normale=False, maschera=False):
         tex.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_SIMPLE_AVERAGE)
         tex.set_editor_property("address_x", unreal.TextureAddress.TA_CLAMP)
         tex.set_editor_property("address_y", unreal.TextureAddress.TA_CLAMP)
+        # (07/11 sera) sempre tutta in memoria: l'erba vera si calcola dal materiale, e se in quel momento la maschera
+        # non è ancora arrivata a piena risoluzione l'erba torna dove non deve (successo in piazza dopo un "rifai solo")
+        try:
+            tex.set_editor_property("never_stream", True)
+        except Exception:  # noqa: BLE001
+            pass
     else:
         tex.set_editor_property("srgb", colore)
     tex.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_WORLD)

@@ -289,6 +289,8 @@ private:
 	void TastoMappa();
 	/** (07/11) Client: la modalità foto (tasto P; ValdorsoModoFoto.h). */
 	void TastoFoto();
+	/** (07/11) R: il quaderno delle rune (l'alfabeto e le parole delle Cronache), nella bacheca. */
+	void TastoQuaderno();
 	void ChiudiMappa();
 	TSharedPtr<SValdorsoMappa> SchermataMappa;
 	TSharedPtr<SValdorsoBacheca> SchermataBacheca;

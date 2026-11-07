@@ -19,6 +19,7 @@
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoInterazione.h"
 #include "SValdorsoBacheca.h"
+#include "ValdorsoRune.h"
 #include "SValdorsoMappa.h"
 #include "ValdorsoModoFoto.h"
 #include "ValdorsoTemaUI.h"
@@ -138,6 +139,7 @@ void AValdorsoPlayerController::SetupInputComponent()
 		InputComponent->BindKey(EKeys::Gamepad_Special_Left, IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
 		// (07/11) la modalità foto (dentro la foto i tasti li prende lo schermo della foto: P o Esc per uscire)
 		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AValdorsoPlayerController::TastoFoto);
+		InputComponent->BindKey(EKeys::R, IE_Pressed, this, &AValdorsoPlayerController::TastoQuaderno);
 	}
 
 	// only add IMCs for local player controllers
@@ -508,6 +510,22 @@ void AValdorsoPlayerController::TastoFoto()
 	{
 		ValdorsoFoto::Apri(this);
 	}
+}
+
+void AValdorsoPlayerController::TastoQuaderno()
+{
+	if (!GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
+		|| SchermataCodici.IsValid() || SchermataMappa.IsValid() || SchermataImpostazioni.IsValid() || ValdorsoFoto::Aperta(this))
+	{
+		return;
+	}
+	if (SchermataBacheca.IsValid())
+	{
+		return;  // una bacheca (o il quaderno) è già aperta: si chiude con Esc, E o R dal suo tasto Chiudi
+	}
+	// Tutto qui sul PC: il quaderno è uguale per tutti (per ora: più avanti le rune che il colono conosce)
+	ClientMostraBacheca_Implementation(NSLOCTEXT("ValdorsoQuaderno", "Titolo", "Il quaderno delle rune").ToString(),
+		ValdorsoRune::RigheQuaderno());
 }
 
 void AValdorsoPlayerController::TastoMappa()

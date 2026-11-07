@@ -137,7 +137,8 @@ void AValdorsoRuneNotte::Tick(float DeltaSeconds)
 	Notte = FMath::FInterpTo(Notte, Voluta, DeltaSeconds, 1.f);
 	const float B = ValdorsoRune::Battito(static_cast<float>(Adesso));
 	const float Valore = ValdorsoRune::Luce(Notte, B);
-	const float ValoreSempre = ValdorsoRune::Luce(1.f, B);
+	// (07/11 sera) le rune che battono sempre stanno al buio della grotta: a piena luce coprivano i segni (Fra), un terzo basta
+	const float ValoreSempre = ValdorsoRune::Luce(0.35f, B);
 	for (const FMaterialeRuna& M : Materiali)
 	{
 		if (UMaterialInstanceDynamic* Dinamico = M.Materiale.Get())
@@ -149,7 +150,7 @@ void AValdorsoRuneNotte::Tick(float DeltaSeconds)
 	{
 		if (ULightComponent* Lampada = L.Luce.Get())
 		{
-			Lampada->SetIntensity(L.Intensita * (L.bSempre ? 1.f : Notte) * (0.45f + 0.55f * B));
+			Lampada->SetIntensity(L.Intensita * (L.bSempre ? 0.6f : Notte) * (0.45f + 0.55f * B));
 		}
 	}
 }

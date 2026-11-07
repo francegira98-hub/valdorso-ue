@@ -21,6 +21,7 @@ import math
 
 import numpy as np
 
+import alfabeto_rune as ar
 import villaggio_rovine as rv
 from villaggio_mesh import Mesh, normalizza
 
@@ -382,26 +383,28 @@ def grotta(pr, rng):
         a1, a2 = 2 * math.pi * k / giro, 2 * math.pi * (k + 1) / giro
         _tratto(rune, "Runa", c0 + la * math.cos(a1) * 92 + np.array([0, 0, math.sin(a1) * 92]),
                 c0 + la * math.cos(a2) * 92 + np.array([0, 0, math.sin(a2) * 92]), av, 3.0)
-    for k, segno in enumerate(("fiamma", "onda", "monte", "piuma", "sole")):
+    # (07/11 sera) i cinque posti portano le rune vere degli elementi (alfabeto_rune.py): Aeth la fiamma, Nir l'onda,
+    # Dorn il monte, Sil la piuma (il vento), Lume il sole; Ur sull'architrave; nelle colonne ai lati gli elementi a
+    # sinistra e i verbi a destra, come un abbecedario inciso per chi viene dopo
+    su_ = np.array([0, 0, 1.0])
+    for k, segno in enumerate(ar.ELEMENTI):
         a = math.pi / 2 + 2 * math.pi * k / 5
         p = c0 + la * math.cos(a) * 92 + np.array([0, 0, math.sin(a) * 92])
         for q in range(10):          # il posto: un anellino
             b1, b2 = 2 * math.pi * q / 10, 2 * math.pi * (q + 1) / 10
             _tratto(rune, "Runa", p + la * math.cos(b1) * 19 + np.array([0, 0, math.sin(b1) * 19]),
                     p + la * math.cos(b2) * 19 + np.array([0, 0, math.sin(b2) * 19]), av, 2.2)
-        for (x1, y1), (x2, y2) in _segno(segno):
-            _tratto(rune, "Runa", p + la * x1 * 11 + np.array([0, 0, y1 * 11]), p + la * x2 * 11 + np.array([0, 0, y2 * 11]),
-                    av, 1.8)
+        ar.incidi(lambda a, b: _tratto(rune, "Runa", a, b, av, 1.8), p, av, su_, 11.0, segno)
     for (x1, y1), (x2, y2) in _segno("mano"):
         _tratto(rune, "Runa", c0 + la * x1 * 30 + np.array([0, 0, y1 * 30]), c0 + la * x2 * 30 + np.array([0, 0, y2 * 30]), av, 2.6)
     ur = fondo + av * 50.6 + np.array([0, 0, 495.0])
-    for (x1, y1), (x2, y2) in _segno("ur"):
-        _tratto(rune, "Runa", ur + la * x1 * 24 + np.array([0, 0, y1 * 24]), ur + la * x2 * 24 + np.array([0, 0, y2 * 24]), av, 4.0)
-    for lato in (-1, 1):
-        for k in range(5):
-            centro = fondo + av * 45.6 + la * lato * 175.0 + np.array([0, 0, 70.0 + k * 75.0])
-            # _runa disegna sulla faccia con normale = lato x su: con -la la faccia guarda 'av'
-            rv._runa(rune, centro, -la, np.array([0, 0, 1.0]), 16.0, 80 + k + (10 if lato > 0 else 0))
+    ar.incidi(lambda a, b: _tratto(rune, "Runa", a, b, av, 4.0), ur, av, su_, 24.0, "Ur")
+    destra = np.cross(av, su_)          # la destra di chi guarda la porta (vedi ar.incidi)
+    for lato, colonna in ((-1, ar.ELEMENTI), (1, ar.VERBI)):
+        for k, nome in enumerate(colonna):
+            # dall'alto in basso: la prima runa della colonna sta in cima
+            centro = fondo + av * 45.6 + destra * lato * 175.0 + np.array([0, 0, 370.0 - k * 75.0])
+            ar.incidi(lambda a, b: _tratto(rune, "Runa", a, b, av, 2.2), centro, av, su_, 15.0, nome)
     # ---- il muschio che fa luce (chiazze sulle pareti della grotta naturale) e le sue luci
     muschio = Mesh("SM_Grotta_Muschio")
     luci_muschio = []
@@ -447,8 +450,12 @@ def grotta(pr, rng):
                 titolo="La porta in fondo alla grotta",
                 avvisi=["Una porta di pietra, liscia, senza maniglia e senza serratura. Non ha mai avuto una chiave.",
                         "Nel mezzo è inciso un cerchio con cinque posti: una fiamma, un'onda, un monte, una piuma, un sole.",
+                        "rune: Aeth Nir Dorn Sil Lume",
                         "Al centro del cerchio, una mano aperta.",
                         "Sull'architrave c'è un segno solo, inciso più a fondo di tutti gli altri.",
+                        "rune: Ur",
+                        "Sugli stipiti, due colonne: a sinistra gli stessi cinque segni del cerchio, a destra cinque segni che sembrano gesti.",
+                        "rune: Var Ka Ren Vel Tor",
                         "Le rune battono piano, giorno e notte: due colpi e una pausa. Come un cuore.",
                         "Al villaggio la chiamano \"la porta che nessuno ha mai aperto\". Spingere non serve."])
     # massi di Poly Haven ai piedi della rupe e davanti alla bocca

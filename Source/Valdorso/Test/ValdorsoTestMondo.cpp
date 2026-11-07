@@ -18,10 +18,94 @@
 #include "ValdorsoStatoMondo.h"
 #include "ValdorsoTerritorio.h"
 #include "ValdorsoModoFoto.h"
+#include "ValdorsoRune.h"
 
 namespace ValdorsoTestMondo
 {
 	constexpr EAutomationTestFlags Bandiere = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
+}
+
+// (07/11) La lingua delle rune: ogni runa ha la sua forma, le parole si leggono e si scrivono, gli incantesimi delle
+// Cronache sono validi e hanno il loro nome, le combinazioni sbagliate no.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestLinguaRune, "Valdorso.Mondo.LinguaRune", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestLinguaRune::RunTest(const FString& Parameters)
+{
+	int32 Elementi = 0;
+	int32 Verbi = 0;
+	for (int32 i = 0; i < static_cast<int32>(EValdorsoRuna::Num); ++i)
+	{
+		const EValdorsoRuna Runa = static_cast<EValdorsoRuna>(i);
+		const FString Nome = ValdorsoRune::Nome(Runa);
+		EValdorsoRuna Riletta;
+		TestTrue(FString::Printf(TEXT("%s si rilegge"), *Nome), ValdorsoRune::DaNome(Nome.ToLower(), Riletta) && Riletta == Runa);
+		TestFalse(FString::Printf(TEXT("%s ha un significato"), *Nome), ValdorsoRune::Significato(Runa).IsEmpty());
+		const TArray<TArray<FVector2D>>& Linee = ValdorsoRune::Linee(Runa);
+		TestTrue(FString::Printf(TEXT("%s ha una forma"), *Nome), Linee.Num() > 0);
+		for (const TArray<FVector2D>& Linea : Linee)
+		{
+			TestTrue(FString::Printf(TEXT("%s: ogni linea ha almeno due punti"), *Nome), Linea.Num() >= 2);
+			for (const FVector2D& P : Linea)
+			{
+				TestTrue(FString::Printf(TEXT("%s: dentro il suo quadrato"), *Nome), FMath::Abs(P.X) <= 1.05 && FMath::Abs(P.Y) <= 1.05);
+			}
+		}
+		Elementi += ValdorsoRune::Elemento(Runa) ? 1 : 0;
+		Verbi += ValdorsoRune::Verbo(Runa) ? 1 : 0;
+	}
+	TestEqual(TEXT("cinque elementi"), Elementi, 5);
+	TestEqual(TEXT("cinque verbi"), Verbi, 5);
+	TestFalse(TEXT("Ur non è un elemento"), ValdorsoRune::Elemento(EValdorsoRuna::Ur));
+	TestFalse(TEXT("Ur non è un verbo"), ValdorsoRune::Verbo(EValdorsoRuna::Ur));
+
+	TArray<EValdorsoRuna> Parola;
+	TestTrue(TEXT("aeth-VAR-tor si legge"), ValdorsoRune::LeggiParola(TEXT("aeth-VAR-tor"), Parola));
+	TestEqual(TEXT("e si riscrive"), ValdorsoRune::ScriviParola(Parola), FString(TEXT("Aeth-Var-Tor")));
+	TestEqual(TEXT("Fiamma che inchioda"), ValdorsoRune::NomeIncantesimo(Parola).ToString(), FString(TEXT("Fiamma che inchioda")));
+	TestEqual(TEXT("tre rune: grado III"), ValdorsoRune::Grado(Parola), 3);
+	TestFalse(TEXT("una parola inventata non si legge"), ValdorsoRune::LeggiParola(TEXT("Aeth-Pippo"), Parola));
+
+	auto Valida = [](const TCHAR* Testo)
+	{
+		TArray<EValdorsoRuna> P;
+		return ValdorsoRune::LeggiParola(Testo, P) && ValdorsoRune::IncantesimoValido(P);
+	};
+	// le diciotto parole con un nome nelle Cronache
+	for (const TCHAR* Testo : { TEXT("Aeth-Var"), TEXT("Nir-Ren"), TEXT("Lume-Tor"),
+		TEXT("Aeth-Var-Tor"), TEXT("Aeth-Var-Ren"), TEXT("Aeth-Ka-Vel"), TEXT("Nir-Var-Tor"), TEXT("Nir-Ren-Ka"),
+		TEXT("Nir-Var-Vel"), TEXT("Dorn-Var-Tor"), TEXT("Dorn-Ka-Ren"), TEXT("Dorn-Var-Vel"), TEXT("Sil-Var-Tor"),
+		TEXT("Sil-Ka-Ren"), TEXT("Sil-Var-Vel"), TEXT("Lume-Vel-Tor"), TEXT("Lume-Ren-Ka"), TEXT("Lume-Vel-Ren") })
+	{
+		TArray<EValdorsoRuna> P;
+		ValdorsoRune::LeggiParola(Testo, P);
+		TestTrue(FString::Printf(TEXT("%s è un incantesimo"), Testo), ValdorsoRune::IncantesimoValido(P));
+		TestFalse(FString::Printf(TEXT("%s ha un nome"), Testo), ValdorsoRune::NomeIncantesimo(P).IsEmpty());
+	}
+	TestTrue(TEXT("Dorn-Tor vale anche senza nome"), Valida(TEXT("Dorn-Tor")));
+	TestFalse(TEXT("un elemento solo non basta"), Valida(TEXT("Aeth")));
+	TestFalse(TEXT("prima l'elemento"), Valida(TEXT("Var-Aeth")));
+	TestFalse(TEXT("due elementi no"), Valida(TEXT("Aeth-Nir")));
+	TestFalse(TEXT("lo stesso verbo due volte no"), Valida(TEXT("Aeth-Var-Var")));
+	TestFalse(TEXT("quattro rune no"), Valida(TEXT("Aeth-Var-Tor-Ka")));
+	TestFalse(TEXT("Ur non entra negli incantesimi"), Valida(TEXT("Aeth-Ur")));
+
+	TArray<TArray<EValdorsoRuna>> Parole;
+	TestTrue(TEXT("riga di rune"), ValdorsoRune::LeggiRiga(TEXT("rune: Aeth Nir-Ren-Ka"), Parole));
+	TestEqual(TEXT("due parole"), Parole.Num(), 2);
+	TestFalse(TEXT("una riga normale non è di rune"), ValdorsoRune::LeggiRiga(TEXT("Le rune battono piano."), Parole));
+	TestTrue(TEXT("la didascalia dopo | non conta"), ValdorsoRune::LeggiRiga(TEXT("rune: Aeth-Var | Dardo infuocato"), Parole) && Parole.Num() == 1);
+	// il quaderno: tutte le rune e tutte le parole con un nome, ogni riga di rune si legge
+	int32 RigheDiRune = 0;
+	for (const FString& Riga : ValdorsoRune::RigheQuaderno())
+	{
+		if (Riga.StartsWith(ValdorsoRune::PrefissoRiga))
+		{
+			TestTrue(FString::Printf(TEXT("quaderno: %s si legge"), *Riga), ValdorsoRune::LeggiRiga(Riga, Parole));
+			++RigheDiRune;
+		}
+	}
+	TestEqual(TEXT("quaderno: 5 righe dell'alfabeto e 18 parole"), RigheDiRune, 5 + ValdorsoRune::ParoleConNome().Num());
+	TestEqual(TEXT("18 parole con un nome"), ValdorsoRune::ParoleConNome().Num(), 18);
+	return true;
 }
 
 // Le etichette scritte da crea_villaggio.py ("ValdorsoFase da-fino") e quando una cosa c'è.

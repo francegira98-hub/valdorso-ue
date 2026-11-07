@@ -436,9 +436,20 @@ def tende_mercato():
     scrivi("6. tende del mercato: %d trovate" % trovate)
 
 
+# ---------------------------------------------------------------------------------------------- 7. l'erba vera
+def erba_da_rifare():
+    """(07/11 sera) Dopo che il materiale della valle si è rifatto (crea_villaggio lo rifà ogni volta), l'erba vera va
+    ricalcolata con la maschera T_SenzaErba già caricata: se no ricresce in piazza e sulle strade."""
+    try:
+        unreal.SystemLibrary.execute_console_command(mondo_editor(), "grass.FlushCache")
+        scrivi("7. erba vera ricalcolata (grass.FlushCache)")
+    except Exception as e:  # noqa: BLE001
+        avviso("7. erba non ricalcolata (%s): scrivere grass.FlushCache nella console" % e)
+
+
 def esegui():
     for passo in (suolo_calpestabile, prova_piazza, rocce_materiale, nanite_trasparenti, nanite_villaggio, luce_altare,
-                  tende_mercato):
+                  tende_mercato, erba_da_rifare):
         try:
             passo()
         except Exception as e:  # noqa: BLE001
