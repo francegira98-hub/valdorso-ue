@@ -1,0 +1,50 @@
+{
+ "gioco": "Valdorso",
+ "aggiornato": "2026-11-08",
+ "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
+ "notizie": [
+  {
+   "data": "2026-11-08",
+   "etichetta": "Patch",
+   "titolo": "La valle si apre: v0.1.3",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Tre chilometri per tre di valle vera: il fiume, il lago, la cascata, il bosco e i monti. Il villaggio con la piazza, il Tempio del Cuore e la locanda di Bruno; la palude di Nonna Edda, le Rovine degli Antichi, le grotte e il belvedere. Il giorno dura due ore, piove e sale la nebbia. E da oggi la valle ha anche il suo launcher."
+  },
+  {
+   "data": "2026-11-07",
+   "etichetta": "Cronache",
+   "titolo": "La lingua delle rune",
+   "immagine": "rune.jpg",
+   "link": "#cronache",
+   "testo": "Undici rune incise nella pietra: cinque elementi, cinque verbi e Ur, la runa del custode. Si leggono sulle pietre delle rovine e si ricopiano nel quaderno delle rune. Nelle Cronache trovi tutto l'alfabeto."
+  },
+  {
+   "data": "2026-11-07",
+   "titolo": "La pietra di Val d'Orso",
+   "link": "",
+   "testo": "Sull'altare del Tempio del Cuore c'è la pietra che segna il territorio della valle. Padre Anselmo la custodisce: chi entra nel tempio può guardarla da vicino."
+  },
+  {
+   "data": "2026-11-06",
+   "titolo": "Le grotte e il belvedere",
+   "link": "",
+   "testo": "La grotta est con la porta degli Antichi, la grotta nord con la frana e il belvedere sopra la cascata: la valle comincia a mostrare i suoi segreti."
+  },
+  {
+   "data": "2026-11-03",
+   "etichetta": "Patch",
+   "titolo": "Chi sei: v0.1.2",
+   "link": "#patch",
+   "testo": "Gli account su invito, tre personaggi per giocatore e il Registro di Val d'Orso: il volto, il corpo, la fede, l'età e le domande del sacerdote, fino alla firma."
+  }
+ ],
+ "voci": [
+  "Dicono che di notte le rune delle rovine si accendano da sole.",
+  "Un pastore giura di aver visto un'ombra enorme passare davanti alla luna.",
+  "Al posto di guardia del passo non lasciano uscire nessuno. Nemmeno le lettere.",
+  "Bruno, alla locanda, dice che il frammento del tempio ha saltato un battito.",
+  "Gaspare il cacciatore parla di un'ombra d'orso tra gli alberi, nelle notti di nebbia.",
+  "Qualcuno ha sentito la campana del tempio suonare da sola, dopo mezzanotte."
+ ]
+}

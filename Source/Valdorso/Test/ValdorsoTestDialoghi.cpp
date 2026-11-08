@@ -1,4 +1,5 @@
-// Valdorso - Test automatici dei dialoghi con i PNG (07/11): Gaspare e le guardie del passo.
+// Valdorso - Test automatici dei dialoghi con i PNG (07/11): Gaspare e le guardie del passo; (08/11) Nonna Edda, Bruno e
+// Padre Anselmo, e la memoria dei dialoghi nel file del personaggio.
 // Scritto da Claude il 07/11/2026. Si avviano come gli altri (Tools\Test Valdorso.cmd), sotto "Valdorso.Dialoghi".
 
 #include "Misc/AutomationTest.h"
@@ -6,10 +7,68 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "ValdorsoDialoghi.h"
+#include "ValdorsoTaccuinoDati.h"
+#include "ValdorsoArchivista.h"
+#include "JsonObjectConverter.h"
 
 namespace ValdorsoTestDialoghi
 {
 	constexpr EAutomationTestFlags Bandiere = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
+
+	/** (08/11) Tutte le battute di un dialogo in una riga sola, in minuscolo (per cercarci le parole). */
+	FString TuttoIlTesto(const FValdorsoDialogo& Dialogo)
+	{
+		FString Fuori;
+		for (const FValdorsoNodoDialogo& Nodo : Dialogo.Nodi)
+		{
+			Fuori += FString::Join(Nodo.Righe, TEXT(" ")) + TEXT(" ");
+		}
+		return Fuori.ToLower();
+	}
+
+	/** (08/11) Il numero (tra le visibili) della prima risposta che contiene quel testo; INDEX_NONE se non c'è. */
+	int32 RispostaCon(const FValdorsoBattuta& Battuta, const FString& Pezzo)
+	{
+		return Battuta.Scelte.IndexOfByPredicate([&Pezzo](const FString& Testo) { return Testo.Contains(Pezzo); });
+	}
+
+	/**
+	 * (08/11) Una memoria dei dialoghi come quella dei personaggi veri: dentro un taccuino, cioè nel file del
+	 * personaggio (il componente del PlayerController fa lo stesso, e in più salva).
+	 */
+	class FMemoriaNelTaccuino final : public FValdorsoMemoriaDialoghi
+	{
+	public:
+		FValdorsoTaccuino Dati;
+
+		virtual bool GiaParlato(FName IdDialogo) const override { return ValdorsoTaccuino::HaParlato(Dati, IdDialogo); }
+		virtual void SegnaParlato(FName IdDialogo) override { ValdorsoTaccuino::SegnaParlato(Dati, IdDialogo); }
+		virtual bool HaSegno(FName IdDialogo, FName Segno) const override { return ValdorsoTaccuino::HaSegno(Dati, IdDialogo, Segno); }
+		virtual void MettiSegno(FName IdDialogo, FName Segno) override { ValdorsoTaccuino::MettiSegno(Dati, IdDialogo, Segno); }
+	};
+
+	/**
+	 * (08/11) Sceglie (come il server) la risposta visibile che contiene Pezzo nel nodo Nodo, con la memoria: dà i segni
+	 * della risposta e del nodo dopo. Vero se c'era; OutProssimo è il nodo dopo.
+	 */
+	bool Scegli(const FValdorsoDialogo& Dialogo, FName Nodo, const FString& Pezzo, FValdorsoMemoriaDialoghi& Memoria, FName& OutProssimo)
+	{
+		OutProssimo = NAME_None;
+		const FValdorsoNodoDialogo* Attuale = Dialogo.Trova(Nodo);
+		const int32 Visibile = RispostaCon(ValdorsoDialoghi::Battuta(Dialogo, Nodo, 1, Memoria), Pezzo);
+		const TArray<int32> Visibili = ValdorsoDialoghi::ScelteVisibili(Dialogo, Nodo, Memoria);
+		FName Evento;
+		if (!Attuale || !Visibili.IsValidIndex(Visibile) || !ValdorsoDialoghi::Avanza(Dialogo, Nodo, Visibili[Visibile], OutProssimo, Evento))
+		{
+			return false;
+		}
+		Memoria.MettiSegno(Dialogo.Id, Attuale->Scelte[Visibili[Visibile]].Segna);
+		if (const FValdorsoNodoDialogo* Dopo = Dialogo.Trova(OutProssimo))
+		{
+			Memoria.MettiSegno(Dialogo.Id, Dopo->Segna);
+		}
+		return true;
+	}
 }
 
 // Ogni dialogo scritto è sano: i nodi d'inizio e del ritorno ci sono, ogni risposta porta a un nodo che esiste, ci si
@@ -19,7 +78,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestDialoghiSani, "Valdorso.Dialoghi.S
 bool FValdorsoTestDialoghiSani::RunTest(const FString& Parameters)
 {
 	const TArray<FValdorsoDialogo>& Tutti = ValdorsoDialoghi::Tutti();
-	TestTrue(TEXT("ci sono dei dialoghi"), Tutti.Num() >= 3);
+	TestTrue(TEXT("ci sono dei dialoghi"), Tutti.Num() >= 6);
 	TSet<FName> Id;
 	for (const FValdorsoDialogo& Dialogo : Tutti)
 	{
@@ -38,7 +97,8 @@ bool FValdorsoTestDialoghiSani::RunTest(const FString& Parameters)
 		}
 		TestNotNull(FString::Printf(TEXT("%s si trova per nome"), *Dialogo.Id.ToString()), ValdorsoDialoghi::Trova(Dialogo.Id));
 	}
-	for (const TCHAR* Atteso : { TEXT("Gaspare"), TEXT("GuardiaCorrado"), TEXT("GuardiaOttone") })
+	for (const TCHAR* Atteso : { TEXT("Gaspare"), TEXT("GuardiaCorrado"), TEXT("GuardiaOttone"), TEXT("NonnaEdda"), TEXT("Bruno"),
+		TEXT("PadreAnselmo") })
 	{
 		TestNotNull(FString::Printf(TEXT("c'è il dialogo %s"), Atteso), ValdorsoDialoghi::Trova(FName(Atteso)));
 	}
@@ -389,6 +449,210 @@ bool FValdorsoTestDialoghiMoneta::RunTest(const FString& Parameters)
 	}
 	ValdorsoDialoghi::Dimentica();
 	TestFalse(TEXT("Dimentica pulisce anche i segni"), ValdorsoDialoghi::HaSegno(TEXT("GuardiaCorrado"), Colono, TEXT("MonetaOfferta")));
+	return true;
+}
+
+// (08/11) I tre PNG nuovi: ognuno ha un primo saluto e un ritorno diversi (come tutti i dialoghi), e dice le cose che
+// deve dire. Nonna Edda: le rune Nir-Ren e Nir-Ren-Ka, il dovuto (Niente / Solo rispetto), il nome della ragazza mai
+// detto, la domanda sul fondo del lago una volta sola. Bruno: la prima scodella la offre la casa (una volta), le quattro
+// voci girano, Livia e il Balivo. Padre Anselmo: il battito, il territorio, tutte le fedi, l'anno e un giorno.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestDialoghiNuoviPng, "Valdorso.Dialoghi.NuoviPNG", ValdorsoTestDialoghi::Bandiere)
+bool FValdorsoTestDialoghiNuoviPng::RunTest(const FString& Parameters)
+{
+	using namespace ValdorsoTestDialoghi;
+
+	for (const FValdorsoDialogo& Dialogo : ValdorsoDialoghi::Tutti())
+	{
+		const FValdorsoNodoDialogo* Primo = Dialogo.Trova(Dialogo.Inizio);
+		const FValdorsoNodoDialogo* Ritorno = Dialogo.Trova(Dialogo.Ritorno);
+		if (TestNotNull(FString::Printf(TEXT("%s: il primo saluto"), *Dialogo.Id.ToString()), Primo)
+			&& TestNotNull(FString::Printf(TEXT("%s: il ritorno"), *Dialogo.Id.ToString()), Ritorno))
+		{
+			TestTrue(FString::Printf(TEXT("%s: il ritorno saluta in un altro modo"), *Dialogo.Id.ToString()),
+				FString::Join(Primo->Righe, TEXT(" ")) != FString::Join(Ritorno->Righe, TEXT(" ")));
+		}
+	}
+
+	const FValdorsoDialogo* Edda = ValdorsoDialoghi::Trova(TEXT("NonnaEdda"));
+	const FValdorsoDialogo* Bruno = ValdorsoDialoghi::Trova(TEXT("Bruno"));
+	const FValdorsoDialogo* Anselmo = ValdorsoDialoghi::Trova(TEXT("PadreAnselmo"));
+	if (!TestNotNull(TEXT("c'è Nonna Edda"), Edda) || !TestNotNull(TEXT("c'è Bruno"), Bruno) || !TestNotNull(TEXT("c'è Padre Anselmo"), Anselmo))
+	{
+		return false;
+	}
+
+	// --- Nonna Edda
+	const FString TestoEdda = TuttoIlTesto(*Edda);
+	TestTrue(TEXT("Edda canta Nir-Ren-Ka, Acqua che veglia"), TestoEdda.Contains(TEXT("rune: nir-ren-ka")) && TestoEdda.Contains(TEXT("acqua che veglia")));
+	TestTrue(TEXT("Edda sa la Guarigione lieve"), TestoEdda.Contains(TEXT("rune: nir-ren |")) && TestoEdda.Contains(TEXT("guarigione lieve")));
+	TestTrue(TEXT("Edda chiede il dovuto"), TestoEdda.Contains(TEXT("porta il dovuto")));
+	TestFalse(TEXT("Edda non dice il nome della ragazza"), TestoEdda.Contains(TEXT("iole")));
+	const FValdorsoBattuta PrimaEdda = ValdorsoDialoghi::Battuta(*Edda, Edda->Inizio, 1);
+	TestTrue(TEXT("Edda: si può non portare niente"), RispostaCon(PrimaEdda, TEXT("Niente")) != INDEX_NONE);
+	TestTrue(TEXT("Edda: o solo rispetto"), RispostaCon(PrimaEdda, TEXT("Solo rispetto")) != INDEX_NONE);
+	{
+		FMemoriaNelTaccuino Memoria;
+		const FString Fondo = TEXT("fondo del lago");
+		TestTrue(TEXT("Edda: prima si può chiedere del lago"), RispostaCon(ValdorsoDialoghi::Battuta(*Edda, TEXT("altro"), 1, Memoria), Fondo) != INDEX_NONE);
+		FName Dopo;
+		TestTrue(TEXT("Edda: la domanda sul lago vale"), Scegli(*Edda, TEXT("altro"), Fondo, Memoria, Dopo));
+		const FValdorsoNodoDialogo* Risposta = Edda->Trova(Dopo);
+		TestTrue(TEXT("Edda: sul lago congeda"), Risposta && Risposta->bFine);
+		TestFalse(TEXT("Edda: poi non si chiede più"), RispostaCon(ValdorsoDialoghi::Battuta(*Edda, TEXT("altro"), 2, Memoria), Fondo) != INDEX_NONE);
+	}
+
+	// --- Bruno
+	const FString TestoBruno = TuttoIlTesto(*Bruno);
+	TestTrue(TEXT("Bruno: la prima la offre la casa"), TestoBruno.Contains(TEXT("la prima la offre la casa")));
+	TestTrue(TEXT("Bruno: il frammento ha saltato un battito"), TestoBruno.Contains(TEXT("saltato un battito")));
+	TestTrue(TEXT("Bruno: Livia Serra"), TestoBruno.Contains(TEXT("livia serra")));
+	TestTrue(TEXT("Bruno: il Balivo Corrado Valli"), TestoBruno.Contains(TEXT("corrado valli")));
+	{
+		FMemoriaNelTaccuino Memoria;
+		const FString Zuppa = TEXT("scodella");
+		TestTrue(TEXT("Bruno: la prima volta c'è la scodella"), RispostaCon(ValdorsoDialoghi::Battuta(*Bruno, Bruno->Inizio, 1, Memoria), Zuppa) != INDEX_NONE);
+		FName Dopo;
+		TestTrue(TEXT("Bruno: la scodella si chiede"), Scegli(*Bruno, Bruno->Inizio, Zuppa, Memoria, Dopo));
+		TestTrue(TEXT("Bruno: e arriva"), Dopo == FName(TEXT("scodella")));
+		for (const TCHAR* Dove : { TEXT("primo"), TEXT("altro") })
+		{
+			TestFalse(FString::Printf(TEXT("Bruno/%s: la seconda scodella non è gratis"), Dove),
+				RispostaCon(ValdorsoDialoghi::Battuta(*Bruno, FName(Dove), 2, Memoria), Zuppa) != INDEX_NONE);
+		}
+	}
+	// Le voci girano: dalla prima, "Un'altra voce?" (la prima risposta) porta a quattro voci diverse e poi di nuovo alla prima.
+	{
+		TArray<FName> Voci;
+		FName Voce = TEXT("voci");
+		for (int32 i = 0; i < 4; ++i)
+		{
+			const FValdorsoNodoDialogo* Nodo = Bruno->Trova(Voce);
+			if (!TestNotNull(FString::Printf(TEXT("Bruno: la voce %d"), i + 1), Nodo) || Nodo->Scelte.Num() == 0)
+			{
+				break;
+			}
+			TestFalse(FString::Printf(TEXT("Bruno: la voce %d è nuova"), i + 1), Voci.Contains(Voce));
+			Voci.Add(Voce);
+			Voce = Nodo->Scelte[0].Verso;
+		}
+		TestEqual(TEXT("Bruno: quattro voci"), Voci.Num(), 4);
+		TestTrue(TEXT("Bruno: dopo l'ultima si ricomincia"), Voce == FName(TEXT("voci")));
+	}
+
+	// --- Padre Anselmo
+	const FString TestoAnselmo = TuttoIlTesto(*Anselmo);
+	for (const TCHAR* Fede : { TEXT("solara"), TEXT("ignar"), TEXT("nereia"), TEXT("torvald"), TEXT("zefira"), TEXT("vecchi dei") })
+	{
+		TestTrue(FString::Printf(TEXT("Anselmo parla di %s"), Fede), TestoAnselmo.Contains(Fede));
+	}
+	TestTrue(TEXT("Anselmo: due colpi e una pausa"), TestoAnselmo.Contains(TEXT("due colpi e una pausa")));
+	TestTrue(TEXT("Anselmo: Val d'Orso, il primo territorio"), TestoAnselmo.Contains(TEXT("primo territorio")));
+	TestTrue(TEXT("Anselmo: l'anno e un giorno"), TestoAnselmo.Contains(TEXT("anno e un giorno")));
+	TestTrue(TEXT("Anselmo: Tobia e Nico"), TestoAnselmo.Contains(TEXT("tobia")) && TestoAnselmo.Contains(TEXT("nico")));
+	return true;
+}
+
+// (08/11) La memoria dei dialoghi nel file del personaggio: chi ha già parlato con chi e i segni restano dopo lo
+// spegnimento del server (si scrivono e si rileggono con il personaggio), i file di prima si leggono con la memoria
+// vuota, i doppioni si uniscono; e attraverso la memoria del taccuino la moneta si offre una volta sola anche dopo.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestDialoghiRicordo, "Valdorso.Dialoghi.Ricordo", ValdorsoTestDialoghi::Bandiere)
+bool FValdorsoTestDialoghiRicordo::RunTest(const FString& Parameters)
+{
+	using namespace ValdorsoTestDialoghi;
+
+	// Le regole.
+	FValdorsoTaccuino Taccuino;
+	TestFalse(TEXT("all'inizio non ha parlato con nessuno"), ValdorsoTaccuino::HaParlato(Taccuino, TEXT("Gaspare")));
+	TestTrue(TEXT("la prima volta cambia"), ValdorsoTaccuino::SegnaParlato(Taccuino, TEXT("Gaspare")));
+	TestFalse(TEXT("la seconda no"), ValdorsoTaccuino::SegnaParlato(Taccuino, TEXT("Gaspare")));
+	TestTrue(TEXT("se lo ricorda"), ValdorsoTaccuino::HaParlato(Taccuino, TEXT("Gaspare")));
+	TestFalse(TEXT("un altro PNG no"), ValdorsoTaccuino::HaParlato(Taccuino, TEXT("Bruno")));
+	TestFalse(TEXT("nessun dialogo"), ValdorsoTaccuino::SegnaParlato(Taccuino, NAME_None));
+	TestTrue(TEXT("un segno nuovo"), ValdorsoTaccuino::MettiSegno(Taccuino, TEXT("GuardiaCorrado"), TEXT("MonetaOfferta")));
+	TestFalse(TEXT("lo stesso segno, anche con altre maiuscole"), ValdorsoTaccuino::MettiSegno(Taccuino, TEXT("GuardiaCorrado"), TEXT("monetaofferta")));
+	TestTrue(TEXT("il segno c'è"), ValdorsoTaccuino::HaSegno(Taccuino, TEXT("GuardiaCorrado"), TEXT("MonetaOfferta")));
+	TestFalse(TEXT("ma non con un'altra guardia"), ValdorsoTaccuino::HaSegno(Taccuino, TEXT("GuardiaOttone"), TEXT("MonetaOfferta")));
+	TestFalse(TEXT("un segno vuoto non c'è mai"), ValdorsoTaccuino::MettiSegno(Taccuino, TEXT("GuardiaCorrado"), NAME_None));
+	TestFalse(TEXT("il segno non vuol dire averci parlato"), ValdorsoTaccuino::HaParlato(Taccuino, TEXT("GuardiaCorrado")));
+	for (int32 i = 0; i < ValdorsoTaccuino::MassimoSegni + 5; ++i)
+	{
+		ValdorsoTaccuino::MettiSegno(Taccuino, TEXT("Pieno"), FName(*FString::Printf(TEXT("Segno%d"), i)));
+	}
+	const FValdorsoRicordoDialogo* Pieno = Taccuino.Dialoghi.FindByPredicate([](const FValdorsoRicordoDialogo& R) { return R.Dialogo == TEXT("Pieno"); });
+	TestTrue(TEXT("i segni hanno un massimo"), Pieno && Pieno->Segni.Num() == ValdorsoTaccuino::MassimoSegni);
+
+	// Nel file del personaggio, e di nuovo fuori (come dopo lo spegnimento del server).
+	FValdorsoPersonaggio Dati;
+	Dati.Id = TEXT("prova");
+	Dati.Nome = TEXT("Tessa");
+	Dati.Taccuino = Taccuino;
+	FString Testo;
+	TestTrue(TEXT("si scrive"), FJsonObjectConverter::UStructToJsonObjectString(Dati, Testo));
+	FValdorsoPersonaggio Riletto;
+	TestTrue(TEXT("si rilegge"), FJsonObjectConverter::JsonObjectStringToUStruct(Testo, &Riletto, 0, 0));
+	ValdorsoTaccuino::Sistema(Riletto.Taccuino);
+	TestTrue(TEXT("dopo: ha parlato con Gaspare"), ValdorsoTaccuino::HaParlato(Riletto.Taccuino, TEXT("Gaspare")));
+	TestTrue(TEXT("dopo: la moneta a Corrado c'è ancora"), ValdorsoTaccuino::HaSegno(Riletto.Taccuino, TEXT("GuardiaCorrado"), TEXT("MonetaOfferta")));
+	TestFalse(TEXT("dopo: con Bruno ancora niente"), ValdorsoTaccuino::HaParlato(Riletto.Taccuino, TEXT("Bruno")));
+
+	// Un personaggio salvato prima (con il taccuino ma senza la memoria dei dialoghi).
+	const FString Vecchio = TEXT("{\"versioneSchema\":2,\"versione\":9,\"id\":\"vecchio\",\"accountId\":\"a1\",\"nome\":\"Bruno\",\"taccuino\":{\"luoghi\":[],\"iscrizioni\":[]}}");
+	FValdorsoPersonaggio DiPrima;
+	TestTrue(TEXT("il file di prima si legge"), FJsonObjectConverter::JsonObjectStringToUStruct(Vecchio, &DiPrima, 0, 0));
+	TestEqual(TEXT("senza memoria dei dialoghi"), DiPrima.Taccuino.Dialoghi.Num(), 0);
+	TestFalse(TEXT("e quindi il primo saluto"), ValdorsoTaccuino::HaParlato(DiPrima.Taccuino, TEXT("Gaspare")));
+
+	// Un file ritoccato a mano: nomi vuoti via, doppioni uniti (con i segni di tutti e due).
+	FValdorsoTaccuino Storto;
+	Storto.Dialoghi.Reserve(3);  // i riferimenti qui sotto restano validi
+	FValdorsoRicordoDialogo& Uno = Storto.Dialoghi.AddDefaulted_GetRef();
+	Uno.Dialogo = TEXT("Bruno");
+	Uno.Segni.Add(TEXT("PrimaScodella"));
+	FValdorsoRicordoDialogo& Vuoto = Storto.Dialoghi.AddDefaulted_GetRef();
+	Vuoto.bParlato = true;
+	FValdorsoRicordoDialogo& Due = Storto.Dialoghi.AddDefaulted_GetRef();
+	Due.Dialogo = TEXT(" bruno ");
+	Due.bParlato = true;
+	Due.Segni.Add(TEXT("primascodella"));
+	Due.Segni.Add(TEXT("Altro"));
+	Due.Segni.Add(FString());
+	ValdorsoTaccuino::Sistema(Storto);
+	if (TestEqual(TEXT("un ricordo solo"), Storto.Dialoghi.Num(), 1))
+	{
+		TestTrue(TEXT("ha parlato"), Storto.Dialoghi[0].bParlato);
+		TestEqual(TEXT("due segni, senza doppioni"), Storto.Dialoghi[0].Segni.Num(), 2);
+	}
+
+	// Attraverso la memoria del taccuino (come il PNG con un personaggio vero): la moneta si offre una volta, anche
+	// dopo il salvataggio; la memoria per nome del server non ne sa niente.
+	ValdorsoDialoghi::Dimentica();
+	const FValdorsoDialogo* Corrado = ValdorsoDialoghi::Trova(TEXT("GuardiaCorrado"));
+	if (!TestNotNull(TEXT("c'è Corrado"), Corrado))
+	{
+		return false;
+	}
+	const FString Offri = TEXT("(Offri una moneta)");
+	FMemoriaNelTaccuino Memoria;
+	TestFalse(TEXT("la memoria nuova: primo saluto"), Memoria.GiaParlato(Corrado->Id));
+	Memoria.SegnaParlato(Corrado->Id);
+	TestTrue(TEXT("poi il ritorno"), ValdorsoDialoghi::NodoIniziale(*Corrado, Memoria.GiaParlato(Corrado->Id)) == Corrado->Ritorno);
+	FName Dopo;
+	TestTrue(TEXT("la moneta si offre"), Scegli(*Corrado, TEXT("passare"), Offri, Memoria, Dopo));
+	TestFalse(TEXT("poi non più"), RispostaCon(ValdorsoDialoghi::Battuta(*Corrado, TEXT("passare"), 2, Memoria), Offri) != INDEX_NONE);
+	TestFalse(TEXT("la memoria per nome non ne sa niente"), ValdorsoDialoghi::HaSegno(Corrado->Id, TEXT("Tessa"), TEXT("MonetaOfferta")));
+	FValdorsoPersonaggio ConMemoria;
+	ConMemoria.Id = TEXT("prova2");
+	ConMemoria.Taccuino = Memoria.Dati;
+	FString TestoMemoria;
+	FValdorsoPersonaggio Riacceso;
+	TestTrue(TEXT("la memoria si scrive"), FJsonObjectConverter::UStructToJsonObjectString(ConMemoria, TestoMemoria));
+	TestTrue(TEXT("e si rilegge"), FJsonObjectConverter::JsonObjectStringToUStruct(TestoMemoria, &Riacceso, 0, 0));
+	FMemoriaNelTaccuino DopoRiavvio;
+	DopoRiavvio.Dati = Riacceso.Taccuino;
+	ValdorsoTaccuino::Sistema(DopoRiavvio.Dati);
+	TestTrue(TEXT("dopo il riavvio: il saluto del ritorno"), DopoRiavvio.GiaParlato(Corrado->Id));
+	TestFalse(TEXT("dopo il riavvio: la moneta non si offre più"), RispostaCon(ValdorsoDialoghi::Battuta(*Corrado, TEXT("passare"), 3, DopoRiavvio), Offri) != INDEX_NONE);
+	TestTrue(TEXT("con la memoria per nome invece sì"), RispostaCon(ValdorsoDialoghi::Battuta(*Corrado, TEXT("passare"), 4, TEXT("Tessa")), Offri) != INDEX_NONE);
 	return true;
 }
 

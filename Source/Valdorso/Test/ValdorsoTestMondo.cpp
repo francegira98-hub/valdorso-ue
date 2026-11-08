@@ -145,8 +145,9 @@ bool FValdorsoTestFasiVillaggio::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestSigillo, "Valdorso.Mondo.Sigillo", ValdorsoTestMondo::Bandiere)
 bool FValdorsoTestSigillo::RunTest(const FString& Parameters)
 {
-	// un sigillo girato come quello vero (verso la valle a -143 gradi), in un punto qualsiasi
-	const FTransform Sigillo(FRotator(0.f, -143.23f, 0.f), FVector(262680.f, 250319.f, 6739.f));
+	// un sigillo girato come quello vero (verso la valle a -143 gradi), dove sta quello vero: (08/11) coordinate del mondo,
+	// la porta del passo del generatore (262680, 250319) meno l'angolo del Landscape (150000, 150000)
+	const FTransform Sigillo(FRotator(0.f, -143.23f, 0.f), FVector(112680.f, 100319.f, 6739.f));
 	const FVector Avanti = Sigillo.GetUnitAxis(EAxis::X);
 
 	const FVector DallaValle = Sigillo.GetLocation() + Avanti * 80.f + FVector(0.f, 0.f, 90.f);
@@ -402,8 +403,11 @@ bool FValdorsoTestStatoMondo::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestTerritorio, "Valdorso.Mondo.Territorio", ValdorsoTestMondo::Bandiere)
 bool FValdorsoTestTerritorio::RunTest(const FString& Parameters)
 {
-	TestEqual(TEXT("la piazza è in Val d'Orso"), ValdorsoTerritori::IdDi(FVector(150000.0, 150000.0, 5000.0)), FString(TEXT("valdorso")));
-	TestEqual(TEXT("anche il passo"), ValdorsoTerritori::IdDi(FVector(262680.0, 250319.0, 6739.0)), FString(TEXT("valdorso")));
+	// (08/11) Coordinate del mondo: il Landscape di L_Valle ha l'angolo nord-ovest in (-150000, -150000), i punti del
+	// generatore meno 150000 (ValdorsoLuoghiDati.inl). La piazza e il posto di guardia del passo, come nei luoghi.
+	TestEqual(TEXT("la piazza è in Val d'Orso"), ValdorsoTerritori::IdDi(FVector(15300.0, 42228.0, 5517.0)), FString(TEXT("valdorso")));
+	TestEqual(TEXT("anche il passo"), ValdorsoTerritori::IdDi(FVector(111399.0, 99361.4, 6739.0)), FString(TEXT("valdorso")));
+	TestEqual(TEXT("anche la grotta nord, in cima ai monti"), ValdorsoTerritori::IdDi(FVector(0.0, -108120.0, 16502.0)), FString(TEXT("valdorso")));
 	TestTrue(TEXT("il signore è la Corona"), ValdorsoTerritori::ValDOrso().Signore.ToString().Contains(TEXT("Corona")));
 	TestEqual(TEXT("forza 1 = piena"), ValdorsoTerritori::ParolaForza(1.f).ToString(), FString(TEXT("piena")));
 	TestEqual(TEXT("forza 0,4 = debole"), ValdorsoTerritori::ParolaForza(0.4f).ToString(), FString(TEXT("debole")));

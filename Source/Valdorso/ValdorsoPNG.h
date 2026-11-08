@@ -13,8 +13,11 @@
 //   esiste, il numero della battuta è giusto, il colono è ancora vicino) e va avanti. Ogni passo finisce nel registro
 //   eventi ("Dialogo"; offrire una moneta a una guardia: "Corruzione").
 // - Il PNG si gira piano verso chi gli parla, e quando nessuno gli parla più torna a guardare dove guardava.
-// - Il saluto cambia dalla seconda volta (il server si ricorda chi ha già parlato con lui, per nome del personaggio).
-// - Nel livello lo mette Content/Python/nuovi/metti_png.py (Gaspare al margine del bosco, Corrado e Ottone al passo).
+// - Il saluto cambia dalla seconda volta (il server si ricorda chi ha già parlato con lui). (08/11) La memoria sta nel
+//   file del personaggio (il taccuino, UValdorsoTaccuinoComponent): resta anche quando il server si spegne. Senza un
+//   personaggio salvato (accesso libero dell'editor) resta solo in memoria, per nome del personaggio.
+// - Nel livello lo mette Content/Python/nuovi/metti_png.py (Gaspare al margine del bosco, Corrado e Ottone al passo;
+//   (08/11) Nonna Edda alla palude, Bruno alla locanda, Padre Anselmo nel Tempio del Cuore).
 
 #pragma once
 
@@ -41,7 +44,8 @@ class VALDORSO_API AValdorsoPNG : public AActor, public IValdorsoInterattivo
 public:
 	AValdorsoPNG();
 
-	/** Quale dialogo (ValdorsoDialoghiTesti.inl): "Gaspare", "GuardiaCorrado", "GuardiaOttone". */
+	/** Quale dialogo (ValdorsoDialoghiTesti.inl): "Gaspare", "GuardiaCorrado", "GuardiaOttone"; (08/11) "NonnaEdda",
+	 *  "Bruno", "PadreAnselmo". */
 	UPROPERTY(EditAnywhere, Replicated, Category = "PNG")
 	FName Dialogo = TEXT("Gaspare");
 

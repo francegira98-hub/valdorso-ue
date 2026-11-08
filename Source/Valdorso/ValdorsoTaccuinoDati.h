@@ -4,7 +4,8 @@
 // Qui ci sono le cose che non disegnano niente (le provano i test Valdorso.Taccuino.*):
 //   - FValdorsoTaccuino: quello che il personaggio ha scoperto e letto. Sta nel file del personaggio
 //     (FValdorsoPersonaggio::Taccuino, Saved/Server/Archivio/Personaggi/<Id>.json); i file di prima, senza il
-//     taccuino, si leggono uguali (taccuino vuoto).
+//     taccuino, si leggono uguali (taccuino vuoto). (08/11) Dentro c'è anche la memoria dei dialoghi con i PNG (chi ha
+//     già parlato con chi, i segni): così sopravvive allo spegnimento del server.
 //   - ValdorsoLuoghi: i luoghi della valle con nome, posizione e raggio di scoperta (ValdorsoLuoghiDati.inl, generato da
 //     Tools/Generatori/luoghi_gioco.py da Luoghi_3000.json).
 //   - ValdorsoBussola: da dove guarda la telecamera ai punti cardinali (N, NE, E, SE, S, SO, O, NO) e ai segni dei luoghi.
@@ -53,6 +54,28 @@ struct FValdorsoIscrizioneLetta
 	int64 Quando = 0;
 };
 
+/**
+ * (08/11) Quello che un PNG ricorda di un personaggio (ValdorsoDialoghi.h): se ci ha già parlato (il saluto cambia) e
+ * i segni che il dialogo gli ha lasciato ("MonetaOfferta": la moneta non si offre più). Uno per dialogo.
+ */
+USTRUCT()
+struct FValdorsoRicordoDialogo
+{
+	GENERATED_BODY()
+
+	/** Il dialogo ("Gaspare", "GuardiaCorrado"...: lo stesso nome di AValdorsoPNG::Dialogo). */
+	UPROPERTY()
+	FString Dialogo;
+
+	/** Ci ha già parlato almeno una volta. */
+	UPROPERTY()
+	bool bParlato = false;
+
+	/** I segni, senza doppioni (al massimo ValdorsoTaccuino::MassimoSegni). */
+	UPROPERTY()
+	TArray<FString> Segni;
+};
+
 /** Il taccuino di viaggio di un personaggio. */
 USTRUCT()
 struct FValdorsoTaccuino
@@ -66,6 +89,14 @@ struct FValdorsoTaccuino
 	/** Le iscrizioni lette, dalla più vecchia alla più nuova (al massimo ValdorsoTaccuino::MassimoIscrizioni). */
 	UPROPERTY()
 	TArray<FValdorsoIscrizioneLetta> Iscrizioni;
+
+	/**
+	 * (08/11) La memoria dei dialoghi: con chi ha già parlato e i segni. Non si vede nel taccuino (è la memoria dei PNG,
+	 * non del colono), ma sta qui perché si salva con lui nello stesso file. I file di prima si leggono con la memoria
+	 * vuota: si ricomincia dal primo saluto.
+	 */
+	UPROPERTY()
+	TArray<FValdorsoRicordoDialogo> Dialoghi;
 };
 
 /** Un luogo della valle. */
@@ -152,6 +183,27 @@ namespace ValdorsoTaccuino
 
 	/** Rimette in ordine un taccuino letto da un file: via i nomi vuoti e i doppioni, misure e massimo rispettati. */
 	VALDORSO_API void Sistema(FValdorsoTaccuino& Taccuino);
+
+	// --- (08/11) La memoria dei dialoghi (FValdorsoTaccuino::Dialoghi) ---------------------------------------
+	// I nomi dei dialoghi e dei segni non badano alle maiuscole (come gli FName). Le funzioni che cambiano qualcosa
+	// restituiscono vero solo se è cambiato davvero: allora si salva il personaggio.
+
+	/** Quanti dialoghi ricorda al massimo, quanti segni per dialogo, quanto lunghi i nomi. */
+	inline constexpr int32 MassimoDialoghi = 256;
+	inline constexpr int32 MassimoSegni = 32;
+	inline constexpr int32 MassimoNomeDialogo = 64;
+
+	/** Vero se il personaggio ha già parlato con il PNG di quel dialogo. */
+	VALDORSO_API bool HaParlato(const FValdorsoTaccuino& Taccuino, FName IdDialogo);
+
+	/** Ricorda che ha parlato con il PNG di quel dialogo; falso se lo sapeva già (o il nome è vuoto). */
+	VALDORSO_API bool SegnaParlato(FValdorsoTaccuino& Taccuino, FName IdDialogo);
+
+	/** Vero se il personaggio ha quel segno in quel dialogo. */
+	VALDORSO_API bool HaSegno(const FValdorsoTaccuino& Taccuino, FName IdDialogo, FName Segno);
+
+	/** Dà il segno; falso se c'era già, se un nome è vuoto o se i segni di quel dialogo sono già al massimo. */
+	VALDORSO_API bool MettiSegno(FValdorsoTaccuino& Taccuino, FName IdDialogo, FName Segno);
 
 	/** Il momento del giorno a parole ("all'alba", "di sera"...) da un'ora della valle; vuoto se l'ora non si sa. */
 	VALDORSO_API FText Momento(float Ora);

@@ -41,9 +41,10 @@ class VALDORSO_API AValdorsoMenuController : public APlayerController
 public:
 	AValdorsoMenuController();
 
-	/** Il livello che si apre con "Entra nella valle" (per ora la mappa di prova; dalla v0.1.3 la valle). */
+	/** Il livello che si apre con "Prova senza server" (con il server la mappa la decide lui: Tools\Avvia server
+	 *  Valdorso.cmd e ServerDefaultMap in DefaultEngine.ini). (08/11) La valle vera, non più la mappa di prova. */
 	UPROPERTY(EditDefaultsOnly, Category = "Valdorso|Menu")
-	FName LivelloValle = TEXT("/Game/ThirdPerson/Lvl_ThirdPerson");
+	FName LivelloValle = TEXT("/Game/Prove/L_Valle");
 
 	/** (08/11) La valle vera che si vede dietro il menu (si apre senza server; se manca resta la scena di Lvl_Menu). */
 	UPROPERTY(EditDefaultsOnly, Category = "Valdorso|Menu")

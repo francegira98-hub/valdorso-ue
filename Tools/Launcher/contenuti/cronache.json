@@ -1,0 +1,199 @@
+{
+ "gioco": "Valdorso",
+ "aggiornato": "2026-11-08",
+ "_come": "Le Cronache: capitoli (titolo, testo; i paragrafi si separano con una riga vuota, cioè \\n\\n), rune (intro e parole), volti (nome, ruolo, testo). La forma delle rune la aggiunge prepara_aggiornamento.py per il sito.",
+ "capitoli": [
+  {
+   "titolo": "La leggenda dell'Orso",
+   "testo": "Prima del Crepuscolo, quando i Vecchi Dei camminavano ancora nei boschi, l'Orso era il più grande di loro: il custode dei boschi e dei cicli, delle stagioni che tornano.\n\nQuando gli eserciti del Senza Nome scesero sulla valle, l'Orso la tenne da solo per sette giorni e sette notti, perché gli Antichi avessero il tempo di compiere il loro rito. Il rito fu compiuto. L'Orso cadde sulla collina più alta, e la valle prese il suo nome.\n\nAl villaggio la raccontano come una favola per bambini. Gaspare il cacciatore e Nonna Edda, nella palude, no: dicono che nelle notti di nebbia, tra gli alberi, passa ancora un'ombra d'orso. Al villaggio li chiamano i due matti."
+  },
+  {
+   "titolo": "Gli Antichi",
+   "testo": "Degli Antichi restano le pietre. Nel cuore del bosco, a ovest, ci sono le loro rovine: pietre in cerchio, una stella incisa nel mezzo, cinque segni che nessuno sa più leggere del tutto, e una cripta sigillata.\n\nIn fondo alla grotta est c'è una porta che non si apre, con sopra una runa sola. E qualcuno giura che di notte le rune delle rovine si accendano da sole."
+  },
+  {
+   "titolo": "La valle riaperta",
+   "testo": "Nell'anno 312 dopo il Crepuscolo la Corona di Aurelia ha chiamato coloni da ogni angolo del regno: la valle dell'Orso è di nuovo aperta.\n\nAl villaggio governa il Balivo, per conto della Corona; la milizia della capitana Livia tiene il posto di guardia al passo. La strada per Aurelia è chiusa dal sigillo della Corona, un velo di rune che respinge chi lo tocca. Non si passa, nemmeno le lettere: chi arriva nella valle, per ora, ci resta."
+  }
+ ],
+ "rune": {
+  "intro": "Gli Antichi scrivevano con undici rune. Cinque sono elementi: il fuoco, l'acqua, la terra, il vento e la luce. Cinque sono verbi, gesti: andare, proteggere, guarire, vedere, fermare. L'undicesima è Ur, la runa del custode. Un elemento e un verbo fanno un incantesimo: Aeth-Var, il fuoco che va, è il Dardo infuocato.",
+  "elementi": [
+   {
+    "nome": "Aeth",
+    "significato": "il fuoco"
+   },
+   {
+    "nome": "Nir",
+    "significato": "l'acqua"
+   },
+   {
+    "nome": "Dorn",
+    "significato": "la terra"
+   },
+   {
+    "nome": "Sil",
+    "significato": "il vento"
+   },
+   {
+    "nome": "Lume",
+    "significato": "la luce"
+   }
+  ],
+  "verbi": [
+   {
+    "nome": "Var",
+    "significato": "andare, scagliare"
+   },
+   {
+    "nome": "Ka",
+    "significato": "proteggere"
+   },
+   {
+    "nome": "Ren",
+    "significato": "guarire"
+   },
+   {
+    "nome": "Vel",
+    "significato": "vedere, guidare"
+   },
+   {
+    "nome": "Tor",
+    "significato": "fermare"
+   }
+  ],
+  "custode": [
+   {
+    "nome": "Ur",
+    "significato": "orso, custode, la porta"
+   }
+  ],
+  "parole": [
+   {
+    "rune": "Aeth-Var",
+    "nome": "Dardo infuocato"
+   },
+   {
+    "rune": "Nir-Ren",
+    "nome": "Guarigione lieve"
+   },
+   {
+    "rune": "Lume-Tor",
+    "nome": "Scudo sacro"
+   },
+   {
+    "rune": "Aeth-Var-Tor",
+    "nome": "Fiamma che inchioda"
+   },
+   {
+    "rune": "Aeth-Var-Ren",
+    "nome": "Fuoco che nutre"
+   },
+   {
+    "rune": "Aeth-Ka-Vel",
+    "nome": "Brace negli occhi"
+   },
+   {
+    "rune": "Nir-Var-Tor",
+    "nome": "Lancia di ghiaccio"
+   },
+   {
+    "rune": "Nir-Ren-Ka",
+    "nome": "Acqua che veglia"
+   },
+   {
+    "rune": "Nir-Var-Vel",
+    "nome": "Pioggia negli occhi"
+   },
+   {
+    "rune": "Dorn-Var-Tor",
+    "nome": "Frana"
+   },
+   {
+    "rune": "Dorn-Ka-Ren",
+    "nome": "Pietra viva"
+   },
+   {
+    "rune": "Dorn-Var-Vel",
+    "nome": "Polvere negli occhi"
+   },
+   {
+    "rune": "Sil-Var-Tor",
+    "nome": "Vento che inchioda"
+   },
+   {
+    "rune": "Sil-Ka-Ren",
+    "nome": "Vento che ristora"
+   },
+   {
+    "rune": "Sil-Var-Vel",
+    "nome": "Vento che guida"
+   },
+   {
+    "rune": "Lume-Vel-Tor",
+    "nome": "Luce che ferma"
+   },
+   {
+    "rune": "Lume-Ren-Ka",
+    "nome": "Mano di Solara"
+   },
+   {
+    "rune": "Lume-Vel-Ren",
+    "nome": "Luce che consola"
+   }
+  ]
+ },
+ "volti_intro": "Le persone che incontri nella valle. Alcune parlano già (Gaspare, Corrado e Ottone); le altre arrivano con le prossime tappe.",
+ "volti": [
+  {
+   "nome": "Padre Anselmo",
+   "ruolo": "il sacerdote del Tempio del Cuore",
+   "testo": "Custodisce il frammento del Cuore e la pietra di Val d'Orso. È lui che ascolta chi arriva e scrive il suo nome nel Registro."
+  },
+  {
+   "nome": "Corrado Valli",
+   "ruolo": "il Balivo",
+   "testo": "Governa il villaggio per conto della Corona e legge gli ordini in piazza. Per ordine suo, di notte la porta del passo resta chiusa."
+  },
+  {
+   "nome": "Livia Serra",
+   "ruolo": "la capitana della milizia",
+   "testo": "Comanda il posto di guardia al passo. È salita dalla capitale a primavera, con le sue guardie."
+  },
+  {
+   "nome": "Bruno",
+   "ruolo": "il locandiere",
+   "testo": "Alla sua locanda si sentono tutte le voci della valle. Giura che una notte il frammento del tempio ha saltato un battito."
+  },
+  {
+   "nome": "Nonna Edda",
+   "ruolo": "la donna della palude",
+   "testo": "Vive nella palude sul lago e vende erbe solo a chi saluta. Non fatele domande sul fondo del lago."
+  },
+  {
+   "nome": "Gaspare",
+   "ruolo": "il vecchio cacciatore",
+   "testo": "Burbero e solitario, caccia nella valle da prima che il Balivo nascesse. Ha visto l'ombra dell'Orso più di chiunque altro. Lo trovi al margine del bosco."
+  },
+  {
+   "nome": "Marta",
+   "ruolo": "la fabbra",
+   "testo": "La sua fucina si sente da tutta la piazza."
+  },
+  {
+   "nome": "Maestro Elric",
+   "ruolo": "il maestro",
+   "testo": "Di lui al villaggio si parla poco. Chi lo cerca, prima o poi, lo trova."
+  },
+  {
+   "nome": "Lucia",
+   "ruolo": "della Gilda",
+   "testo": "All'ufficio della Gilda cerca braccia per gli incarichi: per cominciare, i lupi visti ai pascoli di sud-est."
+  },
+  {
+   "nome": "Corrado e Ottone",
+   "ruolo": "le guardie della Corona",
+   "testo": "Corrado il veterano e Ottone il giovane tengono la sbarra al passo. Poche parole, leali alla Corona: non si comprano."
+  }
+ ]
+}

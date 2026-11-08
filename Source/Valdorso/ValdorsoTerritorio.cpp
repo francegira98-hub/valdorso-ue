@@ -37,6 +37,10 @@ namespace ValdorsoTerritori
 			T.Custode = LOCTEXT("Custode", "Padre Anselmo, sacerdote del villaggio");
 			T.Fede = LOCTEXT("Fede", "La fede della Corona");
 			// Raggio 0 = vale su tutta la mappa (per ora c'è solo la valle). Con i feudi si metteranno i confini veri.
+			// (08/11) Coordinate del mondo, non del generatore: il Landscape di L_Valle va da (-150000, -150000) a
+			// (150000, 150000), quindi il centro della valle è (0, 0) e la piazza sta in (15300, 42228)
+			// (ValdorsoLuoghiDati.inl). Un raggio vero andrà misurato da qui, non da (150000, 150000).
+			T.Centro = FVector2D(0.0, 0.0);
 			T.Raggio = 0.f;
 			return T;
 		}();

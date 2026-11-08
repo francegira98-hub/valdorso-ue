@@ -81,17 +81,21 @@ namespace ValdorsoDialoghi
 
 	TArray<int32> ScelteVisibili(const FValdorsoDialogo& Dialogo, FName Nodo, const FString& Chi)
 	{
+		return ScelteVisibili(Dialogo, Nodo, FValdorsoMemoriaPerNome(Chi));
+	}
+
+	TArray<int32> ScelteVisibili(const FValdorsoDialogo& Dialogo, FName Nodo, const FValdorsoMemoriaDialoghi& Memoria)
+	{
 		TArray<int32> Fuori;
 		const FValdorsoNodoDialogo* Attuale = Dialogo.Trova(Nodo);
 		if (!Attuale)
 		{
 			return Fuori;
 		}
-		const bool bQualcuno = !Chi.TrimStartAndEnd().IsEmpty();
 		for (int32 i = 0; i < Attuale->Scelte.Num() && Fuori.Num() < MassimoScelte; ++i)
 		{
 			const FName Nascosta = Attuale->Scelte[i].NascostaSe;
-			if (bQualcuno && !Nascosta.IsNone() && HaSegno(Dialogo.Id, Chi, Nascosta))
+			if (!Nascosta.IsNone() && Memoria.HaSegno(Dialogo.Id, Nascosta))
 			{
 				continue;
 			}
@@ -101,6 +105,11 @@ namespace ValdorsoDialoghi
 	}
 
 	FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo, const FString& Chi)
+	{
+		return Battuta(Dialogo, Nodo, Passo, FValdorsoMemoriaPerNome(Chi));
+	}
+
+	FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo, const FValdorsoMemoriaDialoghi& Memoria)
 	{
 		FValdorsoBattuta Fuori;
 		Fuori.Chi = Dialogo.Titolo;
@@ -115,7 +124,7 @@ namespace ValdorsoDialoghi
 		{
 			Fuori.Righe.Add(Riga.Left(MassimoLettere));
 		}
-		for (const int32 i : ScelteVisibili(Dialogo, Nodo, Chi))
+		for (const int32 i : ScelteVisibili(Dialogo, Nodo, Memoria))
 		{
 			Fuori.Scelte.Add(Attuale->Scelte[i].Testo.Left(MassimoLettere));
 		}
@@ -318,5 +327,33 @@ namespace ValdorsoDialoghi
 	{
 		DialoghiMemoria().Reset();
 		DialoghiSegni().Reset();
+	}
+}
+
+// --- (08/11) La memoria per nome (accesso libero dell'editor, test) -------------------------------------------------
+
+bool FValdorsoMemoriaPerNome::GiaParlato(FName IdDialogo) const
+{
+	return !Chi.TrimStartAndEnd().IsEmpty() && ValdorsoDialoghi::GiaParlato(IdDialogo, Chi);
+}
+
+void FValdorsoMemoriaPerNome::SegnaParlato(FName IdDialogo)
+{
+	if (!Chi.TrimStartAndEnd().IsEmpty())
+	{
+		ValdorsoDialoghi::SegnaParlato(IdDialogo, Chi);
+	}
+}
+
+bool FValdorsoMemoriaPerNome::HaSegno(FName IdDialogo, FName Segno) const
+{
+	return !Chi.TrimStartAndEnd().IsEmpty() && ValdorsoDialoghi::HaSegno(IdDialogo, Chi, Segno);
+}
+
+void FValdorsoMemoriaPerNome::MettiSegno(FName IdDialogo, FName Segno)
+{
+	if (!Chi.TrimStartAndEnd().IsEmpty())
+	{
+		ValdorsoDialoghi::MettiSegno(IdDialogo, Chi, Segno);
 	}
 }

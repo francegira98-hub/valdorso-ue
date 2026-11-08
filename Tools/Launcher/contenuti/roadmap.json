@@ -1,0 +1,135 @@
+{
+ "gioco": "Valdorso",
+ "aggiornato": "2026-11-08",
+ "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
+ "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0. Ogni tappa è una versione che si può giocare.",
+ "tappe": [
+  {
+   "versione": "0.1.0",
+   "nome": "Preparazione",
+   "stato": "fatta",
+   "data": "2026-10-02",
+   "voci": [
+    "Il disco di lavoro e Unreal Engine 5.8",
+    "Il progetto in C++",
+    "Il repository",
+    "L'inventario delle risorse"
+   ]
+  },
+  {
+   "versione": "0.1.1",
+   "nome": "Il personaggio",
+   "stato": "fatta",
+   "data": "2026-10-02",
+   "voci": [
+    "Camminare e correre",
+    "La schivata",
+    "Scavalcare",
+    "Il pugno",
+    "Il server dedicato di prova"
+   ]
+  },
+  {
+   "versione": "0.1.2",
+   "nome": "Chi sei",
+   "stato": "fatta",
+   "data": "2026-11-03",
+   "voci": [
+    "Il menu Oro e brace",
+    "Gli account su invito, password protette, codici di recupero",
+    "Tre personaggi",
+    "Il Registro di Val d'Orso: volto, corpo, capelli, occhi, fede, età, le domande del sacerdote, la firma",
+    "Pausa, impostazioni e accessibilità",
+    "Uscita con attesa di 20 s e riconnessione senza password",
+    "Privacy: gli IP si tengono 30 giorni"
+   ]
+  },
+  {
+   "versione": "0.1.3",
+   "nome": "La valle",
+   "stato": "fatta",
+   "data": "",
+   "sommario": "La valle vera, da esplorare.",
+   "voci": [
+    "La valle di 3 x 3 km: fiume, lago, cascata, monti, bosco",
+    "Il villaggio in 3 fasi: piazza, Tempio del Cuore, locanda, Gilda, Balivo, milizia, artigiani, mulino, cimitero, orti",
+    "La palude di Nonna Edda",
+    "Il posto di guardia e il sigillo della Corona al passo",
+    "Le Rovine degli Antichi, le cinque pietre, la cripta sigillata",
+    "La grotta est, la grotta nord, il belvedere",
+    "Porte, imposte, bacheche, iscrizioni, panche, letti, scale, nuoto",
+    "Giorno e notte (120 minuti), tempo, pioggia, nebbia",
+    "I suoni della valle e le campane del tempio",
+    "La mappa di carta, la bussola, il taccuino di viaggio",
+    "La pietra di Val d'Orso nel tempio",
+    "La lingua delle rune e il quaderno delle rune",
+    "I primi che parlano: Gaspare, Corrado e Ottone",
+    "La modalità foto",
+    "Il menu con la valle al tramonto e lo stato del mondo",
+    "Il launcher"
+   ]
+  },
+  {
+   "versione": "0.1.4",
+   "nome": "Pericoli",
+   "stato": "in_corso",
+   "sommario": "La valle smette di essere tranquilla.",
+   "voci": [
+    "Lupi, banditi e scheletri",
+    "Le barre di salute, stamina, mana ed equilibrio",
+    "La barra delle azioni",
+    "L'inventario a griglia, con il peso e le monete",
+    "L'equipaggiamento che si vede addosso",
+    "L'aggancio del bersaglio",
+    "La morte e la rinascita",
+    "Il nuoto sott'acqua",
+    "La chat di prossimità",
+    "Falò e bivacchi",
+    "Bagnati e asciutti"
+   ]
+  },
+  {
+   "versione": "0.1.5",
+   "nome": "Crescere",
+   "stato": "prossima",
+   "sommario": "Quello che fai ti cambia.",
+   "voci": [
+    "Abilità che salgono e si evolvono (soglie 25, 50, 75, 100; tetto 700)",
+    "Le guardie della scherma italiana",
+    "Il Vigore",
+    "La scheda del personaggio",
+    "L'accessibilità completa"
+   ]
+  },
+  {
+   "versione": "0.1.6",
+   "nome": "Vita nella valle",
+   "stato": "futura",
+   "sommario": "La valle si riempie.",
+   "voci": [
+    "Gli abitanti e i volti della valle",
+    "Il Battito",
+    "La chat e i gesti",
+    "La Gilda e gli incarichi",
+    "Il diario",
+    "Il server ufficiale e quello di prova",
+    "La pagina su itch.io e il bot di Discord",
+    "Le voci vere della locanda",
+    "Il primo sogno",
+    "Il gatto della locanda",
+    "La musica"
+   ]
+  },
+  {
+   "versione": "0.2",
+   "nome": "L'economia",
+   "stato": "futura",
+   "voci": [
+    "I materiali",
+    "Gli Aureus",
+    "I cantieri: il villaggio cresce di fase"
+   ]
+  }
+ ],
+ "dopo": "Una tappa alla volta, fino alla 1.0. Subito dopo la v0.1.3 arrivano anche il palco del Registro rifatto e il lancio del Kickstarter."
+}

@@ -15,6 +15,23 @@
 //   - La foto è grande il doppio dello schermo (con 1920 x 1080 viene 3840 x 2160), senza scritte: la fa Unreal
 //     (HighResShot) e la salva in Saved/Screenshots. Il moltiplicatore si cambia con Valdorso.Foto.Grandezza 3.
 // Tutto succede solo su questo PC: niente va al server, e gli altri vedono il colono fermo.
+//
+// (08/11) Lo strumento per il trailer (ValdorsoTrailer.h), dentro la modalità foto:
+//   - K mette una tappa del percorso dove sta la telecamera (posizione, sguardo con l'inclinazione, zoom e, se lo sfondo
+//     è sfocato, la distanza del fuoco): "Tappa 3 aggiunta". Backspace toglie l'ultima.
+//   - L fa percorrere il percorso alla telecamera, da sola, a velocità costante con partenza e arrivo dolci; L di nuovo
+//     la ferma (e da lì si torna a volare a mano). Mentre va, l'aiuto, la griglia e i messaggi spariscono (per OBS).
+//   - B le bande nere del cinema (2,39 a 1); 1 2 3 4 5 la velocità (2, 4, 8, 15, 30 m/s); O il giro (dopo l'ultima
+//     tappa torna alla prima e ricomincia, senza fermarsi).
+//   - Anche percorrendo la strada valgono le regole del volo a mano: mai più di 30 m dal colono e mai attraverso muri e
+//     rocce (la stessa sfera di 15 cm). In un gioco online la telecamera libera non deve servire a guardare oltre un muro
+//     o a curiosare lontano: una tappa caricata da un file e messa più in là si ferma al limite.
+//   - Console (con la modalità foto chiusa, perché aperta prende tutti i tasti): Valdorso.Trailer.Salva <nome>,
+//     Valdorso.Trailer.Carica <nome>, Valdorso.Trailer.Elenco, Valdorso.Trailer.Svuota. File in Saved/Trailer/<nome>.json;
+//     chiudendo la modalità foto il percorso si salva in Saved/Trailer/ultimo.json e alla prima apertura si rilegge.
+//   - Valdorso.Trailer.Fotogrammi 1 (solo senza server): mentre la telecamera percorre la strada il tempo del gioco va
+//     a passi fissi di 1/30 di secondo e ogni fotogramma si salva in Saved/Trailer/<nome>/fotogramma_00000.png (senza le
+//     scritte e senza le bande); alla fine tutto torna com'era. Di serie è spento: per il trailer basta registrare con OBS.
 
 #pragma once
 
@@ -22,6 +39,7 @@
 #include "Camera/CameraActor.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Styling/SlateBrush.h"
+#include "ValdorsoTrailer.h"
 #include "ValdorsoModoFoto.generated.h"
 
 class APlayerController;
@@ -113,11 +131,34 @@ public:
 	/** Rimette visibile il colono (all'uscita). */
 	void MostraColono();
 
+	/** (08/11) Il trailer: mette una tappa dove sta la telecamera; falso se ce ne sono già troppe. OutNumero: quante adesso. */
+	bool AggiungiTappa(int32& OutNumero);
+	/** Toglie l'ultima tappa; falso se non ce n'erano. OutRimaste: quante ne restano. */
+	bool TogliTappa(int32& OutRimaste);
+	/** Parte lungo il percorso; falso (con il motivo in OutMessaggio) se non si può. OutMessaggio può avere anche un avviso. */
+	bool AvviaPercorso(FText& OutMessaggio);
+	/** Si ferma dove si trova (da lì si vola di nuovo a mano). */
+	void FermaPercorso();
+	/** Rifà la tabella delle lunghezze (dopo O, mentre va). */
+	void RifaiTabella();
+	bool InPercorso() const { return bInPercorso; }
+
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
 	void Muovi(float DeltaSeconds);
 	void MettiAFuoco();
+	/** (08/11) Un passo lungo il percorso del trailer. */
+	void MuoviSulPercorso(float DeltaSeconds);
+	/** Da Da verso A, senza attraversare niente (la sfera di 15 cm): dove si arriva. */
+	FVector PassoSicuro(const FVector& Da, const FVector& A) const;
+	/** Vero se in A la sfera della telecamera non tocca niente (per saltare alla prima tappa). */
+	bool LiberoIn(const FVector& A) const;
+	void IniziaFotogrammi();
+	void FinisciFotogrammi();
+	/** Rimette la sfocatura come la vuole F (dopo un percorso che aveva il suo fuoco). */
+	void RimettiSfocatura();
 
 	float Imbardata = 0.f;
 	float Beccheggio = 0.f;
@@ -125,6 +166,24 @@ private:
 	bool bSfocatura = false;
 	bool bColonoNascosto = false;
 	TArray<TWeakObjectPtr<AActor>> Nascosti;
+
+	// (08/11) Il percorso del trailer mentre la telecamera lo percorre
+	FValdorsoTabellaTrailer Tabella;
+	bool bInPercorso = false;
+	bool bPrimoPasso = false;
+	/** Vero se qualche tappa ha il suo fuoco: allora il fuoco lo decide il percorso, non il centro dell'immagine. */
+	bool bFuocoDalPercorso = false;
+	float TempoPercorso = 0.f;
+	float DistanzaPercorso = 0.f;
+	float VelocitaUsata = 0.f;
+	int32 GenerazionePercorso = 0;
+
+	// (08/11) I fotogrammi (Valdorso.Trailer.Fotogrammi 1) e come era il tempo del gioco prima
+	bool bFotogrammi = false;
+	bool bPassoFissoPrima = false;
+	double DeltaFissoPrima = 1.0 / 30.0;
+	int32 NumeroFotogramma = 0;
+	FString CartellaFotogrammi;
 };
 
 /** Lo schermo della modalità foto: raccoglie tasti, mouse e controller, e mostra l'aiuto, la griglia e i messaggi. */
@@ -167,6 +226,14 @@ private:
 	FSlateBrush Pannello;
 	bool bAiuto = true;
 	bool bGriglia = false;
+	/** (08/11) Le bande nere del cinema (B). */
+	bool bBande = false;
+	/** (08/11) Per dire "fine del percorso" quando la telecamera si ferma da sola. */
+	bool bEraInPercorso = false;
+	/** (08/11) Vero mentre la telecamera percorre il percorso: niente aiuto, griglia e messaggi. */
+	bool InPercorso() const;
+	/** (08/11) I tasti del trailer (K, Backspace, L, B, O, 1-5); vero se il tasto era uno di questi. */
+	bool TastoTrailer(const FKey& Tasto);
 	FText TestoMessaggio;
 	double FineMessaggio = 0.0;
 	/** Il lampo bianco dello scatto (1 -> 0). */

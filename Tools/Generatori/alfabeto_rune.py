@@ -10,7 +10,9 @@
 # Questo file è la fonte unica della forma delle rune:
 #   - i generatori (villaggio_rovine.py, villaggio_grotta.py) le incidono nella pietra con tratti();
 #   - python alfabeto_rune.py <cartella Source/Valdorso> scrive ValdorsoRuneTratti.inl, che il C++ (ValdorsoRune.cpp)
-#     usa per disegnarle sullo schermo (SValdorsoRuna), e Anteprima_Rune.png per controllarle a occhio.
+#     usa per disegnarle sullo schermo (SValdorsoRuna), e Anteprima_Rune.png per controllarle a occhio;
+#   - python alfabeto_rune.py Tools/Launcher/src/Rune.cs scrive le stesse forme per il launcher (le Cronache), e
+#     linee_json() le dà a prepara_aggiornamento.py per la pagina del sito (08/11/2026).
 # Coordinate: da -1 a 1, x a destra, y in su; ogni runa è un elenco di linee spezzate (punti uniti in ordine).
 
 import math
@@ -183,6 +185,55 @@ def scrivi_inl(percorso):
         f.write("\n".join(righe) + "\n")
 
 
+def linee_json():
+    """Le forme per il sito: {nome: [[[x, y], ...], ...]} con 3 decimali."""
+    return {n: [[[round(x, 3), round(y, 3)] for x, y in l] for l in FORME[n]] for n in TUTTE}
+
+
+def scrivi_cs(percorso):
+    """Le forme per il launcher (C# 5): Rune.Linee[k] = le linee spezzate della runa k, ogni linea x, y, x, y..."""
+    def stringa(t):
+        return '"' + t.replace('\\', '\\\\').replace('"', '\\"') + '"'
+    righe = ["// Valdorso - Il launcher: la forma delle rune. FILE GENERATO da Tools/Generatori/alfabeto_rune.py: non toccarlo",
+             "// a mano, cambia le forme lì e rilancia: python Tools/Generatori/alfabeto_rune.py Tools/Launcher/src/Rune.cs",
+             "// Coordinate da -1 a 1, y in su (come nel gioco). Gli elementi stanno sulla linea di base, i verbi no.",
+             "",
+             "namespace Valdorso.Launcher",
+             "{",
+             "    public static class Rune",
+             "    {",
+             "        public static readonly string[] Nomi = { %s };" % ", ".join(stringa(n) for n in TUTTE),
+             "",
+             "        public static readonly string[] Significati = { %s };" % ", ".join(stringa(SIGNIFICATI[n]) for n in TUTTE),
+             "",
+             "        public static readonly float[][][] Linee =",
+             "        {"]
+    for nome in TUTTE:
+        righe.append("            // %s (%s)" % (nome, SIGNIFICATI[nome]))
+        righe.append("            new float[][]")
+        righe.append("            {")
+        for l in FORME[nome]:
+            righe.append("                new float[] { %s }," % ", ".join("%.3ff, %.3ff" % (x, y) for x, y in l))
+        righe.append("            },")
+    righe += ["        };", "",
+              "        /// <summary>Il numero della runa dal nome (maiuscole e minuscole uguali), -1 se non c'è.</summary>",
+              "        public static int Indice(string nome)",
+              "        {",
+              "            for (int i = 0; i < Nomi.Length; i++)",
+              "            {",
+              "                if (string.Equals(Nomi[i], (nome ?? \"\").Trim(), System.StringComparison.OrdinalIgnoreCase))",
+              "                {",
+              "                    return i;",
+              "                }",
+              "            }",
+              "            return -1;",
+              "        }",
+              "    }",
+              "}"]
+    with open(percorso, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(righe) + "\n")
+
+
 def anteprima(percorso, lato=120):
     from PIL import Image, ImageDraw
     colonne = 6
@@ -210,6 +261,10 @@ def anteprima(percorso, lato=120):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1].lower().endswith(".cs"):
+        scrivi_cs(sys.argv[1])
+        print("scritto", sys.argv[1])
+        sys.exit(0)
     cartella = sys.argv[1] if len(sys.argv) > 1 else "."
     scrivi_inl(os.path.join(cartella, "ValdorsoRuneTratti.inl"))
     print("scritto", os.path.join(cartella, "ValdorsoRuneTratti.inl"))

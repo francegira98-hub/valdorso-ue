@@ -7,6 +7,7 @@
 #include "ValdorsoAspettoComponent.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoTaccuino.h"
 #include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -43,12 +44,70 @@ namespace
 		return Chi->GetName();
 	}
 
+	/**
+	 * (08/11) La memoria dei dialoghi di quel colono: nel file del suo personaggio (il taccuino sul PlayerController,
+	 * che salva il personaggio quando cambia), così resta anche quando il server si spegne. Chi non ha un personaggio
+	 * salvato (l'accesso libero dell'editor) usa la memoria per nome del server, come prima.
+	 */
+	class FPngMemoriaColono final : public FValdorsoMemoriaDialoghi
+	{
+	public:
+		explicit FPngMemoriaColono(const APawn* Colono)
+			: PerNome(PngNomeDi(Colono))
+		{
+			const APlayerController* Controllore = Colono ? Cast<APlayerController>(Colono->GetController()) : nullptr;
+			UValdorsoTaccuinoComponent* Diario = UValdorsoTaccuinoComponent::Di(Controllore);
+			Taccuino = (Diario && Diario->HaPersonaggio()) ? Diario : nullptr;
+		}
+
+		/** Vero se la memoria è quella del file del personaggio. */
+		bool NelFile() const { return Taccuino != nullptr; }
+
+		virtual bool GiaParlato(FName IdDialogo) const override
+		{
+			return Taccuino ? Taccuino->GiaParlato(IdDialogo) : PerNome.GiaParlato(IdDialogo);
+		}
+
+		virtual void SegnaParlato(FName IdDialogo) override
+		{
+			if (Taccuino)
+			{
+				Taccuino->SegnaParlato(IdDialogo);
+			}
+			else
+			{
+				PerNome.SegnaParlato(IdDialogo);
+			}
+		}
+
+		virtual bool HaSegno(FName IdDialogo, FName Segno) const override
+		{
+			return Taccuino ? Taccuino->HaSegno(IdDialogo, Segno) : PerNome.HaSegno(IdDialogo, Segno);
+		}
+
+		virtual void MettiSegno(FName IdDialogo, FName Segno) override
+		{
+			if (Taccuino)
+			{
+				Taccuino->MettiSegno(IdDialogo, Segno);
+			}
+			else
+			{
+				PerNome.MettiSegno(IdDialogo, Segno);
+			}
+		}
+
+	private:
+		FValdorsoMemoriaPerNome PerNome;
+		UValdorsoTaccuinoComponent* Taccuino = nullptr;
+	};
+
 	/** (08/11) Chi arriva al nodo Nodo riceve il suo segno, se ne ha uno (vedi ValdorsoDialoghi.h, "I segni"). */
-	void PngSegnaNodo(const FValdorsoDialogo& Dati, FName Nodo, const FString& Nome)
+	void PngSegnaNodo(const FValdorsoDialogo& Dati, FName Nodo, FValdorsoMemoriaDialoghi& Memoria)
 	{
 		if (const FValdorsoNodoDialogo* Arrivo = Dati.Trova(Nodo))
 		{
-			ValdorsoDialoghi::MettiSegno(Dati.Id, Nome, Arrivo->Segna);
+			Memoria.MettiSegno(Dati.Id, Arrivo->Segna);
 		}
 	}
 }
@@ -207,25 +266,27 @@ void AValdorsoPNG::Interagisci(APawn* Chi)
 		}
 	}
 
-	const FString Nome = PngNomeDi(Chi);
-	const bool bGiaParlato = ValdorsoDialoghi::GiaParlato(Dati->Id, Nome);
-	ValdorsoDialoghi::SegnaParlato(Dati->Id, Nome);
+	// (08/11) La memoria di questo colono: nel file del suo personaggio (o, senza, per nome).
+	FPngMemoriaColono Memoria(Chi);
+	const bool bGiaParlato = Memoria.GiaParlato(Dati->Id);
+	Memoria.SegnaParlato(Dati->Id);
 
 	FConversazione Nuova;
 	Nuova.Nodo = ValdorsoDialoghi::NodoIniziale(*Dati, bGiaParlato);
 	Nuova.Passo = ProssimoPasso++;
 	Conversazioni.Add(TWeakObjectPtr<APlayerController>(Controllore), Nuova);
-	PngSegnaNodo(*Dati, Nuova.Nodo, Nome);
+	PngSegnaNodo(*Dati, Nuova.Nodo, Memoria);
 
 	ValdorsoRegistroEventi::Annota(TEXT("Dialogo"), Chi, this, GetActorLocation(),
-		FString::Printf(TEXT("parla con %s (%s)"), *Dati->NomeBreve, bGiaParlato ? TEXT("di nuovo") : TEXT("la prima volta")));
+		FString::Printf(TEXT("parla con %s (%s%s)"), *Dati->NomeBreve, bGiaParlato ? TEXT("di nuovo") : TEXT("la prima volta"),
+			Memoria.NelFile() ? TEXT("") : TEXT(", senza personaggio salvato")));
 
 	if (UWorld* Mondo = GetWorld())
 	{
 		Mondo->GetTimerManager().ClearTimer(TimerRitorno);
 	}
 	GuardaVerso(Chi);
-	Manda(Controllore, ValdorsoDialoghi::Battuta(*Dati, Nuova.Nodo, Nuova.Passo, Nome));
+	Manda(Controllore, ValdorsoDialoghi::Battuta(*Dati, Nuova.Nodo, Nuova.Passo, Memoria));
 }
 
 void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
@@ -263,8 +324,8 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	const FValdorsoNodoDialogo* Nodo = Dati->Trova(Prima);
 	// (08/11) Il PC ha visto solo le risposte visibili per questo personaggio (senza quelle nascoste dai segni): il
 	// numero che rimanda si riporta alla risposta vera.
-	const FString Nome = PngNomeDi(Colono);
-	const TArray<int32> Visibili = ValdorsoDialoghi::ScelteVisibili(*Dati, Prima, Nome);
+	FPngMemoriaColono Memoria(Colono);
+	const TArray<int32> Visibili = ValdorsoDialoghi::ScelteVisibili(*Dati, Prima, Memoria);
 	if (!Nodo || !Visibili.IsValidIndex(Scelta))
 	{
 		return;  // una risposta che non c'è: si ignora (il PC mostra ancora la stessa battuta)
@@ -278,8 +339,8 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	}
 	const FString Detta = Nodo->Scelte[Vera].Testo;
 	// (08/11) I segni: della risposta scelta (per esempio "MonetaOfferta": la moneta non si offre più) e del nodo dopo.
-	ValdorsoDialoghi::MettiSegno(Dati->Id, Nome, Nodo->Scelte[Vera].Segna);
-	PngSegnaNodo(*Dati, Prossimo, Nome);
+	Memoria.MettiSegno(Dati->Id, Nodo->Scelte[Vera].Segna);
+	PngSegnaNodo(*Dati, Prossimo, Memoria);
 	// (Per esempio offrire una moneta a una guardia: "Corruzione". Un giorno potrà essere un crimine.)
 	if (!Evento.IsNone())
 	{
@@ -298,7 +359,7 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	Aperta->Nodo = Prossimo;
 	Aperta->Passo = ProssimoPasso++;
 	GuardaVerso(Colono);
-	Manda(Chi, ValdorsoDialoghi::Battuta(*Dati, Aperta->Nodo, Aperta->Passo, Nome));
+	Manda(Chi, ValdorsoDialoghi::Battuta(*Dati, Aperta->Nodo, Aperta->Passo, Memoria));
 }
 
 void AValdorsoPNG::Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta)

@@ -12,6 +12,9 @@
 // - (06/11) Le ombre delle nuvole: sul sole c'è M_OmbreNuvole (una Light Function fatta da crea_tempo.py), macchie grandi
 //   che scorrono col vento; quante sono e quanto morbide lo dice il tempo (AValdorsoTempo). Valdorso.Nuvole.Ombre 0 le
 //   spegne (per i PC deboli).
+// - (08/11) Sole e luna sono due Directional Light: Unreal ne sceglie una sola per le cose trasparenti, l'acqua e la
+//   nebbia volumetrica (ForwardShadingPriority). Il sole ha una priorità più alta di tutte le altre luci del livello;
+//   la luna passa davanti solo quando il sole è sparito sotto l'orizzonte. Così niente avviso rosso sullo schermo.
 // Comandi di console (per le prove): Valdorso.Ora 21 (mette le 21), Valdorso.Giorno.Minuti 2 (un giorno in 2 minuti).
 
 #pragma once
@@ -104,4 +107,11 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> OmbreNuvole;
 	bool bOmbreAccese = false;
+
+	/** (08/11) La priorità della luna di giorno (ForwardShadingPriority): sotto il sole e sotto le altre luci del livello. */
+	static constexpr int32 PrioritaLunaDiGiorno = -1;
+
+	/** (08/11) La priorità data al sole (una più di tutte le altre luci del livello) e se adesso davanti c'è la luna. */
+	int32 PrioritaSole = 1;
+	bool bLunaDavanti = false;
 };

@@ -1,0 +1,115 @@
+{
+ "gioco": "Valdorso",
+ "aggiornato": "2026-11-08",
+ "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
+ "versioni": [
+  {
+   "versione": "0.1.3",
+   "nome": "La valle",
+   "data": "",
+   "sommario": "La valle vera, da esplorare a piedi: tre chilometri per tre di fiume, lago, bosco e montagne, con il villaggio nel mezzo. Il giorno e la notte, la pioggia e la nebbia, i suoni e le campane del tempio, le rune degli Antichi e le prime persone che parlano. Ed è la prima versione che si scarica con il launcher.",
+   "gruppi": [
+    {
+     "titolo": "Novità: la valle",
+     "voci": [
+      "Una valle di 3 x 3 km con il fiume, il lago, la cascata, i monti e il bosco.",
+      "Il villaggio, costruito in 3 fasi: la piazza, il Tempio del Cuore, la locanda di Bruno, la Gilda, la casa del Balivo, la milizia, gli artigiani, il mulino, il cimitero e gli orti.",
+      "La palude di Nonna Edda, sul lago.",
+      "Il posto di guardia al passo, con il sigillo della Corona che chiude la strada per Aurelia.",
+      "Le Rovine degli Antichi, con le cinque pietre e la cripta sigillata.",
+      "La grotta est con la porta degli Antichi e la grotta nord con la frana.",
+      "Il belvedere sopra la cascata."
+     ]
+    },
+    {
+     "titolo": "Novità: vivere nella valle",
+     "voci": [
+      "Porte e imposte che si aprono, bacheche e iscrizioni da leggere, panche e letti, scale a pioli.",
+      "Si nuota nel fiume e nel lago.",
+      "Il giorno e la notte: un giorno della valle dura 120 minuti.",
+      "Il tempo che cambia, la pioggia e la nebbia.",
+      "I suoni della valle e le campane del tempio.",
+      "La mappa di carta, la bussola e il taccuino di viaggio, con i luoghi scoperti e le iscrizioni lette.",
+      "La pietra di Val d'Orso nel tempio: segna il territorio della valle.",
+      "La modalità foto."
+     ]
+    },
+    {
+     "titolo": "Novità: rune e persone",
+     "voci": [
+      "La lingua delle rune: Aeth, Nir, Dorn, Sil, Lume; Var, Ka, Ren, Vel, Tor; e Ur. Incise nella pietra, da ricopiare nel quaderno delle rune.",
+      "Le prime persone che parlano: Gaspare il cacciatore, al margine del bosco, e Corrado e Ottone, le guardie della Corona al passo."
+     ]
+    },
+    {
+     "titolo": "Novità: menu e launcher",
+     "voci": [
+      "Il menu ha dietro la valle vera, al tramonto, e mostra lo stato del mondo: l'ora nella valle, il tempo, la stagione e quanti coloni ci sono.",
+      "Il launcher: installa e aggiorna il gioco (anche a pezzi, con la pausa), controlla i file, ti dice com'è la valle prima di entrare e ha le notizie, queste note, la roadmap e le Cronache."
+     ]
+    },
+    {
+     "titolo": "Sistemazioni",
+     "voci": [
+      "Il numero della versione sta in un posto solo: lo leggono il menu, la schermata d'avvio, il server e il launcher.",
+      "Lo stato del mondo il server lo dà su una pagina sua (porta 7780): il menu e il launcher lo leggono senza entrare in partita.",
+      "Le forme delle rune hanno una fonte sola: nella pietra, sullo schermo e nel launcher sono identiche.",
+      "Quando aggiorni, le tue impostazioni restano: la cartella Saved passa nella versione nuova."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.2",
+   "nome": "Chi sei",
+   "data": "2026-11-03",
+   "sommario": "Prima di entrare nella valle bisogna dire chi si è: l'account, i personaggi e il Registro di Val d'Orso.",
+   "gruppi": [
+    {
+     "titolo": "Novità",
+     "voci": [
+      "Il menu \"Oro e brace\".",
+      "Gli account su invito, con le password protette e i codici di recupero.",
+      "Tre personaggi per account.",
+      "Il Registro di Val d'Orso: volto, corpo, capelli e occhi (MetaHuman), la fede, l'età, le domande del sacerdote e la firma.",
+      "La pausa, le impostazioni e l'accessibilità.",
+      "L'uscita con l'attesa di 20 secondi e la riconnessione senza password.",
+      "La privacy: gli indirizzi IP si tengono per 30 giorni, poi si cancellano."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.1",
+   "nome": "Il personaggio",
+   "data": "2026-10-02",
+   "sommario": "Il primo personaggio che si muove davvero.",
+   "gruppi": [
+    {
+     "titolo": "Novità",
+     "voci": [
+      "Camminare, correre, schivare e scavalcare.",
+      "Il pugno.",
+      "Il primo server dedicato di prova."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.0",
+   "nome": "Preparazione",
+   "data": "2026-10-02",
+   "sommario": "La prima pietra: gli attrezzi e il progetto.",
+   "gruppi": [
+    {
+     "titolo": "Novità",
+     "voci": [
+      "Il disco di lavoro e Unreal Engine 5.8.",
+      "Il progetto in C++ e il repository.",
+      "L'inventario delle risorse."
+     ]
+    }
+   ]
+  }
+ ]
+}

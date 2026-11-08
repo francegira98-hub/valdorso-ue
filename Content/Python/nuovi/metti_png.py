@@ -1,6 +1,7 @@
 # Valdorso - Mette i primi PNG della valle, senza rifare il villaggio (v0.1.3). Scritto da Claude il 07/11/2026.
 # Si lancia in L_Valle (dopo aver compilato: serve la classe C++ ValdorsoPNG): Strumenti -> Esegui script Python ->
 # questo file, oppure dal menu Valdorso -> "PNG: metti Gaspare e le guardie del passo".
+# (08/11) Mette anche Nonna Edda, Bruno e Padre Anselmo (vedi sotto).
 #
 # Mette:
 # - Gaspare, il vecchio cacciatore, al margine del bosco grande: accanto alla strada che dal villaggio va alle Rovine
@@ -9,6 +10,16 @@
 #   un Target Point messo a mano), Gaspare va lì, girato come lui.
 # - Corrado e Ottone, le guardie della Corona, davanti alla porta del passo, uno per parte, girati verso la valle.
 #   Li mette rispetto alla "Porta del passo" e al "Sigillo della Corona" messi da crea_villaggio.py.
+# - (08/11) Nonna Edda alla palude: accanto al fuoco del calderone, dove la passerella arriva alla scaletta della
+#   capanna, girata verso chi arriva dalla passerella ("Fuoco del calderone", "Passerella della palude").
+# - (08/11) Bruno dentro la Locanda di Bruno, in fondo al bancone, girato verso la porta ("Locanda_di_Bruno",
+#   "Locanda_di_Bruno porta"). Dentro le case conta il pavimento: la linea parte 1,5 m sopra il pavimento (sotto il
+#   soffitto del piano terra, così non trova il piano di sopra) e scende.
+# - (08/11) Padre Anselmo nel Tempio del Cuore, 2,2 m davanti all'altare e un poco di lato (per non coprire la pietra),
+#   girato verso l'ingresso ("Altare del Cuore (luce)" o "La pietra di Val d'Orso", e "Tempio_del_Cuore").
+#   Se un attore non c'è, si usano le posizioni dei dati (Villaggio_3000.json) dall'angolo del paesaggio.
+#   Nonna Edda ha la testa da donna anziana (Etta), Padre Anselmo quella da uomo anziano (Walter); Bruno quella "dei
+#   dadi" (sempre la stessa per lui).
 # Ognuno sta a terra (una linea dall'alto: il paesaggio, o la strada se c'è). Toglie i PNG messi prima da questo script
 # (etichetta "ValdorsoPNG"); crea_villaggio.py non li tocca. Alla fine salva il livello.
 
@@ -37,6 +48,34 @@ GUARDIE = (
 )
 NOME_PORTA = "Porta del passo"
 NOME_SIGILLO = "Sigillo della Corona"
+
+# (08/11) Nonna Edda, Bruno e Padre Anselmo. Le posizioni dei dati (cm dall'angolo del paesaggio e quota vera, come
+# Villaggio_3000.json) servono solo se nel livello manca l'attore con quell'etichetta.
+# Le teste (UValdorsoAspettoComponent): da donna 2 = Etta, da uomo 1 = Walter; -1 = quella "dei dadi".
+TESTA_EDDA = 2
+TESTA_ANSELMO = 1
+NOME_FUOCO_EDDA = "Fuoco del calderone"
+NOME_PASSERELLA = "Passerella della palude"
+DATI_FUOCO_EDDA = (70935.9, 230108.8, 3048.9)
+DATI_PASSERELLA = (71231.5, 230173.8, 3046.5)
+PASSERELLA_VERSO_LAGO = (1808.5, -773.8)    # dall'inizio della passerella verso il suo secondo punto (chi arriva)
+EDDA_FRA_FUOCO_E_PASSERELLA = 0.65          # dal fuoco (0) all'inizio della passerella (1)
+
+NOME_LOCANDA = "Locanda_di_Bruno"
+NOME_PORTA_LOCANDA = "Locanda_di_Bruno porta"
+DATI_LOCANDA = (162200.0, 192428.0, 5569.2, 90.0)   # x, y, pavimento, gradi
+BRUNO_LOCALE = (-110.0, 300.0)              # in fondo al bancone (che va da -585 a -175 in x, a y 275..365)
+PORTA_LOCANDA_LOCALE = (-150.0, -480.0)
+
+NOME_ALTARE = "Altare del Cuore (luce)"     # 260 cm sopra il pavimento del tempio
+NOME_PIETRA = "La pietra di Val d'Orso"     # 118 cm sopra il pavimento (sull'altare)
+NOME_TEMPIO = "Tempio_del_Cuore"
+DATI_ALTARE = (165300.0, 188058.0, 5773.0)
+DATI_TEMPIO = (165300.0, 188878.0, 5513.0)
+ANSELMO_AVANTI = 220.0                      # cm dall'altare verso l'ingresso (la pedana finisce a 150)
+ANSELMO_LATO = 150.0                        # cm di lato (le panche stanno a 260, la prima fila a 390 dall'altare)
+
+SOPRA_PAVIMENTO = 150.0                     # dentro: la linea parte da qui (sotto il soffitto, sopra i tavoli no)
 
 attori = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
@@ -100,6 +139,40 @@ def metti(classe, dialogo, nome, x, y, z_piedi, gradi):
     a.set_editor_property("tags", [unreal.Name(ETICHETTA)])
     scrivi("%s in (%.0f, %.0f, %.0f), girato a %.0f gradi" % (nome, p.x, p.y, p.z, gradi))
     return a
+
+
+def volto(a, donna, testa):
+    """(08/11) Donna o uomo e la testa MetaHuman (bDonna e Testa del PNG)."""
+    if a is None:
+        return
+    for nome, valore in (("donna", bool(donna)), ("testa", int(testa))):
+        try:
+            a.set_editor_property(nome, valore)
+        except Exception as e:  # noqa: BLE001
+            avviso("%s: non riesco a impostare %s (%s)" % (a.get_actor_label(), nome, e))
+
+
+def pavimento(x, y, z_stima, ignora):
+    """(08/11) La quota del pavimento dentro un edificio, vicino a z_stima: una linea da SOPRA_PAVIMENTO sopra la stima
+    (sotto il soffitto) in giù, il primo urto vicino alla stima. Restituisce (z, libero): z None se non trova niente
+    (allora si usa la stima); libero è falso se sopra il pavimento c'era altro (un tavolo, una panca)."""
+    colpi = colpi_in_giu(x, y, z_stima + SOPRA_PAVIMENTO, z_stima - 300.0, ignora)
+    vicini = [z for z, _ in colpi if abs(z - z_stima) <= 60.0]
+    if not vicini:
+        return None, False
+    z = max(vicini)
+    libero = not any(z + 30.0 < zz for zz, _ in colpi)
+    return z, libero
+
+
+def gradi_verso(da_x, da_y, a_x, a_y):
+    return math.degrees(math.atan2(a_y - da_y, a_x - da_x))
+
+
+def al_mondo(x, y, gradi, lx, ly):
+    """Da centimetri locali di un edificio (come Tools/Generatori/villaggio.py) al mondo."""
+    a = math.radians(gradi)
+    return x + lx * math.cos(a) - ly * math.sin(a), y + lx * math.sin(a) + ly * math.cos(a)
 
 
 def principale():
@@ -193,6 +266,13 @@ def principale():
             if metti(classe, dialogo, nome, x, y, z, verso_valle):
                 messi += 1
 
+    # 4. (08/11) Nonna Edda, Bruno, Padre Anselmo. Le linee verso il basso non guardano gli attori C++ della valle
+    #    (porte, panche, la pietra): hanno zone invisibili che la linea troverebbe prima del pavimento.
+    nostri = [a for a in tutti if a.get_class().get_name().startswith("Valdorso")]
+    messi += metti_edda(classe, per_nome, nel_mondo, nostri)
+    messi += metti_bruno(classe, per_nome, nel_mondo, nostri)
+    messi += metti_anselmo(classe, per_nome, nel_mondo, nostri)
+
     scrivi("messi %d PNG nella cartella %s" % (messi, CARTELLA))
     try:
         unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
@@ -200,7 +280,99 @@ def principale():
     except Exception as e:  # noqa: BLE001
         avviso("salvataggio non riuscito (%s): Ctrl+Maiusc+S" % e)
     scrivi("FATTO. In Play: Gaspare sulla strada per le rovine, dove comincia il bosco; Corrado e Ottone davanti alla "
-           "porta del passo. Avvicinati e premi E.")
+           "porta del passo; Nonna Edda al fuoco della palude; Bruno al bancone della locanda; Padre Anselmo davanti "
+           "all'altare del Tempio del Cuore. Avvicinati e premi E.")
+
+
+def dove(per_nome, nome, dati, nel_mondo):
+    """(08/11) Dov'è l'attore con quell'etichetta; se non c'è, il punto dei dati (x, y, quota) nel mondo."""
+    a = per_nome.get(nome)
+    if a is not None:
+        return a.get_actor_location(), a
+    avviso("non trovo \"%s\" nel livello: uso la posizione dei dati (il villaggio è stato messo? crea_villaggio.py)" % nome)
+    return nel_mondo(dati[0], dati[1], dati[2]), None
+
+
+def metti_edda(classe, per_nome, nel_mondo, nostri):
+    """(08/11) Nonna Edda accanto al fuoco del calderone, verso l'inizio della passerella, girata verso chi arriva."""
+    fuoco, _ = dove(per_nome, NOME_FUOCO_EDDA, DATI_FUOCO_EDDA, nel_mondo)
+    passerella, _ = dove(per_nome, NOME_PASSERELLA, DATI_PASSERELLA, nel_mondo)
+    f = EDDA_FRA_FUOCO_E_PASSERELLA
+    x = fuoco.x + (passerella.x - fuoco.x) * f
+    y = fuoco.y + (passerella.y - fuoco.y) * f
+    z, libero = terra(x, y, fuoco.z, nostri)
+    if z is None:
+        avviso("Nonna Edda: la linea dall'alto non trova il paesaggio (la palude è caricata?): uso la quota del fuoco")
+        z = fuoco.z
+    elif not libero:
+        avviso("Nonna Edda: sopra il posto c'è qualcosa (la scaletta? il treppiede?): controlla e spostala a mano se serve")
+    verso = gradi_verso(x, y, passerella.x + PASSERELLA_VERSO_LAGO[0], passerella.y + PASSERELLA_VERSO_LAGO[1])
+    a = metti(classe, "NonnaEdda", "Nonna Edda, la vecchia della palude", x, y, z, verso)
+    volto(a, True, TESTA_EDDA)
+    return 1 if a else 0
+
+
+def metti_bruno(classe, per_nome, nel_mondo, nostri):
+    """(08/11) Bruno in fondo al bancone della locanda, girato verso la porta."""
+    locanda = per_nome.get(NOME_LOCANDA)
+    if locanda is not None:
+        q = locanda.get_actor_location()
+        cx, cy, pav, gradi = q.x, q.y, q.z, locanda.get_actor_rotation().yaw
+    else:
+        avviso("non trovo \"%s\" nel livello: uso la posizione dei dati" % NOME_LOCANDA)
+        q = nel_mondo(DATI_LOCANDA[0], DATI_LOCANDA[1], DATI_LOCANDA[2])
+        cx, cy, pav, gradi = q.x, q.y, q.z, DATI_LOCANDA[3]
+    x, y = al_mondo(cx, cy, gradi, *BRUNO_LOCALE)
+    porta = per_nome.get(NOME_PORTA_LOCANDA)
+    if porta is not None:
+        px, py = porta.get_actor_location().x, porta.get_actor_location().y
+    else:
+        px, py = al_mondo(cx, cy, gradi, *PORTA_LOCANDA_LOCALE)
+    z, libero = pavimento(x, y, pav, nostri)
+    if z is None:
+        avviso("Bruno: non trovo il pavimento della locanda (la locanda è caricata?): uso la quota dei dati")
+        z = pav
+    elif not libero:
+        avviso("Bruno: sopra il pavimento c'è qualcosa (il bancone? una botte?): controlla e spostalo a mano se serve")
+    a = metti(classe, "Bruno", "Bruno, il locandiere", x, y, z, gradi_verso(x, y, px, py))
+    volto(a, False, -1)
+    return 1 if a else 0
+
+
+def metti_anselmo(classe, per_nome, nel_mondo, nostri):
+    """(08/11) Padre Anselmo davanti all'altare, un poco di lato, girato verso l'ingresso del tempio."""
+    luce = per_nome.get(NOME_ALTARE)
+    pietra = per_nome.get(NOME_PIETRA)
+    if luce is not None:
+        q = luce.get_actor_location()
+        ax, ay, pav = q.x, q.y, q.z - 260.0
+    elif pietra is not None:
+        q = pietra.get_actor_location()
+        ax, ay, pav = q.x, q.y, q.z - 118.0
+    else:
+        avviso("non trovo \"%s\" né \"%s\": uso la posizione dei dati" % (NOME_ALTARE, NOME_PIETRA))
+        q = nel_mondo(DATI_ALTARE[0], DATI_ALTARE[1], DATI_ALTARE[2])
+        ax, ay, pav = q.x, q.y, q.z - 260.0
+    tempio, _ = dove(per_nome, NOME_TEMPIO, DATI_TEMPIO, nel_mondo)
+    # dall'altare (in fondo alla navata) verso il centro del tempio = verso l'ingresso
+    dx, dy = tempio.x - ax, tempio.y - ay
+    lung = math.hypot(dx, dy)
+    if lung < 1.0:
+        dx, dy, lung = 0.0, 1.0, 1.0                 # come nei dati: l'ingresso del tempio guarda a sud (+Y)
+    dx, dy = dx / lung, dy / lung
+    lx, ly = -dy, dx                                  # di lato
+    x = ax + dx * ANSELMO_AVANTI + lx * ANSELMO_LATO
+    y = ay + dy * ANSELMO_AVANTI + ly * ANSELMO_LATO
+    ignora = nostri + [p for p in (pietra,) if p is not None]
+    z, libero = pavimento(x, y, pav, ignora)
+    if z is None:
+        avviso("Padre Anselmo: non trovo il pavimento del tempio (è caricato?): uso la quota dell'altare")
+        z = pav
+    elif not libero:
+        avviso("Padre Anselmo: sopra il pavimento c'è qualcosa (una panca?): controlla e spostalo a mano se serve")
+    a = metti(classe, "PadreAnselmo", "Padre Anselmo, sacerdote del Tempio del Cuore", x, y, z, math.degrees(math.atan2(dy, dx)))
+    volto(a, False, TESTA_ANSELMO)
+    return 1 if a else 0
 
 
 principale()

@@ -1,4 +1,4 @@
-// Valdorso - La modalità foto (vedi il .h).
+// Valdorso - La modalità foto (vedi il .h). (08/11) Con lo strumento per il trailer (K, L, B, O, 1-5; ValdorsoTrailer.h).
 
 #include "ValdorsoModoFoto.h"
 #include "ValdorsoTemaUI.h"
@@ -14,7 +14,10 @@
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformTime.h"
+#include "HAL/FileManager.h"
+#include "Misc/App.h"
 #include "Misc/Paths.h"
+#include "UnrealClient.h"
 #include "Rendering/DrawElements.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -71,6 +74,20 @@ namespace
 		}
 	}
 
+	/** (08/11) Le cose che la sfera della telecamera non deve sentire: lei stessa, il colono e quello che ha attaccato. */
+	FCollisionQueryParams FotoParametriSfera(const AActor* Camera, const APawn* Corpo)
+	{
+		FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoFotoMuovi), false, Camera);
+		if (Corpo)
+		{
+			Parametri.AddIgnoredActor(Corpo);
+			TArray<AActor*> Attaccati;
+			Corpo->GetAttachedActors(Attaccati, true, true);
+			Parametri.AddIgnoredActors(Attaccati);
+		}
+		return Parametri;
+	}
+
 	FAutoConsoleCommandWithWorld ComandoFoto(
 		TEXT("Valdorso.Foto"),
 		TEXT("Apre o chiude la modalità foto (come il tasto P)."),
@@ -105,6 +122,8 @@ namespace ValdorsoFoto
 		}
 		// una voce rimasta da una volta precedente (mondo cambiato) si chiude bene
 		Chiudi(Controllore);
+		// (08/11) il percorso del trailer: la prima volta si rilegge Saved/Trailer/ultimo.json
+		ValdorsoTrailer::CaricaUltimoSeServe();
 
 		FActorSpawnParameters Parametri;
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -167,6 +186,8 @@ namespace ValdorsoFoto
 		}
 		if (AValdorsoCameraFoto* Camera = Copia.Camera.Get())
 		{
+			// (08/11) il percorso si ferma (e il tempo del gioco torna normale, se c'erano i fotogrammi)
+			Camera->FermaPercorso();
 			Camera->MostraColono();
 			Camera->Comandi = FValdorsoComandiFoto();
 			Camera->SetLifeSpan(0.3f);
@@ -185,6 +206,8 @@ namespace ValdorsoFoto
 		}
 		Controllore->SetInputMode(FInputModeGameOnly());
 		Controllore->bShowMouseCursor = false;
+		// (08/11) il percorso del trailer si tiene: Saved/Trailer/ultimo.json
+		ValdorsoTrailer::SalvaUltimo();
 		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Modalità foto chiusa"));
 	}
 
@@ -343,11 +366,26 @@ FString AValdorsoCameraFoto::Scatta()
 void AValdorsoCameraFoto::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	Muovi(DeltaSeconds);
-	if (bSfocatura)
+	if (bInPercorso)
+	{
+		MuoviSulPercorso(DeltaSeconds);
+	}
+	else
+	{
+		Muovi(DeltaSeconds);
+	}
+	// (08/11) se il percorso porta il suo fuoco, il fuoco lo mette lui (MuoviSulPercorso)
+	if (bSfocatura && !(bInPercorso && bFuocoDalPercorso))
 	{
 		MettiAFuoco();
 	}
+}
+
+void AValdorsoCameraFoto::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// (08/11) mai lasciare il tempo del gioco a passi fissi (mondo chiuso a metà percorso)
+	FinisciFotogrammi();
+	Super::EndPlay(EndPlayReason);
 }
 
 void AValdorsoCameraFoto::Muovi(float DeltaSeconds)
@@ -387,17 +425,16 @@ void AValdorsoCameraFoto::Muovi(float DeltaSeconds)
 	{
 		A = ValdorsoFoto::DentroIlRaggio(Corpo->GetActorLocation(), A, RaggioMassimo);
 	}
+	SetActorLocation(PassoSicuro(Da, A));
+}
+
+FVector AValdorsoCameraFoto::PassoSicuro(const FVector& Da, const FVector& Voluto) const
+{
 	// niente muri e rocce attraversati: una sfera di 15 cm si ferma dove tocca
+	FVector A = Voluto;
 	if (UWorld* Mondo = GetWorld())
 	{
-		FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoFotoMuovi), false, this);
-		if (APawn* Corpo = Colono.Get())
-		{
-			Parametri.AddIgnoredActor(Corpo);
-			TArray<AActor*> Attaccati;
-			Corpo->GetAttachedActors(Attaccati, true, true);
-			Parametri.AddIgnoredActors(Attaccati);
-		}
+		const FCollisionQueryParams Parametri = FotoParametriSfera(this, Colono.Get());
 		FHitResult Colpo;
 		if (Mondo->SweepSingleByChannel(Colpo, Da, A, FQuat::Identity, ECC_Camera, FCollisionShape::MakeSphere(15.f), Parametri))
 		{
@@ -412,7 +449,266 @@ void AValdorsoCameraFoto::Muovi(float DeltaSeconds)
 			}
 		}
 	}
-	SetActorLocation(A);
+	return A;
+}
+
+bool AValdorsoCameraFoto::LiberoIn(const FVector& A) const
+{
+	const UWorld* Mondo = GetWorld();
+	if (!Mondo)
+	{
+		return false;
+	}
+	const FCollisionQueryParams Parametri = FotoParametriSfera(this, Colono.Get());
+	return !Mondo->OverlapAnyTestByChannel(A, FQuat::Identity, ECC_Camera, FCollisionShape::MakeSphere(15.f), Parametri);
+}
+
+// ------------------------------------------------------------------------------------------------
+// (08/11) Il percorso del trailer
+// ------------------------------------------------------------------------------------------------
+
+bool AValdorsoCameraFoto::AggiungiTappa(int32& OutNumero)
+{
+	FValdorsoPercorsoTrailer& Percorso = ValdorsoTrailer::Corrente();
+	OutNumero = Percorso.Tappe.Num();
+	if (Percorso.Tappe.Num() >= ValdorsoTrailer::MassimoTappe)
+	{
+		return false;
+	}
+	FValdorsoTappaTrailer Tappa;
+	Tappa.Posizione = GetActorLocation();
+	Tappa.Rotazione = FRotator(Beccheggio, FRotator::NormalizeAxis(Imbardata), Rollio);
+	Tappa.Campo = CampoVisivo();
+	const UCameraComponent* Obiettivo = GetCameraComponent();
+	Tappa.Fuoco = (bSfocatura && Obiettivo) ? FMath::Max(0.f, Obiettivo->PostProcessSettings.DepthOfFieldFocalDistance) : 0.f;
+	Percorso.Tappe.Add(Tappa);
+	OutNumero = Percorso.Tappe.Num();
+	return true;
+}
+
+bool AValdorsoCameraFoto::TogliTappa(int32& OutRimaste)
+{
+	FValdorsoPercorsoTrailer& Percorso = ValdorsoTrailer::Corrente();
+	const bool bTolta = Percorso.Tappe.Num() > 0;
+	if (bTolta)
+	{
+		Percorso.Tappe.RemoveAt(Percorso.Tappe.Num() - 1);
+	}
+	OutRimaste = Percorso.Tappe.Num();
+	return bTolta;
+}
+
+void AValdorsoCameraFoto::RifaiTabella()
+{
+	Tabella.Prepara(ValdorsoTrailer::Corrente());
+	DistanzaPercorso = FMath::Clamp(DistanzaPercorso, 0.f, Tabella.Lunghezza());
+}
+
+bool AValdorsoCameraFoto::AvviaPercorso(FText& OutMessaggio)
+{
+	const FValdorsoPercorsoTrailer& Percorso = ValdorsoTrailer::Corrente();
+	OutMessaggio = FText::GetEmpty();
+	if (Percorso.Tratti() <= 0)
+	{
+		OutMessaggio = LOCTEXT("PercorsoCorto", "Servono almeno due tappe: premi K per metterle.");
+		return false;
+	}
+	Tabella.Prepara(Percorso);
+	if (!Tabella.Pronta() || Tabella.Lunghezza() < 1.f)
+	{
+		OutMessaggio = LOCTEXT("PercorsoFermo", "Le tappe sono tutte nello stesso punto e guardano dalla stessa parte.");
+		return false;
+	}
+
+	// le tappe oltre il limite (per esempio da un file fatto in un'altra parte della valle): lì la telecamera si ferma
+	if (const APawn* Corpo = Colono.Get())
+	{
+		int32 Lontane = 0;
+		for (const FValdorsoTappaTrailer& Tappa : Percorso.Tappe)
+		{
+			Lontane += FVector::Dist(Tappa.Posizione, Corpo->GetActorLocation()) > RaggioMassimo + 1.f ? 1 : 0;
+		}
+		if (Lontane > 0)
+		{
+			OutMessaggio = FText::Format(LOCTEXT("TappeLontane", "{0} tappe sono a più di {1} m dal colono: lì la telecamera si ferma al limite."),
+				FText::AsNumber(Lontane), FText::AsNumber(FMath::RoundToInt(RaggioMassimo / 100.f)));
+			UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Trailer: %d tappe oltre il limite dal colono"), Lontane);
+		}
+	}
+
+	// il fuoco: se qualche tappa l'ha messo (con F), lo decide il percorso
+	bFuocoDalPercorso = false;
+	for (const FValdorsoTappaTrailer& Tappa : Percorso.Tappe)
+	{
+		bFuocoDalPercorso |= Tappa.Fuoco > 0.f;
+	}
+	if (UCameraComponent* Obiettivo = GetCameraComponent())
+	{
+		if (bFuocoDalPercorso)
+		{
+			FPostProcessSettings& Effetti = Obiettivo->PostProcessSettings;
+			Effetti.bOverride_DepthOfFieldFocalDistance = true;
+			Effetti.bOverride_DepthOfFieldFstop = true;
+			Effetti.DepthOfFieldFstop = 1.8f;
+		}
+	}
+
+	bInPercorso = true;
+	bPrimoPasso = true;
+	TempoPercorso = 0.f;
+	DistanzaPercorso = 0.f;
+	VelocitaUsata = Percorso.Velocita;
+	GenerazionePercorso = ValdorsoTrailer::Generazione();
+	Comandi = FValdorsoComandiFoto();
+
+	if (ValdorsoTrailer::Fotogrammi())
+	{
+		if (GetNetMode() == NM_Standalone)
+		{
+			IniziaFotogrammi();
+		}
+		else
+		{
+			// collegati a un server, il tempo a passi fissi farebbe andare l'orologio di questo PC diverso da quello del server
+			UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Trailer: i fotogrammi si salvano solo giocando senza server (Prova senza server)"));
+		}
+	}
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Trailer: parte il percorso, %d tappe, %.0f m, %.0f m/s%s"), Percorso.Tappe.Num(),
+		Tabella.Lunghezza() / 100.f, Percorso.Velocita / 100.f, Percorso.bGiro ? TEXT(", ad anello") : TEXT(""));
+	return true;
+}
+
+void AValdorsoCameraFoto::FermaPercorso()
+{
+	FinisciFotogrammi();
+	if (!bInPercorso)
+	{
+		return;
+	}
+	bInPercorso = false;
+	// da qui si vola di nuovo a mano: lo sguardo riparte da com'è adesso
+	const FRotator SguardoAdesso = GetActorRotation();
+	Imbardata = SguardoAdesso.Yaw;
+	Beccheggio = FMath::Clamp(FRotator::NormalizeAxis(SguardoAdesso.Pitch), -85.f, 85.f);
+	Rollio = FMath::Clamp(FRotator::NormalizeAxis(SguardoAdesso.Roll), -45.f, 45.f);
+	SetActorRotation(FRotator(Beccheggio, Imbardata, Rollio));
+	if (bFuocoDalPercorso)
+	{
+		RimettiSfocatura();
+	}
+	bFuocoDalPercorso = false;
+	Comandi = FValdorsoComandiFoto();
+}
+
+void AValdorsoCameraFoto::RimettiSfocatura()
+{
+	if (UCameraComponent* Obiettivo = GetCameraComponent())
+	{
+		FPostProcessSettings& Effetti = Obiettivo->PostProcessSettings;
+		Effetti.bOverride_DepthOfFieldFocalDistance = bSfocatura;
+		Effetti.bOverride_DepthOfFieldFstop = bSfocatura;
+	}
+}
+
+void AValdorsoCameraFoto::MuoviSulPercorso(float DeltaSeconds)
+{
+	const FValdorsoPercorsoTrailer& Percorso = ValdorsoTrailer::Corrente();
+	// il mouse e la rotella non contano mentre va (niente scatto quando si ferma)
+	Comandi.Sguardo = FVector2D::ZeroVector;
+	Comandi.Zoom = 0.f;
+	// caricato, svuotato o rimasto con meno di due tappe da fuori: ci si ferma
+	if (GenerazionePercorso != ValdorsoTrailer::Generazione() || Percorso.Tratti() <= 0 || !Tabella.Pronta() || Tabella.Lunghezza() < 1.f)
+	{
+		FermaPercorso();
+		return;
+	}
+
+	// quanta strada: la velocità scelta (cambiata con 1-5 ci arriva in un attimo), con la partenza e l'arrivo dolci
+	const float Lunghezza = Tabella.Lunghezza();
+	bool bFinito = false;
+	if (!bPrimoPasso)
+	{
+		VelocitaUsata = FMath::FInterpTo(VelocitaUsata, Percorso.Velocita, DeltaSeconds, 2.f);
+		const float Rimasta = Percorso.bGiro ? -1.f : Lunghezza - DistanzaPercorso;
+		DistanzaPercorso += VelocitaUsata * ValdorsoTrailer::FattoreVelocita(TempoPercorso, Rimasta, VelocitaUsata) * DeltaSeconds;
+		TempoPercorso += DeltaSeconds;
+		if (Percorso.bGiro)
+		{
+			DistanzaPercorso = FMath::Fmod(DistanzaPercorso, Lunghezza);
+		}
+		else if (DistanzaPercorso >= Lunghezza - 0.5f)
+		{
+			DistanzaPercorso = Lunghezza;
+			bFinito = true;
+		}
+	}
+	const FValdorsoTappaTrailer PosaAdesso = ValdorsoTrailer::Posa(Percorso, Tabella.Chiave(DistanzaPercorso));
+
+	// dove: con le stesse regole del volo a mano (al massimo 30 m dal colono, mai attraverso muri e rocce);
+	// alla prima tappa si salta, se lì la telecamera non tocca niente
+	FVector A = PosaAdesso.Posizione;
+	if (const APawn* Corpo = Colono.Get())
+	{
+		A = ValdorsoFoto::DentroIlRaggio(Corpo->GetActorLocation(), A, RaggioMassimo);
+	}
+	const bool bSalta = bPrimoPasso && LiberoIn(A);
+	SetActorLocation(bSalta ? A : PassoSicuro(GetActorLocation(), A));
+	bPrimoPasso = false;
+	SetActorRotation(PosaAdesso.Rotazione);
+	if (UCameraComponent* Obiettivo = GetCameraComponent())
+	{
+		Obiettivo->SetFieldOfView(FMath::Clamp(PosaAdesso.Campo, 15.f, 100.f));
+		if (bFuocoDalPercorso && PosaAdesso.Fuoco > 0.f)
+		{
+			Obiettivo->PostProcessSettings.DepthOfFieldFocalDistance = FMath::Max(30.f, PosaAdesso.Fuoco);
+		}
+	}
+
+	// il fotogramma di questo giro (si salva quando il fotogramma è disegnato, senza le scritte)
+	if (bFotogrammi)
+	{
+		const FString File = CartellaFotogrammi / FString::Printf(TEXT("fotogramma_%05d.png"), NumeroFotogramma);
+		++NumeroFotogramma;
+		FScreenshotRequest::RequestScreenshot(File, /*bInShowUI*/ false, /*bAddFilenameSuffix*/ false);
+	}
+	if (bFinito)
+	{
+		FermaPercorso();
+	}
+}
+
+void AValdorsoCameraFoto::IniziaFotogrammi()
+{
+	if (bFotogrammi)
+	{
+		return;
+	}
+	CartellaFotogrammi = ValdorsoTrailer::Cartella() / ValdorsoTrailer::NomeCorrente();
+	if (!IFileManager::Get().MakeDirectory(*CartellaFotogrammi, true))
+	{
+		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Trailer: non riesco a fare la cartella %s, niente fotogrammi"), *CartellaFotogrammi);
+		return;
+	}
+	// il tempo del gioco a passi fissi: ogni fotogramma vale 1/30 di secondo, anche se disegnarlo e salvarlo ci mette di più
+	bPassoFissoPrima = FApp::UseFixedTimeStep();
+	DeltaFissoPrima = FApp::GetFixedDeltaTime();
+	FApp::SetFixedDeltaTime(1.0 / static_cast<double>(ValdorsoTrailer::FotogrammiAlSecondo));
+	FApp::SetUseFixedTimeStep(true);
+	bFotogrammi = true;
+	NumeroFotogramma = 0;
+	UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Trailer: fotogrammi a %d al secondo in %s"), ValdorsoTrailer::FotogrammiAlSecondo, *CartellaFotogrammi);
+}
+
+void AValdorsoCameraFoto::FinisciFotogrammi()
+{
+	if (!bFotogrammi)
+	{
+		return;
+	}
+	bFotogrammi = false;
+	FApp::SetUseFixedTimeStep(bPassoFissoPrima);
+	FApp::SetFixedDeltaTime(DeltaFissoPrima);
+	UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Trailer: %d fotogrammi in %s"), NumeroFotogramma, *CartellaFotogrammi);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -441,7 +737,7 @@ void SValdorsoFoto::Construct(const FArguments& InArgs)
 		.Padding(FMargin(48.f, 0.f, 0.f, 44.f))
 		[
 			SNew(SBorder)
-			.Visibility_Lambda([this]() { return bAiuto && Lampo <= 0.f ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			.Visibility_Lambda([this]() { return bAiuto && Lampo <= 0.f && !InPercorso() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 			.BorderImage(&Pannello)
 			.Padding(FMargin(22.f, 16.f))
 			[
@@ -479,6 +775,39 @@ void SValdorsoFoto::Construct(const FArguments& InArgs)
 					.ColorAndOpacity(ValdorsoTema::OroChiaro())
 				]
 
+				// (08/11) il trailer
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 12.f, 0.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("TitoloTrailer", "TRAILER"))
+					.Font(FontEtichetta)
+					.ColorAndOpacity(ValdorsoTema::Oro())
+				]
+
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 6.f, 0.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("Aiuto4", "K metti una tappa · Backspace togli l'ultima · L percorri o ferma"))
+					.Font(Caratteri->Testo(19.f))
+					.ColorAndOpacity(ValdorsoTema::Pergamena())
+				]
+
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f, 0.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("Aiuto5", "1 2 3 4 5 velocità (2, 4, 8, 15, 30 m/s) · O giro · B bande del cinema"))
+					.Font(Caratteri->Testo(19.f))
+					.ColorAndOpacity(ValdorsoTema::Pergamena())
+				]
+
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f, 0.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("Aiuto6", "A modalità chiusa, in console: Valdorso.Trailer.Salva <nome> · .Carica <nome> · .Elenco · .Svuota"))
+					.Font(Caratteri->Testo(17.f))
+					.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+				]
+
 				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 10.f, 0.f, 0.f))
 				[
 					SNew(STextBlock)
@@ -498,6 +827,23 @@ void SValdorsoFoto::Construct(const FArguments& InArgs)
 					.Font(Caratteri->Testo(17.f, TEXT("Italic")))
 					.ColorAndOpacity(ValdorsoTema::TestoSecondario())
 				]
+
+				// (08/11) il percorso del trailer
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f, 0.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text_Lambda([this]()
+					{
+						const FValdorsoPercorsoTrailer& Strada = ValdorsoTrailer::Corrente();
+						return FText::Format(LOCTEXT("StatoTrailer", "Percorso: {0} tappe · {1} m/s · giro {2} · bande {3}"),
+							FText::AsNumber(Strada.Tappe.Num()),
+							FText::AsNumber(FMath::RoundToInt(Strada.Velocita / 100.f)),
+							Strada.bGiro ? LOCTEXT("GiroSi", "sì") : LOCTEXT("GiroNo", "no"),
+							bBande ? LOCTEXT("BandeSi", "sì") : LOCTEXT("BandeNo", "no"));
+					})
+					.Font(Caratteri->Testo(17.f, TEXT("Italic")))
+					.ColorAndOpacity(ValdorsoTema::TestoSecondario())
+				]
 			]
 		]
 
@@ -508,7 +854,7 @@ void SValdorsoFoto::Construct(const FArguments& InArgs)
 		.Padding(FMargin(0.f, 46.f, 0.f, 0.f))
 		[
 			SNew(SBorder)
-			.Visibility_Lambda([this]() { return FPlatformTime::Seconds() < FineMessaggio ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			.Visibility_Lambda([this]() { return FPlatformTime::Seconds() < FineMessaggio && !InPercorso() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 			.BorderImage(&Pannello)
 			.Padding(FMargin(22.f, 10.f))
 			[
@@ -606,6 +952,13 @@ FReply SValdorsoFoto::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& In
 		return FReply::Handled();
 	}
 	AValdorsoCameraFoto* C = Camera.Get();
+	// (08/11) i tasti del trailer: K, Backspace, L, B, O, 1-5
+	if (TastoTrailer(Tasto))
+	{
+		return FReply::Handled();
+	}
+	// (08/11) mentre la telecamera percorre la strada lo sguardo, lo zoom e il fuoco li decide il percorso: R e F aspettano
+	const bool bPercorsoAdesso = InPercorso();
 	if (Tasto == EKeys::Escape || Tasto == EKeys::P || Tasto == EKeys::Gamepad_FaceButton_Right)
 	{
 		OnEsci.ExecuteIfBound();
@@ -614,11 +967,11 @@ FReply SValdorsoFoto::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& In
 	{
 		Scatta();
 	}
-	else if (Tasto == EKeys::R)
+	else if (Tasto == EKeys::R && !bPercorsoAdesso)
 	{
 		C->RimettiDritto();
 	}
-	else if (Tasto == EKeys::F || Tasto == EKeys::Gamepad_FaceButton_Left)
+	else if ((Tasto == EKeys::F || Tasto == EKeys::Gamepad_FaceButton_Left) && !bPercorsoAdesso)
 	{
 		C->AlternaSfocatura();
 		Messaggio(C->Sfocatura() ? LOCTEXT("SfocaSi", "Sfondo sfocato: a fuoco c'è quello che sta al centro.") : LOCTEXT("SfocaNo", "Tutto a fuoco."));
@@ -644,6 +997,102 @@ FReply SValdorsoFoto::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& In
 		K->Zoom -= 1.f;
 	}
 	return FReply::Handled();
+}
+
+bool SValdorsoFoto::InPercorso() const
+{
+	const AValdorsoCameraFoto* C = Camera.Get();
+	return C && C->InPercorso();
+}
+
+bool SValdorsoFoto::TastoTrailer(const FKey& Tasto)
+{
+	AValdorsoCameraFoto* C = Camera.Get();
+	if (!C)
+	{
+		return false;
+	}
+	FValdorsoPercorsoTrailer& Strada = ValdorsoTrailer::Corrente();
+	if (Tasto == EKeys::K)
+	{
+		// mentre va, le tappe non si toccano
+		if (!C->InPercorso())
+		{
+			int32 Numero = 0;
+			if (C->AggiungiTappa(Numero))
+			{
+				Messaggio(FText::Format(LOCTEXT("TappaAggiunta", "Tappa {0} aggiunta"), FText::AsNumber(Numero)));
+			}
+			else
+			{
+				Messaggio(FText::Format(LOCTEXT("TroppeTappe", "Al massimo {0} tappe: togline qualcuna con Backspace."), FText::AsNumber(ValdorsoTrailer::MassimoTappe)));
+			}
+		}
+		return true;
+	}
+	if (Tasto == EKeys::BackSpace)
+	{
+		if (!C->InPercorso())
+		{
+			int32 Rimaste = 0;
+			if (C->TogliTappa(Rimaste))
+			{
+				Messaggio(FText::Format(LOCTEXT("TappaTolta", "Ultima tappa tolta: ne restano {0}"), FText::AsNumber(Rimaste)));
+			}
+			else
+			{
+				Messaggio(LOCTEXT("NienteDaTogliere", "Non ci sono tappe da togliere."));
+			}
+		}
+		return true;
+	}
+	if (Tasto == EKeys::L)
+	{
+		if (C->InPercorso())
+		{
+			C->FermaPercorso();
+			return true;
+		}
+		FText Avviso;
+		const bool bPartito = C->AvviaPercorso(Avviso);
+		if (!Avviso.IsEmpty())
+		{
+			// se è partito, mentre va i messaggi non si vedono: lo si legge appena si ferma (se non è passato troppo)
+			Messaggio(Avviso);
+		}
+		bEraInPercorso = bPartito;
+		return true;
+	}
+	if (Tasto == EKeys::B)
+	{
+		bBande = !bBande;
+		return true;
+	}
+	if (Tasto == EKeys::O)
+	{
+		Strada.bGiro = !Strada.bGiro;
+		if (C->InPercorso())
+		{
+			C->RifaiTabella();
+		}
+		Messaggio(Strada.bGiro
+			? LOCTEXT("GiroAcceso", "Giro: dopo l'ultima tappa si torna alla prima e si ricomincia.")
+			: LOCTEXT("GiroSpento", "Niente giro: il percorso si ferma all'ultima tappa."));
+		return true;
+	}
+	int32 Numero = 0;
+	if (Tasto == EKeys::One || Tasto == EKeys::NumPadOne) { Numero = 1; }
+	else if (Tasto == EKeys::Two || Tasto == EKeys::NumPadTwo) { Numero = 2; }
+	else if (Tasto == EKeys::Three || Tasto == EKeys::NumPadThree) { Numero = 3; }
+	else if (Tasto == EKeys::Four || Tasto == EKeys::NumPadFour) { Numero = 4; }
+	else if (Tasto == EKeys::Five || Tasto == EKeys::NumPadFive) { Numero = 5; }
+	if (Numero > 0)
+	{
+		Strada.Velocita = ValdorsoTrailer::VelocitaTasto(Numero);
+		Messaggio(FText::Format(LOCTEXT("VelocitaPercorso", "Velocità del percorso: {0} m/s"), FText::AsNumber(FMath::RoundToInt(Strada.Velocita / 100.f))));
+		return true;
+	}
+	return false;
 }
 
 FReply SValdorsoFoto::OnKeyUp(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
@@ -720,6 +1169,17 @@ EActiveTimerReturnType SValdorsoFoto::Anima(double Tempo, float Delta)
 		OnEsci.ExecuteIfBound();
 		return EActiveTimerReturnType::Stop;
 	}
+	// (08/11) la telecamera si è fermata (in fondo al percorso, con L, o perché il percorso è cambiato da console)
+	const bool bPercorsoAdesso = InPercorso();
+	if (bEraInPercorso && !bPercorsoAdesso)
+	{
+		// un avviso della partenza ancora da leggere resta; se no si dice che è finito
+		if (FPlatformTime::Seconds() >= FineMessaggio)
+		{
+			Messaggio(LOCTEXT("FinePercorso", "Fine del percorso: L lo rifà da capo."));
+		}
+	}
+	bEraInPercorso = bPercorsoAdesso;
 	return EActiveTimerReturnType::Continue;
 }
 
@@ -727,8 +1187,21 @@ int32 SValdorsoFoto::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGe
 	FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	const FVector2f Misura = FVector2f(AllottedGeometry.GetLocalSize());
-	// la griglia dei terzi: due linee per lato, sottili, d'oro chiaro
-	if (bGriglia)
+	const bool bPercorsoAdesso = InPercorso();
+	// (08/11) le bande nere del cinema (2,39 a 1), sotto l'aiuto e i messaggi
+	if (bBande)
+	{
+		const float Banda = ValdorsoTrailer::AltezzaBande(FVector2D(Misura.X, Misura.Y));
+		if (Banda >= 1.f)
+		{
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+				AllottedGeometry.ToPaintGeometry(FVector2f(Misura.X, Banda), FSlateLayoutTransform(FVector2f(0.f, 0.f))), &Pieno, ESlateDrawEffect::None, FLinearColor::Black);
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
+				AllottedGeometry.ToPaintGeometry(FVector2f(Misura.X, Banda), FSlateLayoutTransform(FVector2f(0.f, Misura.Y - Banda))), &Pieno, ESlateDrawEffect::None, FLinearColor::Black);
+		}
+	}
+	// la griglia dei terzi: due linee per lato, sottili, d'oro chiaro (non mentre la telecamera percorre la strada)
+	if (bGriglia && !bPercorsoAdesso)
 	{
 		const FLinearColor Linea = ValdorsoTema::OroChiaro().CopyWithNewOpacity(0.35f);
 		for (int32 I = 1; I <= 2; ++I)

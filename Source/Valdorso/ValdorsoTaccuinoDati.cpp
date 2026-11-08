@@ -43,6 +43,43 @@ namespace
 		const FString Pulito = Titolo.TrimStartAndEnd().Left(ValdorsoTaccuino::MassimoTitolo);
 		return Pulito.IsEmpty() ? FString(TEXT("Bacheca")) : Pulito;
 	}
+
+	/** (08/11) Il nome di un dialogo o di un segno come si scrive nel file: senza spazi ai lati, non troppo lungo. */
+	FString TaccuinoNomeRicordo(const FString& Nome)
+	{
+		return Nome.TrimStartAndEnd().Left(ValdorsoTaccuino::MassimoNomeDialogo);
+	}
+
+	/** (08/11) Il ricordo di quel dialogo (nullptr se non c'è; le maiuscole non contano). */
+	const FValdorsoRicordoDialogo* TaccuinoTrovaRicordo(const TArray<FValdorsoRicordoDialogo>& Ricordi, const FString& IdDialogo)
+	{
+		return Ricordi.FindByPredicate([&IdDialogo](const FValdorsoRicordoDialogo& R) { return R.Dialogo.Equals(IdDialogo, ESearchCase::IgnoreCase); });
+	}
+
+	/** (08/11) Il ricordo di quel dialogo, da cambiare: se non c'è lo aggiunge (nullptr se la memoria è piena). */
+	FValdorsoRicordoDialogo* TaccuinoRicordoDaCambiare(TArray<FValdorsoRicordoDialogo>& Ricordi, const FString& IdDialogo)
+	{
+		FValdorsoRicordoDialogo* Trovato = Ricordi.FindByPredicate([&IdDialogo](const FValdorsoRicordoDialogo& R) { return R.Dialogo.Equals(IdDialogo, ESearchCase::IgnoreCase); });
+		if (Trovato || Ricordi.Num() >= ValdorsoTaccuino::MassimoDialoghi)
+		{
+			return Trovato;
+		}
+		FValdorsoRicordoDialogo& Nuovo = Ricordi.AddDefaulted_GetRef();
+		Nuovo.Dialogo = IdDialogo;
+		return &Nuovo;
+	}
+
+	/** (08/11) Aggiunge il segno al ricordo; falso se c'era già, è vuoto o i segni sono al massimo. */
+	bool TaccuinoAggiungiSegno(FValdorsoRicordoDialogo& Ricordo, const FString& Segno)
+	{
+		if (Segno.IsEmpty() || Ricordo.Segni.Num() >= ValdorsoTaccuino::MassimoSegni
+			|| Ricordo.Segni.ContainsByPredicate([&Segno](const FString& S) { return S.Equals(Segno, ESearchCase::IgnoreCase); }))
+		{
+			return false;
+		}
+		Ricordo.Segni.Add(Segno);
+		return true;
+	}
 }
 
 // ------------------------------------------------------------------------------------------------- i luoghi
@@ -244,6 +281,70 @@ namespace ValdorsoTaccuino
 			AnnotaIscrizione(Riordinato, I.Titolo, I.Righe, I.Quando);
 		}
 		Taccuino.Iscrizioni = MoveTemp(Riordinato.Iscrizioni);
+
+		// (08/11) la memoria dei dialoghi: via i nomi vuoti, i doppioni si uniscono (con i segni di tutti e due)
+		TArray<FValdorsoRicordoDialogo> Ricordi;
+		for (const FValdorsoRicordoDialogo& Letto : Taccuino.Dialoghi)
+		{
+			const FString IdDialogo = TaccuinoNomeRicordo(Letto.Dialogo);
+			FValdorsoRicordoDialogo* Unito = IdDialogo.IsEmpty() ? nullptr : TaccuinoRicordoDaCambiare(Ricordi, IdDialogo);
+			if (!Unito)
+			{
+				continue;
+			}
+			Unito->bParlato = Unito->bParlato || Letto.bParlato;
+			for (const FString& Segno : Letto.Segni)
+			{
+				TaccuinoAggiungiSegno(*Unito, TaccuinoNomeRicordo(Segno));
+			}
+		}
+		Taccuino.Dialoghi = MoveTemp(Ricordi);
+	}
+
+	bool HaParlato(const FValdorsoTaccuino& Taccuino, FName IdDialogo)
+	{
+		const FValdorsoRicordoDialogo* Ricordo = IdDialogo.IsNone() ? nullptr
+			: TaccuinoTrovaRicordo(Taccuino.Dialoghi, TaccuinoNomeRicordo(IdDialogo.ToString()));
+		return Ricordo && Ricordo->bParlato;
+	}
+
+	bool SegnaParlato(FValdorsoTaccuino& Taccuino, FName IdDialogo)
+	{
+		const FString Nome = IdDialogo.IsNone() ? FString() : TaccuinoNomeRicordo(IdDialogo.ToString());
+		FValdorsoRicordoDialogo* Ricordo = Nome.IsEmpty() ? nullptr : TaccuinoRicordoDaCambiare(Taccuino.Dialoghi, Nome);
+		if (!Ricordo || Ricordo->bParlato)
+		{
+			return false;
+		}
+		Ricordo->bParlato = true;
+		return true;
+	}
+
+	bool HaSegno(const FValdorsoTaccuino& Taccuino, FName IdDialogo, FName Segno)
+	{
+		if (IdDialogo.IsNone() || Segno.IsNone())
+		{
+			return false;
+		}
+		const FValdorsoRicordoDialogo* Ricordo = TaccuinoTrovaRicordo(Taccuino.Dialoghi, TaccuinoNomeRicordo(IdDialogo.ToString()));
+		const FString Cercato = TaccuinoNomeRicordo(Segno.ToString());
+		return Ricordo && Ricordo->Segni.ContainsByPredicate([&Cercato](const FString& S) { return S.Equals(Cercato, ESearchCase::IgnoreCase); });
+	}
+
+	bool MettiSegno(FValdorsoTaccuino& Taccuino, FName IdDialogo, FName Segno)
+	{
+		if (IdDialogo.IsNone() || Segno.IsNone())
+		{
+			return false;
+		}
+		const FString Nome = TaccuinoNomeRicordo(IdDialogo.ToString());
+		const FString Pulito = TaccuinoNomeRicordo(Segno.ToString());
+		if (Nome.IsEmpty() || Pulito.IsEmpty() || HaSegno(Taccuino, IdDialogo, Segno))
+		{
+			return false;
+		}
+		FValdorsoRicordoDialogo* Ricordo = TaccuinoRicordoDaCambiare(Taccuino.Dialoghi, Nome);
+		return Ricordo && TaccuinoAggiungiSegno(*Ricordo, Pulito);
 	}
 
 	FText Momento(float Ora)

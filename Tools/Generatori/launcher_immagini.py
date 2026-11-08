@@ -1,10 +1,12 @@
 # Valdorso - Le immagini del launcher: lo sfondo (la valle al tramonto, dipinta da zero), l'icona e i caratteri.
-# Scritto da Claude il 07/11/2026. Richiede Pillow e numpy (come logo.py).
+# Scritto da Claude il 07/11/2026; (08/11) le immagini delle notizie e delle Cronache. Richiede Pillow e numpy.
 #
 # Uso:  python launcher_immagini.py <cartella dei caratteri> <cartella di uscita>
 #   sul PC: python Tools\Generatori\launcher_immagini.py V:\Font V:\Valdorso\Build\Launcher\risorse
 # Fa:   sfondo.jpg (2200 x 1280), icona.ico (16-256 px), anteprima_icona.png e copia Cinzel ed EB Garamond
-#       (licenza SIL OFL 1.1: si possono dare insieme al launcher, con la licenza) accanto, per la finestra.
+#       (licenza SIL OFL 1.1: si possono dare insieme al launcher, con la licenza) accanto, per la finestra;
+#       in immagini/: valle.jpg e rune.jpg (le cartoline delle notizie) e cronache.jpg (l'Orso sotto la luna, la
+#       testata delle Cronache). prepara_aggiornamento.py le copia anche sul sito (cartella immagini/).
 # Cerca i caratteri sia come file statici (Cinzel/static/Cinzel-Bold.ttf) sia come file variabili (Cinzel.ttf).
 
 import math
@@ -136,6 +138,151 @@ def sfondo(W=2200, H=1280, seme=312):
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 
 
+def rumore(W, H, rng, scale=(4, 16, 64, 160), pesi=(0.5, 0.3, 0.15, 0.05)):
+    """Un rumore morbido 0..1 (la grana della pietra): somma di rumori sfocati a più scale."""
+    tot = np.zeros((H, W))
+    for sc, p in zip(scale, pesi):
+        w, h = max(2, W // sc), max(2, H // sc)
+        r = Image.fromarray((rng.random((h, w)) * 255).astype(np.uint8), "L").resize((W, H), Image.BICUBIC)
+        tot += np.asarray(r).astype(float) / 255 * p
+    return (tot - tot.min()) / max(1e-6, tot.max() - tot.min())
+
+
+def cartolina_valle(W=1300, H=450):
+    """Un'altra valle al tramonto (altro seme), tagliata larga: la cartolina della notizia della v0.1.3."""
+    grande = sfondo(W=1500, H=880, seme=77)
+    y0 = int(880 * 0.38)
+    return grande.crop((100, y0, 100 + W, y0 + H))
+
+
+def cartolina_rune(W=1300, H=450):
+    """Le rune incise nella pietra scura, accese d'oro e di brace (la cartolina della notizia delle rune)."""
+    import alfabeto_rune as ar
+    rng = np.random.default_rng(311)
+    n = rumore(W, H, rng)
+    pietra = np.stack([28 + n * 34, 24 + n * 28, 22 + n * 24], -1)
+    # una luce calda da sinistra in basso
+    yy = np.linspace(0, 1, H)[:, None]
+    xx = np.linspace(0, 1, W)[None, :]
+    luce = np.exp(-(((xx - 0.3) / 0.55) ** 2 + ((yy - 0.9) / 0.7) ** 2))
+    pietra = pietra * (0.55 + 0.6 * luce[..., None])
+    img = Image.fromarray(np.clip(pietra, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+    # le rune: la riga degli elementi grande e una parola sotto
+    tratti = Image.new("L", (W, H), 0)
+    dt = ImageDraw.Draw(tratti)
+
+    def incidi(segmenti, cx, cy, scala, spessore):
+        for (a, b) in segmenti:
+            dt.line([(cx + a[0] * scala, cy - a[1] * scala), (cx + b[0] * scala, cy - b[1] * scala)], fill=255, width=spessore)
+            for (x, y) in (a, b):
+                r = spessore / 2
+                dt.ellipse([cx + x * scala - r, cy - y * scala - r, cx + x * scala + r, cy - y * scala + r], fill=255)
+
+    nomi = ar.ELEMENTI + ["Ur"] + ar.VERBI
+    passo = W / (len(nomi) + 1)
+    for k, nome in enumerate(nomi):
+        cx = passo * (k + 1)
+        cy = H * 0.36 + (12 if k % 2 else -8)
+        incidi(ar.tratti(nome), cx, cy, 44 if nome != "Ur" else 56, 8)
+    incidi(ar.tratti_parola("Aeth-Var-Tor"), W * 0.5, H * 0.76, 40, 7)
+    alone = tratti.filter(ImageFilter.GaussianBlur(14))
+    s = Image.new("RGBA", (W, H), BRACE + (0,))
+    s.putalpha(alone.point(lambda v: int(v * 0.9)))
+    img.alpha_composite(s)
+    # il solco: scuro sotto, oro sopra
+    solco = Image.new("RGBA", (W, H), (10, 6, 4, 0))
+    solco.putalpha(tratti.point(lambda v: int(v * 0.8)))
+    img.alpha_composite(solco, (2, 3))
+    img.alpha_composite(gradiente_oro(tratti))
+    arr = np.asarray(img.convert("RGB")).astype(float)
+    vign = np.clip(1 - 0.6 * ((xx - 0.5) * 1.3) ** 2 - 0.5 * ((yy - 0.5) * 1.3) ** 2, 0.4, 1)[..., None]
+    return Image.fromarray(np.clip(arr * vign, 0, 255).astype(np.uint8), "RGB")
+
+
+def punti_orso():
+    """La sagoma dell'orso di orso.py (l'ombra che si vede nel bosco): si leggono i punti senza eseguirlo."""
+    import ast
+    import re
+    testo = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "orso.py"), encoding="utf-8").read()
+    m = re.search(r"pts\s*=\s*(\[.*?\])\s*\nP\s*=", testo, re.S)
+    return ast.literal_eval(m.group(1))
+
+
+def testata_cronache(W=1800, H=330):
+    """L'Orso sulla collina più alta, sotto la luna: la testata delle Cronache."""
+    rng = random.Random(312)
+    yy = np.linspace(0, 1, H)[:, None]
+    xx = np.linspace(0, 1, W)[None, :]
+    # il cielo di notte, con l'ultima brace del tramonto sull'orizzonte
+    alto = np.array([10, 10, 22], float)
+    basso = np.array([92, 44, 30], float)
+    cielo = alto + (basso - alto) * (yy ** 2.2)[..., None]
+    img = np.broadcast_to(cielo, (H, W, 3)).copy()
+    luna = (0.78, 0.30)
+    d = np.sqrt(((xx - luna[0]) * W / H) ** 2 + (yy - luna[1]) ** 2)
+    img += (np.exp(-(d / 0.35) ** 2) * 40)[..., None] * np.array([0.8, 0.85, 1.0])
+    im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+    dr = ImageDraw.Draw(im)
+    for _ in range(170):
+        x, y = rng.uniform(0, W), rng.uniform(0, H * 0.7)
+        r = rng.uniform(0.5, 1.6)
+        a = int(rng.uniform(60, 220) * (1 - y / H))
+        dr.ellipse([x - r, y - r, x + r, y + r], fill=(240, 232, 210, a))
+    # la falce: il disco meno un disco spostato (niente cerchio scuro sul cielo)
+    lx, ly, lr = luna[0] * W, luna[1] * H, H * 0.11
+    falce = Image.new("L", (W, H), 0)
+    df = ImageDraw.Draw(falce)
+    df.ellipse([lx - lr, ly - lr, lx + lr, ly + lr], fill=255)
+    df.ellipse([lx - lr + lr * 0.5, ly - lr - lr * 0.2, lx + lr + lr * 0.5, ly + lr - lr * 0.2], fill=0)
+    chiara = Image.new("RGBA", (W, H), (236, 228, 205, 0))
+    chiara.putalpha(falce.filter(ImageFilter.GaussianBlur(0.8)))
+    im.alpha_composite(chiara)
+    # i monti lontani e la collina
+    nrng = np.random.default_rng(5)
+    colonne = np.arange(W)
+    for base, amp, colore in ((0.80, 0.30, (40, 30, 40)), (0.92, 0.18, (22, 17, 20))):
+        y = np.zeros(W)
+        for f, a in ((2, 1.0), (5, 0.45), (13, 0.2), (37, 0.08)):
+            fase = nrng.uniform(0, 6.28)
+            y += a * np.sin(colonne / W * f * 6.28 + fase)
+        y = (y - y.min()) / (y.max() - y.min())
+        linea = (base - y * amp) * H
+        poli = [(0, H)] + [(int(i), float(linea[i])) for i in range(0, W, 4)] + [(W, H)]
+        ImageDraw.Draw(im).polygon(poli, fill=colore + (255,))
+    collina = [(int(W * 0.10), H), (int(W * 0.24), int(H * 0.80)), (int(W * 0.33), int(H * 0.73)), (int(W * 0.44), int(H * 0.79)), (int(W * 0.62), H)]
+    ImageDraw.Draw(im).polygon(collina, fill=(12, 9, 9, 255))
+    # l'orso, nero con un filo d'oro sul dorso (la luna da destra, in alto) e l'occhio di brace
+    pts = punti_orso()
+    scala = H * 0.40 / 760.0
+    ox, oy = W * 0.33 - 1170 * scala, H * 0.75 - 978 * scala
+    P = [(ox + x * scala, oy + y * scala) for x, y in pts]
+    m = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(m).polygon(P, fill=255)
+    m = m.filter(ImageFilter.GaussianBlur(0.8))
+    from PIL import ImageChops
+    # il filo di luce: i punti dell'orso che, spostandosi verso la luna, escono dalla sagoma
+    spostata = ImageChops.offset(m, -3, 3)
+    filo = ImageChops.subtract(m, spostata).filter(ImageFilter.GaussianBlur(1.0))
+    oro = Image.new("RGBA", (W, H), OROC + (0,))
+    oro.putalpha(filo.point(lambda v: int(min(255, v * 0.9))))
+    nero = Image.new("RGBA", (W, H), (8, 6, 6, 0))
+    nero.putalpha(m)
+    im.alpha_composite(nero)
+    im.alpha_composite(oro)
+    ex, ey = ox + 1838 * scala, oy + 474 * scala
+    occhio = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(occhio).ellipse([ex - 6, ey - 6, ex + 6, ey + 6], fill=BRACE + (160,))
+    im.alpha_composite(occhio.filter(ImageFilter.GaussianBlur(4)))
+    ImageDraw.Draw(im).ellipse([ex - 1.6, ey - 1.6, ex + 1.6, ey + 1.6], fill=(255, 190, 110, 255))
+    # la nebbia bassa
+    nebbia = np.clip(rumore(W, H, np.random.default_rng(9), scale=(8, 30, 120), pesi=(0.2, 0.4, 0.4)) * 1.4 - 0.3, 0, 1)
+    nebbia = nebbia * np.clip((yy - 0.65) / 0.35, 0, 1) * 0.55
+    arr = np.asarray(im.convert("RGB")).astype(float)
+    arr = arr * (1 - nebbia[..., None]) + nebbia[..., None] * np.array([120, 104, 110])
+    vign = np.clip(1 - 0.5 * ((xx - 0.45) * 1.2) ** 2, 0.45, 1)[..., None]
+    return Image.fromarray(np.clip(arr * vign, 0, 255).astype(np.uint8), "RGB")
+
+
 def gradiente_oro(maschera):
     w, h = maschera.size
     y = np.linspace(0, 1, h)[:, None]
@@ -198,6 +345,13 @@ def principale():
 
     sfondo().save(os.path.join(uscita, "sfondo.jpg"), quality=90, optimize=True)
     print("sfondo.jpg fatto")
+    immagini = os.path.join(uscita, "immagini")
+    os.makedirs(immagini, exist_ok=True)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # per alfabeto_rune
+    cartolina_valle().save(os.path.join(immagini, "valle.jpg"), quality=86, optimize=True)
+    cartolina_rune().save(os.path.join(immagini, "rune.jpg"), quality=86, optimize=True)
+    testata_cronache().save(os.path.join(immagini, "cronache.jpg"), quality=86, optimize=True)
+    print("immagini/valle.jpg, rune.jpg, cronache.jpg fatte")
 
     cinzel = trova(caratteri, ["Cinzel-Bold.ttf", "Cinzel.ttf", "Cinzel-VariableFont_wght.ttf"])
     garamond = trova(caratteri, ["EBGaramond-Regular.ttf", "EBGaramond.ttf", "EBGaramond-VariableFont_wght.ttf"])

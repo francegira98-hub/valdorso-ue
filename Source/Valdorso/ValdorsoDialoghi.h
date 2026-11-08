@@ -6,14 +6,15 @@
 //   del colono. Ogni risposta porta a un altro nodo, oppure chiude il dialogo ("Me ne vado"). Un nodo senza risposte è
 //   una fine voluta (bFine): il colono legge l'ultima battuta e si congeda.
 // - Ogni dialogo ha due ingressi: Inizio (la prima volta che quel personaggio parla con quel PNG) e Ritorno (dalla
-//   seconda volta: il saluto cambia). Il server si ricorda chi ha già parlato con chi (per ora solo in memoria, per
-//   nome del personaggio: si dimentica quando il server si spegne).
+//   seconda volta: il saluto cambia). Il server si ricorda chi ha già parlato con chi: (08/11) nel file del
+//   personaggio, con il taccuino (FValdorsoMemoriaDialoghi, qui sotto), così resta anche quando il server si spegne;
+//   senza un personaggio salvato (accesso libero dell'editor) solo in memoria, per nome.
 // - Una risposta può avere un Evento: quando il colono la sceglie, il server la annota nel registro eventi con quel
 //   tipo (per esempio "Corruzione" quando si offre una moneta a una guardia: un giorno potrà essere un crimine).
 // - I segni (08/11): un nodo, o una risposta, può lasciare un segno al personaggio ("MonetaOfferta"); una risposta può
 //   restare nascosta a chi ha già quel segno (NascostaSe). Così l'offerta della moneta alle guardie si fa una volta
-//   sola. I segni stanno nella stessa memoria di "chi ha già parlato" (per dialogo e per nome del personaggio, solo sul
-//   server, solo in memoria: si dimenticano quando il server si spegne). Il PC vede solo le risposte visibili, e il
+//   sola. I segni stanno nella stessa memoria di "chi ha già parlato" (per dialogo e per personaggio, solo sul
+//   server; (08/11) nel file del personaggio, come sopra). Il PC vede solo le risposte visibili, e il
 //   numero che rimanda è quello tra le visibili (ScelteVisibili lo riporta alla risposta vera).
 // - Le battute che cominciano con "rune:" si mostrano con le rune disegnate (come nelle bacheche, ValdorsoRune.h).
 // - I testi sono scritti qui nel C++ (ValdorsoDialoghiTesti.inl): niente file da impacchettare, niente passi
@@ -177,6 +178,50 @@ struct FValdorsoBattuta
 	bool bChiudi = false;
 };
 
+/**
+ * (08/11) La memoria di un personaggio per i dialoghi: se ha già parlato con un PNG e i segni che ha. Il dialogo legge e
+ * scrive solo da qui, senza sapere dove sta davvero:
+ * - con un personaggio vero sta nel suo file (il taccuino, UValdorsoTaccuinoComponent sul PlayerController): resta
+ *   anche quando il server si spegne (ValdorsoPNG.cpp ne fa una di queste attorno al componente);
+ * - senza (l'accesso libero dell'editor, i test) c'è FValdorsoMemoriaPerNome: quella di prima, per nome del personaggio,
+ *   solo nella memoria del server.
+ */
+class VALDORSO_API FValdorsoMemoriaDialoghi
+{
+public:
+	virtual ~FValdorsoMemoriaDialoghi() = default;
+
+	/** Vero se ha già parlato con il PNG del dialogo IdDialogo. */
+	virtual bool GiaParlato(FName IdDialogo) const = 0;
+
+	/** Ricorda che ci ha parlato. */
+	virtual void SegnaParlato(FName IdDialogo) = 0;
+
+	/** Vero se ha il segno Segno nel dialogo IdDialogo (falso con Segno vuoto). */
+	virtual bool HaSegno(FName IdDialogo, FName Segno) const = 0;
+
+	/** Gli dà il segno (niente con Segno vuoto). */
+	virtual void MettiSegno(FName IdDialogo, FName Segno) = 0;
+};
+
+/**
+ * (08/11) La memoria del server per nome del personaggio (ValdorsoDialoghi::GiaParlato...): si dimentica quando il
+ * server si spegne. Con il nome vuoto non ricorda niente (nessun segno: si vedono tutte le risposte).
+ */
+class VALDORSO_API FValdorsoMemoriaPerNome : public FValdorsoMemoriaDialoghi
+{
+public:
+	explicit FValdorsoMemoriaPerNome(const FString& InChi) : Chi(InChi) {}
+
+	virtual bool GiaParlato(FName IdDialogo) const override;
+	virtual void SegnaParlato(FName IdDialogo) override;
+	virtual bool HaSegno(FName IdDialogo, FName Segno) const override;
+	virtual void MettiSegno(FName IdDialogo, FName Segno) override;
+
+private:
+	FString Chi;
+};
+
 namespace ValdorsoDialoghi
 {
 	/** Le risposte al massimo per nodo (i tasti 1-4). */
@@ -206,16 +251,24 @@ namespace ValdorsoDialoghi
 	 */
 	VALDORSO_API TArray<int32> ScelteVisibili(const FValdorsoDialogo& Dialogo, FName Nodo, const FString& Chi);
 
+	/** (08/11) Come sopra, con la memoria di quel personaggio (quella del suo file, o quella per nome). */
+	VALDORSO_API TArray<int32> ScelteVisibili(const FValdorsoDialogo& Dialogo, FName Nodo, const FValdorsoMemoriaDialoghi& Memoria);
+
 	/**
 	 * La battuta da mandare al PC per quel nodo (vuota con bChiudi se il nodo non c'è). Solo le risposte visibili per
 	 * Chi (08/11; Chi vuoto = tutte): il numero che il PC rimanda va riportato con ScelteVisibili.
 	 */
 	VALDORSO_API FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo, const FString& Chi = FString());
 
+	/** (08/11) Come sopra, con la memoria di quel personaggio. */
+	VALDORSO_API FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo, const FValdorsoMemoriaDialoghi& Memoria);
+
 	/** I problemi di un dialogo (nodi che mancano, irraggiungibili, senza uscita...), in italiano; vuoto = va bene. */
 	VALDORSO_API TArray<FString> Problemi(const FValdorsoDialogo& Dialogo);
 
-	// --- La memoria del server: chi ha già parlato con chi ---------------------------------------------------------
+	// --- La memoria del server per nome: chi ha già parlato con chi ------------------------------------------------
+	// (08/11) Solo per chi non ha un personaggio salvato (accesso libero dell'editor) e per i test: i personaggi veri
+	// hanno la memoria nel loro file (FValdorsoMemoriaDialoghi, qui sopra).
 
 	/** Vero se il personaggio Chi ha già parlato con il PNG del dialogo Id (da quando il server è acceso). */
 	VALDORSO_API bool GiaParlato(FName Id, const FString& Chi);

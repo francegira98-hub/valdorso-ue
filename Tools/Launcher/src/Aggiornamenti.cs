@@ -1,9 +1,13 @@
 // Valdorso - Il launcher: il manifesto, lo scaricamento con ripresa, il controllo SHA-256, l'installazione e lo stato
-// del mondo. Scritto da Claude il 07/11/2026.
+// del mondo. Scritto da Claude il 07/11/2026; (08/11) il gioco in più parti (le Release di GitHub tengono al massimo
+// 2 GB per file), i rinvii seguiti a mano tenendo la ripresa, il controllo dello spazio sul disco, la pausa.
 //
 // Il manifesto (manifesto.json, sul sito) lo prepara Tools/Launcher/prepara_aggiornamento.py dal gioco pacchettizzato:
-//   versione, nome, data, pacchetto (url, sha256, byte), eseguibile, argomenti, server (indirizzo, stato),
-//   notizie (data, titolo, testo, link), launcher (versione, url), file (p = percorso, s = sha256, b = byte).
+//   versione, nome, data, pacchetto (parti: url, sha256, byte; byte = tutto; installato = byte da scompattato),
+//   eseguibile, argomenti, server (indirizzo, stato), launcher_versione, launcher_url, notizie, file (p, s, b).
+// Va bene anche il manifesto di prima, con lo zip intero: pacchetto (url, sha256, byte) diventa una parte sola.
+// Le parti sono pezzi uguali dello stesso zip (Valdorso_0.1.3.zip.001, .002...): non si riuniscono su disco (sarebbe
+// il doppio dello spazio), si leggono una dopo l'altra come un file solo (FlussoUnito).
 // L'installazione non lascia mai il gioco a metà: si scompatta in "Gioco_nuovo", poi si scambiano le cartelle; le
 // impostazioni del giocatore (la cartella Saved del gioco) passano nella versione nuova.
 
@@ -19,17 +23,17 @@ using System.Threading;
 
 namespace Valdorso.Launcher
 {
-    public class Notizia
-    {
-        public string Data = "";
-        public string Titolo = "";
-        public string Testo = "";
-        public string Link = "";
-    }
-
     public class FileDelGioco
     {
         public string Percorso = "";
+        public string Sha256 = "";
+        public long Byte;
+    }
+
+    /// <summary>Un pezzo dello zip del gioco: dove sta, la sua impronta, quanto è grande.</summary>
+    public class ParteDelPacchetto
+    {
+        public string Url = "";
         public string Sha256 = "";
         public long Byte;
     }
@@ -39,9 +43,11 @@ namespace Valdorso.Launcher
         public string Versione = "";
         public string NomeVersione = "";
         public string Data = "";
-        public string UrlPacchetto = "";
-        public string Sha256Pacchetto = "";
+        public List<ParteDelPacchetto> Parti = new List<ParteDelPacchetto>();
+        /// <summary>Quanto pesa tutto lo zip (la somma delle parti).</summary>
         public long BytePacchetto;
+        /// <summary>Quanto pesa il gioco scompattato (0 se il manifesto non lo dice).</summary>
+        public long ByteInstallato;
         public string Eseguibile = "Valdorso.exe";
         public string Argomenti = "";
         public string Server = "";
@@ -66,25 +72,53 @@ namespace Valdorso.Launcher
             m.Eseguibile = Json.Testo(d, "eseguibile", m.Eseguibile);
             m.Argomenti = Json.Testo(d, "argomenti", "");
             m.Aperto = Json.SiNo(d, "aperto", true);
+
             Dictionary<string, object> p = Json.Oggetto(d, "pacchetto");
-            m.UrlPacchetto = Json.Testo(p, "url", "");
-            m.Sha256Pacchetto = Json.Testo(p, "sha256", "").ToLowerInvariant();
-            m.BytePacchetto = (long)Json.Numero(p, "byte", 0);
+            foreach (Dictionary<string, object> x in Json.Elenco(p, "parti"))
+            {
+                ParteDelPacchetto parte = new ParteDelPacchetto();
+                parte.Url = Json.Testo(x, "url", "").Trim();
+                parte.Sha256 = Json.Testo(x, "sha256", "").Trim().ToLowerInvariant();
+                parte.Byte = (long)Json.Numero(x, "byte", 0);
+                if (parte.Url.Length > 0)
+                {
+                    m.Parti.Add(parte);
+                }
+            }
+            if (m.Parti.Count == 0 && Json.Testo(p, "url", "").Trim().Length > 0)
+            {
+                // il manifesto di prima: lo zip intero è una parte sola
+                ParteDelPacchetto parte = new ParteDelPacchetto();
+                parte.Url = Json.Testo(p, "url", "").Trim();
+                parte.Sha256 = Json.Testo(p, "sha256", "").Trim().ToLowerInvariant();
+                parte.Byte = (long)Json.Numero(p, "byte", 0);
+                m.Parti.Add(parte);
+            }
+            foreach (ParteDelPacchetto parte in m.Parti)
+            {
+                m.BytePacchetto += parte.Byte;
+            }
+            if (m.BytePacchetto == 0)
+            {
+                m.BytePacchetto = (long)Json.Numero(p, "byte", 0);
+            }
+            m.ByteInstallato = (long)Json.Numero(p, "installato", 0);
+
             Dictionary<string, object> s = Json.Oggetto(d, "server");
-            m.Server = Json.Testo(s, "indirizzo", "");
-            m.Stato = Json.Testo(s, "stato", "");
+            m.Server = Json.Testo(s, "indirizzo", "").Trim();
+            m.Stato = Json.Testo(s, "stato", "").Trim();
             Dictionary<string, object> l = Json.Oggetto(d, "launcher");
-            m.VersioneLauncher = Json.Testo(l, "versione", "");
-            m.UrlLauncher = Json.Testo(l, "url", "");
+            m.VersioneLauncher = Json.Testo(d, "launcher_versione", Json.Testo(l, "versione", ""));
+            m.UrlLauncher = Json.Testo(d, "launcher_url", Json.Testo(l, "url", ""));
             foreach (Dictionary<string, object> n in Json.Elenco(d, "notizie"))
             {
-                Notizia x = new Notizia();
-                x.Data = Json.Testo(n, "data", "");
-                x.Titolo = Json.Testo(n, "titolo", "");
-                x.Testo = Json.Testo(n, "testo", "");
-                x.Link = Json.Testo(n, "link", "");
-                m.Notizie.Add(x);
+                Notizia x = Notizia.DaJson(n);
+                if (x.Titolo.Length > 0 || x.Testo.Length > 0)
+                {
+                    m.Notizie.Add(x);
+                }
             }
+            long somma = 0;
             foreach (Dictionary<string, object> f in Json.Elenco(d, "file"))
             {
                 FileDelGioco x = new FileDelGioco();
@@ -94,22 +128,30 @@ namespace Valdorso.Launcher
                 if (x.Percorso.Length > 0)
                 {
                     m.File.Add(x);
+                    somma += x.Byte;
                 }
+            }
+            if (m.ByteInstallato == 0)
+            {
+                m.ByteInstallato = somma;
             }
             return m;
         }
     }
 
-    /// <summary>Lo stato del mondo che il server dà su http://server:7780/stato (lo stesso del menu del gioco).</summary>
+    /// <summary>Lo stato del mondo che il server dà su http://server:7780/stato (ValdorsoStatoMondo.cpp, lo stesso del
+    /// menu del gioco): gioco, versione, nome_versione, ora, tempo, stagione, coloni, posti, notizia, aggiornato, aperto.</summary>
     public class StatoMondo
     {
         public string Versione = "";
+        public string NomeVersione = "";
         public double Ora = -1;
         public string Tempo = "";
         public string Stagione = "";
         public int Coloni;
         public int Posti;
         public string Notizia = "";
+        public string Aggiornato = "";
         public bool Aperto = true;
 
         public static StatoMondo DaJson(string testo)
@@ -121,12 +163,18 @@ namespace Valdorso.Launcher
             }
             StatoMondo s = new StatoMondo();
             s.Versione = Json.Testo(d, "versione", "");
+            s.NomeVersione = Json.Testo(d, "nome_versione", "");
             s.Ora = Json.Numero(d, "ora", -1);
             s.Tempo = Json.Testo(d, "tempo", "");
             s.Stagione = Json.Testo(d, "stagione", "");
-            s.Coloni = (int)Json.Numero(d, "coloni", 0);
-            s.Posti = (int)Json.Numero(d, "posti", 0);
+            s.Coloni = Math.Max(0, (int)Json.Numero(d, "coloni", 0));
+            s.Posti = Math.Max(0, (int)Json.Numero(d, "posti", 0));
             s.Notizia = Json.Testo(d, "notizia", "");
+            if (s.Notizia.Length > 200)
+            {
+                s.Notizia = s.Notizia.Substring(0, 200);
+            }
+            s.Aggiornato = Json.Testo(d, "aggiornato", "");
             s.Aperto = Json.SiNo(d, "aperto", true);
             return s;
         }
@@ -141,6 +189,24 @@ namespace Valdorso.Launcher
             int minuti = (int)Math.Floor((ora % 24.0) * 60.0 + 0.001);
             minuti = Math.Max(0, Math.Min(24 * 60 - 1, minuti));
             return string.Format(CultureInfo.InvariantCulture, "{0:00}:{1:00}", minuti / 60, minuti % 60);
+        }
+
+        /// <summary>Il momento del giorno, come lo direbbe un contadino della valle.</summary>
+        public static string Momento(double ora)
+        {
+            if (ora < 0)
+            {
+                return "";
+            }
+            double h = ora % 24.0;
+            if (h < 5) return "notte fonda";
+            if (h < 7) return "l'alba";
+            if (h < 11) return "il mattino";
+            if (h < 14) return "mezzogiorno";
+            if (h < 17.5) return "il pomeriggio";
+            if (h < 20) return "il tramonto";
+            if (h < 22) return "la sera";
+            return "la notte";
         }
 
         /// <summary>La riga come nel menu del gioco: "Nella valle sono le 18:40 · sereno · autunno · 3 coloni".</summary>
@@ -181,40 +247,160 @@ namespace Valdorso.Launcher
             catch (Exception)
             {
             }
+            try
+            {
+                ServicePointManager.DefaultConnectionLimit = Math.Max(ServicePointManager.DefaultConnectionLimit, 8);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        public static string Agente
+        {
+            get { return "ValdorsoLauncher/" + Info.Versione; }
         }
 
         public static string Pagina(string url, int millisecondi)
         {
+            return Encoding.UTF8.GetString(Byte(url, millisecondi, 4 * 1024 * 1024));
+        }
+
+        /// <summary>Un file piccolo (pagine, immagini): al massimo "limite" byte.</summary>
+        public static byte[] Byte(string url, int millisecondi, int limite)
+        {
             HttpWebRequest r = (HttpWebRequest)WebRequest.Create(url);
             r.Timeout = millisecondi;
             r.ReadWriteTimeout = millisecondi;
-            r.UserAgent = "ValdorsoLauncher/" + Info.Versione;
+            r.UserAgent = Agente;
             r.Headers[HttpRequestHeader.CacheControl] = "no-cache";
             r.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
             using (HttpWebResponse risposta = (HttpWebResponse)r.GetResponse())
-            using (StreamReader lettore = new StreamReader(risposta.GetResponseStream(), Encoding.UTF8))
+            using (Stream dentro = risposta.GetResponseStream())
+            using (MemoryStream fuori = new MemoryStream())
             {
-                return lettore.ReadToEnd();
+                byte[] pezzo = new byte[1 << 16];
+                int letti;
+                while ((letti = dentro.Read(pezzo, 0, pezzo.Length)) > 0)
+                {
+                    fuori.Write(pezzo, 0, letti);
+                    if (fuori.Length > limite)
+                    {
+                        throw new InvalidDataException("il file è troppo grande: " + url);
+                    }
+                }
+                byte[] tutto = fuori.ToArray();
+                // via il BOM, se c'è (JavaScriptSerializer non lo vuole)
+                if (tutto.Length >= 3 && tutto[0] == 0xEF && tutto[1] == 0xBB && tutto[2] == 0xBF)
+                {
+                    byte[] senza = new byte[tutto.Length - 3];
+                    Array.Copy(tutto, 3, senza, 0, senza.Length);
+                    return senza;
+                }
+                return tutto;
             }
         }
     }
 
-    public delegate void Avanzamento(string fase, long fatti, long totale, double bytePerSecondo);
+    public enum Fase
+    {
+        Scarico,
+        Controllo,
+        Installo,
+        Verifica
+    }
+
+    public delegate void Avanzamento(Fase fase, string testo, long fatti, long totale, double bytePerSecondo);
+
+    /// <summary>Quando sul disco non c'è posto per l'aggiornamento.</summary>
+    public class SpazioInsufficiente : Exception
+    {
+        public SpazioInsufficiente(string messaggio) : base(messaggio)
+        {
+        }
+    }
 
     /// <summary>Scarica, controlla e installa. Tutto qui gira fuori dalla finestra (in un altro thread).</summary>
     public class Aggiornatore
     {
         private readonly Configurazione config;
         public volatile bool Annulla;
+        private volatile HttpWebRequest richiesta;
+        private double velocita;
+        /// <summary>Vero mentre si scambiano le cartelle (un attimo): il launcher non si chiude a metà.</summary>
+        public volatile bool Scambio;
 
         public Aggiornatore(Configurazione config)
         {
             this.config = config;
         }
 
+        /// <summary>Ferma il lavoro in corso (subito: chiude anche lo scaricamento a metà; il pezzo scaricato resta).</summary>
+        public void Ferma()
+        {
+            Annulla = true;
+            HttpWebRequest r = richiesta;
+            if (r != null)
+            {
+                try
+                {
+                    r.Abort();
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
+
         public string FileVersione
         {
             get { return Path.Combine(config.PercorsoGioco, "valdorso_versione.txt"); }
+        }
+
+        /// <summary>Se l'ultima installazione si è fermata a metà dello scambio (il PC spento in quel secondo), rimette
+        /// a posto la versione vecchia.</summary>
+        public void Ripristina()
+        {
+            try
+            {
+                string gioco = config.PercorsoGioco.TrimEnd('\\', '/');
+                string vecchio = gioco + "_vecchio";
+                if (!Directory.Exists(gioco) && Directory.Exists(vecchio))
+                {
+                    Directory.Move(vecchio, gioco);
+                    Registro.Scrivi("rimessa a posto la versione di prima (lo scambio si era fermato a metà)");
+                }
+            }
+            catch (Exception e)
+            {
+                Registro.Scrivi("ripristino non riuscito: " + e.Message);
+            }
+        }
+
+        /// <summary>La cartella scelta dal giocatore, resa sicura: se non è vuota e non è già una cartella di Valdorso,
+        /// si usa una cartella "Valdorso" dentro (un aggiornamento sostituisce tutta la cartella del gioco!).</summary>
+        public static string CartellaSicura(string scelta)
+        {
+            try
+            {
+                string piena = Path.GetFullPath(scelta);
+                if (!Directory.Exists(piena) || File.Exists(Path.Combine(piena, "valdorso_versione.txt")) || Directory.GetFileSystemEntries(piena).Length == 0)
+                {
+                    return piena;
+                }
+                return Path.Combine(piena, "Valdorso");
+            }
+            catch (Exception)
+            {
+                return Path.Combine(scelta, "Valdorso");
+            }
+        }
+
+        /// <summary>Vero se la cartella del gioco non c'è, è vuota o è già di Valdorso: solo così si può sostituire.</summary>
+        public bool CartellaDelGiocoBuona()
+        {
+            string gioco = config.PercorsoGioco;
+            return !Directory.Exists(gioco) || File.Exists(FileVersione) || Directory.GetFileSystemEntries(gioco).Length == 0;
         }
 
         /// <summary>La versione installata ("" se il gioco non c'è).</summary>
@@ -239,36 +425,149 @@ namespace Valdorso.Launcher
             return Path.Combine(config.PercorsoGioco, nome.Replace('/', Path.DirectorySeparatorChar));
         }
 
-        /// <summary>Scarica il pacchetto (riprende da dove si era fermato), lo controlla e lo installa.</summary>
+        string NomeParte(Manifesto m, int indice)
+        {
+            return Path.Combine(Cartelle.Scaricati, "Valdorso_" + Pulito(m.Versione) + ".zip." + (indice + 1).ToString("000", CultureInfo.InvariantCulture));
+        }
+
+        static bool ParteFinita(ParteDelPacchetto p, string file)
+        {
+            try
+            {
+                string ok = file + ".ok";
+                return File.Exists(file) && File.Exists(ok) && (p.Byte <= 0 || new FileInfo(file).Length == p.Byte)
+                    && File.ReadAllText(ok).Trim() == (p.Sha256.Length > 0 ? p.Sha256 : "senza impronta");
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>Quanti byte mancano da scaricare (le parti già finite non contano, quelle a metà solo per quel che manca).</summary>
+        public long DaScaricare(Manifesto m)
+        {
+            long fuori = 0;
+            for (int i = 0; i < m.Parti.Count; i++)
+            {
+                ParteDelPacchetto p = m.Parti[i];
+                string file = NomeParte(m, i);
+                if (ParteFinita(p, file))
+                {
+                    continue;
+                }
+                long gia = 0;
+                try
+                {
+                    string scarico = file + ".scarico";
+                    if (File.Exists(scarico))
+                    {
+                        gia = new FileInfo(scarico).Length;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+                fuori += Math.Max(0, p.Byte - gia);
+            }
+            return fuori;
+        }
+
+        /// <summary>Controlla che sui dischi ci sia posto. "" se va bene, altrimenti cosa manca, da dire al giocatore.</summary>
+        public string ControllaSpazio(Manifesto m)
+        {
+            const long margine = 300L * 1024 * 1024;
+            long scarico = DaScaricare(m);
+            long installo = m.ByteInstallato > 0 ? m.ByteInstallato : (long)(m.BytePacchetto * 1.2);
+            string discoScarico = Disco(Cartelle.Scaricati);
+            string discoGioco = Disco(config.PercorsoGioco);
+            Dictionary<string, long> servono = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            if (discoScarico.Length > 0)
+            {
+                servono[discoScarico] = scarico + margine;
+            }
+            if (discoGioco.Length > 0)
+            {
+                long gia;
+                servono.TryGetValue(discoGioco, out gia);
+                servono[discoGioco] = gia + installo + (gia > 0 ? 0 : margine);
+            }
+            foreach (KeyValuePair<string, long> voce in servono)
+            {
+                try
+                {
+                    DriveInfo disco = new DriveInfo(voce.Key);
+                    long liberi = disco.AvailableFreeSpace;
+                    if (liberi < voce.Value)
+                    {
+                        return "Sul disco " + voce.Key.TrimEnd('\\', '/') + " non c'è abbastanza posto: servono " + Misure.Byte(voce.Value) +
+                               ", ce ne sono " + Misure.Byte(liberi) + ". Libera " + Misure.Byte(voce.Value - liberi) + " o scegli un'altra cartella nelle Opzioni.";
+                    }
+                }
+                catch (Exception e)
+                {
+                    // dischi di rete e simili: non si sa, si prova lo stesso
+                    Registro.Scrivi("spazio sul disco " + voce.Key + " non controllato: " + e.Message);
+                }
+            }
+            return "";
+        }
+
+        static string Disco(string cartella)
+        {
+            try
+            {
+                string radice = Path.GetPathRoot(Path.GetFullPath(cartella));
+                return radice != null && !radice.StartsWith("\\\\") ? radice : "";
+            }
+            catch (Exception)
+            {
+                return "";
+            }
+        }
+
+        /// <summary>Scarica le parti (riprende da dove si era fermato), le controlla e installa il gioco.</summary>
         public void Installa(Manifesto m, Avanzamento avanza)
         {
-            if (string.IsNullOrEmpty(m.UrlPacchetto))
+            if (m.Parti.Count == 0)
             {
                 throw new InvalidDataException("il manifesto non dice da dove scaricare il gioco");
             }
             Directory.CreateDirectory(Cartelle.Scaricati);
-            string zip = Path.Combine(Cartelle.Scaricati, "Valdorso_" + Pulito(m.Versione) + ".zip");
-            string parte = zip + ".part";
-
-            if (!(File.Exists(zip) && Sha256File(zip, null, avanza) == m.Sha256Pacchetto))
+            PulisciScaricati(m);
+            string spazio = ControllaSpazio(m);
+            if (spazio.Length > 0)
             {
-                Scarica(m.UrlPacchetto, parte, m.BytePacchetto, avanza);
-                avanza("Controllo il pacchetto", 0, 1, 0);
-                string impronta = Sha256File(parte, "Controllo il pacchetto", avanza);
-                if (m.Sha256Pacchetto.Length > 0 && impronta != m.Sha256Pacchetto)
-                {
-                    File.Delete(parte);
-                    throw new InvalidDataException("il pacchetto scaricato non è giusto (impronta diversa): riprova");
-                }
-                if (File.Exists(zip))
-                {
-                    File.Delete(zip);
-                }
-                File.Move(parte, zip);
+                throw new SpazioInsufficiente(spazio);
             }
-            Registro.Scrivi("pacchetto pronto: " + zip);
+            if (!CartellaDelGiocoBuona())
+            {
+                throw new InvalidDataException("la cartella del gioco (" + config.PercorsoGioco + ") contiene altre cose: scegline una vuota nelle Opzioni");
+            }
 
-            // si scompatta accanto, poi si scambiano le cartelle
+            // 1. le parti
+            long totale = 0;
+            foreach (ParteDelPacchetto p in m.Parti)
+            {
+                totale += Math.Max(0, p.Byte);
+            }
+            List<string> file = new List<string>();
+            long primaDiQuesta = 0;
+            velocita = 0;
+            for (int i = 0; i < m.Parti.Count; i++)
+            {
+                if (Annulla)
+                {
+                    throw new OperationCanceledException();
+                }
+                string nome = NomeParte(m, i);
+                ScaricaParte(m.Parti[i], nome, i, m.Parti.Count, primaDiQuesta, totale, avanza);
+                file.Add(nome);
+                primaDiQuesta += new FileInfo(nome).Length;
+            }
+            Registro.Scrivi("pacchetto pronto: " + m.Parti.Count + " parti, " + Misure.Byte(primaDiQuesta));
+
+            // 2. si scompatta accanto, poi si scambiano le cartelle
             string gioco = config.PercorsoGioco;
             string nuovo = gioco.TrimEnd('\\', '/') + "_nuovo";
             string vecchio = gioco.TrimEnd('\\', '/') + "_vecchio";
@@ -276,8 +575,8 @@ namespace Valdorso.Launcher
             {
                 Directory.Delete(nuovo, true);
             }
-            avanza("Installo", 0, 1, 0);
-            Scompatta(zip, nuovo, avanza);
+            avanza(Fase.Installo, "Installo", 0, 1, 0);
+            Scompatta(file, nuovo, avanza);
 
             // se lo zip ha una sola cartella dentro (per esempio "Windows"), quella è il gioco
             string radice = nuovo;
@@ -288,15 +587,38 @@ namespace Valdorso.Launcher
             }
             File.WriteAllText(Path.Combine(radice, "valdorso_versione.txt"), m.Versione);
 
+            // la cartella del gioco si sostituisce tutta: deve essere davvero di Valdorso (o vuota)
+            if (!CartellaDelGiocoBuona())
+            {
+                throw new InvalidDataException("la cartella del gioco (" + gioco + ") contiene altre cose: scegline una vuota nelle Opzioni");
+            }
             if (Directory.Exists(vecchio))
             {
                 Directory.Delete(vecchio, true);
             }
-            if (Directory.Exists(gioco))
+            Scambio = true;
+            try
             {
-                Directory.Move(gioco, vecchio);
+                if (Directory.Exists(gioco))
+                {
+                    Directory.Move(gioco, vecchio);
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(gioco).TrimEnd('\\', '/')));
+                Directory.Move(radice, gioco);
             }
-            Directory.Move(radice, gioco);
+            catch (Exception)
+            {
+                // per esempio un file del gioco ancora aperto: si rimette tutto com'era
+                if (!Directory.Exists(gioco) && Directory.Exists(vecchio))
+                {
+                    Directory.Move(vecchio, gioco);
+                }
+                throw;
+            }
+            finally
+            {
+                Scambio = false;
+            }
             if (radice != nuovo && Directory.Exists(nuovo))
             {
                 Directory.Delete(nuovo, true);
@@ -314,15 +636,282 @@ namespace Valdorso.Launcher
                     Registro.Scrivi("pulizia della versione vecchia non finita: " + e.Message);
                 }
             }
-            // lo zip non serve più (occupa spazio)
+            // le parti non servono più (occupano spazio)
+            foreach (string f in file)
+            {
+                Cancella(f);
+                Cancella(f + ".ok");
+            }
+            Registro.Scrivi("installata la versione " + m.Versione);
+        }
+
+        /// <summary>Via dalla cartella Scaricati i pezzi delle versioni vecchie (lo zip intero del launcher 1.0 compreso).</summary>
+        void PulisciScaricati(Manifesto m)
+        {
+            string mio = "Valdorso_" + Pulito(m.Versione) + ".zip.";
             try
             {
-                File.Delete(zip);
+                foreach (string f in Directory.GetFiles(Cartelle.Scaricati, "Valdorso_*"))
+                {
+                    if (!Path.GetFileName(f).StartsWith(mio, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Cancella(f);
+                        Registro.Scrivi("tolto il pezzo vecchio " + Path.GetFileName(f));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Registro.Scrivi("pulizia di Scaricati: " + e.Message);
+            }
+        }
+
+        static void Cancella(string f)
+        {
+            try
+            {
+                if (File.Exists(f))
+                {
+                    File.Delete(f);
+                }
             }
             catch (Exception)
             {
             }
-            Registro.Scrivi("installata la versione " + m.Versione);
+        }
+
+        void ScaricaParte(ParteDelPacchetto p, string finale, int indice, int quante, long primaDiQuesta, long totale, Avanzamento avanza)
+        {
+            string chi = quante > 1 ? "la parte " + (indice + 1) + " di " + quante : "il pacchetto";
+            string impronta = p.Sha256.Length > 0 ? p.Sha256 : "senza impronta";
+            if (ParteFinita(p, finale))
+            {
+                return;
+            }
+            // un file intero senza il segno ".ok" (scaricato a mano, o il controllo interrotto): si controlla
+            if (File.Exists(finale))
+            {
+                if (p.Sha256.Length > 0 && (p.Byte <= 0 || new FileInfo(finale).Length == p.Byte) &&
+                    Sha256File(finale, Fase.Controllo, "Controllo " + chi, avanza, this) == p.Sha256)
+                {
+                    File.WriteAllText(finale + ".ok", impronta);
+                    return;
+                }
+                Cancella(finale);
+            }
+            string scarico = finale + ".scarico";
+            for (int giro = 1; ; giro++)
+            {
+                Scarica(p.Url, scarico, p.Byte, primaDiQuesta, totale, "Scarico " + chi, avanza);
+                if (Annulla)
+                {
+                    throw new OperationCanceledException();
+                }
+                string letta = Sha256File(scarico, Fase.Controllo, "Controllo " + chi, avanza, this);
+                if (p.Sha256.Length == 0 || letta == p.Sha256)
+                {
+                    break;
+                }
+                Registro.Scrivi(chi + ": impronta diversa (" + letta + " invece di " + p.Sha256 + "), giro " + giro);
+                Cancella(scarico);
+                if (giro >= 2)
+                {
+                    throw new InvalidDataException(chi + " arriva rovinata anche scaricandola di nuovo: riprova più tardi (o scrivi a Fra)");
+                }
+            }
+            Cancella(finale);
+            File.Move(scarico, finale);
+            File.WriteAllText(finale + ".ok", impronta);
+        }
+
+        /// <summary>Apre l'indirizzo seguendo i rinvii a mano (GitHub manda le Release su objects.githubusercontent.com):
+        /// così la richiesta "da questo byte in poi" arriva fino all'ultimo indirizzo.</summary>
+        HttpWebResponse Apri(string url, long da)
+        {
+            Uri dove = new Uri(url);
+            for (int salti = 0; salti < 10; salti++)
+            {
+                HttpWebRequest r = (HttpWebRequest)WebRequest.Create(dove);
+                r.AllowAutoRedirect = false;
+                r.UserAgent = Rete.Agente;
+                r.Timeout = 30000;
+                r.ReadWriteTimeout = 60000;
+                r.Accept = "*/*";
+                if (da > 0)
+                {
+                    r.AddRange(da);
+                }
+                richiesta = r;
+                if (Annulla)
+                {
+                    throw new OperationCanceledException();
+                }
+                HttpWebResponse risposta;
+                try
+                {
+                    risposta = (HttpWebResponse)r.GetResponse();
+                }
+                catch (WebException e)
+                {
+                    risposta = e.Response as HttpWebResponse;
+                    if (risposta == null || !Rinvio((int)risposta.StatusCode))
+                    {
+                        throw;
+                    }
+                }
+                int codice = (int)risposta.StatusCode;
+                if (Rinvio(codice))
+                {
+                    string altrove = risposta.Headers[HttpResponseHeader.Location];
+                    risposta.Close();
+                    if (string.IsNullOrEmpty(altrove))
+                    {
+                        throw new WebException("rinvio senza indirizzo (" + codice + ")");
+                    }
+                    dove = new Uri(dove, altrove);
+                    continue;
+                }
+                return risposta;
+            }
+            throw new WebException("troppi rinvii per " + url);
+        }
+
+        static bool Rinvio(int codice)
+        {
+            return codice == 301 || codice == 302 || codice == 303 || codice == 307 || codice == 308;
+        }
+
+        /// <summary>L'inizio scritto in "Content-Range: bytes 1000-1999/2000" (-1 se non c'è).</summary>
+        static long InizioIntervallo(HttpWebResponse r)
+        {
+            string intervallo = r.Headers["Content-Range"] ?? "";
+            int spazio = intervallo.IndexOf(' ');
+            int trattino = intervallo.IndexOf('-');
+            long inizio;
+            if (spazio >= 0 && trattino > spazio && long.TryParse(intervallo.Substring(spazio + 1, trattino - spazio - 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out inizio))
+            {
+                return inizio;
+            }
+            return -1;
+        }
+
+        void Scarica(string url, string file, long attesi, long primaDiQuesta, long totale, string testo, Avanzamento avanza)
+        {
+            int tentativo = 0;
+            while (true)
+            {
+                long gia = File.Exists(file) ? new FileInfo(file).Length : 0;
+                if (attesi > 0 && gia > attesi)
+                {
+                    Cancella(file);
+                    gia = 0;
+                }
+                if (attesi > 0 && gia == attesi)
+                {
+                    return;
+                }
+                long all_inizio = gia;
+                try
+                {
+                    using (HttpWebResponse risposta = Apri(url, gia))
+                    {
+                        bool riprende = gia > 0 && risposta.StatusCode == HttpStatusCode.PartialContent && InizioIntervallo(risposta) == gia;
+                        if (gia > 0 && !riprende)
+                        {
+                            Registro.Scrivi("il server non riprende da metà (" + (int)risposta.StatusCode + "): ricomincio questo pezzo");
+                            gia = 0;
+                        }
+                        using (Stream dentro = risposta.GetResponseStream())
+                        using (FileStream fuori = new FileStream(file, riprende ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+                        {
+                            byte[] pezzo = new byte[1 << 18];
+                            DateTime finestra = DateTime.UtcNow;
+                            long inFinestra = 0;
+                            DateTime ultimoAvviso = DateTime.MinValue;
+                            int letti;
+                            while ((letti = dentro.Read(pezzo, 0, pezzo.Length)) > 0)
+                            {
+                                if (Annulla)
+                                {
+                                    throw new OperationCanceledException();
+                                }
+                                fuori.Write(pezzo, 0, letti);
+                                gia += letti;
+                                inFinestra += letti;
+                                double secondi = (DateTime.UtcNow - finestra).TotalSeconds;
+                                if (secondi >= 1.0)
+                                {
+                                    // la velocità si addolcisce: niente cifre che saltano
+                                    double adesso = inFinestra / secondi;
+                                    velocita = velocita <= 0 ? adesso : velocita * 0.75 + adesso * 0.25;
+                                    finestra = DateTime.UtcNow;
+                                    inFinestra = 0;
+                                }
+                                if ((DateTime.UtcNow - ultimoAvviso).TotalMilliseconds > 200)
+                                {
+                                    long tutto = totale > 0 ? totale : (risposta.ContentLength > 0 ? risposta.ContentLength + (riprende ? all_inizio : 0) : 0);
+                                    avanza(Fase.Scarico, testo, primaDiQuesta + gia, tutto, velocita);
+                                    ultimoAvviso = DateTime.UtcNow;
+                                }
+                            }
+                        }
+                    }
+                    if (attesi > 0 && new FileInfo(file).Length < attesi)
+                    {
+                        throw new IOException("la connessione si è chiusa prima della fine");
+                    }
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    if (Annulla)
+                    {
+                        throw new OperationCanceledException();
+                    }
+                    if (!(e is WebException || e is IOException))
+                    {
+                        throw;
+                    }
+                    WebException w = e as WebException;
+                    HttpWebResponse r = w != null ? w.Response as HttpWebResponse : null;
+                    int codice = r != null ? (int)r.StatusCode : 0;
+                    if (codice == 416 && gia > 0)
+                    {
+                        // il pezzo scaricato è già tutto il file (o è sbagliato): lo dice il controllo dopo
+                        if (attesi <= 0 || gia >= attesi)
+                        {
+                            return;
+                        }
+                        Cancella(file);
+                        continue;
+                    }
+                    if (codice == 404 || codice == 403 || codice == 410)
+                    {
+                        throw new WebException("il file non c'è sul sito (" + codice + "): forse l'aggiornamento non è ancora caricato tutto. " + url);
+                    }
+                    long ora = File.Exists(file) ? new FileInfo(file).Length : 0;
+                    // se in questo giro si è andati avanti, i tentativi ripartono: per scaricare GB basta che la rete torni
+                    tentativo = ora > all_inizio ? 1 : tentativo + 1;
+                    Registro.Scrivi("scaricamento interrotto (tentativo " + tentativo + "): " + e.Message);
+                    if (tentativo >= 6)
+                    {
+                        throw;
+                    }
+                    avanza(Fase.Scarico, "La rete si è interrotta: riprovo tra poco", primaDiQuesta + ora, totale, 0);
+                    for (int i = 0; i < Math.Min(30, 3 * tentativo) * 10; i++)
+                    {
+                        if (Annulla)
+                        {
+                            throw new OperationCanceledException();
+                        }
+                        Thread.Sleep(100);
+                    }
+                }
+            }
         }
 
         /// <summary>Controlla ogni file del gioco con l'elenco del manifesto. Restituisce i file mancanti o diversi.</summary>
@@ -335,114 +924,31 @@ namespace Valdorso.Launcher
                 totale += f.Byte;
             }
             long fatti = 0;
+            int contati = 0;
             foreach (FileDelGioco f in m.File)
             {
                 if (Annulla)
                 {
-                    break;
+                    throw new OperationCanceledException();
                 }
                 string percorso = Path.Combine(config.PercorsoGioco, f.Percorso.Replace('/', Path.DirectorySeparatorChar));
-                if (!File.Exists(percorso) || new FileInfo(percorso).Length != f.Byte || Sha256File(percorso, null, null) != f.Sha256)
+                if (!File.Exists(percorso) || new FileInfo(percorso).Length != f.Byte || Sha256File(percorso, Fase.Verifica, null, null, this) != f.Sha256)
                 {
                     sbagliati.Add(f.Percorso);
                 }
                 fatti += f.Byte;
-                avanza("Controllo i file", fatti, Math.Max(1, totale), 0);
+                contati++;
+                avanza(Fase.Verifica, "Controllo i file (" + contati + " di " + m.File.Count + ")", fatti, Math.Max(1, totale), 0);
             }
             return sbagliati;
         }
 
-        private void Scarica(string url, string parte, long attesi, Avanzamento avanza)
-        {
-            long gia = File.Exists(parte) ? new FileInfo(parte).Length : 0;
-            for (int tentativo = 1; ; tentativo++)
-            {
-                try
-                {
-                    HttpWebRequest r = (HttpWebRequest)WebRequest.Create(url);
-                    r.UserAgent = "ValdorsoLauncher/" + Info.Versione;
-                    r.Timeout = 30000;
-                    r.ReadWriteTimeout = 30000;
-                    if (gia > 0)
-                    {
-                        r.AddRange(gia);
-                    }
-                    using (HttpWebResponse risposta = (HttpWebResponse)r.GetResponse())
-                    {
-                        bool riprende = gia > 0 && risposta.StatusCode == HttpStatusCode.PartialContent;
-                        if (!riprende)
-                        {
-                            gia = 0;
-                        }
-                        long totale = attesi > 0 ? attesi : (risposta.ContentLength > 0 ? risposta.ContentLength + gia : 0);
-                        using (Stream dentro = risposta.GetResponseStream())
-                        using (FileStream fuori = new FileStream(parte, riprende ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
-                        {
-                            byte[] pezzo = new byte[1 << 18];
-                            DateTime inizio = DateTime.UtcNow;
-                            long inQuestoGiro = 0;
-                            DateTime ultimoAvviso = DateTime.MinValue;
-                            int letti;
-                            while ((letti = dentro.Read(pezzo, 0, pezzo.Length)) > 0)
-                            {
-                                if (Annulla)
-                                {
-                                    throw new OperationCanceledException();
-                                }
-                                fuori.Write(pezzo, 0, letti);
-                                gia += letti;
-                                inQuestoGiro += letti;
-                                if ((DateTime.UtcNow - ultimoAvviso).TotalMilliseconds > 150)
-                                {
-                                    double secondi = Math.Max(0.001, (DateTime.UtcNow - inizio).TotalSeconds);
-                                    avanza("Scarico l'aggiornamento", gia, totale, inQuestoGiro / secondi);
-                                    ultimoAvviso = DateTime.UtcNow;
-                                }
-                            }
-                        }
-                    }
-                    return;
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (WebException e)
-                {
-                    HttpWebResponse r = e.Response as HttpWebResponse;
-                    // 416: il pezzo già scaricato è tutto il file (o è sbagliato): si ricomincia da capo una volta
-                    if (r != null && (int)r.StatusCode == 416 && gia > 0)
-                    {
-                        File.Delete(parte);
-                        gia = 0;
-                        continue;
-                    }
-                    Registro.Scrivi("scaricamento interrotto (tentativo " + tentativo + "): " + e.Message);
-                    if (tentativo >= 5)
-                    {
-                        throw;
-                    }
-                    Thread.Sleep(2000 * tentativo);
-                    gia = File.Exists(parte) ? new FileInfo(parte).Length : 0;
-                }
-                catch (IOException e)
-                {
-                    Registro.Scrivi("scaricamento interrotto (tentativo " + tentativo + "): " + e.Message);
-                    if (tentativo >= 5)
-                    {
-                        throw;
-                    }
-                    Thread.Sleep(2000 * tentativo);
-                    gia = File.Exists(parte) ? new FileInfo(parte).Length : 0;
-                }
-            }
-        }
-
-        private void Scompatta(string zip, string dove, Avanzamento avanza)
+        private void Scompatta(List<string> parti, string dove, Avanzamento avanza)
         {
             Directory.CreateDirectory(dove);
-            string base_ = Path.GetFullPath(dove) + Path.DirectorySeparatorChar;
-            using (ZipArchive archivio = ZipFile.OpenRead(zip))
+            string base_ = Path.GetFullPath(dove).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            using (FlussoUnito flusso = new FlussoUnito(parti))
+            using (ZipArchive archivio = new ZipArchive(flusso, ZipArchiveMode.Read, false))
             {
                 long totale = 0;
                 foreach (ZipArchiveEntry e in archivio.Entries)
@@ -450,6 +956,8 @@ namespace Valdorso.Launcher
                     totale += e.Length;
                 }
                 long fatti = 0;
+                DateTime ultimoAvviso = DateTime.MinValue;
+                byte[] pezzo = new byte[1 << 20];
                 foreach (ZipArchiveEntry e in archivio.Entries)
                 {
                     if (Annulla)
@@ -468,10 +976,35 @@ namespace Valdorso.Launcher
                         continue;
                     }
                     Directory.CreateDirectory(Path.GetDirectoryName(destinazione));
-                    e.ExtractToFile(destinazione, true);
-                    fatti += e.Length;
-                    avanza("Installo", fatti, Math.Max(1, totale), 0);
+                    // a pezzi, così anche un file grande (i .pak) fa muovere la barra
+                    using (Stream dentro = e.Open())
+                    using (FileStream fuori = new FileStream(destinazione, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+                    {
+                        int letti;
+                        while ((letti = dentro.Read(pezzo, 0, pezzo.Length)) > 0)
+                        {
+                            if (Annulla)
+                            {
+                                throw new OperationCanceledException();
+                            }
+                            fuori.Write(pezzo, 0, letti);
+                            fatti += letti;
+                            if ((DateTime.UtcNow - ultimoAvviso).TotalMilliseconds > 200)
+                            {
+                                avanza(Fase.Installo, "Installo", fatti, Math.Max(1, totale), 0);
+                                ultimoAvviso = DateTime.UtcNow;
+                            }
+                        }
+                    }
+                    try
+                    {
+                        File.SetLastWriteTime(destinazione, e.LastWriteTime.DateTime);
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
+                avanza(Fase.Installo, "Installo", totale, Math.Max(1, totale), 0);
             }
         }
 
@@ -495,7 +1028,8 @@ namespace Valdorso.Launcher
             }
         }
 
-        public static string Sha256File(string percorso, string fase, Avanzamento avanza)
+        /// <summary>L'impronta SHA-256 di un file. Se "chi" viene fermato, si ferma anche il conto.</summary>
+        public static string Sha256File(string percorso, Fase fase, string testo, Avanzamento avanza, Aggiornatore chi)
         {
             using (SHA256 sha = SHA256.Create())
             using (FileStream f = new FileStream(percorso, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20))
@@ -507,11 +1041,15 @@ namespace Valdorso.Launcher
                 DateTime ultimoAvviso = DateTime.MinValue;
                 while ((letti = f.Read(pezzo, 0, pezzo.Length)) > 0)
                 {
+                    if (chi != null && chi.Annulla)
+                    {
+                        throw new OperationCanceledException();
+                    }
                     sha.TransformBlock(pezzo, 0, letti, null, 0);
                     fatti += letti;
-                    if (avanza != null && fase != null && (DateTime.UtcNow - ultimoAvviso).TotalMilliseconds > 150)
+                    if (avanza != null && testo != null && (DateTime.UtcNow - ultimoAvviso).TotalMilliseconds > 200)
                     {
-                        avanza(fase, fatti, totale, 0);
+                        avanza(fase, testo, fatti, totale, 0);
                         ultimoAvviso = DateTime.UtcNow;
                     }
                 }
@@ -536,6 +1074,126 @@ namespace Valdorso.Launcher
                 }
             }
             return s.Length > 0 ? s.ToString() : "nuova";
+        }
+    }
+
+    /// <summary>Più file letti come uno solo, uno dopo l'altro (le parti dello zip), solo in lettura, con lo spostamento:
+    /// è quello che serve a ZipArchive, che legge prima l'indice in fondo e poi salta ai file.</summary>
+    public class FlussoUnito : Stream
+    {
+        readonly List<FileStream> file = new List<FileStream>();
+        readonly List<long> inizi = new List<long>();
+        readonly long lunghezza;
+        long posizione;
+
+        public FlussoUnito(List<string> percorsi)
+        {
+            long somma = 0;
+            try
+            {
+                foreach (string p in percorsi)
+                {
+                    FileStream f = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16);
+                    file.Add(f);
+                    inizi.Add(somma);
+                    somma += f.Length;
+                }
+            }
+            catch
+            {
+                Dispose(true);
+                throw;
+            }
+            lunghezza = somma;
+        }
+
+        public override bool CanRead { get { return true; } }
+        public override bool CanSeek { get { return true; } }
+        public override bool CanWrite { get { return false; } }
+        public override long Length { get { return lunghezza; } }
+
+        public override long Position
+        {
+            get { return posizione; }
+            set { Seek(value, SeekOrigin.Begin); }
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int letti = 0;
+            while (count > 0 && posizione < lunghezza)
+            {
+                int k = file.Count - 1;
+                while (k > 0 && inizi[k] > posizione)
+                {
+                    k--;
+                }
+                FileStream f = file[k];
+                long dentro = posizione - inizi[k];
+                long restano = f.Length - dentro;
+                if (restano <= 0)
+                {
+                    // un file vuoto in mezzo: si passa oltre
+                    if (k == file.Count - 1)
+                    {
+                        break;
+                    }
+                    posizione = inizi[k + 1];
+                    continue;
+                }
+                if (f.Position != dentro)
+                {
+                    f.Position = dentro;
+                }
+                int n = f.Read(buffer, offset, (int)Math.Min(count, restano));
+                if (n <= 0)
+                {
+                    break;
+                }
+                letti += n;
+                offset += n;
+                count -= n;
+                posizione += n;
+            }
+            return letti;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            long nuova = origin == SeekOrigin.Begin ? offset : (origin == SeekOrigin.Current ? posizione + offset : lunghezza + offset);
+            if (nuova < 0)
+            {
+                throw new IOException("posizione prima dell'inizio");
+            }
+            posizione = nuova;
+            return posizione;
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                foreach (FileStream f in file)
+                {
+                    f.Dispose();
+                }
+                file.Clear();
+            }
+            base.Dispose(disposing);
         }
     }
 }

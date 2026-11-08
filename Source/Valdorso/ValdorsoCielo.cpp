@@ -15,6 +15,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/UObjectIterator.h"
+#include "UObject/UnrealType.h"
 
 namespace
 {
@@ -26,6 +27,31 @@ namespace
 		ECVF_Default);
 
 	const TCHAR* PercorsoOmbreNuvole = TEXT("/Game/Valle/Tempo/M_OmbreNuvole.M_OmbreNuvole");
+
+	/**
+	 * (08/11) La ForwardShadingPriority di una Directional Light, letta e scritta per nome (la proprietà di Unreal):
+	 * così compila comunque, anche se in un'altra versione di Unreal non fosse pubblica; se mancasse, non fa niente.
+	 */
+	FIntProperty* CieloProprietaPriorita()
+	{
+		static FIntProperty* Proprieta = FindFProperty<FIntProperty>(UDirectionalLightComponent::StaticClass(), TEXT("ForwardShadingPriority"));
+		return Proprieta;
+	}
+
+	int32 CieloPriorita(const UDirectionalLightComponent* Luce)
+	{
+		const FIntProperty* Proprieta = CieloProprietaPriorita();
+		return (Luce && Proprieta) ? Proprieta->GetPropertyValue_InContainer(Luce) : 0;
+	}
+
+	void CieloMettiPriorita(UDirectionalLightComponent* Luce, int32 Valore)
+	{
+		const FIntProperty* Proprieta = CieloProprietaPriorita();
+		if (Luce && Proprieta)
+		{
+			Proprieta->SetPropertyValue_InContainer(Luce, Valore);
+		}
+	}
 
 	/** Valdorso.Ora 21: mette l'ora in tutti i mondi con il cielo (il server la manda poi a tutti). */
 	FAutoConsoleCommand ComandoOra(
@@ -88,6 +114,10 @@ AValdorsoCielo::AValdorsoCielo()
 	Luna->SetAtmosphereSunLight(true);
 	Luna->SetAtmosphereSunLightIndex(1);
 	Luna->SetCastShadows(true);
+	// (08/11) Due luci del cielo nello stesso livello: Unreal ne usa una sola per il "forward shading", le cose
+	// trasparenti, l'acqua e la nebbia volumetrica, e se hanno la stessa priorità lo scrive sullo schermo ("Multiple
+	// directional lights are competing..."). Di giorno vince il sole (priorità più alta, vedi TrovaLuci), di notte la luna.
+	CieloMettiPriorita(Luna, PrioritaLunaDiGiorno);
 }
 
 void AValdorsoCielo::BeginPlay()
@@ -197,6 +227,24 @@ void AValdorsoCielo::TrovaLuci()
 			Sole = Luce;
 			IntensitaSole = Luce->Intensity;
 			Luce->SetAtmosphereSunLightIndex(0);
+			// (08/11) Il sole vince sulle altre luci del livello (e sulla luna di giorno) per le cose trasparenti, l'acqua
+			// e la nebbia volumetrica: una priorità in più di tutte. La priorità entra nella luce disegnata solo
+			// rifacendola (MarkRenderStateDirty), perché il sole era già nel livello.
+			int32 PiuAlta = PrioritaLunaDiGiorno;
+			for (TActorIterator<ADirectionalLight> It(Mondo); It; ++It)
+			{
+				const UDirectionalLightComponent* Altra = Cast<UDirectionalLightComponent>(It->GetLightComponent());
+				if (*It != Scelta && Altra)
+				{
+					PiuAlta = FMath::Max(PiuAlta, CieloPriorita(Altra));
+				}
+			}
+			PrioritaSole = FMath::Max(CieloPriorita(Luce), PiuAlta + 1);
+			if (CieloPriorita(Luce) != PrioritaSole)
+			{
+				CieloMettiPriorita(Luce, PrioritaSole);
+				Luce->MarkRenderStateDirty();
+			}
 			// (06/11) Le ombre delle nuvole (M_OmbreNuvole, da crea_tempo.py): valgono per tutta la valle (3 km),
 			// quindi la luce non le spegne con la distanza.
 			if (UMaterialInterface* Materiale = LoadObject<UMaterialInterface>(nullptr, PercorsoOmbreNuvole, nullptr, LOAD_NoWarn))
@@ -279,6 +327,15 @@ void AValdorsoCielo::Tick(float DeltaSeconds)
 		const float AltezzaLuna = FMath::Max(15.f, -Altezza);
 		Luna->SetWorldRotation(FRotator(-AltezzaLuna, Direzione, 0.f));
 		Luna->SetIntensity(LuceLuna * (1.f - Giorno));
+		// (08/11) Quando il sole è quasi sparito la luna passa davanti (nebbia e acqua di notte prendono la sua luce);
+		// all'alba torna dietro. Succede due volte al giorno: rifare la luce costa poco.
+		const bool bVoglioLunaDavanti = Sole.IsValid() && Giorno < 0.05f;
+		if (bVoglioLunaDavanti != bLunaDavanti)
+		{
+			bLunaDavanti = bVoglioLunaDavanti;
+			CieloMettiPriorita(Luna, bLunaDavanti ? PrioritaSole + 1 : PrioritaLunaDiGiorno);
+			Luna->MarkRenderStateDirty();
+		}
 	}
 
 	// La luce del cielo (riflessi e ombre morbide) va ricatturata se non lo fa da sola.

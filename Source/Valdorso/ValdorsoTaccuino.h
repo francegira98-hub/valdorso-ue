@@ -10,14 +10,17 @@
 //   byte e servono alla bussola. Il testo di un'iscrizione arriva solo quando lo si apre nel taccuino (una richiesta
 //   al server, poi resta in memoria finché il taccuino non cambia): così 200 iscrizioni non pesano sulla rete.
 // - Il taccuino si salva con il personaggio (FValdorsoPersonaggio::Taccuino): il PlayerController lo dà al componente
-//   quando il personaggio entra (Carica) e lo riprende quando salva (Dati).
+//   quando il personaggio entra (Carica) e lo riprende quando salva (Dati). (08/11) Con il taccuino viaggia anche la
+//   memoria dei dialoghi con i PNG (GiaParlato, HaSegno...): la usa AValdorsoPNG, così il saluto e i segni restano
+//   anche dopo lo spegnimento del server.
 // - La bussola: una striscia in alto al centro (SValdorsoBussola) con i punti cardinali che scorrono con lo sguardo e
 //   i segni dei luoghi già scoperti (col nome, quando ci si guarda davanti). Si nasconde quando c'è una schermata
 //   aperta (si vede il mouse), nella modalità foto e senza il colono. Valdorso.Bussola 0 la spegne.
 // - Il taccuino (tasto J): una pergamena con tre schede, Luoghi, Iscrizioni e Rune (il quaderno delle rune).
 //   Si chiude con J, Esc, E o il pulsante Chiudi; 1, 2, 3 (o i dorsali del controller) cambiano scheda.
 // Comandi di console (sul server, o giocando da soli): Valdorso.Taccuino.ScopriTutto (tutti i luoghi, per le prove),
-// Valdorso.Taccuino.Dimentica (svuota il taccuino del giocatore).
+// Valdorso.Taccuino.Dimentica (svuota il taccuino del giocatore); (08/11) Valdorso.Dialoghi.Dimentica (i PNG
+// dimenticano chi ha già parlato con loro e i segni, anche nei file dei personaggi).
 
 #pragma once
 
@@ -55,8 +58,31 @@ public:
 	/** Annota un luogo come scoperto (con l'avviso al giocatore); falso se lo conosceva già. */
 	bool Scopri(const FString& Nome, bool bAvvisa = true);
 
-	/** Per le prove (console): svuota il taccuino. */
+	/** Per le prove (console): svuota il taccuino (luoghi e iscrizioni; la memoria dei dialoghi resta). */
 	void Dimentica();
+
+	// --- (08/11) Sul server: la memoria dei dialoghi con i PNG (ValdorsoDialoghi.h) -----------------------
+	// Sta nel file del personaggio (FValdorsoTaccuino::Dialoghi): quando cambia si salva il personaggio, come per i
+	// luoghi scoperti. Vale solo con un personaggio vero (HaPersonaggio): chi entra con l'accesso libero dell'editor
+	// non ha un file, e i PNG usano la memoria per nome del server (ValdorsoDialoghi::GiaParlato).
+
+	/** Vero se il taccuino è quello di un personaggio salvato (arrivato con Carica). */
+	bool HaPersonaggio() const { return bPersonaggio; }
+
+	/** Vero se questo personaggio ha già parlato con il PNG di quel dialogo. */
+	bool GiaParlato(FName IdDialogo) const;
+
+	/** Ricorda che ci ha parlato (e salva, se è la prima volta). */
+	void SegnaParlato(FName IdDialogo);
+
+	/** Vero se questo personaggio ha quel segno in quel dialogo. */
+	bool HaSegno(FName IdDialogo, FName Segno) const;
+
+	/** Gli dà il segno (e salva, se è nuovo). */
+	void MettiSegno(FName IdDialogo, FName Segno);
+
+	/** Per le prove (console Valdorso.Dialoghi.Dimentica): i PNG lo salutano di nuovo come la prima volta. */
+	void DimenticaDialoghi();
 
 	// --- Sul PC del giocatore -----------------------------------------------------------------------
 
@@ -115,6 +141,12 @@ private:
 
 	/** Solo sul server: le iscrizioni con il testo. */
 	TArray<FValdorsoIscrizioneLetta> Iscrizioni;
+
+	/** (08/11) Solo sul server: la memoria dei dialoghi (non va in rete: il PC non ne ha bisogno). */
+	TArray<FValdorsoRicordoDialogo> Ricordi;
+
+	/** (08/11) Solo sul server: vero dopo Carica (c'è un personaggio con il suo file). */
+	bool bPersonaggio = false;
 
 	/** Server: quando guardare di nuovo i luoghi; il limite alle richieste dei testi. */
 	double ProssimoControllo = 0.0;

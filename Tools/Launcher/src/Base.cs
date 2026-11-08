@@ -1,4 +1,5 @@
-// Valdorso - Il launcher: le cose di base (configurazione, registro, JSON, versioni). Scritto da Claude il 07/11/2026.
+// Valdorso - Il launcher: le cose di base (configurazione, registro, JSON, versioni). Scritto da Claude il 07/11/2026;
+// (08/11) le opzioni si salvano dalla finestra, la cartella cache, le date in italiano.
 //
 // Il launcher è un programma Windows a parte (non Unreal): si apre prima del gioco, mostra le notizie della valle e lo
 // stato del server, scarica e installa gli aggiornamenti, controlla i file e avvia Valdorso con l'indirizzo giusto.
@@ -18,7 +19,7 @@ namespace Valdorso.Launcher
     /// <summary>La versione del launcher (si cambia a ogni versione nuova del launcher).</summary>
     public static class Info
     {
-        public const string Versione = "1.0.0";
+        public const string Versione = "1.1.0";
         public const string Nome = "Valdorso";
     }
 
@@ -88,6 +89,111 @@ namespace Valdorso.Launcher
         public static string Scaricati
         {
             get { return Path.Combine(Base, "Scaricati"); }
+        }
+
+        private static string cache;
+
+        /// <summary>Le ultime notizie, note e immagini scaricate dal sito (per quando manca la rete).</summary>
+        public static string Cache
+        {
+            get
+            {
+                if (cache == null)
+                {
+                    cache = Path.Combine(Base, "cache");
+                    try
+                    {
+                        Directory.CreateDirectory(cache);
+                        string prova = Path.Combine(cache, ".prova");
+                        System.IO.File.WriteAllText(prova, "");
+                        System.IO.File.Delete(prova);
+                    }
+                    catch (Exception)
+                    {
+                        // la cartella del launcher non si può scrivere (per esempio dentro Programmi)
+                        cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Valdorso", "cache");
+                        try
+                        {
+                            Directory.CreateDirectory(cache);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
+                }
+                return cache;
+            }
+        }
+
+        /// <summary>Le opzioni salvate qui quando launcher.json accanto al programma non si può scrivere.</summary>
+        public static string OpzioniDiRiserva
+        {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Valdorso", "launcher_opzioni.json"); }
+        }
+    }
+
+    /// <summary>Le misure in italiano: "3,4 GB", "12 min".</summary>
+    public static class Misure
+    {
+        public static string Byte(long n)
+        {
+            CultureInfo it = CultureInfo.GetCultureInfo("it-IT");
+            if (n >= 1L << 30)
+            {
+                return (n / (double)(1L << 30)).ToString("0.0", it) + " GB";
+            }
+            if (n >= 1L << 20)
+            {
+                return (n / (double)(1L << 20)).ToString("0.0", it) + " MB";
+            }
+            return Math.Max(1, n / 1024).ToString(CultureInfo.InvariantCulture) + " KB";
+        }
+
+        public static string Durata(double secondi)
+        {
+            if (secondi < 90)
+            {
+                return Math.Max(1, (int)secondi).ToString(CultureInfo.InvariantCulture) + " s";
+            }
+            if (secondi < 5400)
+            {
+                return ((int)Math.Round(secondi / 60)).ToString(CultureInfo.InvariantCulture) + " min";
+            }
+            int ore = (int)(secondi / 3600);
+            int minuti = (int)((secondi - ore * 3600) / 60);
+            return ore.ToString(CultureInfo.InvariantCulture) + " h " + minuti.ToString("00", CultureInfo.InvariantCulture) + " min";
+        }
+    }
+
+    /// <summary>Le date: nei file del sito sono "2026-11-08"; nella finestra "8 novembre 2026".</summary>
+    public static class Date
+    {
+        static readonly string[] Mesi = { "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre" };
+
+        public static string Leggibile(string data)
+        {
+            DateTime d;
+            if (Leggi(data, out d))
+            {
+                return d.Day.ToString(CultureInfo.InvariantCulture) + " " + Mesi[d.Month - 1] + " " + d.Year.ToString(CultureInfo.InvariantCulture);
+            }
+            return data ?? "";
+        }
+
+        /// <summary>Corta: "8 nov".</summary>
+        public static string Corta(string data)
+        {
+            DateTime d;
+            if (Leggi(data, out d))
+            {
+                return d.Day.ToString(CultureInfo.InvariantCulture) + " " + Mesi[d.Month - 1].Substring(0, 3);
+            }
+            return data ?? "";
+        }
+
+        public static bool Leggi(string data, out DateTime d)
+        {
+            return DateTime.TryParseExact((data ?? "").Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d);
         }
     }
 
@@ -173,6 +279,25 @@ namespace Valdorso.Launcher
             }
             return fuori;
         }
+
+        /// <summary>Un elenco di scritte (["a", "b"]); le voci che non sono scritte si saltano.</summary>
+        public static List<string> Testi(Dictionary<string, object> d, string chiave)
+        {
+            List<string> fuori = new List<string>();
+            object v;
+            if (d != null && d.TryGetValue(chiave, out v) && v is IEnumerable && !(v is string))
+            {
+                foreach (object elemento in (IEnumerable)v)
+                {
+                    string t = elemento as string;
+                    if (!string.IsNullOrEmpty(t))
+                    {
+                        fuori.Add(t);
+                    }
+                }
+            }
+            return fuori;
+        }
     }
 
     /// <summary>Le versioni "0.1.3": si confrontano numero per numero (0.1.10 viene dopo 0.1.9).</summary>
@@ -208,6 +333,8 @@ namespace Valdorso.Launcher
     public class Configurazione
     {
         public string Manifesto = "https://valdorso.altervista.org/launcher/manifesto.json";
+        /// <summary>La cartella del sito con notizie.json, patch.json, roadmap.json, cronache.json e immagini/ (vuoto = quella del manifesto).</summary>
+        public string Contenuti = "";
         public string CartellaGioco = "Gioco";
         public string Server = "";
         public string Stato = "";
@@ -226,19 +353,57 @@ namespace Valdorso.Launcher
             }
         }
 
+        /// <summary>L'indirizzo della cartella dei contenuti, sempre con la "/" in fondo.</summary>
+        public string CartellaContenuti
+        {
+            get
+            {
+                string base_ = Contenuti.Trim();
+                if (base_.Length == 0)
+                {
+                    int barra = Manifesto.LastIndexOf('/');
+                    base_ = barra > 8 ? Manifesto.Substring(0, barra + 1) : "";
+                }
+                if (base_.Length > 0 && !base_.EndsWith("/"))
+                {
+                    base_ += "/";
+                }
+                return base_;
+            }
+        }
+
+        static string FileOpzioni
+        {
+            get { return Path.Combine(Cartelle.Base, "launcher.json"); }
+        }
+
         public static Configurazione Carica()
         {
             Configurazione c = new Configurazione();
-            string file = Path.Combine(Cartelle.Base, "launcher.json");
-            if (!File.Exists(file))
+            if (!File.Exists(FileOpzioni))
             {
                 Registro.Scrivi("launcher.json non c'è: uso i valori di serie");
-                return c;
             }
+            else
+            {
+                c.Leggi(FileOpzioni);
+            }
+            // se launcher.json non si poteva scrivere, le opzioni scelte nella finestra stanno qui
+            if (File.Exists(Cartelle.OpzioniDiRiserva))
+            {
+                c.Leggi(Cartelle.OpzioniDiRiserva);
+            }
+            return c;
+        }
+
+        void Leggi(string file)
+        {
+            Configurazione c = this;
             try
             {
                 Dictionary<string, object> d = Json.Leggi(File.ReadAllText(file, Encoding.UTF8));
                 c.Manifesto = Json.Testo(d, "manifesto", c.Manifesto);
+                c.Contenuti = Json.Testo(d, "contenuti", c.Contenuti);
                 c.CartellaGioco = Json.Testo(d, "cartella_gioco", c.CartellaGioco);
                 c.Server = Json.Testo(d, "server", c.Server);
                 c.Stato = Json.Testo(d, "stato", c.Stato);
@@ -250,9 +415,79 @@ namespace Valdorso.Launcher
             }
             catch (Exception e)
             {
-                Registro.Scrivi("launcher.json non si legge (" + e.Message + "): uso i valori di serie");
+                Registro.Scrivi(Path.GetFileName(file) + " non si legge (" + e.Message + "): uso i valori di serie");
             }
-            return c;
+        }
+
+        /// <summary>Salva le opzioni scelte nella finestra in launcher.json (le altre voci del file restano com'erano).
+        /// Restituisce falso se non si è potuto scrivere da nessuna parte.</summary>
+        public bool Salva()
+        {
+            Dictionary<string, object> d = null;
+            try
+            {
+                if (File.Exists(FileOpzioni))
+                {
+                    d = Json.Leggi(File.ReadAllText(FileOpzioni, Encoding.UTF8));
+                }
+            }
+            catch (Exception)
+            {
+            }
+            if (d == null)
+            {
+                d = new Dictionary<string, object>();
+            }
+            d["manifesto"] = Manifesto;
+            d["contenuti"] = Contenuti;
+            d["cartella_gioco"] = CartellaGioco;
+            d["server"] = Server;
+            d["stato"] = Stato;
+            d["sito"] = Sito;
+            d["discord"] = Discord;
+            d["chiudi_dopo_avvio"] = ChiudiDopoAvvio;
+            d["argomenti"] = ArgomentiInPiu;
+            d["caratteri_propri"] = CaratteriPropri;
+            string testo = InColonna(d);
+            try
+            {
+                File.WriteAllText(FileOpzioni, testo, new UTF8Encoding(false));
+                if (File.Exists(Cartelle.OpzioniDiRiserva))
+                {
+                    File.Delete(Cartelle.OpzioniDiRiserva);
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                Registro.Scrivi("launcher.json non si scrive (" + e.Message + "): salvo in " + Cartelle.OpzioniDiRiserva);
+            }
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(Cartelle.OpzioniDiRiserva));
+                File.WriteAllText(Cartelle.OpzioniDiRiserva, testo, new UTF8Encoding(false));
+                return true;
+            }
+            catch (Exception e)
+            {
+                Registro.Scrivi("opzioni non salvate: " + e.Message);
+                return false;
+            }
+        }
+
+        /// <summary>Un dizionario semplice in JSON, una voce per riga (così launcher.json resta leggibile a mano).</summary>
+        static string InColonna(Dictionary<string, object> d)
+        {
+            StringBuilder s = new StringBuilder();
+            s.Append("{\r\n");
+            int i = 0;
+            foreach (KeyValuePair<string, object> voce in d)
+            {
+                s.Append("  ").Append(Json.Scrivi(voce.Key)).Append(": ").Append(Json.Scrivi(voce.Value));
+                s.Append(++i < d.Count ? ",\r\n" : "\r\n");
+            }
+            s.Append("}\r\n");
+            return s.ToString();
         }
     }
 }

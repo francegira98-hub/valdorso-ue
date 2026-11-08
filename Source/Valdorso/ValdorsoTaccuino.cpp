@@ -4,6 +4,7 @@
 #include "SValdorsoTaccuino.h"
 #include "Valdorso.h"
 #include "ValdorsoCielo.h"
+#include "ValdorsoDialoghi.h"
 #include "ValdorsoModoFoto.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
@@ -70,6 +71,19 @@ namespace
 			? TEXT("svuotato")
 			: TEXT("nessun giocatore (il comando vale sul server, o giocando da soli)"));
 	}
+
+	/** (08/11) Per le prove: i PNG dimenticano tutti (la memoria dei personaggi e quella per nome del server). */
+	void TaccuinoDimenticaDialoghi(UWorld* Mondo)
+	{
+		ValdorsoDialoghi::Dimentica();
+		const int32 Trovati = TaccuinoPerOgniGiocatore(Mondo, [](UValdorsoTaccuinoComponent& Diario) { Diario.DimenticaDialoghi(); });
+		UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Dialoghi: i PNG hanno dimenticato tutti (%d giocatori)"), Trovati);
+	}
+
+	FAutoConsoleCommandWithWorld ComandoTaccuinoDimenticaDialoghi(
+		TEXT("Valdorso.Dialoghi.Dimentica"),
+		TEXT("Per le prove: i PNG dimenticano chi ha già parlato con loro e i segni (anche nei file dei personaggi; sul server, o da soli)."),
+		FConsoleCommandWithWorldDelegate::CreateStatic(&TaccuinoDimenticaDialoghi));
 
 	FAutoConsoleCommandWithWorld ComandoTaccuinoScopriTutto(
 		TEXT("Valdorso.Taccuino.ScopriTutto"),
@@ -158,6 +172,9 @@ void UValdorsoTaccuinoComponent::Carica(const FValdorsoTaccuino& Salvato)
 	ValdorsoTaccuino::Sistema(Pulito);
 	Luoghi = MoveTemp(Pulito.Luoghi);
 	Iscrizioni = MoveTemp(Pulito.Iscrizioni);
+	// (08/11) la memoria dei dialoghi: da qui in poi i PNG usano questa (e si salva con il personaggio)
+	Ricordi = MoveTemp(Pulito.Dialoghi);
+	bPersonaggio = true;
 	AggiornaTitoli();
 	// i luoghi dove si trova adesso si guardano subito
 	ProssimoControllo = 0.0;
@@ -168,7 +185,67 @@ FValdorsoTaccuino UValdorsoTaccuinoComponent::Dati() const
 	FValdorsoTaccuino Fuori;
 	Fuori.Luoghi = Luoghi;
 	Fuori.Iscrizioni = Iscrizioni;
+	Fuori.Dialoghi = Ricordi;
 	return Fuori;
+}
+
+// (08/11) La memoria dei dialoghi: le regole sono quelle di ValdorsoTaccuinoDati (le provano i test), qui solo il
+// salvataggio quando qualcosa cambia davvero.
+
+bool UValdorsoTaccuinoComponent::GiaParlato(FName IdDialogo) const
+{
+	FValdorsoTaccuino Lettura;
+	Lettura.Dialoghi = Ricordi;
+	return ValdorsoTaccuino::HaParlato(Lettura, IdDialogo);
+}
+
+void UValdorsoTaccuinoComponent::SegnaParlato(FName IdDialogo)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	FValdorsoTaccuino Lavoro;
+	Lavoro.Dialoghi = MoveTemp(Ricordi);
+	const bool bCambiato = ValdorsoTaccuino::SegnaParlato(Lavoro, IdDialogo);
+	Ricordi = MoveTemp(Lavoro.Dialoghi);
+	if (bCambiato)
+	{
+		Salva();
+	}
+}
+
+bool UValdorsoTaccuinoComponent::HaSegno(FName IdDialogo, FName Segno) const
+{
+	FValdorsoTaccuino Lettura;
+	Lettura.Dialoghi = Ricordi;
+	return ValdorsoTaccuino::HaSegno(Lettura, IdDialogo, Segno);
+}
+
+void UValdorsoTaccuinoComponent::MettiSegno(FName IdDialogo, FName Segno)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	FValdorsoTaccuino Lavoro;
+	Lavoro.Dialoghi = MoveTemp(Ricordi);
+	const bool bCambiato = ValdorsoTaccuino::MettiSegno(Lavoro, IdDialogo, Segno);
+	Ricordi = MoveTemp(Lavoro.Dialoghi);
+	if (bCambiato)
+	{
+		Salva();
+	}
+}
+
+void UValdorsoTaccuinoComponent::DimenticaDialoghi()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || Ricordi.Num() == 0)
+	{
+		return;
+	}
+	Ricordi.Reset();
+	Salva();
 }
 
 void UValdorsoTaccuinoComponent::AnnotaIscrizione(const FString& Titolo, const TArray<FString>& Righe)
