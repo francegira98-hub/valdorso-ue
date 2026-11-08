@@ -176,7 +176,8 @@ float UValdorsoMovementComponent::GetMaxSpeed() const
 	// A piedi (e non accucciati) la velocità la decide la corsa; negli altri casi (salto, nuoto...) quella di serie.
 	if ((MovementMode == MOVE_Walking || MovementMode == MOVE_NavWalking) && !IsCrouching())
 	{
-		return bVuoleCorrere ? VelocitaCorsa : VelocitaCamminata;
+		// (08/11) con lo zaino troppo pesante non si corre, e oltre il sovraccarico si cammina piano
+		return (bVuoleCorrere && bCaricoPermetteCorsa ? VelocitaCorsa : VelocitaCamminata) * FattoreCarico;
 	}
 	return Super::GetMaxSpeed();
 }

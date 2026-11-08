@@ -15,6 +15,8 @@
 #include "ValdorsoLetto.h"
 #include "ValdorsoScala.h"
 #include "ValdorsoMovenze.h"
+#include "ValdorsoPericoli.h"
+#include "ValdorsoBagnato.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
@@ -79,6 +81,8 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	AbilitaSchivata = UValdorsoAbilitaSchivata::StaticClass();
 	AbilitaPugno = UValdorsoAbilitaPugno::StaticClass();
 	EffettiIniziali.Add(UValdorsoGE_RecuperoStamina::StaticClass());
+	// (08/11) e quello dell'equilibrio (i pugni lo abbassano; vedi ValdorsoPericoli.h)
+	EffettiIniziali.Add(UValdorsoGE_RecuperoEquilibrio::StaticClass());
 
 	// (28/10) L'aspetto: corpo MetaHuman sopra il manichino, volto con i cursori del Registro.
 	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
@@ -86,6 +90,10 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	Sonno = CreateDefaultSubobject<UValdorsoSonnoComponent>(TEXT("Sonno"));
 	Scalata = CreateDefaultSubobject<UValdorsoScalataComponent>(TEXT("Scalata"));
 	Movenze = CreateDefaultSubobject<UValdorsoMovenzeComponent>(TEXT("Movenze"));
+	// (08/11, v0.1.4) Equilibrio, caduta e rinascita al tempio.
+	Pericoli = CreateDefaultSubobject<UValdorsoPericoliComponent>(TEXT("Pericoli"));
+	// (08/11, v0.1.4) Bagnati e asciutti.
+	Bagnato = CreateDefaultSubobject<UValdorsoBagnatoComponent>(TEXT("Bagnato"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -153,6 +161,12 @@ void AValdorsoCharacter::PossessedBy(AController* NewController)
 			{
 				AbilitySystemComponent->ApplyGameplayEffectToSelf(Effetto->GetDefaultObject<UGameplayEffect>(), 1.f, Contesto);
 			}
+		}
+
+		// (08/11) Il recupero dell'equilibrio c'è sempre, anche se il Blueprint del personaggio ha una sua lista di effetti iniziali.
+		if (!EffettiIniziali.Contains(TSubclassOf<UGameplayEffect>(UValdorsoGE_RecuperoEquilibrio::StaticClass())))
+		{
+			AbilitySystemComponent->ApplyGameplayEffectToSelf(GetDefault<UValdorsoGE_RecuperoEquilibrio>(), 1.f, Contesto);
 		}
 	}
 }

@@ -12,6 +12,9 @@ UValdorsoAttributeSet::UValdorsoAttributeSet()
 	InitStaminaMax(100.f);
 	InitMana(100.f);
 	InitManaMax(100.f);
+	// (08/11) l'equilibrio, pieno a 100
+	InitEquilibrio(100.f);
+	InitEquilibrioMax(100.f);
 }
 
 void UValdorsoAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -24,6 +27,8 @@ void UValdorsoAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME_CONDITION_NOTIFY(UValdorsoAttributeSet, StaminaMax, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UValdorsoAttributeSet, Mana, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UValdorsoAttributeSet, ManaMax, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UValdorsoAttributeSet, Equilibrio, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UValdorsoAttributeSet, EquilibrioMax, COND_None, REPNOTIFY_Always);
 }
 
 void UValdorsoAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -43,6 +48,11 @@ void UValdorsoAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribu
 	{
 		NewValue = FMath::Clamp(NewValue, 0.f, GetManaMax());
 	}
+	else if (Attribute == GetEquilibrioAttribute())
+	{
+		// (08/11) anche l'equilibrio
+		NewValue = FMath::Clamp(NewValue, 0.f, GetEquilibrioMax());
+	}
 }
 
 void UValdorsoAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
@@ -61,6 +71,11 @@ void UValdorsoAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 	else if (Data.EvaluatedData.Attribute == GetManaAttribute())
 	{
 		SetMana(FMath::Clamp(GetMana(), 0.f, GetManaMax()));
+	}
+	else if (Data.EvaluatedData.Attribute == GetEquilibrioAttribute())
+	{
+		// (08/11) anche l'equilibrio
+		SetEquilibrio(FMath::Clamp(GetEquilibrio(), 0.f, GetEquilibrioMax()));
 	}
 }
 
@@ -92,4 +107,14 @@ void UValdorsoAttributeSet::OnRep_Mana(const FGameplayAttributeData& OldValue)
 void UValdorsoAttributeSet::OnRep_ManaMax(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UValdorsoAttributeSet, ManaMax, OldValue);
+}
+
+void UValdorsoAttributeSet::OnRep_Equilibrio(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UValdorsoAttributeSet, Equilibrio, OldValue);
+}
+
+void UValdorsoAttributeSet::OnRep_EquilibrioMax(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UValdorsoAttributeSet, EquilibrioMax, OldValue);
 }

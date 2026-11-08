@@ -1,5 +1,6 @@
 // Valdorso - Le statistiche del personaggio per il Gameplay Ability System:
 // salute, stamina e mana, ognuna con il suo massimo. Le decide il server e viaggiano in rete ai giocatori.
+// (08/11, v0.1.4 "Pericoli") In più l'equilibrio: i colpi lo abbassano, a zero il colono barcolla (ValdorsoPericoli.h).
 
 #pragma once
 
@@ -51,6 +52,15 @@ public:
 	FGameplayAttributeData ManaMax;
 	VALDORSO_ATTRIBUTE_ACCESSORS(UValdorsoAttributeSet, ManaMax)
 
+	/** (08/11) L'equilibrio: i colpi lo abbassano, a zero il colono barcolla un istante e poi torna pieno; ricresce da solo. */
+	UPROPERTY(BlueprintReadOnly, Category = "Statistiche", ReplicatedUsing = OnRep_Equilibrio)
+	FGameplayAttributeData Equilibrio;
+	VALDORSO_ATTRIBUTE_ACCESSORS(UValdorsoAttributeSet, Equilibrio)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Statistiche", ReplicatedUsing = OnRep_EquilibrioMax)
+	FGameplayAttributeData EquilibrioMax;
+	VALDORSO_ATTRIBUTE_ACCESSORS(UValdorsoAttributeSet, EquilibrioMax)
+
 protected:
 	UFUNCTION()
 	void OnRep_Salute(const FGameplayAttributeData& OldValue);
@@ -69,4 +79,11 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ManaMax(const FGameplayAttributeData& OldValue);
+
+	/** (08/11) L'equilibrio e il suo massimo. */
+	UFUNCTION()
+	void OnRep_Equilibrio(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	void OnRep_EquilibrioMax(const FGameplayAttributeData& OldValue);
 };

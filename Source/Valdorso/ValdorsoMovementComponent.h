@@ -36,6 +36,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Valdorso|Movimento")
 	bool VuoleCorrere() const { return bVuoleCorrere; }
 
+	/** (08/11) Il peso dello zaino (ValdorsoZaino.h): quanto si va piano (1 = normale) e se si può ancora correre.
+	 *  Li mette lo zaino, uguali sul server e sul PC di chi gioca (così la previsione del movimento torna). */
+	float FattoreCarico = 1.f;
+	bool bCaricoPermetteCorsa = true;
+
 	/** (06/11) Con quanta acqua addosso si comincia a nuotare (0..1 dell'altezza: 0,6 = al petto). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Valdorso|Nuoto", meta = (ClampMin = "0.1", ClampMax = "1"))
 	float AcquaPerNuotare = 0.6f;

@@ -3,6 +3,7 @@
 #include "ValdorsoEffetti.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoEtichette.h"
+#include "ValdorsoPericoli.h"
 
 UValdorsoGE_CostoSchivata::UValdorsoGE_CostoSchivata()
 {
@@ -50,6 +51,13 @@ UValdorsoGE_DannoPugno::UValdorsoGE_DannoPugno()
 	Danno.ModifierOp = EGameplayModOp::Additive;
 	Danno.ModifierMagnitude = FGameplayEffectModifierMagnitude(DaChiChiama);
 	Modifiers.Add(Danno);
+
+	// (08/11) Il colpo fa anche perdere l'equilibrio: 30 a pugno (a zero si barcolla, vedi ValdorsoPericoli.h).
+	FGameplayModifierInfo Spinta;
+	Spinta.Attribute = UValdorsoAttributeSet::GetEquilibrioAttribute();
+	Spinta.ModifierOp = EGameplayModOp::Additive;
+	Spinta.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(-ValdorsoPericoli::EquilibrioPerPugno));
+	Modifiers.Add(Spinta);
 }
 
 UValdorsoGE_RecuperoStamina::UValdorsoGE_RecuperoStamina()
@@ -61,5 +69,17 @@ UValdorsoGE_RecuperoStamina::UValdorsoGE_RecuperoStamina()
 	Recupero.Attribute = UValdorsoAttributeSet::GetStaminaAttribute();
 	Recupero.ModifierOp = EGameplayModOp::Additive;
 	Recupero.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(2.5f));
+	Modifiers.Add(Recupero);
+}
+
+UValdorsoGE_RecuperoEquilibrio::UValdorsoGE_RecuperoEquilibrio()
+{
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+	Period = FScalableFloat(0.25f);
+
+	FGameplayModifierInfo Recupero;
+	Recupero.Attribute = UValdorsoAttributeSet::GetEquilibrioAttribute();
+	Recupero.ModifierOp = EGameplayModOp::Additive;
+	Recupero.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(ValdorsoPericoli::EquilibrioAlSecondo * 0.25f));
 	Modifiers.Add(Recupero);
 }

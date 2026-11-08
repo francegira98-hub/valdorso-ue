@@ -23,6 +23,8 @@ class UValdorsoSedutaComponent;
 class UValdorsoSonnoComponent;
 class UValdorsoScalataComponent;
 class UValdorsoMovenzeComponent;
+class UValdorsoPericoliComponent;
+class UValdorsoBagnatoComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -72,6 +74,14 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	/** (06/11) Le animazioni sulla scala e in acqua (vedi ValdorsoMovenze.h): solo aspetto, su ogni PC. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoMovenzeComponent* Movenze;
+
+	/** (08/11, v0.1.4) Equilibrio, caduta e rinascita al tempio (vedi ValdorsoPericoli.h). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UValdorsoPericoliComponent* Pericoli;
+
+	/** (08/11, v0.1.4) Bagnati e asciutti: nell'acqua e sotto la pioggia (vedi ValdorsoBagnato.h). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UValdorsoBagnatoComponent* Bagnato;
 
 	/** Le statistiche: salute, stamina, mana */
 	UPROPERTY()
@@ -210,6 +220,9 @@ public:
 
 	/** (06/11) Il componente delle scale a pioli (sale, scende) */
 	FORCEINLINE UValdorsoScalataComponent* GetScalata() const { return Scalata; }
+
+	/** (08/11) Il componente dei pericoli (equilibrio, caduta, rinascita) */
+	FORCEINLINE UValdorsoPericoliComponent* GetPericoli() const { return Pericoli; }
 
 	/** (03/11) Vero se è su una panca, (05/11) in un letto o (06/11) su una scala a pioli: niente salti, schivate e pugni */
 	bool SuUnaPanca() const;

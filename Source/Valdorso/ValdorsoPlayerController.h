@@ -23,6 +23,9 @@ class SValdorsoBacheca;
 class SValdorsoMappa;
 class SValdorsoDialogo;
 class UValdorsoTaccuinoComponent;
+class UValdorsoBarreComponent;
+class UValdorsoChatComponent;
+class UValdorsoZainoComponent;
 
 /**
  *  Basic PlayerController class for a third person game
@@ -71,6 +74,18 @@ public:
 	/** (07/11) Il taccuino di viaggio e la bussola (ValdorsoTaccuino.h): lo tiene il server, arriva solo a questo giocatore. */
 	UPROPERTY(VisibleAnywhere, Category = "Taccuino")
 	TObjectPtr<UValdorsoTaccuinoComponent> Taccuino;
+
+	/** (08/11, v0.1.4) Le barre di salute, stamina, mana ed equilibrio e la barra delle azioni (ValdorsoBarre.h): solo su questo PC. */
+	UPROPERTY(VisibleAnywhere, Category = "Pericoli")
+	TObjectPtr<UValdorsoBarreComponent> Barre;
+
+	/** (08/11, v0.1.4) La chat di prossimità (ValdorsoChat.h). */
+	UPROPERTY(VisibleAnywhere, Category = "Pericoli")
+	TObjectPtr<UValdorsoChatComponent> Chat;
+
+	/** (08/11, v0.1.4) Lo zaino, con il peso e le monete (ValdorsoZaino.h): lo tiene il server, arriva solo a questo giocatore. */
+	UPROPERTY(VisibleAnywhere, Category = "Pericoli")
+	TObjectPtr<UValdorsoZainoComponent> Zaino;
 
 	/**
 	 * (28/10) Solo per le prove nell'editor (console): apre il Registro di Val d'Orso su un colono di prova, con il
@@ -310,6 +325,13 @@ private:
 	void TastoQuaderno();
 	/** (07/11) J: il taccuino di viaggio (luoghi, iscrizioni, rune). */
 	void TastoTaccuino();
+	/** (08/11) I: lo zaino. */
+	void TastoZaino();
+	/** (08/11) I tasti 1-8 della barra delle azioni (Indice da 0 a 7) e Invio per la chat: solo in gioco, senza schermate aperte. */
+	void TastoAzione(int32 Indice);
+	void TastoChat();
+	/** (08/11) Vero se c'è una schermata aperta (anche la modalità foto, il taccuino o la riga della chat). */
+	bool SchermataAperta() const;
 	void ChiudiMappa();
 	TSharedPtr<SValdorsoMappa> SchermataMappa;
 	TSharedPtr<SValdorsoBacheca> SchermataBacheca;

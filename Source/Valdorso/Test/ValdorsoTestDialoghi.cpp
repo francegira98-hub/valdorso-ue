@@ -104,6 +104,14 @@ bool FValdorsoTestDialoghiSani::RunTest(const FString& Parameters)
 	}
 	TestNull(TEXT("un dialogo che non c'è"), ValdorsoDialoghi::Trova(FName(TEXT("NessunoQui"))));
 	TestNull(TEXT("nessun nome"), ValdorsoDialoghi::Trova(NAME_None));
+	// (08/11) Le guardie hanno nomi loro: Corrado è il Balivo, Ottone il Gran Inquisitore delle Cronache (gli Id restano).
+	const FValdorsoDialogo* Veterano = ValdorsoDialoghi::Trova(TEXT("GuardiaCorrado"));
+	const FValdorsoDialogo* Giovane = ValdorsoDialoghi::Trova(TEXT("GuardiaOttone"));
+	if (Veterano && Giovane)
+	{
+		TestEqual(TEXT("la guardia veterana è Tebaldo"), Veterano->NomeBreve, FString(TEXT("Tebaldo")));
+		TestEqual(TEXT("la guardia giovane è Fulvio"), Giovane->NomeBreve, FString(TEXT("Fulvio")));
+	}
 	return true;
 }
 

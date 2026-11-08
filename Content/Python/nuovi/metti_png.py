@@ -8,7 +8,7 @@
 #   degli Antichi, dove il bosco comincia a farsi fitto (lo dice lo strato Bosco della valle), girato verso il
 #   villaggio, a guardare chi arriva. Se nel livello c'è un attore con l'etichetta "Posto di Gaspare" (per esempio
 #   un Target Point messo a mano), Gaspare va lì, girato come lui.
-# - Corrado e Ottone, le guardie della Corona, davanti alla porta del passo, uno per parte, girati verso la valle.
+# - Tebaldo e Fulvio, le guardie della Corona (08/11: prima Corrado e Ottone; gli Id dei dialoghi restano), davanti alla porta del passo, uno per parte, girati verso la valle.
 #   Li mette rispetto alla "Porta del passo" e al "Sigillo della Corona" messi da crea_villaggio.py.
 # - (08/11) Nonna Edda alla palude: accanto al fuoco del calderone, dove la passerella arriva alla scaletta della
 #   capanna, girata verso chi arriva dalla passerella ("Fuoco del calderone", "Passerella della palude").
@@ -43,8 +43,8 @@ GASPARE_LATI = (450.0, 350.0, 550.0, -450.0, -350.0, 650.0)
 
 # Le guardie: metri verso la valle davanti alla porta, metri di traverso (+ verso la bacheca del passo).
 GUARDIE = (
-    ("GuardiaCorrado", "Corrado, guardia della Corona", 2.0, -4.3),
-    ("GuardiaOttone", "Ottone, guardia della Corona", 2.0, 4.3),
+    ("GuardiaCorrado", "Tebaldo, guardia della Corona", 2.0, -4.3),
+    ("GuardiaOttone", "Fulvio, guardia della Corona", 2.0, 4.3),
 )
 NOME_PORTA = "Porta del passo"
 NOME_SIGILLO = "Sigillo della Corona"
@@ -279,7 +279,7 @@ def principale():
         scrivi("livello salvato")
     except Exception as e:  # noqa: BLE001
         avviso("salvataggio non riuscito (%s): Ctrl+Maiusc+S" % e)
-    scrivi("FATTO. In Play: Gaspare sulla strada per le rovine, dove comincia il bosco; Corrado e Ottone davanti alla "
+    scrivi("FATTO. In Play: Gaspare sulla strada per le rovine, dove comincia il bosco; Tebaldo e Fulvio davanti alla "
            "porta del passo; Nonna Edda al fuoco della palude; Bruno al bancone della locanda; Padre Anselmo davanti "
            "all'altare del Tempio del Cuore. Avvicinati e premi E.")
 

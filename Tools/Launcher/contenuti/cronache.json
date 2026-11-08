@@ -143,7 +143,7 @@
    }
   ]
  },
- "volti_intro": "Le persone che incontri nella valle. Alcune parlano già (Gaspare, Corrado e Ottone); le altre arrivano con le prossime tappe.",
+ "volti_intro": "Le persone che incontri nella valle. Alcune parlano già (Gaspare, le guardie del passo, Nonna Edda, Bruno e Padre Anselmo); le altre arrivano con le prossime tappe.",
  "volti": [
   {
    "nome": "Padre Anselmo",
@@ -158,7 +158,7 @@
   {
    "nome": "Livia Serra",
    "ruolo": "la capitana della milizia",
-   "testo": "Comanda il posto di guardia al passo. È salita dalla capitale a primavera, con le sue guardie."
+   "testo": "Comanda il posto di guardia al passo. Nominata in inverno, è salita dalla capitale con le sue guardie all'inizio della primavera, poco prima della carovana."
   },
   {
    "nome": "Bruno",
@@ -191,9 +191,9 @@
    "testo": "All'ufficio della Gilda cerca braccia per gli incarichi: per cominciare, i lupi visti ai pascoli di sud-est."
   },
   {
-   "nome": "Corrado e Ottone",
+   "nome": "Le guardie del passo",
    "ruolo": "le guardie della Corona",
-   "testo": "Corrado il veterano e Ottone il giovane tengono la sbarra al passo. Poche parole, leali alla Corona: non si comprano."
+   "testo": "Un veterano e un giovane venuto dalla capitale tengono la sbarra al passo. Poche parole, leali alla Corona: non si comprano."
   }
  ]
 }

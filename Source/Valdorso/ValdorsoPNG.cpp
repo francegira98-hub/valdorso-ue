@@ -8,6 +8,8 @@
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoTaccuino.h"
+#include "ValdorsoOggetti.h"
+#include "ValdorsoZaino.h"
 #include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -56,6 +58,7 @@ namespace
 			: PerNome(PngNomeDi(Colono))
 		{
 			const APlayerController* Controllore = Colono ? Cast<APlayerController>(Colono->GetController()) : nullptr;
+			Zaino = UValdorsoZainoComponent::Di(Controllore);
 			UValdorsoTaccuinoComponent* Diario = UValdorsoTaccuinoComponent::Di(Controllore);
 			Taccuino = (Diario && Diario->HaPersonaggio()) ? Diario : nullptr;
 		}
@@ -87,6 +90,13 @@ namespace
 
 		virtual void MettiSegno(FName IdDialogo, FName Segno) override
 		{
+			// (08/11) certi segni portano un dono nello zaino (il pane di Bruno, le erbe di Nonna Edda): solo la prima volta
+			FName Dono = NAME_None;
+			int32 Quanti = 0;
+			if (Zaino && !Segno.IsNone() && !HaSegno(IdDialogo, Segno) && ValdorsoOggetti::DonoDelSegno(IdDialogo, Segno, Dono, Quanti))
+			{
+				Zaino->Dai(Dono, Quanti);
+			}
 			if (Taccuino)
 			{
 				Taccuino->MettiSegno(IdDialogo, Segno);
@@ -100,6 +110,7 @@ namespace
 	private:
 		FValdorsoMemoriaPerNome PerNome;
 		UValdorsoTaccuinoComponent* Taccuino = nullptr;
+		UValdorsoZainoComponent* Zaino = nullptr;
 	};
 
 	/** (08/11) Chi arriva al nodo Nodo riceve il suo segno, se ne ha uno (vedi ValdorsoDialoghi.h, "I segni"). */

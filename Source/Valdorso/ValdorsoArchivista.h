@@ -25,6 +25,7 @@
 #include "Containers/Ticker.h"
 #include "ValdorsoRegistro.h"
 #include "ValdorsoTaccuinoDati.h"
+#include "ValdorsoZainoDati.h"
 #include "ValdorsoArchivista.generated.h"
 
 UENUM(BlueprintType)
@@ -239,6 +240,11 @@ struct FValdorsoPersonaggio
 	 *  server; nei file di prima manca e si legge vuoto (non serve cambiare VersioneSchema). */
 	UPROPERTY()
 	FValdorsoTaccuino Taccuino;
+
+	/** (08/11) Lo zaino: gli oggetti, gli Aureus e la barra delle azioni (ValdorsoZainoDati.h). Nei file di prima
+	 *  manca: si legge vuoto, e al primo ingresso il colono riceve quello che ha portato con sé. */
+	UPROPERTY()
+	FValdorsoZaino Zaino;
 };
 
 /** Quello che il giocatore vede nella scelta del personaggio (viaggia dal server al client). */

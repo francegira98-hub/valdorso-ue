@@ -20,7 +20,10 @@
 // solo intuire. Ama chi rispetta il bosco, detesta chi caccia per divertimento. Lui e Nonna Edda sono gli unici che
 // credono all'Orso. Prepara la missione "Dove l'ho vista" e le lezioni sulle tracce ("torna quando avrai imparato a
 // stare zitto nel bosco").
-// Le guardie (Corrado, il veterano, e Ottone, il giovane): poche parole, leali alla Corona, non si comprano.
+// Le guardie (Tebaldo, il veterano, e Fulvio, il giovane): poche parole, leali alla Corona, non si comprano.
+// (08/11) Prima si chiamavano Corrado e Ottone, come il Balivo (Corrado Valli) e il Gran Inquisitore (Ottone Vesper)
+// delle Cronache: cambiati i nomi. Gli Id restano "GuardiaCorrado" e "GuardiaOttone" (nel livello e nei taccuini
+// salvati), così chi ci ha già parlato se lo ricorda.
 //
 // (08/11) Tre PNG nuovi, scritti da Claude l'08/11/2026:
 // - Nonna Edda, la vecchia della palude (capanna su pali a sud del lago): guaritrice, un po' strega. Lei e Gaspare sono
@@ -263,13 +266,13 @@ namespace
 		return D;
 	}
 
-	/** Corrado, il veterano del posto di guardia: due parole quando bastano due, una quando basta una. */
+	/** Tebaldo, il veterano del posto di guardia: due parole quando bastano due, una quando basta una. */
 	FValdorsoDialogo DialoghiCorrado()
 	{
 		FValdorsoDialogo D;
 		D.Id = TEXT("GuardiaCorrado");
-		D.NomeBreve = TEXT("Corrado");
-		D.Titolo = TEXT("Corrado, guardia della Corona");
+		D.NomeBreve = TEXT("Tebaldo");
+		D.Titolo = TEXT("Tebaldo, guardia della Corona");
 		D.Inizio = TEXT("primo");
 		D.Ritorno = TEXT("ritorno");
 
@@ -324,7 +327,7 @@ namespace
 			.Scelta(TEXT("Me ne vado."), TEXT("congedo"));
 
 		D.Nodo(TEXT("moneta"), {
-			TEXT("(Corrado guarda la moneta. Poi guarda te. La moneta resta dov'è.)"),
+			TEXT("(Tebaldo guarda la moneta. Poi guarda te. La moneta resta dov'è.)"),
 			TEXT("Mettila via. Adesso."),
 			TEXT("Questa va nel registro della capitana. La prossima volta che allunghi la mano verso una guardia della Corona, la mano la lasci qui."),
 			})
@@ -337,7 +340,7 @@ namespace
 			}).Fine();
 
 		D.Nodo(TEXT("forza"), {
-			TEXT("(Corrado fa un cenno con il mento verso il velo, senza voltarsi.)"),
+			TEXT("(Tebaldo fa un cenno con il mento verso il velo, senza voltarsi.)"),
 			TEXT("Provaci. Il sigillo ti rimanda indietro come un sasso dalla fionda. Poi noi ti raccogliamo e ti scriviamo nel registro. Due volte, se fai lo spiritoso."),
 			})
 			.Scelta(TEXT("Altro."), TEXT("altro"))
@@ -353,7 +356,7 @@ namespace
 
 		D.Nodo(TEXT("trema"), {
 			TEXT("Ho detto che non è niente."),
-			TEXT("(Per la prima volta, Corrado guarda il velo alle sue spalle. Un attimo solo.)"),
+			TEXT("(Per la prima volta, Tebaldo guarda il velo alle sue spalle. Un attimo solo.)"),
 			})
 			.Scelta(TEXT("Altro."), TEXT("altro"))
 			.Scelta(TEXT("Me ne vado."), TEXT("congedo"));
@@ -372,13 +375,13 @@ namespace
 		return D;
 	}
 
-	/** Ottone, la guardia giovane: viene dalla capitale, è qui da primavera, ha giurato e ci crede. */
+	/** Fulvio, la guardia giovane: viene dalla capitale, è qui da primavera, ha giurato e ci crede. */
 	FValdorsoDialogo DialoghiOttone()
 	{
 		FValdorsoDialogo D;
 		D.Id = TEXT("GuardiaOttone");
-		D.NomeBreve = TEXT("Ottone");
-		D.Titolo = TEXT("Ottone, guardia della Corona");
+		D.NomeBreve = TEXT("Fulvio");
+		D.Titolo = TEXT("Fulvio, guardia della Corona");
 		D.Inizio = TEXT("primo");
 		D.Ritorno = TEXT("ritorno");
 
@@ -409,19 +412,19 @@ namespace
 			.Scelta(TEXT("No. Me ne vado."), TEXT("congedo"));
 
 		D.Nodo(TEXT("chi"), {
-			TEXT("Dalla capitale. Mi hanno mandato su a primavera, con Corrado e con la capitana Livia."),
-			TEXT("Corrado dice che al freddo ci si abitua. Corrado parla poco, ma di solito ha ragione."),
+			TEXT("Dalla capitale. Mi hanno mandato su a primavera, con Tebaldo e con la capitana Livia."),
+			TEXT("Tebaldo dice che al freddo ci si abitua. Tebaldo parla poco, ma di solito ha ragione."),
 			})
 			.Scelta(TEXT("Ti manca casa?"), TEXT("casa"))
 			.Scelta(TEXT("Altro."), TEXT("altro"));
 
 		D.Nodo(TEXT("casa"), {
-			TEXT("(Ottone esita.)"),
+			TEXT("(Fulvio esita.)"),
 			TEXT("Non sta a me dirlo. Sto dove mi mette la Corona."),
 			TEXT("Però d'estate, ad Aurelia, ci sono i fichi. Qui crescono solo le more."),
 			})
 			.Scelta(TEXT("Altro."), TEXT("altro"))
-			.Scelta(TEXT("Buona guardia, Ottone."), TEXT("congedo"));
+			.Scelta(TEXT("Buona guardia, Fulvio."), TEXT("congedo"));
 
 		D.Nodo(TEXT("perche"), {
 			TEXT("Ordine della Corona, firmato e sigillato. Il Balivo l'ha letto in piazza."),
@@ -440,7 +443,7 @@ namespace
 			.Scelta(TEXT("Me ne vado."), TEXT("congedo"));
 
 		D.Nodo(TEXT("moneta"), {
-			TEXT("(Ottone guarda la moneta, poi te, poi Corrado. Corrado non dice niente. Non serve.)"),
+			TEXT("(Fulvio guarda la moneta, poi te, poi Tebaldo. Tebaldo non dice niente. Non serve.)"),
 			TEXT("Sei matto? Rimettila in tasca."),
 			TEXT("Ho giurato alla Corona. Un giuramento non si vende, né per una moneta né per cento. E il sigillo non lo apro io: non lo apre nessuno, con l'oro."),
 			})
@@ -449,7 +452,7 @@ namespace
 
 		D.Nodo(TEXT("insiste"), {
 			TEXT("Lo saprei io."),
-			TEXT("E adesso lo sa anche la capitana: questa la riferisco. Vattene, prima che chiami Corrado."),
+			TEXT("E adesso lo sa anche la capitana: questa la riferisco. Vattene, prima che chiami Tebaldo."),
 			}).Fine();
 
 		D.Nodo(TEXT("congedo"), {
@@ -501,6 +504,7 @@ namespace
 			TEXT("Rispetto. Mh."),
 			TEXT("(Ti guarda per la prima volta: due occhi chiari e svegli in una faccia di corteccia.)"),
 			TEXT("Il rispetto non si mangia e nel calderone non ci va. Però è la cosa che mi portano più di rado. Va bene. Per oggi basta quello."),
+			TEXT("(Ti mette in mano un mazzetto d'erbe legato con un filo d'erba.) Menta d'acqua e achillea. Sulle ferite piccole, non sulle grandi: per quelle vieni da me."),
 			})
 			.Scelta(TEXT("Posso farti qualche domanda?"), TEXT("ancora"))
 			.Scelta(TEXT("Allora ti lascio al tuo calderone."), TEXT("congedo"));
@@ -725,7 +729,8 @@ namespace
 		D.Nodo(TEXT("scodella"), {
 			TEXT("(Bruno sbatte sul bancone una scodella fumante di zuppa di cipolle e un pezzo di pane nero.)"),
 			TEXT("Mangia. No, metti via quella mano, che non voglio vedere monete. La prima la offre la casa: è la regola di Bruno, ed è più vecchia della locanda."),
-			TEXT("La seconda la paghi. Quando in questa valle gireranno monete vere, s'intende. Per adesso qui si paga in legna, in pesce e in storie belle."),
+			TEXT("(Il pane nero te lo fa mettere nella bisaccia: per la strada, dice, che la valle è lunga.)"),
+			TEXT("La seconda la paghi. Con gli Aureus della Corona, quando ne avrai da spendere: per adesso qui si paga in legna, in pesce e in storie belle."),
 			})
 			.Scelta(TEXT("Grazie, Bruno. È buonissima."), TEXT("ancora"))
 			.Scelta(TEXT("Allora pago con una domanda: che si dice in giro?"), TEXT("voci"));
@@ -756,7 +761,7 @@ namespace
 		D.Nodo(TEXT("voci"), {
 			TEXT("(Bruno si sporge sul bancone e abbassa la voce, anche se nella sala non c'è nessuno.)"),
 			TEXT("Ti dico quello che si dice, eh. Non quello che dico io. Io non dico mai niente."),
-			TEXT("L'altra notte Padre Anselmo è uscito dal tempio bianco come un lenzuolo. Tobia, il ragazzino del prete, giura che il frammento del tempio ha saltato un battito. Due colpi e una pausa, da sempre. E quella notte un colpo solo, e poi niente, per il tempo di un respiro."),
+			TEXT("L'altra notte Padre Anselmo è uscito dal tempio bianco come un lenzuolo. Tobia, il ragazzino del prete, giura che il frammento del tempio ha saltato un battito. Due colpi e una pausa, da sempre. E quella notte un colpo solo, e poi niente, per il tempo di un respiro. Come la Pietra Cuore di Aurelia, nel 309: e quella volta lo seppe tutto il regno."),
 			})
 			.Scelta(TEXT("Un'altra voce?"), TEXT("sigillo"))
 			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
@@ -764,7 +769,7 @@ namespace
 
 		D.Nodo(TEXT("sigillo"), {
 			TEXT("Un'altra? Va bene. Questa me l'ha raccontata uno della milizia al terzo boccale, quindi vale per tre."),
-			TEXT("Il sigillo del passo, quel velo di luce che la Corona ha messo da parete a parete: di notte trema. Le guardie dicono che non è niente. Ma Corrado, quello grosso del passo, non il Balivo, l'altro Corrado, quello che si può guardare in faccia: be', adesso il turno di notte lo fa con la schiena al muro e gli occhi al velo."),
+			TEXT("Il sigillo del passo, quel velo di luce che la Corona ha messo da parete a parete: di notte trema. Le guardie dicono che non è niente. Ma Tebaldo, quello grosso del passo, che in vent'anni di guardia non ha mai guardato indietro: be', adesso il turno di notte lo fa con la schiena al muro e gli occhi al velo."),
 			})
 			.Scelta(TEXT("Un'altra voce?"), TEXT("ombra"))
 			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
