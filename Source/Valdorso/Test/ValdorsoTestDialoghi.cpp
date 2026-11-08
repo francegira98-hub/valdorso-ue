@@ -79,6 +79,18 @@ bool FValdorsoTestDialoghiControllo::RunTest(const FString& Parameters)
 	const FString Tutto2 = FString::Join(ValdorsoDialoghi::Problemi(Troppe), TEXT("\n"));
 	TestTrue(TEXT("trova le risposte di troppo"), Tutto2.Contains(TEXT("5 risposte")));
 	TestTrue(TEXT("trova la riga di rune sbagliata"), Tutto2.Contains(TEXT("la riga di rune non si legge")));
+
+	// (08/11) Un nodo le cui risposte si possono nascondere tutte: con i segni resterebbe senza risposte.
+	FValdorsoDialogo Nascosto;
+	Nascosto.Id = TEXT("Nascosto");
+	Nascosto.NomeBreve = TEXT("Nascosto");
+	Nascosto.Titolo = TEXT("Tutto nascosto");
+	Nascosto.Inizio = TEXT("a");
+	Nascosto.Nodo(TEXT("a"), { TEXT("Ciao.") })
+		.Scelta(TEXT("Una volta sola"), NAME_None).SceltaSegna(TEXT("Fatto")).SceltaNascostaSe(TEXT("Fatto"));
+	const FString Tutto3 = FString::Join(ValdorsoDialoghi::Problemi(Nascosto), TEXT("\n"));
+	TestTrue(TEXT("trova il nodo che resta senza risposte"), Tutto3.Contains(TEXT("Nascosto/a: con le risposte nascoste resta senza risposte")));
+	TestTrue(TEXT("e che da lì, con i segni, non si esce"), Tutto3.Contains(TEXT("Nascosto/a: da qui non si arriva mai a una fine")));
 	return true;
 }
 
@@ -234,6 +246,149 @@ bool FValdorsoTestDialoghiGuardie::RunTest(const FString& Parameters)
 		}
 		TestTrue(FString::Printf(TEXT("%s: nessuno passa il sigillo"), Nome), bChiuso);
 	}
+	return true;
+}
+
+// (08/11) La moneta si offre una volta sola: dopo l'offerta (il segno "MonetaOfferta", per personaggio e per guardia)
+// la risposta "(Offri una moneta)" non c'è più tra le risposte di quella guardia; le altre restano, e i numeri che il
+// PC rimanda si riportano alle risposte vere. E ogni dialogo resta sano con tutti i segni: ogni nodo ha ancora almeno
+// una risposta visibile, o è una fine.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestDialoghiMoneta, "Valdorso.Dialoghi.MonetaUnaVolta", ValdorsoTestDialoghi::Bandiere)
+bool FValdorsoTestDialoghiMoneta::RunTest(const FString& Parameters)
+{
+	const FString Offri = TEXT("(Offri una moneta)");
+	const FString Colono = TEXT("Prova3");
+	const FString Altro = TEXT("Prova2");
+	auto Offre = [&Offri](const FValdorsoBattuta& Battuta)
+	{
+		return Battuta.Scelte.ContainsByPredicate([&Offri](const FString& Testo) { return Testo.StartsWith(Offri); });
+	};
+
+	ValdorsoDialoghi::Dimentica();
+	for (const TCHAR* Nome : { TEXT("GuardiaCorrado"), TEXT("GuardiaOttone") })
+	{
+		const FValdorsoDialogo* Guardia = ValdorsoDialoghi::Trova(FName(Nome));
+		if (!TestNotNull(FString::Printf(TEXT("c'è %s"), Nome), Guardia))
+		{
+			continue;
+		}
+		// I nodi dove si offre la moneta, e il segno che l'offerta lascia.
+		TArray<FName> NodiMoneta;
+		FName Segno;
+		for (const FValdorsoNodoDialogo& Nodo : Guardia->Nodi)
+		{
+			for (const FValdorsoSceltaDialogo& Risposta : Nodo.Scelte)
+			{
+				if (Risposta.Testo.StartsWith(Offri))
+				{
+					NodiMoneta.AddUnique(Nodo.Id);
+					TestFalse(FString::Printf(TEXT("%s/%s: l'offerta lascia un segno"), Nome, *Nodo.Id.ToString()), Risposta.Segna.IsNone());
+					TestFalse(FString::Printf(TEXT("%s/%s: l'offerta si nasconde"), Nome, *Nodo.Id.ToString()), Risposta.NascostaSe.IsNone());
+					TestTrue(FString::Printf(TEXT("%s/%s: si nasconde con il suo stesso segno"), Nome, *Nodo.Id.ToString()),
+						Risposta.NascostaSe == Risposta.Segna);
+					Segno = Risposta.Segna;
+				}
+			}
+		}
+		if (!TestTrue(FString::Printf(TEXT("%s: da qualche parte si offre la moneta"), Nome), NodiMoneta.Num() > 0 && !Segno.IsNone()))
+		{
+			continue;
+		}
+
+		// Prima: chi non ha offerto niente vede l'offerta.
+		for (const FName& IdNodo : NodiMoneta)
+		{
+			TestTrue(FString::Printf(TEXT("%s/%s: prima si può offrire"), Nome, *IdNodo.ToString()),
+				Offre(ValdorsoDialoghi::Battuta(*Guardia, IdNodo, 1, Colono)));
+		}
+
+		// L'offerta: si sceglie davvero (come fa il server, dal numero visibile al numero vero) e si dà il segno.
+		const FName Primo = NodiMoneta[0];
+		const FValdorsoNodoDialogo* NodoPrimo = Guardia->Trova(Primo);
+		if (!TestNotNull(FString::Printf(TEXT("%s: il nodo dell'offerta"), Nome), NodoPrimo))
+		{
+			continue;
+		}
+		const TArray<int32> Prima = ValdorsoDialoghi::ScelteVisibili(*Guardia, Primo, Colono);
+		const int32 Visibile = Prima.IndexOfByPredicate([NodoPrimo, &Offri](int32 Vera) { return NodoPrimo->Scelte[Vera].Testo.StartsWith(Offri); });
+		if (!TestTrue(FString::Printf(TEXT("%s: l'offerta è tra le visibili"), Nome), Visibile != INDEX_NONE))
+		{
+			continue;
+		}
+		const int32 VeraMoneta = Prima[Visibile];
+		FName Prossimo;
+		FName Evento;
+		TestTrue(FString::Printf(TEXT("%s: l'offerta vale"), Nome), ValdorsoDialoghi::Avanza(*Guardia, Primo, VeraMoneta, Prossimo, Evento));
+		TestTrue(FString::Printf(TEXT("%s: è una corruzione"), Nome), Evento == FName(TEXT("Corruzione")));
+		ValdorsoDialoghi::MettiSegno(Guardia->Id, Colono, NodoPrimo->Scelte[VeraMoneta].Segna);
+		TestTrue(FString::Printf(TEXT("%s: il segno resta"), Nome), ValdorsoDialoghi::HaSegno(Guardia->Id, Colono, Segno));
+		TestTrue(FString::Printf(TEXT("%s: anche con maiuscole e spazi diversi"), Nome), ValdorsoDialoghi::HaSegno(Guardia->Id, TEXT(" prova3 "), Segno));
+		TestFalse(FString::Printf(TEXT("%s: un altro personaggio no"), Nome), ValdorsoDialoghi::HaSegno(Guardia->Id, Altro, Segno));
+
+		// Dopo: in nessun nodo di quella guardia (primo saluto, ritorno, "passare"...) l'offerta c'è ancora.
+		for (const FValdorsoNodoDialogo& Nodo : Guardia->Nodi)
+		{
+			const FValdorsoBattuta Battuta = ValdorsoDialoghi::Battuta(*Guardia, Nodo.Id, 2, Colono);
+			TestFalse(FString::Printf(TEXT("%s/%s: dopo l'offerta la moneta non si offre più"), Nome, *Nodo.Id.ToString()), Offre(Battuta));
+			TestTrue(FString::Printf(TEXT("%s/%s: resta una risposta o è una fine"), Nome, *Nodo.Id.ToString()),
+				Battuta.bFine || Battuta.Scelte.Num() > 0);
+		}
+		// Le risposte che restano sono le stesse di prima, meno l'offerta; e i numeri visibili portano dove devono.
+		const TArray<int32> Dopo = ValdorsoDialoghi::ScelteVisibili(*Guardia, Primo, Colono);
+		TestTrue(FString::Printf(TEXT("%s: una risposta in meno"), Nome), Dopo.Num() == Prima.Num() - 1);
+		TestFalse(FString::Printf(TEXT("%s: senza l'offerta"), Nome), Dopo.Contains(VeraMoneta));
+		const FValdorsoBattuta Senza = ValdorsoDialoghi::Battuta(*Guardia, Primo, 3, Colono);
+		if (TestTrue(FString::Printf(TEXT("%s: la battuta ha le risposte visibili"), Nome), Senza.Scelte.Num() == Dopo.Num()))
+		{
+			for (int32 i = 0; i < Dopo.Num(); ++i)
+			{
+				TestTrue(FString::Printf(TEXT("%s: la risposta visibile %d è quella vera"), Nome, i + 1), Senza.Scelte[i] == NodoPrimo->Scelte[Dopo[i]].Testo);
+			}
+		}
+		// Un altro personaggio la vede ancora; e senza nome (i test di prima) si vedono tutte.
+		TestTrue(FString::Printf(TEXT("%s: un altro personaggio può ancora offrire"), Nome), Offre(ValdorsoDialoghi::Battuta(*Guardia, Primo, 4, Altro)));
+		TestTrue(FString::Printf(TEXT("%s: senza nome si vedono tutte"), Nome), Offre(ValdorsoDialoghi::Battuta(*Guardia, Primo, 5)));
+	}
+
+	// Il segno è di quella guardia: offrire a Corrado non nasconde l'offerta a Ottone (lo si controlla da capo).
+	ValdorsoDialoghi::Dimentica();
+	const FValdorsoDialogo* Ottone = ValdorsoDialoghi::Trova(TEXT("GuardiaOttone"));
+	const FValdorsoDialogo* Corrado = ValdorsoDialoghi::Trova(TEXT("GuardiaCorrado"));
+	if (Ottone && Corrado)
+	{
+		TestTrue(TEXT("Ottone: dopo Dimentica si può offrire"), Offre(ValdorsoDialoghi::Battuta(*Ottone, Ottone->Ritorno, 1, Colono)));
+		ValdorsoDialoghi::MettiSegno(Corrado->Id, Colono, TEXT("MonetaOfferta"));
+		TestTrue(TEXT("Ottone: la moneta offerta a Corrado non conta"), Offre(ValdorsoDialoghi::Battuta(*Ottone, Ottone->Ritorno, 2, Colono)));
+		TestFalse(TEXT("Corrado: invece sì"), Offre(ValdorsoDialoghi::Battuta(*Corrado, TEXT("passare"), 3, Colono)));
+	}
+
+	// Ogni dialogo con tutti i segni insieme: ogni nodo ha ancora almeno una risposta visibile, o è una fine.
+	ValdorsoDialoghi::Dimentica();
+	const FString ConTutti = TEXT("Tutti i segni");
+	for (const FValdorsoDialogo& Dialogo : ValdorsoDialoghi::Tutti())
+	{
+		for (const FValdorsoNodoDialogo& Nodo : Dialogo.Nodi)
+		{
+			ValdorsoDialoghi::MettiSegno(Dialogo.Id, ConTutti, Nodo.Segna);
+			for (const FValdorsoSceltaDialogo& Risposta : Nodo.Scelte)
+			{
+				ValdorsoDialoghi::MettiSegno(Dialogo.Id, ConTutti, Risposta.Segna);
+				ValdorsoDialoghi::MettiSegno(Dialogo.Id, ConTutti, Risposta.NascostaSe);
+			}
+		}
+		for (const FValdorsoNodoDialogo& Nodo : Dialogo.Nodi)
+		{
+			const FString Qui = FString::Printf(TEXT("%s/%s"), *Dialogo.Id.ToString(), *Nodo.Id.ToString());
+			const FValdorsoBattuta Battuta = ValdorsoDialoghi::Battuta(Dialogo, Nodo.Id, 1, ConTutti);
+			TestFalse(FString::Printf(TEXT("%s: con tutti i segni non si chiude"), *Qui), Battuta.bChiudi);
+			TestTrue(FString::Printf(TEXT("%s: con tutti i segni, una fine o almeno una risposta"), *Qui),
+				Nodo.bFine ? (Battuta.bFine && Battuta.Scelte.Num() == 0) : (!Battuta.bFine && Battuta.Scelte.Num() > 0));
+			TestTrue(FString::Printf(TEXT("%s: le risposte visibili sono quelle della battuta"), *Qui),
+				ValdorsoDialoghi::ScelteVisibili(Dialogo, Nodo.Id, ConTutti).Num() == Battuta.Scelte.Num());
+		}
+	}
+	ValdorsoDialoghi::Dimentica();
+	TestFalse(TEXT("Dimentica pulisce anche i segni"), ValdorsoDialoghi::HaSegno(TEXT("GuardiaCorrado"), Colono, TEXT("MonetaOfferta")));
 	return true;
 }
 

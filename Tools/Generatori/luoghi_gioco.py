@@ -5,14 +5,21 @@
 #   - scoprire i luoghi: il server guarda ogni secondo se un colono è entrato nel raggio di un luogo che non conosceva;
 #   - la bussola in alto sullo schermo: i segni dei luoghi già scoperti;
 #   - il taccuino di viaggio (tasto J): l'elenco dei luoghi scoperti.
-# Le posizioni sono in centimetri del mondo, con il Landscape importato con l'angolo nord-ovest in (0, 0, 0) come dice
-# valle.py (Unreal X = est, Unreal Y = sud). Se un giorno il Landscape si sposta, si rilancia con --angolo X Y (cm).
+# Le posizioni sono in centimetri del mondo (Unreal X = est, Unreal Y = sud): quelle del file (cm dall'angolo nord-ovest
+# del paesaggio, come per gli script dell'editor) più l'angolo del Landscape nel mondo.
+# (08/11) L'angolo NON è (0, 0) come si pensava: in L_Valle il Landscape è centrato, l'angolo nord-ovest sta in
+# (-150000, -150000). Lo dice il gioco: in PIE Ottone stava in (112297, 99495), cioè la porta del passo del file
+# (262200, 249960) più il suo posto (+97, -465 cm, metti_png.py) meno 150000. Con l'angolo a zero tutti i luoghi
+# erano spostati di 1,5 km verso sud-est (il passo, per esempio, a 2,1 km dalla porta, fuori dal paesaggio) e non se ne
+# scopriva nessuno. Gli script dell'editor leggono l'angolo dal Landscape; qui è scritto in ANGOLO_DI_SERIE.
+# Se un giorno il Landscape si sposta, si cambia ANGOLO_DI_SERIE o si rilancia con --angolo X Y (cm).
 # Il raggio di scoperta (metri) si decide qui sotto, luogo per luogo: grande per i luoghi larghi (il lago, la palude,
 # i pascoli), piccolo per una cosa sola (il tempio, il mulino, l'ingresso di una grotta).
 #
 # Uso (dalla cartella del progetto):
 #   python Tools/Generatori/luoghi_gioco.py                                   legge V:/Texture/valdorso/valle/Luoghi_3000.json
 #   python Tools/Generatori/luoghi_gioco.py <Luoghi_3000.json> [<cartella Source/Valdorso>] [--angolo X Y]
+#   (senza --angolo: ANGOLO_DI_SERIE, l'angolo del Landscape di L_Valle)
 
 import json
 import os
@@ -35,10 +42,21 @@ RAGGI_M = {
     "Pascoli": 120,
     "Cimitero": 30,
     "Boschetto": 150,
-    "Posto di guardia del passo": 40,
+    "Posto di guardia del passo": 45,   # (08/11) dal centro qui sotto: dal sigillo fino a 55 m giù per la strada
     "Cascata": 50,                   # la pozza sotto la cascata
 }
 RAGGIO_DI_SERIE = 40
+
+# (08/11) L'angolo nord-ovest del Landscape nel mondo (cm): vedi sopra.
+ANGOLO_DI_SERIE = (-150000.0, -150000.0)
+
+# (08/11) Centri spostati (cm, come nel file: dall'angolo del paesaggio). Il passo: il punto di valle.py è la porta
+# stessa e il sigillo sta 6 m dietro, verso il passo, quindi metà del cerchio cadeva dove non si va. Il centro scende
+# di 10 m lungo la strada verso la valle (la direzione della strada di villaggio.py, (-0.80105, -0.59860)): così si
+# scopre arrivando al posto di guardia, davanti alla sbarra e alle guardie, fino alla porta e al sigillo.
+CENTRI_CM = {
+    "Posto di guardia del passo": (262200.0 - 0.80105 * 1000.0, 249960.0 - 0.59860 * 1000.0),
+}
 
 # Voci del file che non sono luoghi da scoprire (per ora nessuna: tutte quelle di valle.py hanno un nome sulla mappa).
 DA_SALTARE = set()
@@ -52,12 +70,15 @@ def scrivi_inl(luoghi, percorso, angolo):
     righe = ["// Valdorso - I luoghi della valle. FILE GENERATO da Tools/Generatori/luoghi_gioco.py: non toccarlo a mano,",
              "// cambia i raggi lì e rilancia: python Tools/Generatori/luoghi_gioco.py <Luoghi_3000.json>",
              "// Per ogni luogo: il nome, la posizione nel mondo (cm: X est, Y sud, Z quota) e il raggio di scoperta (cm).",
+             "// L'angolo nord-ovest del Landscape nel mondo, sommato alle posizioni del file: (%.0f, %.0f) cm." % (angolo[0], angolo[1]),
              "static const FValdorsoLuogoDati GValdorsoLuoghiDati[] =",
              "{"]
     for nome, dati in luoghi.items():
         if nome in DA_SALTARE:
             continue
         x, y, z = dati["unreal_cm"]
+        if nome in CENTRI_CM:
+            x, y = CENTRI_CM[nome]
         raggio = RAGGI_M.get(nome, RAGGIO_DI_SERIE) * 100
         righe.append('\t{ TEXT("%s"), %.1f, %.1f, %.1f, %.1ff },' % (c_testo(nome), x + angolo[0], y + angolo[1], z, raggio))
     righe.append("};")
@@ -67,7 +88,7 @@ def scrivi_inl(luoghi, percorso, angolo):
 
 if __name__ == "__main__":
     argomenti = sys.argv[1:]
-    angolo = (0.0, 0.0)
+    angolo = ANGOLO_DI_SERIE
     if "--angolo" in argomenti:
         i = argomenti.index("--angolo")
         angolo = (float(argomenti[i + 1]), float(argomenti[i + 2]))

@@ -17,6 +17,21 @@ namespace
 	{
 		return Id.ToString() + TEXT("|") + Chi.TrimStartAndEnd().ToLower();
 	}
+
+	/**
+	 * (08/11) I segni dei personaggi: "Gaspare|nome del personaggio|segno". Come la memoria qui sopra: solo sul server,
+	 * solo in memoria (si dimenticano quando il server si spegne), con la stessa chiave per dialogo e personaggio.
+	 */
+	TSet<FString>& DialoghiSegni()
+	{
+		static TSet<FString> Segni;
+		return Segni;
+	}
+
+	FString DialoghiChiaveSegno(FName Id, const FString& Chi, FName Segno)
+	{
+		return DialoghiChiave(Id, Chi) + TEXT("|") + Segno.ToString().ToLower();
+	}
 }
 
 // I testi: Gaspare e le due guardie del passo (DialoghiScritti()).
@@ -64,7 +79,28 @@ namespace ValdorsoDialoghi
 		return true;
 	}
 
-	FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo)
+	TArray<int32> ScelteVisibili(const FValdorsoDialogo& Dialogo, FName Nodo, const FString& Chi)
+	{
+		TArray<int32> Fuori;
+		const FValdorsoNodoDialogo* Attuale = Dialogo.Trova(Nodo);
+		if (!Attuale)
+		{
+			return Fuori;
+		}
+		const bool bQualcuno = !Chi.TrimStartAndEnd().IsEmpty();
+		for (int32 i = 0; i < Attuale->Scelte.Num() && Fuori.Num() < MassimoScelte; ++i)
+		{
+			const FName Nascosta = Attuale->Scelte[i].NascostaSe;
+			if (bQualcuno && !Nascosta.IsNone() && HaSegno(Dialogo.Id, Chi, Nascosta))
+			{
+				continue;
+			}
+			Fuori.Add(i);
+		}
+		return Fuori;
+	}
+
+	FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo, const FString& Chi)
 	{
 		FValdorsoBattuta Fuori;
 		Fuori.Chi = Dialogo.Titolo;
@@ -79,7 +115,7 @@ namespace ValdorsoDialoghi
 		{
 			Fuori.Righe.Add(Riga.Left(MassimoLettere));
 		}
-		for (int32 i = 0; i < Attuale->Scelte.Num() && i < MassimoScelte; ++i)
+		for (const int32 i : ScelteVisibili(Dialogo, Nodo, Chi))
 		{
 			Fuori.Scelte.Add(Attuale->Scelte[i].Testo.Left(MassimoLettere));
 		}
@@ -154,6 +190,17 @@ namespace ValdorsoDialoghi
 			{
 				Fuori.Add(FString::Printf(TEXT("%s: vicolo cieco (nessuna risposta e non è una fine)"), *Qui));
 			}
+			// (08/11) Anche con nascoste tutte le risposte NascostaSe deve restarne almeno una (contano le prime
+			// MassimoScelte, come le manda Battuta).
+			int32 SempreVisibili = 0;
+			for (int32 i = 0; i < Nodo.Scelte.Num() && i < MassimoScelte; ++i)
+			{
+				SempreVisibili += Nodo.Scelte[i].NascostaSe.IsNone() ? 1 : 0;
+			}
+			if (!Nodo.bFine && Nodo.Scelte.Num() > 0 && SempreVisibili == 0)
+			{
+				Fuori.Add(FString::Printf(TEXT("%s: con le risposte nascoste resta senza risposte"), *Qui));
+			}
 			for (const FValdorsoSceltaDialogo& Risposta : Nodo.Scelte)
 			{
 				if (Risposta.Testo.TrimStartAndEnd().IsEmpty())
@@ -210,6 +257,7 @@ namespace ValdorsoDialoghi
 		}
 
 		// Da ogni nodo si deve poter arrivare a una fine (un nodo fine, o una risposta che chiude): niente giri chiusi.
+		// (08/11) Contano solo le risposte che non si nascondono mai: così vale anche per chi ha tutti i segni.
 		TSet<FName> Escono;
 		bool bCambiato = true;
 		while (bCambiato)
@@ -224,7 +272,7 @@ namespace ValdorsoDialoghi
 				bool bEsce = Nodo.bFine;
 				for (const FValdorsoSceltaDialogo& Risposta : Nodo.Scelte)
 				{
-					bEsce = bEsce || Risposta.Verso.IsNone() || Escono.Contains(Risposta.Verso);
+					bEsce = bEsce || (Risposta.NascostaSe.IsNone() && (Risposta.Verso.IsNone() || Escono.Contains(Risposta.Verso)));
 				}
 				if (bEsce)
 				{
@@ -253,8 +301,22 @@ namespace ValdorsoDialoghi
 		DialoghiMemoria().Add(DialoghiChiave(Id, Chi));
 	}
 
+	bool HaSegno(FName Id, const FString& Chi, FName Segno)
+	{
+		return !Segno.IsNone() && DialoghiSegni().Contains(DialoghiChiaveSegno(Id, Chi, Segno));
+	}
+
+	void MettiSegno(FName Id, const FString& Chi, FName Segno)
+	{
+		if (!Segno.IsNone())
+		{
+			DialoghiSegni().Add(DialoghiChiaveSegno(Id, Chi, Segno));
+		}
+	}
+
 	void Dimentica()
 	{
 		DialoghiMemoria().Reset();
+		DialoghiSegni().Reset();
 	}
 }

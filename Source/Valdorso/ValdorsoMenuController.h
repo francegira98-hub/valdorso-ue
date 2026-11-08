@@ -11,12 +11,18 @@
 //     con "La valle ti accoglie" e il Cuore che batte più forte; si salta con Esc.
 //   Sul nero, mentre ci si collega: "In cammino verso la valle...". Se il server non risponde si torna al menu
 //   con il motivo (lo fa l'istanza del gioco, ValdorsoGameInstance).
+//
+// (08/11, v0.1.3) Il menu nella valle vera al tramonto (ValdorsoMenuValle.h): in Lvl_Menu, se c'è la valle, questo
+// controllore mette il nero e la apre senza server (AValdorsoMenuValleGameMode); di là lo stesso controllore mostra
+// l'avvio e il menu, e la telecamera fa il giro lento sopra il villaggio. "Entra" e il volo lungo partono da lì.
+// Se la valle manca o non si apre, tutto resta come prima, nella scena di Lvl_Menu.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "ValdorsoGameInstance.h"
+#include "ValdorsoMenuValle.h"
 #include "ValdorsoMenuController.generated.h"
 
 class SValdorsoMenuPrincipale;
@@ -39,6 +45,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Valdorso|Menu")
 	FName LivelloValle = TEXT("/Game/ThirdPerson/Lvl_ThirdPerson");
 
+	/** (08/11) La valle vera che si vede dietro il menu (si apre senza server; se manca resta la scena di Lvl_Menu). */
+	UPROPERTY(EditDefaultsOnly, Category = "Valdorso|Menu")
+	FName LivelloMenuValle = TEXT("/Game/Prove/L_Valle");
+
+	/** (08/11) L'apertura dell'obiettivo della telecamera del giro nella valle, in gradi. */
+	UPROPERTY(EditDefaultsOnly, Category = "Valdorso|Menu")
+	float SguardoGiro = 55.f;
+
 	/** Quanto dura il volo verso il frammento prima di entrare nella valle, in secondi. */
 	UPROPERTY(EditDefaultsOnly, Category = "Valdorso|Menu")
 	float DurataTransizione = 2.4f;
@@ -56,6 +70,39 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	// --- (08/11) Il menu nella valle vera al tramonto ----------------------------------------------
+	/** L'avvio (una volta per avvio del gioco) oppure subito il menu; poi i messaggi di ritorno dal server. */
+	void Comincia();
+	/** In Lvl_Menu: vero se si può andare nella valle (comando acceso, la valle c'è, non è già andata male, niente rientro). */
+	bool ValleDisponibile() const;
+	/** In Lvl_Menu: il nero e la riga "La valle si sveglia...", poi (dopo un attimo, perché si vedano) la valle. */
+	void VaiNellaValle();
+	void AvanzaVersoLaValle(float DeltaSeconds);
+	/** Apre la valle senza server, con la modalità di gioco del menu. */
+	void ApriLaValle();
+	/** In Lvl_Menu, se la valle non si è aperta: si toglie il nero e si va avanti con la scena di sempre. */
+	void RinunciaAllaValle();
+	/** Nella valle: la telecamera del giro (nasce qui) e il nero finché la valle intorno non è arrivata. */
+	void PreparaGiro();
+	void AvanzaGiro(float DeltaSeconds);
+
+	/** Vero se questo menu sta nella valle vera (aperta con AValdorsoMenuValleGameMode). */
+	bool bNellaValle = false;
+	bool bVersoLaValle = false;
+	bool bValleChiesta = false;
+	float AttesaValle = 0.f;
+
+	FValdorsoGiroMenu GiroValle;
+	float DistanzaGiro = 0.f;
+	/** Quanto è salita la telecamera sopra il giro perché sotto c'era qualcosa (sfuma piano). */
+	float AlzataGiro = 0.f;
+	/** Dove guarda adesso la telecamera del giro ("Entra" ci vola incontro). */
+	FVector BersaglioGiro = FVector::ZeroVector;
+	bool bValleVisibile = false;
+	bool bSuoloTrovato = false;
+	float AttesaVista = 0.f;
+	float SuoloDa = -1.f;
+
 	// --- (07/11) L'avvio, le impostazioni e lo stato del mondo ------------------------------------
 	void MostraAvvio();
 	void FineAvvio();

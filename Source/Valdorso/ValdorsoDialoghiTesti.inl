@@ -7,6 +7,9 @@
 //       .Scelta(TEXT("me ne vado"), NAME_None);                    <- chiude il dialogo
 //   D.Nodo(TEXT("fine"), { ... }).Fine();                          <- ultima battuta, senza risposte
 //   Una risposta con un evento: .Scelta(TEXT("..."), TEXT("nodo"), TEXT("Corruzione")) (finisce nel registro eventi).
+//   (08/11) I segni: .SceltaSegna(TEXT("segno")) dopo una risposta (chi la sceglie riceve il segno), .Segno(TEXT("segno"))
+//   su un nodo (chi ci arriva lo riceve), .SceltaNascostaSe(TEXT("segno")) dopo una risposta (non si mostra più a chi ha
+//   il segno). Per personaggio e per PNG, solo in memoria come "chi ha già parlato". Così la moneta si offre una volta.
 //   Al massimo 4 risposte per nodo. Una riga "rune: Ur | didascalia" si mostra con le rune disegnate.
 // I test (Valdorso.Dialoghi.*) controllano che ogni nodo esista, ci si arrivi e porti a una fine.
 //
@@ -283,6 +286,7 @@ namespace
 			})
 			.Scelta(TEXT("Perché?"), TEXT("perche"))
 			.Scelta(TEXT("(Offri una moneta) Magari con questa ci ripensi."), TEXT("moneta"), TEXT("Corruzione"))
+			.SceltaSegna(TEXT("MonetaOfferta")).SceltaNascostaSe(TEXT("MonetaOfferta"))  // (08/11) una volta sola
 			.Scelta(TEXT("E se passassi lo stesso?"), TEXT("forza"))
 			.Scelta(TEXT("Va bene."), TEXT("altro"));
 
@@ -366,6 +370,7 @@ namespace
 			.Scelta(TEXT("Da dove vieni?"), TEXT("chi"))
 			.Scelta(TEXT("Perché è chiuso?"), TEXT("perche"))
 			.Scelta(TEXT("(Offri una moneta) Per un amico una moneta si trova sempre, no?"), TEXT("moneta"), TEXT("Corruzione"))
+			.SceltaSegna(TEXT("MonetaOfferta")).SceltaNascostaSe(TEXT("MonetaOfferta"))  // (08/11) una volta sola
 			.Scelta(TEXT("Va bene, me ne vado."), TEXT("congedo"));
 
 		D.Nodo(TEXT("ritorno"), {
@@ -374,6 +379,7 @@ namespace
 			.Scelta(TEXT("Da dove vieni?"), TEXT("chi"))
 			.Scelta(TEXT("Perché è chiuso?"), TEXT("perche"))
 			.Scelta(TEXT("(Offri una moneta) Per un amico una moneta si trova sempre, no?"), TEXT("moneta"), TEXT("Corruzione"))
+			.SceltaSegna(TEXT("MonetaOfferta")).SceltaNascostaSe(TEXT("MonetaOfferta"))  // (08/11) una volta sola
 			.Scelta(TEXT("Niente. Me ne vado."), TEXT("congedo"));
 
 		D.Nodo(TEXT("altro"), {

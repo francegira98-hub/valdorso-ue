@@ -42,6 +42,15 @@ namespace
 		}
 		return Chi->GetName();
 	}
+
+	/** (08/11) Chi arriva al nodo Nodo riceve il suo segno, se ne ha uno (vedi ValdorsoDialoghi.h, "I segni"). */
+	void PngSegnaNodo(const FValdorsoDialogo& Dati, FName Nodo, const FString& Nome)
+	{
+		if (const FValdorsoNodoDialogo* Arrivo = Dati.Trova(Nodo))
+		{
+			ValdorsoDialoghi::MettiSegno(Dati.Id, Nome, Arrivo->Segna);
+		}
+	}
 }
 
 AValdorsoPNG::AValdorsoPNG()
@@ -206,6 +215,7 @@ void AValdorsoPNG::Interagisci(APawn* Chi)
 	Nuova.Nodo = ValdorsoDialoghi::NodoIniziale(*Dati, bGiaParlato);
 	Nuova.Passo = ProssimoPasso++;
 	Conversazioni.Add(TWeakObjectPtr<APlayerController>(Controllore), Nuova);
+	PngSegnaNodo(*Dati, Nuova.Nodo, Nome);
 
 	ValdorsoRegistroEventi::Annota(TEXT("Dialogo"), Chi, this, GetActorLocation(),
 		FString::Printf(TEXT("parla con %s (%s)"), *Dati->NomeBreve, bGiaParlato ? TEXT("di nuovo") : TEXT("la prima volta")));
@@ -215,7 +225,7 @@ void AValdorsoPNG::Interagisci(APawn* Chi)
 		Mondo->GetTimerManager().ClearTimer(TimerRitorno);
 	}
 	GuardaVerso(Chi);
-	Manda(Controllore, ValdorsoDialoghi::Battuta(*Dati, Nuova.Nodo, Nuova.Passo));
+	Manda(Controllore, ValdorsoDialoghi::Battuta(*Dati, Nuova.Nodo, Nuova.Passo, Nome));
 }
 
 void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
@@ -251,13 +261,25 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 
 	const FName Prima = Aperta->Nodo;
 	const FValdorsoNodoDialogo* Nodo = Dati->Trova(Prima);
-	FName Prossimo;
-	FName Evento;
-	if (!Nodo || !ValdorsoDialoghi::Avanza(*Dati, Prima, Scelta, Prossimo, Evento))
+	// (08/11) Il PC ha visto solo le risposte visibili per questo personaggio (senza quelle nascoste dai segni): il
+	// numero che rimanda si riporta alla risposta vera.
+	const FString Nome = PngNomeDi(Colono);
+	const TArray<int32> Visibili = ValdorsoDialoghi::ScelteVisibili(*Dati, Prima, Nome);
+	if (!Nodo || !Visibili.IsValidIndex(Scelta))
 	{
 		return;  // una risposta che non c'è: si ignora (il PC mostra ancora la stessa battuta)
 	}
-	const FString Detta = Nodo->Scelte[Scelta].Testo;
+	const int32 Vera = Visibili[Scelta];
+	FName Prossimo;
+	FName Evento;
+	if (!ValdorsoDialoghi::Avanza(*Dati, Prima, Vera, Prossimo, Evento))
+	{
+		return;
+	}
+	const FString Detta = Nodo->Scelte[Vera].Testo;
+	// (08/11) I segni: della risposta scelta (per esempio "MonetaOfferta": la moneta non si offre più) e del nodo dopo.
+	ValdorsoDialoghi::MettiSegno(Dati->Id, Nome, Nodo->Scelte[Vera].Segna);
+	PngSegnaNodo(*Dati, Prossimo, Nome);
 	// (Per esempio offrire una moneta a una guardia: "Corruzione". Un giorno potrà essere un crimine.)
 	if (!Evento.IsNone())
 	{
@@ -276,7 +298,7 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	Aperta->Nodo = Prossimo;
 	Aperta->Passo = ProssimoPasso++;
 	GuardaVerso(Colono);
-	Manda(Chi, ValdorsoDialoghi::Battuta(*Dati, Aperta->Nodo, Aperta->Passo));
+	Manda(Chi, ValdorsoDialoghi::Battuta(*Dati, Aperta->Nodo, Aperta->Passo, Nome));
 }
 
 void AValdorsoPNG::Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta)

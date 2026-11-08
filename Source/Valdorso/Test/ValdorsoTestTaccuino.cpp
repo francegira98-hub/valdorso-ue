@@ -82,8 +82,9 @@ bool FValdorsoTestLuoghi::RunTest(const FString& Parameters)
 		TestFalse(FString::Printf(TEXT("%s: un nome solo"), *Luogo.Nome), Nomi.Contains(Luogo.Nome));
 		Nomi.Add(Luogo.Nome);
 		TestTrue(FString::Printf(TEXT("%s: un raggio sensato"), *Luogo.Nome), Luogo.Raggio >= 500.f && Luogo.Raggio <= 50000.f);
+		// (08/11) il Landscape di L_Valle è centrato: la valle va da -1,5 km a +1,5 km (luoghi_gioco.py, ANGOLO_DI_SERIE)
 		TestTrue(FString::Printf(TEXT("%s: dentro i 3 km della valle"), *Luogo.Nome),
-			Luogo.Posizione.X >= 0.0 && Luogo.Posizione.X <= 300000.0 && Luogo.Posizione.Y >= 0.0 && Luogo.Posizione.Y <= 300000.0);
+			Luogo.Posizione.X >= -150000.0 && Luogo.Posizione.X <= 150000.0 && Luogo.Posizione.Y >= -150000.0 && Luogo.Posizione.Y <= 150000.0);
 		TestTrue(FString::Printf(TEXT("%s: si ritrova per nome"), *Luogo.Nome), ValdorsoLuoghi::Trova(Luogo.Nome) == &Luogo);
 	}
 	TestNull(TEXT("un luogo che non c'è"), ValdorsoLuoghi::Trova(TEXT("Atlantide")));
@@ -105,6 +106,15 @@ bool FValdorsoTestLuoghi::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Intorno trova il mulino"), bTrovato);
 	}
 	TestEqual(TEXT("fuori dal mondo nessun luogo"), ValdorsoLuoghi::Intorno(FVector(-500000.0, -500000.0, 0.0)).Num(), 0);
+
+	// (08/11) Il posto di guardia del passo si scopre dove stanno le guardie: in PIE Ottone era in (112297, 99495) e
+	// il taccuino restava vuoto (i luoghi erano spostati di 1,5 km, vedi luoghi_gioco.py). E anche alla porta stessa.
+	const FValdorsoLuogo* Passo = ValdorsoLuoghi::Trova(TEXT("Posto di guardia del passo"));
+	if (TestNotNull(TEXT("il posto di guardia del passo c'è"), Passo))
+	{
+		TestTrue(TEXT("si scopre accanto alle guardie"), ValdorsoLuoghi::Dentro(*Passo, FVector(112297.0, 99495.0, 6813.0)));
+		TestTrue(TEXT("si scopre alla porta"), ValdorsoLuoghi::Dentro(*Passo, FVector(112200.0, 99960.0, 6739.0)));
+	}
 	return true;
 }
 

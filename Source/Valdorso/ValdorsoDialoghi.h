@@ -10,6 +10,11 @@
 //   nome del personaggio: si dimentica quando il server si spegne).
 // - Una risposta può avere un Evento: quando il colono la sceglie, il server la annota nel registro eventi con quel
 //   tipo (per esempio "Corruzione" quando si offre una moneta a una guardia: un giorno potrà essere un crimine).
+// - I segni (08/11): un nodo, o una risposta, può lasciare un segno al personaggio ("MonetaOfferta"); una risposta può
+//   restare nascosta a chi ha già quel segno (NascostaSe). Così l'offerta della moneta alle guardie si fa una volta
+//   sola. I segni stanno nella stessa memoria di "chi ha già parlato" (per dialogo e per nome del personaggio, solo sul
+//   server, solo in memoria: si dimenticano quando il server si spegne). Il PC vede solo le risposte visibili, e il
+//   numero che rimanda è quello tra le visibili (ScelteVisibili lo riporta alla risposta vera).
 // - Le battute che cominciano con "rune:" si mostrano con le rune disegnate (come nelle bacheche, ValdorsoRune.h).
 // - I testi sono scritti qui nel C++ (ValdorsoDialoghiTesti.inl): niente file da impacchettare, niente passi
 //   nell'editor. I test (Test/ValdorsoTestDialoghi.cpp) controllano che ogni nodo esista, si possa raggiungere e
@@ -33,6 +38,12 @@ struct FValdorsoSceltaDialogo
 
 	/** Se non è vuoto, il server annota nel registro eventi un evento con questo tipo ("Corruzione"). */
 	FName Evento;
+
+	/** (08/11) Se non è vuoto: chi sceglie questa risposta riceve questo segno (vedi ValdorsoDialoghi::HaSegno). */
+	FName Segna;
+
+	/** (08/11) Se non è vuoto: la risposta non si mostra a chi ha già questo segno ("(Offri una moneta)" una volta sola). */
+	FName NascostaSe;
 };
 
 /** Un nodo: cosa dice il PNG, e le risposte possibili. */
@@ -49,6 +60,9 @@ struct FValdorsoNodoDialogo
 	/** Una fine voluta: nessuna risposta, il colono si congeda. */
 	bool bFine = false;
 
+	/** (08/11) Se non è vuoto: chi arriva a questo nodo riceve questo segno (vedi ValdorsoDialoghi::HaSegno). */
+	FName Segna;
+
 	/** Per scrivere i testi in fila: aggiunge una risposta e restituisce il nodo. */
 	FValdorsoNodoDialogo& Scelta(const FString& Testo, FName Verso, FName Evento = NAME_None)
 	{
@@ -56,6 +70,33 @@ struct FValdorsoNodoDialogo
 		Nuova.Testo = Testo;
 		Nuova.Verso = Verso;
 		Nuova.Evento = Evento;
+		return *this;
+	}
+
+	/** (08/11) Per scrivere i testi in fila: chi arriva a questo nodo riceve il segno. */
+	FValdorsoNodoDialogo& Segno(FName Nome)
+	{
+		Segna = Nome;
+		return *this;
+	}
+
+	/** (08/11) Per scrivere i testi in fila: chi sceglie l'ultima risposta aggiunta riceve il segno. */
+	FValdorsoNodoDialogo& SceltaSegna(FName Nome)
+	{
+		if (Scelte.Num() > 0)
+		{
+			Scelte.Last().Segna = Nome;
+		}
+		return *this;
+	}
+
+	/** (08/11) Per scrivere i testi in fila: l'ultima risposta aggiunta non si mostra a chi ha già il segno. */
+	FValdorsoNodoDialogo& SceltaNascostaSe(FName Nome)
+	{
+		if (Scelte.Num() > 0)
+		{
+			Scelte.Last().NascostaSe = Nome;
+		}
 		return *this;
 	}
 
@@ -159,8 +200,17 @@ namespace ValdorsoDialoghi
 	 */
 	VALDORSO_API bool Avanza(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Scelta, FName& OutProssimo, FName& OutEvento);
 
-	/** La battuta da mandare al PC per quel nodo (vuota con bChiudi se il nodo non c'è). */
-	VALDORSO_API FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo);
+	/**
+	 * (08/11) Le risposte di quel nodo che il personaggio Chi vede (i numeri veri, nell'ordine, al massimo MassimoScelte):
+	 * senza quelle NascostaSe di un segno che Chi ha già. Chi vuoto = nessun segno, si vedono tutte.
+	 */
+	VALDORSO_API TArray<int32> ScelteVisibili(const FValdorsoDialogo& Dialogo, FName Nodo, const FString& Chi);
+
+	/**
+	 * La battuta da mandare al PC per quel nodo (vuota con bChiudi se il nodo non c'è). Solo le risposte visibili per
+	 * Chi (08/11; Chi vuoto = tutte): il numero che il PC rimanda va riportato con ScelteVisibili.
+	 */
+	VALDORSO_API FValdorsoBattuta Battuta(const FValdorsoDialogo& Dialogo, FName Nodo, int32 Passo, const FString& Chi = FString());
 
 	/** I problemi di un dialogo (nodi che mancano, irraggiungibili, senza uscita...), in italiano; vuoto = va bene. */
 	VALDORSO_API TArray<FString> Problemi(const FValdorsoDialogo& Dialogo);
@@ -173,6 +223,12 @@ namespace ValdorsoDialoghi
 	/** Ricorda che il personaggio Chi ha parlato con il PNG del dialogo Id. */
 	VALDORSO_API void SegnaParlato(FName Id, const FString& Chi);
 
-	/** Dimentica tutto (per i test). */
+	/** (08/11) Vero se il personaggio Chi ha il segno Segno nel dialogo Id (da quando il server è acceso). */
+	VALDORSO_API bool HaSegno(FName Id, const FString& Chi, FName Segno);
+
+	/** (08/11) Dà al personaggio Chi il segno Segno nel dialogo Id (niente se Segno è vuoto). */
+	VALDORSO_API void MettiSegno(FName Id, const FString& Chi, FName Segno);
+
+	/** Dimentica tutto, anche i segni (per i test). */
 	VALDORSO_API void Dimentica();
 }

@@ -26,6 +26,12 @@
 #include "ValdorsoTemaUI.h"
 #include "HAL/PlatformTime.h"
 #include "Valdorso.h"
+#include "ValdorsoMenuValle.h"
+#include "ValdorsoImpostazioni.h"
+#include "Components/SplineComponent.h"
+#include "Misc/PackageName.h"
+#include "CollisionQueryParams.h"
+#include "Engine/HitResult.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoMenuController"
 
@@ -80,6 +86,19 @@ void AValdorsoMenuController::BeginPlay()
 		return;
 	}
 
+	// (08/11) Nella valle vera (aperta da Lvl_Menu con la modalità del menu): la telecamera del giro, poi come sempre.
+	bNellaValle = GetWorld()->GetAuthGameMode<AValdorsoMenuValleGameMode>() != nullptr;
+	if (bNellaValle)
+	{
+		if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+		{
+			Istanza->bMenuValleRiuscito = true;
+		}
+		PreparaGiro();
+		Comincia();
+		return;
+	}
+
 	// La telecamera della scena: quella con l'etichetta MenuCamera, altrimenti la prima che c'è.
 	for (TActorIterator<ACameraActor> It(GetWorld()); It; ++It)
 	{
@@ -108,6 +127,17 @@ void AValdorsoMenuController::BeginPlay()
 		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Menu: nessuna telecamera MenuCamera nel livello"));
 	}
 
+	// (08/11) Se c'è la valle vera, si va di là: l'avvio, il menu e i messaggi del server li mostra il menu nella valle.
+	if (ValleDisponibile())
+	{
+		VaiNellaValle();
+		return;
+	}
+	Comincia();
+}
+
+void AValdorsoMenuController::Comincia()
+{
 	// (07/11) Una volta per avvio del gioco, prima del menu, la schermata d'avvio. Tornando dal server (messaggio,
 	// rientro) l'istanza del gioco è la stessa e l'avvio è già stato visto: si va dritti al menu.
 	UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
@@ -120,6 +150,225 @@ void AValdorsoMenuController::BeginPlay()
 	{
 		CreaMenu();
 		ControllaRitorno();
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// (08/11) Il menu nella valle vera al tramonto
+// ---------------------------------------------------------------------------------------------
+
+bool AValdorsoMenuController::ValleDisponibile() const
+{
+	if (bNellaValle || LivelloMenuValle.IsNone() || !ValdorsoMenuValle::Attiva() || GetNetMode() != NM_Standalone)
+	{
+		return false;
+	}
+	const UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
+	if (!Istanza)
+	{
+		return false;
+	}
+	// Già provata in questo avvio e mai aperta: qualcosa non va, resta la scena di sempre.
+	if (Istanza->bMenuValleTentato && !Istanza->bMenuValleRiuscito)
+	{
+		return false;
+	}
+	// Collegamento interrotto con il biglietto: si rientra da qui, subito, senza caricare la valle.
+	if (!Istanza->NomeRientro().IsEmpty())
+	{
+		return false;
+	}
+	if (!FPackageName::DoesPackageExist(LivelloMenuValle.ToString()))
+	{
+		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: la valle %s non c'è, resta la scena di sempre"), *LivelloMenuValle.ToString());
+		return false;
+	}
+	return true;
+}
+
+void AValdorsoMenuController::VaiNellaValle()
+{
+	if (bVersoLaValle)
+	{
+		return;
+	}
+	bVersoLaValle = true;
+	bValleChiesta = false;
+	AttesaValle = 0.f;
+	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+	{
+		Istanza->bMenuValleTentato = true;
+		// (08/11) Ogni volta di nuovo: lo rimette a vero solo la valle aperta. Se una volta è andata e la volta dopo no
+		// (si torna in Lvl_Menu dalla valle che non si apre), niente giro infinito Lvl_Menu -> valle -> Lvl_Menu.
+		Istanza->bMenuValleRiuscito = false;
+	}
+	// Subito il nero (niente scena di Lvl_Menu per un attimo) e la riga piccola: la valle è grande, il gioco si ferma
+	// qualche secondo mentre la apre.
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->SetManualCameraFade(1.f, FLinearColor::Black, false);
+	}
+	TogliScritte();
+	SAssignNew(Scritte, SValdorsoVolo);
+	Scritte->ImpostaRiga(LOCTEXT("ValleSiSveglia", "La valle si sveglia..."), 1.f);
+	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
+	{
+		Viewport->AddViewportWidgetContent(Scritte.ToSharedRef(), 30);
+	}
+	FInputModeUIOnly Modo;
+	Modo.SetWidgetToFocus(Scritte);
+	Modo.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Modo);
+	bShowMouseCursor = false;
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: vado nella valle vera (%s)"), *LivelloMenuValle.ToString());
+}
+
+void AValdorsoMenuController::AvanzaVersoLaValle(float DeltaSeconds)
+{
+	AttesaValle += DeltaSeconds;
+	if (!bValleChiesta)
+	{
+		// qualche fotogramma di nero con la riga, poi si apre (mentre si apre lo schermo resta così)
+		if (AttesaValle >= 0.25f)
+		{
+			bValleChiesta = true;
+			AttesaValle = 0.f;
+			ApriLaValle();
+		}
+		return;
+	}
+	// Se dopo l'apertura questo livello è ancora qui, la valle non si è aperta: la scena di sempre.
+	if (AttesaValle >= 8.f)
+	{
+		RinunciaAllaValle();
+	}
+}
+
+void AValdorsoMenuController::ApriLaValle()
+{
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu: apro %s senza server"), *LivelloMenuValle.ToString());
+	UGameplayStatics::OpenLevel(this, LivelloMenuValle, true, ValdorsoMenuValle::OpzioniLivello());
+}
+
+void AValdorsoMenuController::RinunciaAllaValle()
+{
+	UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Menu: la valle %s non si è aperta, resta la scena di sempre"), *LivelloMenuValle.ToString());
+	bVersoLaValle = false;
+	bValleChiesta = false;
+	TogliScritte();
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(1.f, 0.f, 0.6f, FLinearColor::Black, false, false);
+	}
+	Comincia();
+}
+
+void AValdorsoMenuController::PreparaGiro()
+{
+	GiroValle.Prepara(ValdorsoMenuValle::Tappe());
+	DistanzaGiro = 0.f;
+	AlzataGiro = 0.f;
+	bValleVisibile = false;
+	bSuoloTrovato = false;
+	AttesaVista = 0.f;
+	SuoloDa = -1.f;
+
+	FVector Posizione, Sguardo;
+	GiroValle.Posa(0.f, Posizione, Sguardo);
+	BersaglioGiro = Sguardo;
+
+	// La telecamera nasce qui: è la vista del controllore, quindi World Partition carica la valle intorno a lei.
+	FActorSpawnParameters Parametri;
+	Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ACameraActor* NuovaTelecamera = GetWorld()->SpawnActor<ACameraActor>(Posizione, (Sguardo - Posizione).Rotation(), Parametri);
+	if (NuovaTelecamera)
+	{
+		NuovaTelecamera->SetActorEnableCollision(false);
+		if (UCameraComponent* Componente = NuovaTelecamera->GetCameraComponent())
+		{
+			Componente->SetFieldOfView(SguardoGiro);
+			Componente->bConstrainAspectRatio = false;
+			Obiettivo = Componente;
+			SguardoBase = SguardoGiro;
+		}
+		Telecamera = NuovaTelecamera;
+		PosizioneBase = Posizione;
+		RotazioneBase = NuovaTelecamera->GetActorRotation();
+		SetViewTarget(NuovaTelecamera);
+	}
+	else
+	{
+		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Menu nella valle: non riesco a far nascere la telecamera"));
+	}
+
+	// Il nero finché la valle intorno alla telecamera non è arrivata (lo apre AvanzaGiro).
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->SetManualCameraFade(1.f, FLinearColor::Black, false);
+	}
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu nella valle: giro di %.0f m in %.0f secondi"),
+		GiroValle.Lunghezza() / 100.f, ValdorsoMenuValle::SecondiGiro);
+}
+
+void AValdorsoMenuController::AvanzaGiro(float DeltaSeconds)
+{
+	if (!Telecamera.IsValid())
+	{
+		return;
+	}
+	// Si parte quando la valle si vede: prima la telecamera resta sulla prima tappa (la prima inquadratura è quella).
+	if (bValleVisibile)
+	{
+		const bool bMeno = ValdorsoImpostazioni::Correnti().bMenoMovimenti;
+		DistanzaGiro += ValdorsoMenuValle::Velocita(GiroValle.Lunghezza(), ValdorsoMenuValle::SecondiGiro, bMeno) * DeltaSeconds;
+		if (GiroValle.Lunghezza() > 1.f)
+		{
+			DistanzaGiro = FMath::Fmod(DistanzaGiro, GiroValle.Lunghezza());
+		}
+	}
+	FVector Posizione, Sguardo;
+	GiroValle.Posa(DistanzaGiro, Posizione, Sguardo);
+
+	// La sonda: se sotto la telecamera c'è qualcosa (un albero, un tetto, il monte) a meno di 20 m, si sale piano;
+	// passato l'ostacolo si torna giù, ancora più piano.
+	FHitResult Colpo;
+	FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoMenuGiro), false, Telecamera.Get());
+	const FVector Sopra = Posizione + FVector(0.f, 0.f, 5000.f);
+	const FVector Sotto = Posizione - FVector(0.f, 0.f, 30000.f);
+	float Voluta = 0.f;
+	// (una sonda che parte già dentro qualcosa, per esempio una cupola del cielo con le collisioni, non conta)
+	if (GetWorld()->LineTraceSingleByChannel(Colpo, Sopra, Sotto, ECC_Visibility, Parametri) && !Colpo.bStartPenetrating)
+	{
+		bSuoloTrovato = true;
+		Voluta = FMath::Min(ValdorsoMenuValle::Alzata(static_cast<float>(Posizione.Z), static_cast<float>(Colpo.ImpactPoint.Z),
+			ValdorsoMenuValle::MinimoSicuro), ValdorsoMenuValle::AlzataMassima);
+	}
+	AlzataGiro = bValleVisibile ? FMath::FInterpTo(AlzataGiro, Voluta, DeltaSeconds, Voluta > AlzataGiro ? 1.5f : 0.4f) : Voluta;
+	Posizione.Z += AlzataGiro;
+	Sguardo.Z += AlzataGiro * 0.5f;
+	BersaglioGiro = Sguardo;
+	Telecamera->SetActorLocationAndRotation(Posizione, (Sguardo - Posizione).Rotation());
+
+	// Il nero si apre quando sotto la telecamera c'è la valle (e ancora un secondo e mezzo, perché arrivino i pezzi
+	// intorno), al massimo dopo 25 secondi.
+	if (!bValleVisibile)
+	{
+		AttesaVista += DeltaSeconds;
+		if (bSuoloTrovato && SuoloDa < 0.f)
+		{
+			SuoloDa = AttesaVista;
+		}
+		const bool bPronta = (SuoloDa >= 0.f && AttesaVista - SuoloDa >= 1.5f && AttesaVista >= 2.f) || AttesaVista >= 25.f;
+		if (bPronta)
+		{
+			bValleVisibile = true;
+			if (PlayerCameraManager)
+			{
+				PlayerCameraManager->StartCameraFade(1.f, 0.f, 2.5f, FLinearColor::Black, false, false);
+			}
+			UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Menu nella valle: la valle si vede (dopo %.1f secondi%s)"),
+				AttesaVista, bSuoloTrovato ? TEXT("") : TEXT(", senza trovare il suolo"));
+		}
 	}
 }
 
@@ -504,6 +753,12 @@ void AValdorsoMenuController::TornaAlMenu(const FString& Motivo)
 		Istanza->RicordaMessaggio(Motivo);
 	}
 	UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Menu: il collegamento non parte (%s)"), *Motivo);
+	// (08/11) Nella valle vera si riapre la valle con la modalità del menu (aperta da sola avrebbe quella del gioco).
+	if (bNellaValle)
+	{
+		ApriLaValle();
+		return;
+	}
 	UGameplayStatics::OpenLevel(this, FName(*UGameplayStatics::GetCurrentLevelName(this, true)));
 }
 
@@ -546,6 +801,19 @@ void AValdorsoMenuController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// (08/11) In Lvl_Menu, verso la valle vera: il nero, poi si apre.
+	if (bVersoLaValle)
+	{
+		AvanzaVersoLaValle(DeltaSeconds);
+		return;
+	}
+
+	// (08/11) Nella valle: il giro della telecamera (durante il volo verso la valle la muove il volo).
+	if (bNellaValle && !bInTransizione)
+	{
+		AvanzaGiro(DeltaSeconds);
+	}
+
 	if (RientroInAttesa.IsSet())
 	{
 		AvanzaRientro(DeltaSeconds);
@@ -580,12 +848,13 @@ void AValdorsoMenuController::Tick(float DeltaSeconds)
 		}
 	}
 
-	// La telecamera respira: si sposta e gira di pochissimo, lentamente.
-	if (Telecamera.IsValid())
+	// La telecamera respira: si sposta e gira di pochissimo, lentamente (in Lvl_Menu; (08/11) ferma con "Meno movimento").
+	if (Telecamera.IsValid() && !bNellaValle)
 	{
 		Tempo += DeltaSeconds;
-		const FVector Spostamento(0.f, FMath::Sin(Tempo * 0.13f) * Ondeggio, FMath::Sin(Tempo * 0.09f) * Ondeggio * 0.4f);
-		const FRotator Giro(FMath::Sin(Tempo * 0.11f) * 0.4f, FMath::Sin(Tempo * 0.07f) * 1.2f, 0.f);
+		const float Respiro = ValdorsoImpostazioni::Correnti().bMenoMovimenti ? 0.f : 1.f;
+		const FVector Spostamento(0.f, FMath::Sin(Tempo * 0.13f) * Ondeggio * Respiro, FMath::Sin(Tempo * 0.09f) * Ondeggio * 0.4f * Respiro);
+		const FRotator Giro(FMath::Sin(Tempo * 0.11f) * 0.4f * Respiro, FMath::Sin(Tempo * 0.07f) * 1.2f * Respiro, 0.f);
 		Telecamera->SetActorLocationAndRotation(PosizioneBase + Spostamento, RotazioneBase + Giro);
 	}
 }
@@ -621,11 +890,19 @@ void AValdorsoMenuController::EntraNellaValle()
 
 	// Il frammento si risveglia e la telecamera gli vola incontro.
 	FVector Cuore(0.f, 0.f, 165.f);
-	for (TActorIterator<AValdorsoFrammentoCuore> It(GetWorld()); It; ++It)
+	if (bNellaValle)
 	{
-		Cuore = It->GetActorLocation() + FVector(0.f, 0.f, 75.f);
-		It->Risveglia();
-		break;
+		// (08/11) Nella valle non c'è il frammento: si vola verso dove guarda il giro (il villaggio).
+		Cuore = BersaglioGiro;
+	}
+	else
+	{
+		for (TActorIterator<AValdorsoFrammentoCuore> It(GetWorld()); It; ++It)
+		{
+			Cuore = It->GetActorLocation() + FVector(0.f, 0.f, 75.f);
+			It->Risveglia();
+			break;
+		}
 	}
 
 	if (!Telecamera.IsValid())
@@ -634,15 +911,24 @@ void AValdorsoMenuController::EntraNellaValle()
 		bVoloLungo = false;
 		if (PlayerCameraManager)
 		{
-			PlayerCameraManager->StartCameraFade(0.f, 1.f, 0.4f, FLinearColor::Black, false, true);
+			PlayerCameraManager->StartCameraFade(PlayerCameraManager->FadeAmount, 1.f, 0.4f, FLinearColor::Black, false, true);
 		}
 		Arriva();
 		return;
 	}
 	Partenza = Telecamera->GetActorLocation();
 	GiroPartenza = Telecamera->GetActorQuat();
-	const FVector Direzione = (Partenza - Cuore).GetSafeNormal2D();
-	Arrivo = Cuore + Direzione * 230.f + FVector(0.f, 0.f, 15.f);
+	if (bNellaValle)
+	{
+		// (08/11) Un terzo della strada verso il villaggio (al massimo 40 m), scendendo appena: resta sopra i tetti.
+		const FVector Verso = Cuore - Partenza;
+		Arrivo = Partenza + Verso.GetSafeNormal() * FMath::Min(static_cast<float>(Verso.Size()) * 0.3f, 4000.f);
+	}
+	else
+	{
+		const FVector Direzione = (Partenza - Cuore).GetSafeNormal2D();
+		Arrivo = Cuore + Direzione * 230.f + FVector(0.f, 0.f, 15.f);
+	}
 	GiroArrivo = (Cuore - Arrivo).Rotation().Quaternion();
 
 	// Al primo ingresso, il volo lungo (se la curva manca del tutto, resta il volo corto qui sopra).
@@ -675,7 +961,7 @@ void AValdorsoMenuController::AvanzaTransizione(float DeltaSeconds)
 		bBuio = true;
 		if (PlayerCameraManager)
 		{
-			PlayerCameraManager->StartCameraFade(0.f, 1.f, Durata * 0.5f, FLinearColor::Black, false, true);
+			PlayerCameraManager->StartCameraFade(PlayerCameraManager->FadeAmount, 1.f, Durata * 0.5f, FLinearColor::Black, false, true);
 		}
 	}
 
@@ -726,6 +1012,13 @@ void AValdorsoMenuController::PreparaVoloLungo()
 	{
 		bVoloLungo = false;   // non dovrebbe succedere: si ripiega sul volo corto
 		return;
+	}
+	if (bNellaValle && Volo->Percorso)
+	{
+		// (08/11) Nella valle i punti di Lvl_Menu non valgono: sopra la piazza, poi su verso i monti (ValdorsoMenuValle).
+		TArray<FVector> Punti;
+		ValdorsoMenuValle::VoloLungo(Partenza, Punti);
+		Volo->Percorso->SetSplinePoints(Punti, ESplineCoordinateSpace::World, true);
 	}
 	Volo->PartiDa(Partenza);
 
@@ -780,7 +1073,7 @@ void AValdorsoMenuController::AvanzaVoloLungo(float DeltaSeconds)
 		bBuio = true;
 		if (PlayerCameraManager)
 		{
-			PlayerCameraManager->StartCameraFade(0.f, 1.f, Durata * (1.f - Buio), FLinearColor::Black, false, true);
+			PlayerCameraManager->StartCameraFade(PlayerCameraManager->FadeAmount, 1.f, Durata * (1.f - Buio), FLinearColor::Black, false, true);
 		}
 	}
 

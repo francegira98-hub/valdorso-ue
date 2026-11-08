@@ -56,20 +56,33 @@ namespace
 		return ValdorsoBussola::Rotta(Imbardata);
 	}
 
-	/** Un testo con un'ombra scura sotto (si legge sopra il cielo e sopra la neve). */
-	void BussolaScrivi(FSlateWindowElementList& Elementi, int32 Strato, const FGeometry& Geometria, const FString& Testo,
-		const FSlateFontInfo& Font, const FVector2f& Centro, const FLinearColor& Colore)
+	/** Quanto è grande un testo sullo schermo (zero se Slate non c'è). */
+	FVector2f BussolaMisura(const FString& Testo, const FSlateFontInfo& Font)
 	{
 		if (!FSlateApplication::IsInitialized() || !FSlateApplication::Get().GetRenderer())
 		{
-			return;
+			return FVector2f::ZeroVector;
 		}
 		const TSharedRef<FSlateFontMeasure> Misuratore = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
-		const FVector2f Misura = FVector2f(Misuratore->Measure(Testo, Font));
+		return FVector2f(Misuratore->Measure(Testo, Font));
+	}
+
+	/**
+	 * Un testo con un'ombra scura sotto (si legge sopra il cielo e sopra la neve): lo stesso testo disegnato due volte,
+	 * prima scuro e spostato di 1 pixel, poi del suo colore. (08/11) L'ombra è il Fondo del tema, più piena di prima.
+	 */
+	void BussolaScrivi(FSlateWindowElementList& Elementi, int32 Strato, const FGeometry& Geometria, const FString& Testo,
+		const FSlateFontInfo& Font, const FVector2f& Centro, const FLinearColor& Colore)
+	{
+		const FVector2f Misura = BussolaMisura(Testo, Font);
+		if (Misura.IsNearlyZero())
+		{
+			return;
+		}
 		const FVector2f Inizio = Centro - Misura * 0.5f;
 		FSlateDrawElement::MakeText(Elementi, Strato,
 			Geometria.ToPaintGeometry(FVector2D(Misura), FSlateLayoutTransform(1.f, FVector2D(Inizio + FVector2f(1.f, 1.f)))),
-			Testo, Font, ESlateDrawEffect::None, FLinearColor(0.f, 0.f, 0.f, 0.6f * Colore.A));
+			Testo, Font, ESlateDrawEffect::None, ValdorsoTema::Fondo().CopyWithNewOpacity(0.85f * Colore.A));
 		FSlateDrawElement::MakeText(Elementi, Strato + 1,
 			Geometria.ToPaintGeometry(FVector2D(Misura), FSlateLayoutTransform(1.f, FVector2D(Inizio))),
 			Testo, Font, ESlateDrawEffect::None, Colore);
@@ -98,8 +111,10 @@ void SValdorsoBussola::Construct(const FArguments& InArgs)
 	Taccuino = InArgs._Taccuino;
 	Caratteri = MakeShared<FValdorsoCaratteri>();
 	Pieno = FSlateColorBrush(FLinearColor::White);
-	Fascia = FSlateRoundedBoxBrush(ValdorsoTema::Pannelli().CopyWithNewOpacity(0.62f), 4.f,
-		ValdorsoTema::Oro().CopyWithNewOpacity(0.4f), 1.f);
+	// (08/11) Sul cielo chiaro la fascia di prima (pannello al 62%, filo d'oro tenue) quasi spariva: adesso un fondo
+	// scuro velato (il Fondo del tema al 55%), angoli tondi e un filo d'oro scuro. Lo stesso per il nome del luogo.
+	Fascia = FSlateRoundedBoxBrush(ValdorsoTema::Fondo().CopyWithNewOpacity(0.55f), 6.f,
+		ValdorsoTema::OroScuro().CopyWithNewOpacity(0.9f), 1.f);
 	SetVisibility(EVisibility::HitTestInvisible);
 	RegisterActiveTimer(0.f, FWidgetActiveTimerDelegate::CreateSP(this, &SValdorsoBussola::Anima));
 }
@@ -145,6 +160,23 @@ int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 	FSlateDrawElement::MakeBox(OutDrawElements, LayerId,
 		AllottedGeometry.ToPaintGeometry(FVector2f(Larghezza, BussolaAltezzaFascia), FSlateLayoutTransform(FVector2f(0.f, 0.f))),
 		&Fascia, ESlateDrawEffect::None, FLinearColor(1.f, 1.f, 1.f, Alfa));
+	// (08/11) e dentro, appena sopra il bordo basso, un filo d'oro sottile che sfuma verso i lati (a pezzetti)
+	{
+		constexpr int32 Pezzi = 8;
+		const float YFilo = BussolaAltezzaFascia - 3.f;
+		const float Lungo = (Mezzo - 14.f) / Pezzi;
+		for (int32 i = 0; i < Pezzi; ++i)
+		{
+			const float T = static_cast<float>(i) / Pezzi;
+			const FLinearColor Filo = ValdorsoTema::Oro().CopyWithNewOpacity(0.4f * (1.f - T * T) * Alfa);
+			for (const float Lato : { -1.f, 1.f })
+			{
+				FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(),
+					TArray<FVector2f>{ FVector2f(Mezzo + Lato * Lungo * i, YFilo), FVector2f(Mezzo + Lato * Lungo * (i + 1), YFilo) },
+					ESlateDrawEffect::None, Filo, true, 1.f);
+			}
+		}
+	}
 
 	// le tacche ogni 15 gradi e le lettere ogni 45
 	const FSlateFontInfo FontCardinale = Caratteri->Titolo(15.f, TEXT("Bold"));
@@ -163,17 +195,17 @@ int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 		{
 			const int32 Punto = k / 3;
 			const bool bCardinale = Punto % 2 == 0;
-			const FLinearColor Colore = Punto == 0 ? ValdorsoTema::OroChiaro()
-				: (bCardinale ? ValdorsoTema::Oro() : ValdorsoTema::TestoSecondario());
+			// (08/11) tutte d'oro chiaro (prima Oro e TestoSecondario, pallide sul cielo); le intermedie un poco più tenui
+			const FLinearColor Colore = ValdorsoTema::OroChiaro().CopyWithNewOpacity(bCardinale ? 1.f : 0.8f);
 			BussolaScrivi(OutDrawElements, LayerId + 1, AllottedGeometry, ValdorsoBussola::Sigla(Punto),
 				bCardinale ? FontCardinale : FontIntermedio, FVector2f(X, BussolaAltezzaFascia * 0.5f + 1.f),
-				Colore.CopyWithNewOpacity(Forza));
+				Colore.CopyWithNewOpacity(Colore.A * Forza));
 		}
 		else
 		{
 			FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(),
 				TArray<FVector2f>{ FVector2f(X, BussolaAltezzaFascia - 9.f), FVector2f(X, BussolaAltezzaFascia - 4.f) },
-				ESlateDrawEffect::None, ValdorsoTema::Oro().CopyWithNewOpacity(0.55f * Forza), true, 1.f);
+				ESlateDrawEffect::None, ValdorsoTema::OroChiaro().CopyWithNewOpacity(0.6f * Forza), true, 1.f);
 		}
 	}
 
@@ -226,8 +258,19 @@ int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 			float X = Mezzo;
 			ValdorsoBussola::SullaStriscia(ScartoDavanti, Larghezza, Campo, X);
 			const FString Testo = FString::Printf(TEXT("%s  ·  %s"), *Davanti->Nome, *ValdorsoBussola::TestoDistanza(Distanza));
-			BussolaScrivi(OutDrawElements, LayerId + 2, AllottedGeometry, Testo, Caratteri->Testo(15.f, TEXT("Italic")),
-				FVector2f(X, YRombo + 15.f), ValdorsoTema::Pergamena().CopyWithNewOpacity(Alfa));
+			const FSlateFontInfo FontNome = Caratteri->Testo(15.f, TEXT("Italic"));
+			const FVector2f CentroNome(X, YRombo + 15.f);
+			// (08/11) sotto il nome lo stesso fondo scuro velato della fascia, appena più largo del testo
+			const FVector2f MisuraNome = BussolaMisura(Testo, FontNome);
+			if (!MisuraNome.IsNearlyZero())
+			{
+				const FVector2f Velo(MisuraNome.X + 22.f, MisuraNome.Y + 2.f);
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+					AllottedGeometry.ToPaintGeometry(Velo, FSlateLayoutTransform(CentroNome - Velo * 0.5f)),
+					&Fascia, ESlateDrawEffect::None, FLinearColor(1.f, 1.f, 1.f, 0.85f * Alfa));
+			}
+			BussolaScrivi(OutDrawElements, LayerId + 2, AllottedGeometry, Testo, FontNome, CentroNome,
+				ValdorsoTema::Pergamena().CopyWithNewOpacity(Alfa));
 		}
 	}
 	return LayerId + 4;

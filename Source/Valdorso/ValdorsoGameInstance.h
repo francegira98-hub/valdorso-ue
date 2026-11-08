@@ -71,6 +71,11 @@ public:
 	/** (07/11) La schermata d'avvio (SValdorsoAvvio) si vede una volta sola per avvio del gioco. */
 	bool bAvvioMostrato = false;
 
+	/** (08/11) Il menu nella valle vera (ValdorsoMenuValle): se in questo avvio si è provato ad aprirla e se si è aperta
+	 *  davvero. Provata e mai aperta = qualcosa non va: fino alla chiusura del gioco resta la scena di sempre (Lvl_Menu). */
+	bool bMenuValleTentato = false;
+	bool bMenuValleRiuscito = false;
+
 	virtual void Init() override;
 	virtual void Shutdown() override;
 	virtual void ReceivedNetworkEncryptionToken(const FString& EncryptionToken, const FOnEncryptionKeyResponse& Delegate) override;
