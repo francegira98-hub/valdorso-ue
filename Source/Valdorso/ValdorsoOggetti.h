@@ -33,6 +33,8 @@ enum class EValdorsoUso : uint8
 	Leggi,
 	/** (08/11) Si accende un falò davanti al colono (l'acciarino; servono i rami secchi: ValdorsoFalo.h). */
 	Accendi,
+	/** (09/11) Si apre come un foglio vero (la tessera del colono, ValdorsoTessera.h) e si può mostrare. */
+	Documento,
 };
 
 /** Un tipo di oggetto del catalogo. */

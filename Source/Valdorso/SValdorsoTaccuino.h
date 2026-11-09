@@ -42,6 +42,11 @@ private:
 	EActiveTimerReturnType Anima(double Tempo, float Delta);
 	/** Vero quando la bussola deve vedersi (il colono c'è e non c'è niente di aperto sopra). */
 	bool DaMostrare() const;
+	/** (09/11) Ai lati della striscia: l'ora canonica e l'ora (a sinistra), il termometro (a destra). */
+	void DisegnaLati(const FGeometry& Geometria, FSlateWindowElementList& Elementi, int32 Strato, float Alfa) const;
+	/** Il cielo del livello (per l'ora), cercato una volta. */
+	mutable TWeakObjectPtr<class AValdorsoCielo> Cielo;
+	mutable bool bCieloCercato = false;
 
 	TWeakObjectPtr<APlayerController> Controllore;
 	TWeakObjectPtr<UValdorsoTaccuinoComponent> Taccuino;

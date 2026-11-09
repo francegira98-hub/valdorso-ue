@@ -9,11 +9,13 @@
 
 #include "ValdorsoArchivista.h"
 #include "ValdorsoBagnato.h"
+#include "ValdorsoClima.h"
 #include "ValdorsoFalo.h"
 #include "ValdorsoRaccolta.h"
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoRegistro.h"
+#include "ValdorsoTessera.h"
 #include "ValdorsoZainoDati.h"
 #include "JsonObjectConverter.h"
 
@@ -374,6 +376,151 @@ bool FValdorsoTestZainoRaccolta::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("ci sono rami per i falò"), Rami >= 10);
 	TestTrue(TEXT("ci sono le erbe della palude"), Erbe >= 5);
+	return true;
+}
+
+// (08/11) La mappa della valle: nella partenza; chi era già arrivato la riceve una volta sola con Aggiorna.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestZainoMappa, "Valdorso.Zaino.Mappa", ValdorsoTestZaino::Bandiere)
+bool FValdorsoTestZainoMappa::RunTest(const FString& Parameters)
+{
+	FValdorsoZaino Nuovo;
+	ValdorsoZaino::DaiPartenza(Nuovo, nullptr);
+	TestEqual(TEXT("la mappa all'arrivo"), ValdorsoZaino::Conta(Nuovo, TEXT("Mappa_Valle")), 1);
+	TestEqual(TEXT("la partenza segna tutti gli aggiornamenti"), Nuovo.Aggiornamenti, ValdorsoZaino::UltimoAggiornamento);
+	TestFalse(TEXT("niente da aggiornare"), ValdorsoZaino::Aggiorna(Nuovo));
+
+	// un colono arrivato prima (partenza data, senza mappa)
+	FValdorsoZaino DiPrima;
+	ValdorsoZaino::Sistema(DiPrima);
+	DiPrima.bPartenzaData = true;
+	ValdorsoZaino::Aggiungi(DiPrima, TEXT("Pane_Nero"), 2);
+	TestTrue(TEXT("riceve la mappa"), ValdorsoZaino::Aggiorna(DiPrima));
+	TestEqual(TEXT("una"), ValdorsoZaino::Conta(DiPrima, TEXT("Mappa_Valle")), 1);
+	TestFalse(TEXT("una volta sola"), ValdorsoZaino::Aggiorna(DiPrima));
+	TestEqual(TEXT("sempre una"), ValdorsoZaino::Conta(DiPrima, TEXT("Mappa_Valle")), 1);
+
+	// chi non è ancora arrivato non riceve niente (prima la partenza)
+	FValdorsoZaino MaiArrivato;
+	ValdorsoZaino::Sistema(MaiArrivato);
+	TestFalse(TEXT("prima la partenza"), ValdorsoZaino::Aggiorna(MaiArrivato));
+	return true;
+}
+
+// (09/11) Il caldo e il freddo: la stagione, l'ora, la quota e il tempo fanno l'aria; bagnati si sente più freddo, il
+// mantello, il tetto e il fuoco riparano; le soglie, i freni della stamina e le ore canoniche.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestClima, "Valdorso.Clima.Temperatura", ValdorsoTestZaino::Bandiere)
+bool FValdorsoTestClima::RunTest(const FString& Parameters)
+{
+	using namespace ValdorsoClima;
+	const float Piazza = 5500.f;
+	TestTrue(TEXT("l'estate è più calda dell'inverno"), Aria(12.f, TEXT("estate"), Piazza, 0.f, 0.f, 0.f) > Aria(12.f, TEXT("inverno"), Piazza, 0.f, 0.f, 0.f) + 10.f);
+	TestTrue(TEXT("alle tre del pomeriggio più caldo che all'alba"), Aria(15.f, TEXT("autunno"), Piazza, 0.f, 0.f, 0.f) > Aria(5.f, TEXT("autunno"), Piazza, 0.f, 0.f, 0.f) + 8.f);
+	TestTrue(TEXT("le nuvole appiattiscono il giorno"),
+		Aria(15.f, TEXT("autunno"), Piazza, 1.f, 0.f, 0.f) - Aria(5.f, TEXT("autunno"), Piazza, 1.f, 0.f, 0.f)
+		< Aria(15.f, TEXT("autunno"), Piazza, 0.f, 0.f, 0.f) - Aria(5.f, TEXT("autunno"), Piazza, 0.f, 0.f, 0.f));
+	TestTrue(TEXT("in alto più freddo"), Aria(12.f, TEXT("autunno"), 18000.f, 0.f, 0.f, 0.f) < Aria(12.f, TEXT("autunno"), Piazza, 0.f, 0.f, 0.f) - 1.f);
+	TestTrue(TEXT("la pioggia rinfresca"), Aria(12.f, TEXT("estate"), Piazza, 0.f, 1.f, 0.f) < Aria(12.f, TEXT("estate"), Piazza, 0.f, 0.f, 0.f));
+
+	const float Fuori = 6.f;
+	TestTrue(TEXT("bagnati più freddo"), Percepita(Fuori, 1.f, false, 10.f, false, false, false) < Fuori - 5.f);
+	TestTrue(TEXT("il mantello ripara"), Percepita(Fuori, 0.f, false, 10.f, true, false, false) > Fuori);
+	TestEqual(TEXT("il mantello non scalda d'estate"), Percepita(28.f, 0.f, false, 10.f, true, false, false), 28.f);
+	TestTrue(TEXT("al fuoco si sta caldi"), Percepita(-5.f, 1.f, false, 10.f, false, false, true) >= 18.f);
+	TestTrue(TEXT("ma non si arrostisce"), Percepita(25.f, 0.f, false, 10.f, false, false, true) <= 26.f);
+	TestEqual(TEXT("nell'acqua conta l'acqua"), Percepita(30.f, 1.f, true, 4.f, true, true, true), 2.f);
+
+	TestTrue(TEXT("sotto zero: gelo"), Sensazione(-1.f) == EValdorsoSensazione::Gelo);
+	TestTrue(TEXT("5 gradi: freddo"), Sensazione(5.f) == EValdorsoSensazione::Freddo);
+	TestTrue(TEXT("20 gradi: mite"), Sensazione(20.f) == EValdorsoSensazione::Mite);
+	TestTrue(TEXT("35 gradi: afa"), Sensazione(35.f) == EValdorsoSensazione::Afa);
+	TestEqual(TEXT("mite: nessun freno"), FrenoTemperatura(20.f), 0.f);
+	TestTrue(TEXT("il gelo frena più del freddo"), FrenoTemperatura(-3.f) > FrenoTemperatura(4.f));
+	TestEqual(TEXT("bagnati e gelati: al massimo tre quarti"), FrenoTotale(0.5f, 0.5f), 0.75f);
+
+	TestEqual(TEXT("le 18:40"), OraEMinuti(18.f + 40.f / 60.f + 0.001f), FString(TEXT("18:40")));
+	TestEqual(TEXT("lo zero davanti"), OraEMinuti(7.0834f), FString(TEXT("07:05")));
+	TestEqual(TEXT("vespro"), OraCanonica(19.f).ToString(), FString(TEXT("Vespro")));
+	TestEqual(TEXT("mattutino"), OraCanonica(1.f).ToString(), FString(TEXT("Mattutino")));
+	TestEqual(TEXT("compieta"), OraCanonica(23.9f).ToString(), FString(TEXT("Compieta")));
+	return true;
+}
+
+// (09/11) La tessera del colono: il numero è sempre lo stesso per lo stesso personaggio, la tessera nuova ha qualifica,
+// rilascio e il timbro della capitana; Sistema rilascia quella che manca e accorcia quella troppo lunga; Vista legge il
+// Registro (la fede corta) e si salva nel file del personaggio.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestTessera, "Valdorso.Tessera.Regole", ValdorsoTestZaino::Bandiere)
+bool FValdorsoTestTessera::RunTest(const FString& Parameters)
+{
+	const FString Numero = ValdorsoTessera::Numero(TEXT("personaggio-1"));
+	TestEqual(TEXT("sempre lo stesso numero"), ValdorsoTessera::Numero(TEXT("personaggio-1")), Numero);
+	TestEqual(TEXT("maiuscole o minuscole, uguale"), ValdorsoTessera::Numero(TEXT("PERSONAGGIO-1")), Numero);
+	TestNotEqual(TEXT("un altro personaggio, un altro numero"), ValdorsoTessera::Numero(TEXT("personaggio-2")), Numero);
+	TestEqual(TEXT("lungo come VO-312-XXXX"), Numero.Len(), 11);
+	TestTrue(TEXT("comincia con VO-312-"), Numero.StartsWith(TEXT("VO-312-")));
+	for (int32 i = 7; i < Numero.Len(); ++i)
+	{
+		TestTrue(TEXT("niente 0, O, 1 o I"), Numero[i] != TEXT('0') && Numero[i] != TEXT('O') && Numero[i] != TEXT('1') && Numero[i] != TEXT('I'));
+	}
+
+	const FValdorsoTessera Nuova = ValdorsoTessera::Nuova(TEXT("personaggio-1"));
+	TestEqual(TEXT("la nuova ha il numero"), Nuova.Numero, Numero);
+	TestFalse(TEXT("la qualifica"), Nuova.Qualifica.IsEmpty());
+	TestFalse(TEXT("il rilascio"), Nuova.Rilascio.IsEmpty());
+	TestEqual(TEXT("il timbro della capitana"), Nuova.Timbri.Num(), 1);
+
+	// un file senza tessera (un personaggio di prima): Sistema la rilascia
+	FValdorsoTessera DiPrima;
+	ValdorsoTessera::Sistema(DiPrima, TEXT("personaggio-1"));
+	TestEqual(TEXT("rilasciata"), DiPrima.Numero, Numero);
+
+	// un file rovinato: tutto troppo lungo e troppi timbri
+	FValdorsoTessera Rovinata = Nuova;
+	Rovinata.Qualifica = FString::ChrN(500, TEXT('a'));
+	for (int32 i = 0; i < 40; ++i)
+	{
+		Rovinata.Timbri.Add(FString::ChrN(300, TEXT('t')));
+		Rovinata.Note.Add(TEXT("nota"));
+	}
+	ValdorsoTessera::Sistema(Rovinata, TEXT("personaggio-1"));
+	TestEqual(TEXT("qualifica accorciata"), Rovinata.Qualifica.Len(), ValdorsoTessera::MassimaLunghezza);
+	TestEqual(TEXT("timbri al massimo"), Rovinata.Timbri.Num(), ValdorsoTessera::MassimoTimbri);
+	TestEqual(TEXT("note al massimo"), Rovinata.Note.Num(), ValdorsoTessera::MassimoNote);
+	TestEqual(TEXT("il primo timbro resta"), Rovinata.Timbri[0], Nuova.Timbri[0]);
+	for (const FString& Timbro : Rovinata.Timbri)
+	{
+		TestTrue(TEXT("timbro accorciato"), Timbro.Len() <= ValdorsoTessera::MassimaLunghezza);
+	}
+	FValdorsoTessera SenzaQualifica = Nuova;
+	SenzaQualifica.Qualifica.Reset();
+	ValdorsoTessera::Sistema(SenzaQualifica, TEXT("personaggio-1"));
+	TestFalse(TEXT("la qualifica torna"), SenzaQualifica.Qualifica.IsEmpty());
+
+	// quello che si vede: dal Registro
+	FValdorsoRegistro Registro;
+	Registro.Sesso = TEXT("donna");
+	Registro.Eta = 27;
+	Registro.Fede = TEXT("nereia");
+	Registro.Mestiere = TEXT("contadino");
+	Registro.Firma = TEXT("@");
+	const FValdorsoTesseraVista Vista = ValdorsoTessera::Vista(TEXT("Mara"), &Registro, Nuova);
+	TestEqual(TEXT("il nome"), Vista.Nome, FString(TEXT("Mara")));
+	TestEqual(TEXT("l'età"), Vista.Eta, 27);
+	TestEqual(TEXT("la fede corta"), Vista.Fede, FString(TEXT("Nereia")));
+	TestFalse(TEXT("il mestiere"), Vista.Mestiere.IsEmpty());
+	TestEqual(TEXT("la firma"), Vista.Firma, FString(TEXT("@")));
+	TestEqual(TEXT("il numero"), Vista.Tessera.Numero, Numero);
+	const FValdorsoTesseraVista SenzaRegistro = ValdorsoTessera::Vista(TEXT("Prova"), nullptr, Nuova);
+	TestEqual(TEXT("senza Registro: solo nome e tessera"), SenzaRegistro.Eta, 0);
+
+	// la tessera si salva nel file del personaggio e torna uguale
+	FValdorsoPersonaggio Personaggio;
+	Personaggio.Tessera = Rovinata;
+	FString Testo;
+	TestTrue(TEXT("si scrive"), FJsonObjectConverter::UStructToJsonObjectString(Personaggio, Testo));
+	FValdorsoPersonaggio Letto;
+	TestTrue(TEXT("si legge"), FJsonObjectConverter::JsonObjectStringToUStruct(Testo, &Letto, 0, 0));
+	TestEqual(TEXT("il numero torna"), Letto.Tessera.Numero, Numero);
+	TestEqual(TEXT("i timbri tornano"), Letto.Tessera.Timbri.Num(), ValdorsoTessera::MassimoTimbri);
 	return true;
 }
 

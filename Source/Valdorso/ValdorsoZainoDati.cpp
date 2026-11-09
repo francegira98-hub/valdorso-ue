@@ -259,6 +259,30 @@ namespace ValdorsoZaino
 			}
 		}
 		Zaino.bPartenzaData = true;
+		Zaino.Aggiornamenti = UltimoAggiornamento;
+	}
+
+	bool Aggiorna(FValdorsoZaino& Zaino)
+	{
+		bool bDato = false;
+		if (!Zaino.bPartenzaData)
+		{
+			return false;
+		}
+		if (Zaino.Aggiornamenti < 1)
+		{
+			// 1: la mappa della valle (prima il tasto M la apriva a tutti)
+			if (Conta(Zaino, TEXT("Mappa_Valle")) == 0)
+			{
+				if (Aggiungi(Zaino, TEXT("Mappa_Valle"), 1) == 0)
+				{
+					return false;  // lo zaino è pieno: si riprova la prossima volta che il personaggio entra
+				}
+				bDato = true;
+			}
+		}
+		Zaino.Aggiornamenti = FMath::Max(Zaino.Aggiornamenti, UltimoAggiornamento);
+		return bDato;
 	}
 
 	bool RiempiBorracce(FValdorsoZaino& Zaino)

@@ -37,7 +37,7 @@ QUOTA_MAX_CM = 80000.0          # i 16 bit delle altezze coprono 0-800 m (valle.
 REIMPORTA = True                # False: usa i pezzi già importati (più veloce, se il generatore non è cambiato)
 FASE_EDITOR = 1                 # (06/11) la fase del villaggio che si vede nell'editor dopo il lancio
 # (06/11, sera) SOLO: le sezioni da rifare (le altre restano come sono, e i loro pezzi non si reimportano). Vuoto = tutto.
-# Sezioni: "Villaggio", "Palude", "Guardia", "Rovine", "Grotta", "Grotta nord", "Belvedere". Dal menu Valdorso c'è
+# Sezioni: "Villaggio", "Palude", "Guardia", "Rovine", "Grotta", "Grotta nord", "Belvedere", (09/11) "Vita". Dal menu Valdorso c'è
 # anche "Villaggio: rifai solo rovine, grotte e belvedere", che passa SOLO_VILLAGGIO senza toccare questo file.
 SOLO = []
 SOLO = list(globals().get("SOLO_VILLAGGIO", SOLO))

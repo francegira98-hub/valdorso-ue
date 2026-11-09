@@ -90,12 +90,16 @@ namespace
 			TEXT("Porcini e chiodini, quelli che Gaspare dice che si possono mangiare. Gli altri lasciali stare."), 0.1f, 10, 5.f, 10.f));
 		C.Add(OggSemplice(TEXT("Mantello"), TEXT("Mantello di lana"),
 			TEXT("Grezzo, pesante e caldo. Finché lo porti con te, la pioggia ti bagna la metà."), 1.5f));
+		C.Add(OggDaLeggere(OggSemplice(TEXT("Mappa_Valle"), TEXT("Mappa della valle"),
+			TEXT("La valle dell'Orso su un foglio piegato in tre, con il villaggio, il lago e il passo. Senza, il tasto M non apre niente."), 0.1f),
+			TEXT("La mappa della valle: si apre con il tasto M.")));
 		C.Add(OggSemplice(TEXT("Corda"), TEXT("Corda di canapa"),
 			TEXT("Dieci braccia di corda. Non si sa mai."), 1.0f));
 		{
-			FValdorsoTipoOggetto Tessera = OggDaLeggere(OggRicordo(TEXT("Tessera"), TEXT("Tessera del colono"),
-				TEXT("Il lasciapassare della carovana, con il timbro della capitana al passo. Senza, dal passo non si torna."), 0.02f),
-				TEXT("«Colono della valle dell'Orso, anno 312 dopo il Crepuscolo. Visto al passo: L. Serra, capitana.»"));
+			FValdorsoTipoOggetto Tessera = OggRicordo(TEXT("Tessera"), TEXT("Tessera del colono"),
+				TEXT("Il lasciapassare della carovana, con il tuo ritratto e il timbro della capitana. Senza, dal passo non si torna."), 0.02f);
+			// (09/11) si apre come un foglio vero, e si può mostrare a chi si ha davanti
+			Tessera.Uso = EValdorsoUso::Documento;
 			C.Add(Tessera);
 		}
 
@@ -213,6 +217,16 @@ namespace
 			L.Add(OggLinea({ { 0.f, 0.05f }, { 0.25f, 0.2f } }));
 			L.Add(OggLinea({ { -0.3f, 0.15f }, { -0.5f, 0.2f } }));
 			L.Add(OggLinea({ { 0.32f, 0.3f }, { 0.55f, 0.3f } }));
+		}
+		else if (N == TEXT("Mappa_Valle"))
+		{
+			// un foglio piegato in tre, con il fiume e un segno
+			L.Add(OggLinea({ { -0.85f, -0.6f }, { -0.3f, -0.45f }, { 0.3f, -0.6f }, { 0.85f, -0.45f }, { 0.85f, 0.6f }, { 0.3f, 0.45f },
+				{ -0.3f, 0.6f }, { -0.85f, 0.45f }, { -0.85f, -0.6f } }));
+			L.Add(OggLinea({ { -0.3f, -0.45f }, { -0.3f, 0.6f } }));
+			L.Add(OggLinea({ { 0.3f, -0.6f }, { 0.3f, 0.45f } }));
+			L.Add(OggLinea({ { -0.7f, 0.25f }, { -0.45f, 0.05f }, { -0.1f, 0.1f }, { 0.15f, -0.15f }, { 0.5f, -0.1f }, { 0.7f, -0.3f } }));
+			L.Add(OggCerchio(0.55f, 0.25f, 0.1f, 10));
 		}
 		else if (N == TEXT("Rami_Secchi"))
 		{
@@ -503,6 +517,7 @@ namespace ValdorsoOggetti
 		Kit.Emplace(TEXT("Coltello"), 1);
 		Kit.Emplace(TEXT("Acciarino"), 1);
 		Kit.Emplace(TEXT("Rami_Secchi"), 4);
+		Kit.Emplace(TEXT("Mappa_Valle"), 1);
 		Kit.Emplace(TEXT("Mantello"), 1);
 		if (Registro)
 		{

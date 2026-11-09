@@ -19,6 +19,7 @@
 #include "ValdorsoTerritorio.h"
 #include "ValdorsoModoFoto.h"
 #include "ValdorsoRune.h"
+#include "ValdorsoBosco.h"
 
 namespace ValdorsoTestMondo
 {
@@ -459,6 +460,26 @@ bool FValdorsoTestFoto::RunTest(const FString& Parameters)
 	TestTrue(TEXT("zoom indietro allarga"), ValdorsoFoto::CampoDopoZoom(60.f, -1.f) > 60.f);
 	TestEqual(TEXT("mai sotto 15 gradi"), ValdorsoFoto::CampoDopoZoom(20.f, 50.f), 15.f);
 	TestEqual(TEXT("mai sopra 100 gradi"), ValdorsoFoto::CampoDopoZoom(90.f, -50.f), 100.f);
+	return true;
+}
+
+// (09/11) Il bosco: il cilindro invisibile del tronco sta dove sta l'albero, largo come il tronco (con la scala
+// dell'albero), dal terreno in su; quello di un tronco caduto sta sdraiato lungo X.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestBosco, "Valdorso.Mondo.Bosco", ValdorsoTestMondo::Bandiere)
+bool FValdorsoTestBosco::RunTest(const FString& Parameters)
+{
+	const FTransform Albero(FRotator(0.f, 90.f, 0.f), FVector(1000.f, 0.f, 0.f), FVector(1.2f));
+	const FTransform Ritto = ValdorsoBosco::Tronco(Albero, 30.f, 400.f, false);
+	TestTrue(TEXT("sotto l'albero"), FVector::Dist2D(Ritto.GetLocation(), FVector(1000.f, 0.f, 0.f)) < 0.1f);
+	TestTrue(TEXT("da 30 cm sotto terra a 4 m: il centro a 1,85 m (con la scala)"), FMath::IsNearlyEqual(Ritto.GetLocation().Z, 1.2f * 185.f, 0.5f));
+	TestTrue(TEXT("largo come il tronco"), FMath::IsNearlyEqual(Ritto.GetScale3D().X, 0.72f, 0.01f));
+	TestTrue(TEXT("lungo 4,3 m per la scala"), FMath::IsNearlyEqual(Ritto.GetScale3D().Z, 1.2f * 4.3f, 0.01f));
+	TestTrue(TEXT("dritto"), FMath::Abs(Ritto.GetRotation().RotateVector(FVector::UpVector).Z) > 0.99f);
+
+	const FTransform Caduto = ValdorsoBosco::Tronco(FTransform::Identity, 30.f, 800.f, true);
+	TestTrue(TEXT("sdraiato lungo X"), FMath::Abs(Caduto.GetRotation().RotateVector(FVector::UpVector).X) > 0.99f);
+	TestTrue(TEXT("appoggiato a terra"), Caduto.GetLocation().Z > 0.f && Caduto.GetLocation().Z < 30.f);
+	TestTrue(TEXT("lungo 8 m"), FMath::IsNearlyEqual(Caduto.GetScale3D().Z, 8.f, 0.01f));
 	return true;
 }
 

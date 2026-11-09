@@ -26,6 +26,7 @@
 #include "ValdorsoRegistro.h"
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoZainoDati.h"
+#include "ValdorsoTessera.h"
 #include "ValdorsoArchivista.generated.h"
 
 UENUM(BlueprintType)
@@ -245,6 +246,11 @@ struct FValdorsoPersonaggio
 	 *  manca: si legge vuoto, e al primo ingresso il colono riceve quello che ha portato con sé. */
 	UPROPERTY()
 	FValdorsoZaino Zaino;
+
+	/** (09/11) La tessera del colono (ValdorsoTessera.h): numero, qualifica, timbri. Nei file di prima manca: si
+	 *  rilascia al primo ingresso. */
+	UPROPERTY()
+	FValdorsoTessera Tessera;
 };
 
 /** Quello che il giocatore vede nella scelta del personaggio (viaggia dal server al client). */
@@ -284,6 +290,10 @@ struct FValdorsoPersonaggioBreve
 	/** (06/10, passo 4.4) L'aspetto, per il ritratto nella scelta del personaggio (una ventina di byte). */
 	UPROPERTY()
 	FValdorsoAspetto Aspetto;
+
+	/** (09/11) Chi è, in una riga: "Contadina, 27 anni · Nereia · presso: Mulino" (vuoto se il registro è ancora bianco). */
+	UPROPERTY(BlueprintReadOnly, Category = "Valdorso|Personaggio")
+	FString Descrizione;
 };
 
 /** Un nome di personaggio cancellato, riservato fino a una data. */

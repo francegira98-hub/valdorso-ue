@@ -12,6 +12,8 @@
 #include "Components/PrimitiveComponent.h"
 #include "UObject/Package.h"
 #include "Components/SceneCaptureComponent2D.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -82,6 +84,28 @@ AValdorsoPalcoRegistro::AValdorsoPalcoRegistro()
 
 	// (28/10) Sopra il manichino, il MetaHuman del colono (lo vede solo la telecamera del palco).
 	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
+
+	// (09/11) L'altare alle spalle, sotto il frammento (a destra di chi guarda): un blocco di pietra e una lastra un poco
+	// più larga sopra, come l'altare del tempio. La pietra la mette PreparaScena (M_Pietra del menu).
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cubo(TEXT("/Engine/BasicShapes/Cube.Cube"));
+	Altare = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Altare"));
+	AltareLastra = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AltareLastra"));
+	for (UStaticMeshComponent* Pezzo : { Altare.Get(), AltareLastra.Get() })
+	{
+		Pezzo->SetupAttachment(Radice);
+		if (Cubo.Succeeded())
+		{
+			Pezzo->SetStaticMesh(Cubo.Object);
+		}
+		Pezzo->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Pezzo->SetVisibleInSceneCaptureOnly(true);
+		Pezzo->SetCastShadow(true);
+	}
+	// il cubo di serie è 100 cm con l'origine al centro
+	Altare->SetRelativeLocation(FVector(-420.f, -95.f, 52.f));
+	Altare->SetRelativeScale3D(FVector(1.1f, 0.75f, 1.04f));
+	AltareLastra->SetRelativeLocation(FVector(-420.f, -95.f, 110.f));
+	AltareLastra->SetRelativeScale3D(FVector(1.3f, 0.92f, 0.12f));
 
 	Obiettivo = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("Obiettivo"));
 	Obiettivo->SetupAttachment(Radice);
@@ -185,6 +209,12 @@ void AValdorsoPalcoRegistro::PreparaScena()
 	UMaterialInterface* Pietra = PalcoMateriale(TEXT("/Game/Menu/M_Pietra.M_Pietra"));
 	UMaterialInterface* Fuoco = PalcoMateriale(TEXT("/Game/Menu/M_Fuoco2.M_Fuoco2"));
 	const FTransform Qui = GetActorTransform();
+	// (09/11) l'altare di pietra, come i bracieri
+	if (Pietra)
+	{
+		Altare->SetMaterial(0, Pietra);
+		AltareLastra->SetMaterial(0, Pietra);
+	}
 
 	FActorSpawnParameters Parametri;
 	Parametri.Owner = this;

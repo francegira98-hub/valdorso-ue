@@ -58,6 +58,11 @@ struct FValdorsoZaino
 	/** Vero quando il colono ha già ricevuto quello che porta dall'arrivo. */
 	UPROPERTY()
 	bool bPartenzaData = false;
+
+	/** (08/11) Le cose aggiunte alla partenza dopo che il colono era già arrivato (ValdorsoZaino::Aggiorna): 0 = nessuna,
+	 *  1 = la mappa della valle. */
+	UPROPERTY()
+	int32 Aggiornamenti = 0;
 };
 
 namespace ValdorsoZaino
@@ -108,6 +113,13 @@ namespace ValdorsoZaino
 	/** Quello che il colono ha all'arrivo, dal suo Registro (nullptr = un colono qualunque): si aggiunge a quello che
 	 *  c'è, e bPartenzaData diventa vero. La barra prende il pane (tasto 1) e la borraccia (tasto 2). */
 	VALDORSO_API void DaiPartenza(FValdorsoZaino& Zaino, const FValdorsoRegistro* Registro);
+
+	/** Quante volte è cambiata la partenza dopo la v0.1.4 (vedi FValdorsoZaino::Aggiornamenti). */
+	inline constexpr int32 UltimoAggiornamento = 1;
+
+	/** (08/11) A chi era già arrivato dà le cose aggiunte poi alla partenza (la mappa della valle). Vero se ha dato
+	 *  qualcosa. DaiPartenza segna già tutto come dato. */
+	VALDORSO_API bool Aggiorna(FValdorsoZaino& Zaino);
 
 	/** Riempie le borracce (falso se erano già piene, o non ce n'è). */
 	VALDORSO_API bool RiempiBorracce(FValdorsoZaino& Zaino);

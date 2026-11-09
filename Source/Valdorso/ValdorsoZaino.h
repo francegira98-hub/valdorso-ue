@@ -25,10 +25,12 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "ValdorsoZainoDati.h"
+#include "ValdorsoTessera.h"
 #include "ValdorsoZaino.generated.h"
 
 class APlayerController;
 class SValdorsoZaino;
+class SValdorsoTessera;
 struct FValdorsoRegistro;
 
 UCLASS(ClassGroup = (Valdorso))
@@ -66,6 +68,17 @@ public:
 	void ImpostaMonete(int32 Monete);
 	void Svuota();
 
+	/** (09/11) La tessera del personaggio, come si vede (la mette il PlayerController quando il personaggio entra). */
+	void ImpostaTessera(const FValdorsoTesseraVista& Vista);
+
+	/** (09/11) Mostra la tessera a chi si ha davanti (un altro colono entro 3,5 m): a lui si apre. */
+	UFUNCTION(Server, Reliable)
+	void ServerMostraTessera();
+
+	/** (09/11) Apre una tessera su questo PC: la propria, o quella che un altro colono (Colono) ti mostra. */
+	UFUNCTION(Client, Reliable)
+	void ClientTessera(const FValdorsoTesseraVista& Vista, APawn* Colono, bool bPropria);
+
 	// --- Dal PC del giocatore (il server controlla) ------------------------------------------------------
 
 	UFUNCTION(Server, Reliable)
@@ -88,6 +101,9 @@ public:
 	/** La schermata aperta (solo sul PC del giocatore). */
 	TSharedPtr<SValdorsoZaino> Schermata;
 
+	/** (09/11) La tessera aperta (solo sul PC del giocatore, ValdorsoTesseraSchermo). */
+	TSharedPtr<SValdorsoTessera> SchermataTessera;
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -105,6 +121,8 @@ private:
 	void ApplicaPeso();
 	/** Server: la borraccia si riempie nell'acqua. */
 	void ControllaAcqua();
+	/** Server: senza personaggio (l'accesso libero dell'editor) una tessera di prova, con il nome di chi gioca. */
+	void TesseraDiProva();
 	/** Server: un avviso breve in alto sullo schermo del giocatore. */
 	void Avvisa(const FText& Testo, float Secondi = 2.5f);
 
@@ -113,6 +131,10 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Zaino)
 	FValdorsoZaino Zaino;
+
+	/** Server: la tessera di chi gioca (vuota finché il personaggio non entra: allora una di prova). */
+	FValdorsoTesseraVista Tessera;
+	double ProssimaTesseraMostrata = 0.0;
 
 	/** Server: vero dopo Carica (c'è un personaggio con il suo file). */
 	bool bPersonaggio = false;

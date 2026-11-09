@@ -23,6 +23,7 @@
 #include "ValdorsoPNG.h"
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoZaino.h"
+#include "SValdorsoTessera.h"
 #include "ValdorsoBarre.h"
 #include "ValdorsoChat.h"
 #include "ValdorsoPericoli.h"
@@ -216,7 +217,7 @@ void AValdorsoPlayerController::ApriPausa()
 {
 	// Solo nella valle, con il corpo, e quando non c'è già un'altra schermata (registro, scelta, anticamera, codici).
 	if (Pausa.IsValid() || !GetPawn() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoFoto::Aperta(this))
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoFoto::Aperta(this))
 	{
 		return;
 	}
@@ -363,7 +364,7 @@ void AValdorsoPlayerController::AggiornaSuggerimento()
 
 	// Niente suggerimento mentre c'è una schermata aperta o il colono sta uscendo.
 	const bool bSchermata = Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || SchermataMappa.IsValid() || SullaPancaInMovimento(GetPawn())
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || SchermataMappa.IsValid() || SullaPancaInMovimento(GetPawn())
 		|| ValdorsoFoto::Aperta(this);
 	AActor* Trovata = (!bSchermata && GetPawn()) ? ValdorsoInterazione::PiuVicina(GetPawn()) : nullptr;
 	CosaVicina = Trovata;
@@ -487,6 +488,7 @@ void AValdorsoPlayerController::ClientMostraBacheca_Implementation(const FString
 	ValdorsoFoto::Chiudi(this);
 	ValdorsoTaccuino::Chiudi(this);
 	ValdorsoZainoSchermo::Chiudi(this);
+	ValdorsoTesseraSchermo::Chiudi(this);
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid())
 	{
@@ -533,7 +535,7 @@ void AValdorsoPlayerController::ChiudiBacheca()
 void AValdorsoPlayerController::TastoFoto()
 {
 	if (!GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
-		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || SchermataMappa.IsValid() || SchermataImpostazioni.IsValid())
+		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || SchermataMappa.IsValid() || SchermataImpostazioni.IsValid())
 	{
 		return;
 	}
@@ -554,7 +556,7 @@ void AValdorsoPlayerController::TastoQuaderno()
 	{
 		return;
 	}
-	if (SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this))
+	if (SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this))
 	{
 		return;  // una bacheca (o il quaderno) è già aperta: si chiude con Esc, E o R dal suo tasto Chiudi
 	}
@@ -568,7 +570,7 @@ void AValdorsoPlayerController::TastoTaccuino()
 {
 	if (!GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
-		|| SchermataImpostazioni.IsValid() || ValdorsoFoto::Aperta(this) || ValdorsoZainoSchermo::Aperto(this))
+		|| SchermataImpostazioni.IsValid() || ValdorsoFoto::Aperta(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this))
 	{
 		return;
 	}
@@ -581,7 +583,7 @@ void AValdorsoPlayerController::TastoZaino()
 	const UValdorsoPericoliComponent* Pericoli = UValdorsoPericoliComponent::Di(GetPawn());
 	if (!GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
-		|| SchermataImpostazioni.IsValid() || ValdorsoFoto::Aperta(this) || ValdorsoTaccuino::Aperto(this)
+		|| SchermataImpostazioni.IsValid() || ValdorsoFoto::Aperta(this) || ValdorsoTaccuino::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this)
 		|| (Chat && Chat->RigaAperta()) || (Pericoli && Pericoli->Caduto()))
 	{
 		return;
@@ -595,7 +597,7 @@ bool AValdorsoPlayerController::SchermataAperta() const
 {
 	return Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
-		|| SchermataImpostazioni.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoFoto::Aperta(this)
+		|| SchermataImpostazioni.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoFoto::Aperta(this)
 		|| (Chat && Chat->RigaAperta());
 }
 
@@ -633,6 +635,7 @@ void AValdorsoPlayerController::ClientMostraDialogo_Implementation(AActor* Chi, 
 	ValdorsoFoto::Chiudi(this);
 	ValdorsoTaccuino::Chiudi(this);
 	ValdorsoZainoSchermo::Chiudi(this);
+	ValdorsoTesseraSchermo::Chiudi(this);
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataMappa.IsValid())
@@ -714,13 +717,20 @@ void AValdorsoPlayerController::TastoMappa()
 	// La mappa si apre solo in gioco, con il colono nella valle e nessun'altra schermata aperta.
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || !GetPawn() || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid()
-		|| Anticamera.IsValid() || SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoFoto::Aperta(this))
+		|| Anticamera.IsValid() || SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoFoto::Aperta(this))
 	{
 		return;
 	}
 	if (SchermataMappa.IsValid())
 	{
 		ChiudiMappa();
+		return;
+	}
+	// (08/11) la mappa si apre solo a chi ce l'ha nello zaino (ce l'hanno tutti dall'arrivo; chi la getta, la perde)
+	if (const UValdorsoZainoComponent* Il = UValdorsoZainoComponent::Di(this);
+		Il && Il->Contenuto().bPartenzaData && ValdorsoZaino::Conta(Il->Contenuto(), TEXT("Mappa_Valle")) == 0)
+	{
+		ClientAvviso_Implementation(NSLOCTEXT("ValdorsoMappa", "SenzaMappa", "Non hai una mappa della valle."), 2.5f, 0.f);
 		return;
 	}
 	TWeakObjectPtr<AValdorsoPlayerController> Debole(this);
@@ -760,7 +770,7 @@ void AValdorsoPlayerController::ChiudiMappa()
 
 void AValdorsoPlayerController::TastoInteragisci()
 {
-	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || !GetPawn())
+	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || !GetPawn())
 	{
 		return;
 	}
@@ -1439,6 +1449,9 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 	{
 		Zaino->Carica(Dati->Zaino, &Dati->Registro);
 		Dati->Zaino = Zaino->Dati();
+		// (09/11) la tessera del colono: rilasciata al primo ingresso, poi sempre quella (ValdorsoTessera.h)
+		ValdorsoTessera::Sistema(Dati->Tessera, Dati->Id);
+		Zaino->ImpostaTessera(ValdorsoTessera::Vista(Dati->Nome, &Dati->Registro, Dati->Tessera));
 	}
 	UltimoSalvataggio = FPlatformTime::Seconds();
 	Dati->UltimoGioco = FDateTime::UtcNow().ToUnixTimestamp();
@@ -1778,6 +1791,7 @@ void AValdorsoPlayerController::MostraSceltaPersonaggio()
 	ValdorsoFoto::Chiudi(this);
 	ValdorsoTaccuino::Chiudi(this);
 	ValdorsoZainoSchermo::Chiudi(this);
+	ValdorsoTesseraSchermo::Chiudi(this);
 	if (SceltaPersonaggio.IsValid())
 	{
 		return;
@@ -1880,6 +1894,7 @@ void AValdorsoPlayerController::MostraRegistro(const FString& IdRegistro, const 
 	ValdorsoFoto::Chiudi(this);
 	ValdorsoTaccuino::Chiudi(this);
 	ValdorsoZainoSchermo::Chiudi(this);
+	ValdorsoTesseraSchermo::Chiudi(this);
 	// (28/10, passo 4.4) Un registro ancora da firmare parte con il volto "dei dadi" del personaggio (lo stesso che
 	// avrebbe nella valle): il giocatore lo vede sul palco e lo cambia nella pagina del volto.
 	FValdorsoRegistro Risposte = RisposteServer;

@@ -12,6 +12,7 @@
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistro.h"
 #include "ValdorsoTaccuino.h"
+#include "SValdorsoTessera.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/GameViewportClient.h"
@@ -207,6 +208,15 @@ void UValdorsoZainoComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		}
 		Schermata.Reset();
 	}
+	if (SchermataTessera.IsValid())
+	{
+		UWorld* Mondo = GetWorld();
+		if (UGameViewportClient* Viewport = Mondo ? Mondo->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(SchermataTessera.ToSharedRef());
+		}
+		SchermataTessera.Reset();
+	}
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -226,6 +236,14 @@ void UValdorsoZainoComponent::Carica(const FValdorsoZaino& Salvato, const FValdo
 		// la prima volta nella valle: quello che il colono ha portato con sé (dal suo Registro)
 		ValdorsoZaino::DaiPartenza(Zaino, Registro);
 		Cambiato();
+	}
+	else if (Zaino.Aggiornamenti < ValdorsoZaino::UltimoAggiornamento)
+	{
+		// (08/11) chi era già arrivato riceve le cose aggiunte poi (la mappa della valle)
+		if (ValdorsoZaino::Aggiorna(Zaino))
+		{
+			Cambiato();
+		}
 	}
 	++NumeroCambiamenti;
 }
@@ -280,6 +298,83 @@ void UValdorsoZainoComponent::Svuota()
 		Zaino.bPartenzaData = bData || !bPersonaggio;
 		Cambiato();
 	}
+}
+
+void UValdorsoZainoComponent::ImpostaTessera(const FValdorsoTesseraVista& Vista)
+{
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		Tessera = Vista;
+	}
+}
+
+void UValdorsoZainoComponent::ServerMostraTessera_Implementation()
+{
+	APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	APawn* Io = Controllore ? Controllore->GetPawn() : nullptr;
+	UWorld* Mondo = GetWorld();
+	if (!Io || !Mondo || TroppeRichieste())
+	{
+		return;
+	}
+	const double Adesso = Mondo->GetTimeSeconds();
+	if (Adesso < ProssimaTesseraMostrata)
+	{
+		return;
+	}
+	ProssimaTesseraMostrata = Adesso + 2.0;
+	if (ValdorsoZaino::Conta(Zaino, TEXT("Tessera")) == 0)
+	{
+		Avvisa(LOCTEXT("SenzaTessera", "Non hai la tessera con te."), 3.f);
+		return;
+	}
+	// chi si ha davanti: il colono più vicino entro 3,5 m, non alle spalle
+	APlayerController* Scelto = nullptr;
+	float Migliore = 350.f;
+	for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* Altro = It->Get();
+		APawn* Corpo = Altro ? Altro->GetPawn() : nullptr;
+		if (!Corpo || Altro == Controllore || !UValdorsoZainoComponent::Di(Altro))
+		{
+			continue;
+		}
+		const FVector Verso = Corpo->GetActorLocation() - Io->GetActorLocation();
+		const float Distanza = Verso.Size();
+		if (Distanza < Migliore && FVector::DotProduct(Io->GetActorForwardVector().GetSafeNormal2D(), Verso.GetSafeNormal2D()) > -0.2f)
+		{
+			Migliore = Distanza;
+			Scelto = Altro;
+		}
+	}
+	UValdorsoZainoComponent* SuoZaino = UValdorsoZainoComponent::Di(Scelto);
+	if (!SuoZaino)
+	{
+		Avvisa(LOCTEXT("Nessuno", "Non c'è nessuno qui davanti a cui mostrarla."), 3.f);
+		return;
+	}
+	TesseraDiProva();
+	SuoZaino->ClientTessera(Tessera, Io, false);
+	const APlayerState* Stato = Scelto->PlayerState;
+	Avvisa(FText::Format(LOCTEXT("Mostrata", "Mostri la tessera a {0}."), FText::FromString(Stato ? Stato->GetPlayerName() : FString(TEXT("chi hai davanti")))), 3.f);
+}
+
+void UValdorsoZainoComponent::TesseraDiProva()
+{
+	// chi entra con l'accesso libero dell'editor non ha un file: una tessera di prova
+	if (!Tessera.Tessera.Numero.IsEmpty())
+	{
+		return;
+	}
+	const APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	const APlayerState* Stato = Controllore ? Controllore->PlayerState.Get() : nullptr;
+	const FString Nome = Stato ? Stato->GetPlayerName() : FString(TEXT("Colono"));
+	Tessera = ValdorsoTessera::Vista(Nome, nullptr, ValdorsoTessera::Nuova(Nome));
+}
+
+void UValdorsoZainoComponent::ClientTessera_Implementation(const FValdorsoTesseraVista& Vista, APawn* Colono, bool bPropria)
+{
+	ValdorsoTesseraSchermo::Apri(Cast<APlayerController>(GetOwner()), Vista, Colono, bPropria);
 }
 
 void UValdorsoZainoComponent::Cambiato()
@@ -457,6 +552,13 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 	case EValdorsoUso::Leggi:
 		Avvisa(FText::FromString(Tipo->Lettura), 7.f);
 		return;
+	case EValdorsoUso::Documento:
+	{
+		// (09/11) la tessera: si apre come un foglio vero sul PC di chi gioca (con la sua faccia)
+		TesseraDiProva();
+		ClientTessera(Tessera, Corpo, true);
+		return;
+	}
 	case EValdorsoUso::Accendi:
 	{
 		// (08/11) il falò: servono i rami secchi; dove e se si può lo decide AValdorsoFalo::Accendi

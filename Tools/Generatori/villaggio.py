@@ -28,6 +28,7 @@ import villaggio_belvedere
 import villaggio_fasi
 import villaggio_grotta
 import villaggio_milizia
+import villaggio_vita
 import villaggio_rovine
 import villaggio_texture
 from villaggio_mesh import Mesh, normalizza
@@ -992,6 +993,7 @@ def guardia(pr, rng):
                 suolo=True, **dv)
     pr.disegni.append((S, "linea", [P(-6.0, dv["traverso_da"] / 100.0), P(-6.0, dv["traverso_a"] / 100.0)], "Sigillo"))
     print("sigillo: largo %.0f m, alto %.0f m" % (dv["larghezza"] / 100, dv["altezza"] / 100))
+    pietra_del_sigillo(pr, S, P, d)
     # la torre, dalla parte della valle, a sinistra della strada
     X, Y = P(5, -10)
     pr.edificio(S, "Torre_del_passo", lambda nome, W, D, **kw: ed.torre(nome, lato=W, altezza=1400, fondazione=kw["fondazione"]),
@@ -1036,6 +1038,80 @@ def guardia(pr, rng):
     pr.al_suolo(S, "Lanterne del passo", lan, gx, gy, gq, collisione=True)
     for k, (lx, ly, lz) in enumerate(luci):
         pr.aggiungi(S, "Luce lanterna del passo %d" % k, "luce", gx + lx, gy + ly, gq + lz, intensita=4.0, raggio=1000.0)
+
+
+def pietra_del_sigillo(pr, S, P, d):
+    """(09/11, canone delle Cronache, Capitolo V: "Correzione su Ur e il sigillo") Ai piedi del velo la pietra ritta su cui
+    la guardia appoggia la tessera di bronzo: bianca, liscia, antica, con lo schema delle pietre di guardia degli Antichi
+    (Ur in alto, sotto le cinque rune degli elementi). Il velo di luce e' della Corona, la pietra su cui si regge e' degli
+    Antichi: e' la prima delle sette pietre della gola. Di giorno le rune sono solo incise; di notte azzurro tenue, a
+    tempo con il Cuore (due colpi e una pausa)."""
+    t = pr.t
+    X, Y = P(-5.0, -4.2)
+    q = t.quota(X, Y)
+    gradi = math.degrees(math.atan2(d[1], d[0]))      # la faccia (+X) guarda la valle, da dove arriva chi passa
+    bianco = (0.86, 0.85, 0.80)
+    m = Mesh("SM_Guardia_PietraSigillo")
+    sotto, alto, cima = -45.0, 150.0, 172.0
+    b0 = [(-19, -36), (19, -36), (19, 36), (-19, 36)]          # x (verso la valle) e y: in basso
+    b1 = [(-16, -30), (16, -30), (16, 30), (-16, 30)]          # in alto
+    b2 = [(-9, -18), (9, -18), (9, 18), (-9, 18)]              # la cima smussata
+    giro0 = [np.array([x, y, sotto]) for x, y in b0]
+    giro1 = [np.array([x, y, alto]) for x, y in b1]
+    giro2 = [np.array([x, y, cima]) for x, y in b2]
+
+    def faccia(a, b, c, e):
+        n = np.cross(b - a, e - a)
+        n = n / (np.linalg.norm(n) + 1e-9)
+        centro = (a + b + c + e) / 4
+        if np.dot(n, centro - np.array([0, 0, 60])) < 0:
+            n = -n
+        villaggio_vita.colorato(m, bianco, lambda tmp: tmp.quad("Canna", a, b, c, e, normale=n))
+
+    for i in range(4):
+        j = (i + 1) % 4
+        faccia(giro0[i], giro0[j], giro1[j], giro1[i])
+        faccia(giro1[i], giro1[j], giro2[j], giro2[i])
+    faccia(giro2[0], giro2[1], giro2[2], giro2[3])
+    pr.metti_mesh(S, "Pietra del sigillo", m, X, Y, q, gradi, collisione=True)
+    # le rune (lo schema delle pietre di guardia degli Antichi, dalla Lore): Ur in alto, una riga, poi in colonna le
+    # cinque rune degli elementi nell'ordine della porta della grotta: Aeth, Nir, Dorn, Sil, Lume.
+    # Di giorno sono solo incise, del colore della pietra in ombra (il colore dei vertici, per il materiale delle rune
+    # azzurro, fa quasi grigio: 0,30 x 1 / 0,72 x 0,43 / 1 x 0,29); di notte si accendono di un azzurro freddo che
+    # batte con il Cuore (AValdorsoRuneNotte, la luce del materiale: non dipende dal colore dei vertici).
+    rune = Mesh("SM_Guardia_PietraSigillo_Rune")
+    ombra = (1.0, 0.43, 0.29)
+    # la faccia verso la valle e' un poco inclinata (da x 19 in basso a 16 in alto)
+    normale = np.array([alto - sotto, 0.0, 3.0])
+    normale = normale / np.linalg.norm(normale)
+
+    def faccia_x(z):
+        return 19.0 - 3.0 * (z - sotto) / (alto - sotto)
+
+    def incidi(parola, z, misura, largo):
+        villaggio_vita.colorato(rune, ombra, lambda tmp: villaggio_rovine._incidi(
+            tmp, [faccia_x(z) + 0.2, 0, z], normale, [0, 0, 1], misura, parola, largo=largo))
+
+    incidi("Ur", 135.0, 9.0, 2.0)
+    villaggio_vita.colorato(rune, ombra, lambda tmp: villaggio_rovine._tratto(
+        tmp, np.array([faccia_x(120.0) + 0.2, -15.0, 120.0]), np.array([faccia_x(120.0) + 0.2, 15.0, 120.0]), normale, 0.9))
+    for k, parola in enumerate(("Aeth", "Nir", "Dorn", "Sil", "Lume")):
+        incidi(parola, 104.0 - k * 19.0, 7.0, 1.4)
+    pr.metti_mesh(S, "Rune della pietra del sigillo", rune, X, Y, q, gradi, collisione=False)
+    pr.cose[-1]["rune"] = True
+    # si legge con E, da chi le sta davanti
+    lx, ly = P(-4.2, -4.2)
+    pr.aggiungi(S, "Iscrizione della pietra del sigillo", "iscrizione", lx, ly, t.quota(lx, ly), gradi + 180.0,
+                titolo="La pietra del sigillo",
+                avvisi=["Ai piedi del velo c'è una pietra ritta, bianca e liscia. È più vecchia del posto di guardia, e della Corona.",
+                        "Le guardie ci appoggiano sopra la tessera di bronzo, quando aprono il velo a chi passa.",
+                        "In alto, un segno solo, tre linee sotto un arco:",
+                        "rune: Ur",
+                        "Sotto una riga, in colonna, le cinque rune degli elementi: la fiamma, l'onda, il monte, la piuma, il sole.",
+                        "rune: Aeth Nir Dorn Sil Lume",
+                        "Chi sa leggere le rune capisce una cosa che le guardie non dicono: il sigillo della Corona non è della Corona.",
+                        "È costruito sopra qualcosa di molto più vecchio."])
+    print("pietra del sigillo: Ur e le cinque rune degli elementi")
 
 
 # --------------------------------------------------------------------------------------------------- prova degli assi
@@ -1154,6 +1230,9 @@ def main(cartella_valle, uscita):
     villaggio_grotta.grotta(pr, rng)
     villaggio_grotta.frana(pr, rng)
     villaggio_belvedere.belvedere(pr, rng)
+    # (09/11) la vita nelle strade: le cose intorno alle case, le insegne, i carri, le lanterne (villaggio_vita.py);
+    # con il suo seme, cosi' il resto del villaggio resta identico
+    villaggio_vita.vita(pr, np.random.default_rng(909))
     senza_erba(pr, os.path.join(uscita, "T_SenzaErba.png"))
     dati = {"nota": "Fatto da Tools/Generatori/villaggio.py: cm dall'angolo nord-ovest del paesaggio, Z = quota vera in cm.",
             "cose": pr.cose, "mesh": sorted(pr.mesh_scritte), "avvisi": pr.avvisi}

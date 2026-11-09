@@ -17,6 +17,13 @@ COMANDO_VILLAGGIO = (
     "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'SOLO_VILLAGGIO': %s})"
 )
 
+# (09/11) crea_bosco.py con la densita' (1 = tutti gli alberi)
+COMANDO_BOSCO = (
+    "import os, unreal; "
+    "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_bosco.py'); "
+    "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'DENSITA_BOSCO': %s})"
+)
+
 # (07/11) un altro script di Content/Python/nuovi, lanciato così com'è
 COMANDO_SCRIPT = (
     "import os, unreal; "
@@ -60,7 +67,11 @@ def crea_menu_valdorso():
     # (06/11, sera) rifare solo alcune sezioni del villaggio (più veloce: il resto non si tocca e non si reimporta)
     for nome, etichetta, sezioni in (("VillaggioTutto", "Villaggio: rifai tutto", []),
                                      ("VillaggioRovineGrotte", "Villaggio: rifai solo rovine, grotte e belvedere",
-                                      ["Rovine", "Grotta", "Grotta nord", "Belvedere"])):
+                                      ["Rovine", "Grotta", "Grotta nord", "Belvedere"]),
+                                     # (09/11) le cose intorno alle case, le insegne, i carri, le lanterne delle strade
+                                     ("VillaggioVita", "Villaggio: rifai solo la vita nelle strade", ["Vita"]),
+                                     # (09/11) il posto di guardia del passo (con la pietra del sigillo e la runa Ur)
+                                     ("VillaggioGuardia", "Villaggio: rifai solo il posto di guardia del passo", ["Guardia"])):
         voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
         voce.set_label(etichetta)
         voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_VILLAGGIO % repr(sezioni))
@@ -77,6 +88,14 @@ def crea_menu_valdorso():
     voce.set_label("PNG: metti Gaspare, le guardie del passo, Nonna Edda, Bruno e Padre Anselmo")
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "metti_png.py")
     valdorso.add_menu_entry("Villaggio", voce)
+
+    # (09/11) il bosco: tutti gli alberi della valle (crea_bosco.py); la seconda voce ne mette sei su dieci
+    for nome, etichetta, densita in (("Bosco", "Bosco: pianta gli alberi", 1.0),
+                                     ("BoscoRado", "Bosco: pianta gli alberi (6 su 10, se gli fps calano)", 0.6)):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_BOSCO % densita)
+        valdorso.add_menu_entry("Villaggio", voce)
 
     # (07/11 sera) i piedi in piazza, il materiale delle rocce, Nanite sui trasparenti
     voce = unreal.ToolMenuEntry(name="SistemaValle", type=unreal.MultiBlockType.MENU_ENTRY)

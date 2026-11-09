@@ -96,6 +96,7 @@ namespace
 		case EValdorsoUso::Bevi: return TEXT("Clic destro: bevi un sorso") + Tra;
 		case EValdorsoUso::Cura: return TEXT("Clic destro: ti medichi") + Tra;
 		case EValdorsoUso::Leggi: return TEXT("Clic destro: lo leggi");
+		case EValdorsoUso::Documento: return TEXT("Clic destro: la apri (e la puoi mostrare a chi hai davanti)");
 		case EValdorsoUso::Accendi: return FString::Printf(TEXT("Clic destro: accendi un falò davanti a te (servono %d fasci di rami secchi)"),
 			ValdorsoOggetti::RamiPerFalo);
 		default: return FString();

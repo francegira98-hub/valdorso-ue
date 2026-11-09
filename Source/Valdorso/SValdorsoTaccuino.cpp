@@ -3,6 +3,11 @@
 #include "SValdorsoTaccuino.h"
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoTaccuinoDati.h"
+#include "ValdorsoBagnato.h"
+#include "ValdorsoCielo.h"
+#include "ValdorsoClima.h"
+#include "EngineUtils.h"
+#include "Engine/World.h"
 #include "SValdorsoAccesso.h"
 #include "SValdorsoBacheca.h"
 #include "ValdorsoModoFoto.h"
@@ -42,6 +47,8 @@ namespace
 	/** Le misure della bussola: la fascia scura con le lettere, sotto i segni dei luoghi e il nome. */
 	constexpr float BussolaAltezzaFascia = 30.f;
 	constexpr float BussolaAltezza = 64.f;
+	/** (09/11) Ai lati della striscia: a sinistra l'ora, a destra la temperatura. */
+	constexpr float BussolaLato = 185.f;
 	/** Entro quanti gradi dal centro un luogo mostra il nome. */
 	constexpr float BussolaGradiNome = 9.f;
 	/** Più vicino di così (cm) il segno del luogo sparisce: ci si è dentro. */
@@ -135,10 +142,11 @@ EActiveTimerReturnType SValdorsoBussola::Anima(double Tempo, float Delta)
 
 FVector2D SValdorsoBussola::ComputeDesiredSize(float) const
 {
-	return FVector2D(Larghezza, BussolaAltezza);
+	// (09/11) più larga: ai lati l'ora (a sinistra) e la temperatura (a destra)
+	return FVector2D(Larghezza + 2.f * BussolaLato, BussolaAltezza);
 }
 
-int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& GeometriaIntera, const FSlateRect& MyCullingRect,
 	FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	const APlayerController* Chi = Controllore.Get();
@@ -146,6 +154,9 @@ int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 	{
 		return LayerId;
 	}
+	// la striscia sta nel mezzo; tutto quello che segue (fino alle due etichette dei lati) è disegnato lì dentro
+	const FGeometry AllottedGeometry = GeometriaIntera.MakeChild(FVector2f(Larghezza, BussolaAltezza), FSlateLayoutTransform(FVector2f(BussolaLato, 0.f)));
+	DisegnaLati(GeometriaIntera, OutDrawElements, LayerId, Presenza * InWidgetStyle.GetColorAndOpacityTint().A);
 	const float Alfa = Presenza * InWidgetStyle.GetColorAndOpacityTint().A;
 	const float Guardata = BussolaRottaGuardata(Chi);
 	const float Mezzo = Larghezza * 0.5f;
@@ -274,6 +285,94 @@ int32 SValdorsoBussola::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 		}
 	}
 	return LayerId + 4;
+}
+
+void SValdorsoBussola::DisegnaLati(const FGeometry& Geometria, FSlateWindowElementList& Elementi, int32 Strato, float Alfa) const
+{
+	const APlayerController* Chi = Controllore.Get();
+	UWorld* Mondo = Chi ? Chi->GetWorld() : nullptr;
+	if (!Mondo || Alfa <= 0.01f)
+	{
+		return;
+	}
+	if (!bCieloCercato)
+	{
+		bCieloCercato = true;
+		for (TActorIterator<AValdorsoCielo> It(Mondo); It; ++It)
+		{
+			Cielo = *It;
+			break;
+		}
+	}
+	const FSlateFontInfo Font = Caratteri->Testo(15.f, TEXT("Italic"));
+	const float Centro = BussolaAltezzaFascia * 0.5f;
+
+	// a sinistra: l'ora canonica del tempio e l'ora ("Vespro · 18:40"), appoggiate alla striscia
+	if (const AValdorsoCielo* IlCielo = Cielo.Get())
+	{
+		const float Ora = IlCielo->Ora();
+		const FString Testo = FString::Printf(TEXT("%s  ·  %s"), *ValdorsoClima::OraCanonica(Ora).ToString(), *ValdorsoClima::OraEMinuti(Ora));
+		const FVector2f Misura = BussolaMisura(Testo, Font);
+		if (!Misura.IsNearlyZero())
+		{
+			const FVector2f Velo(Misura.X + 22.f, BussolaAltezzaFascia - 6.f);
+			const FVector2f Angolo(FMath::Max(0.f, BussolaLato - 8.f - Velo.X), Centro - Velo.Y * 0.5f);
+			FSlateDrawElement::MakeBox(Elementi, Strato, Geometria.ToPaintGeometry(Velo, FSlateLayoutTransform(Angolo)),
+				&Fascia, ESlateDrawEffect::None, FLinearColor(1.f, 1.f, 1.f, Alfa));
+			BussolaScrivi(Elementi, Strato + 1, Geometria, Testo, Font, Angolo + Velo * 0.5f, ValdorsoTema::Pergamena().CopyWithNewOpacity(Alfa));
+		}
+	}
+
+	// a destra: il termometro, i gradi che sente il colono e, se non è mite, come si sente ("12°  ·  Freddo")
+	const UValdorsoBagnatoComponent* Clima = UValdorsoBagnatoComponent::Di(Chi->GetPawn());
+	if (!Clima)
+	{
+		return;
+	}
+	const float Gradi = Clima->Temperatura();
+	const EValdorsoSensazione Come = ValdorsoClima::Sensazione(Gradi);
+	FLinearColor Tinta = ValdorsoTema::Pergamena();
+	switch (Come)
+	{
+	case EValdorsoSensazione::Gelo: Tinta = ValdorsoTema::Hex(TEXT("9CC8F0")); break;
+	case EValdorsoSensazione::Freddo: Tinta = ValdorsoTema::Hex(TEXT("BBD6EE")); break;
+	case EValdorsoSensazione::Caldo: Tinta = ValdorsoTema::Brace(); break;
+	case EValdorsoSensazione::Afa: Tinta = ValdorsoTema::Hex(TEXT("E0603A")); break;
+	default: break;
+	}
+	FString Testo = FString::Printf(TEXT("%d°"), FMath::RoundToInt(Gradi));
+	if (Come != EValdorsoSensazione::Mite && Come != EValdorsoSensazione::Fresco)
+	{
+		Testo += TEXT("  ·  ") + ValdorsoClima::Nome(Come).ToString();
+	}
+	const FVector2f Misura = BussolaMisura(Testo, Font);
+	if (Misura.IsNearlyZero())
+	{
+		return;
+	}
+	const float Icona = 14.f;
+	const FVector2f Velo(Misura.X + Icona + 30.f, BussolaAltezzaFascia - 6.f);
+	const FVector2f Angolo(BussolaLato + Larghezza + 8.f, Centro - Velo.Y * 0.5f);
+	FSlateDrawElement::MakeBox(Elementi, Strato, Geometria.ToPaintGeometry(Velo, FSlateLayoutTransform(Angolo)),
+		&Fascia, ESlateDrawEffect::None, FLinearColor(1.f, 1.f, 1.f, Alfa));
+	// il termometro: il bulbo in basso, il tubo, e dentro il "mercurio" che sale con i gradi (da -10 a 35)
+	const FVector2f Bulbo = Angolo + FVector2f(13.f, Velo.Y * 0.5f + 5.f);
+	const float Mercurio = FMath::Clamp((Gradi + 10.f) / 45.f, 0.08f, 1.f);
+	const FLinearColor Filo = ValdorsoTema::OroChiaro().CopyWithNewOpacity(0.9f * Alfa);
+	TArray<FVector2f> Cerchio;
+	for (int32 k = 0; k <= 12; ++k)
+	{
+		const float R = FMath::DegreesToRadians(-60.f + 300.f * k / 12.f);
+		Cerchio.Add(Bulbo + FVector2f(3.5f * FMath::Sin(R), -3.5f * FMath::Cos(R)));
+	}
+	FSlateDrawElement::MakeLines(Elementi, Strato + 1, Geometria.ToPaintGeometry(), Cerchio, ESlateDrawEffect::None, Filo, true, 1.2f);
+	FSlateDrawElement::MakeLines(Elementi, Strato + 1, Geometria.ToPaintGeometry(),
+		TArray<FVector2f>{ Bulbo + FVector2f(-1.8f, -3.f), Bulbo + FVector2f(-1.8f, -14.f), Bulbo + FVector2f(1.8f, -14.f), Bulbo + FVector2f(1.8f, -3.f) },
+		ESlateDrawEffect::None, Filo, true, 1.2f);
+	FSlateDrawElement::MakeLines(Elementi, Strato + 2, Geometria.ToPaintGeometry(),
+		TArray<FVector2f>{ Bulbo, Bulbo + FVector2f(0.f, -3.f - 10.f * Mercurio) }, ESlateDrawEffect::None, Tinta.CopyWithNewOpacity(Alfa), true, 2.f);
+	BussolaScrivi(Elementi, Strato + 1, Geometria, Testo, Font, Angolo + FVector2f(Icona + 12.f + Misura.X * 0.5f, Velo.Y * 0.5f),
+		Tinta.CopyWithNewOpacity(Alfa));
 }
 
 // ------------------------------------------------------------------------------------------------- il taccuino

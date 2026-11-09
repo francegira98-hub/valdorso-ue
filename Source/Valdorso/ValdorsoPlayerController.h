@@ -201,6 +201,10 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientAvviso(const FText& Testo, float Secondi, float SecondiFermo);
 
+	/** (08/11) Vero se c'è una schermata aperta (anche la modalità foto, il taccuino, lo zaino, la tessera o la riga
+	 *  della chat). (09/11) Pubblica: la usa anche la tessera (ValdorsoTesseraSchermo::Apri). */
+	bool SchermataAperta() const;
+
 	/** (07/11) Il dialogo con un PNG: il server manda la battuta di adesso (bChiudi = via la pergamena). */
 	UFUNCTION(Client, Reliable)
 	void ClientMostraDialogo(AActor* Chi, const FValdorsoBattuta& Battuta);
@@ -330,8 +334,6 @@ private:
 	/** (08/11) I tasti 1-8 della barra delle azioni (Indice da 0 a 7) e Invio per la chat: solo in gioco, senza schermate aperte. */
 	void TastoAzione(int32 Indice);
 	void TastoChat();
-	/** (08/11) Vero se c'è una schermata aperta (anche la modalità foto, il taccuino o la riga della chat). */
-	bool SchermataAperta() const;
 	void ChiudiMappa();
 	TSharedPtr<SValdorsoMappa> SchermataMappa;
 	TSharedPtr<SValdorsoBacheca> SchermataBacheca;

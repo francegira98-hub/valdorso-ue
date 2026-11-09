@@ -4,6 +4,9 @@
 #include "Valdorso.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoFalo.h"
+#include "ValdorsoCielo.h"
+#include "ValdorsoClima.h"
+#include "ValdorsoStatoMondo.h"
 #include "ValdorsoMovementComponent.h"
 #include "ValdorsoPericoli.h"
 #include "ValdorsoTempo.h"
@@ -11,6 +14,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
@@ -59,6 +63,33 @@ namespace
 		}));
 }
 
+namespace
+{
+	FAutoConsoleCommandWithWorld ComandoClima(
+		TEXT("Valdorso.Clima"),
+		TEXT("Scrive l'aria, la temperatura che sente ogni colono e come si sente (sul server, o da soli: l'aria la sa solo il server)."),
+		FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* Mondo)
+		{
+			if (!Mondo)
+			{
+				return;
+			}
+			for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It; ++It)
+			{
+				const APlayerController* Controllore = It->Get();
+				const APawn* Colono = Controllore ? Controllore->GetPawn() : nullptr;
+				const UValdorsoBagnatoComponent* Clima = UValdorsoBagnatoComponent::Di(Colono);
+				if (!Clima)
+				{
+					continue;
+				}
+				UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Clima: %s, aria %.1f°, sente %.1f° (%s), bagnato %.2f"),
+					*Colono->GetName(), Clima->TemperaturaAria(), Clima->Temperatura(),
+					*ValdorsoClima::Nome(ValdorsoClima::Sensazione(Clima->Temperatura())).ToString(), Clima->Bagnato());
+			}
+		}));
+}
+
 namespace ValdorsoBagnato
 {
 	float Passo(float Bagnato, float Delta, bool bInAcqua, float Pioggia, bool bTetto, bool bMantello, bool bFuoco)
@@ -103,6 +134,7 @@ void UValdorsoBagnatoComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UValdorsoBagnatoComponent, Livello);
+	DOREPLIFETIME(UValdorsoBagnatoComponent, Percepita);
 }
 
 void UValdorsoBagnatoComponent::Imposta(float Nuovo)
@@ -174,20 +206,60 @@ void UValdorsoBagnatoComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		Livello = LivelloEsatto;
 	}
 
-	// da bagnati la stamina torna a metà: si toglie metà di quello che è tornato nell'ultimo mezzo secondo
+	// (09/11) la temperatura: l'aria (stagione, ora, quota, tempo) e quella che sente lui (ValdorsoClima.h)
+	if (!bCieloCercato)
+	{
+		bCieloCercato = true;
+		for (TActorIterator<AValdorsoCielo> It(Mondo); It; ++It)
+		{
+			Cielo = *It;
+			break;
+		}
+	}
+	const float Ora = Cielo.IsValid() ? Cielo->Ora() : 12.f;
+	const FString Stagione = ValdorsoStatoMondo::StagioneDi(FDateTime::Now());
+	const FValdorsoAria Aria = Tempo ? Tempo->AriaAdesso() : FValdorsoAria();
+	GradiAria = ValdorsoClima::Aria(Ora, Stagione, static_cast<float>(Corpo->GetActorLocation().Z), Aria.Nuvole, Aria.Pioggia, Aria.Nebbia);
+	const float Sentita = ValdorsoClima::Percepita(GradiAria, LivelloEsatto, bInAcqua, ValdorsoClima::Acqua(Stagione), HaMantello(), bTetto, bFuoco);
+	// in rete solo a mezzi gradi (e solo quando cambia davvero)
+	const float Arrotondata = FMath::RoundToFloat(Sentita * 2.f) / 2.f;
+	if (!FMath::IsNearlyEqual(Arrotondata, Percepita))
+	{
+		Percepita = Arrotondata;
+	}
+
 	UAbilitySystemComponent* Abilita = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Corpo);
 	if (!Abilita || !Abilita->HasAttributeSetForAttribute(UValdorsoAttributeSet::GetStaminaAttribute()))
 	{
 		return;
 	}
 	const UValdorsoPericoliComponent* Pericoli = UValdorsoPericoliComponent::Di(Corpo);
+	const bool bCaduto = Pericoli && Pericoli->Caduto();
+
+	// il ritorno della stamina: bagnati a metà, e il caldo o il freddo lo frenano ancora (al massimo tre quarti);
+	// si toglie la parte frenata di quello che è tornato dall'ultimo controllo
+	const float FrenoBagnato = (!bFuoco && ValdorsoBagnato::Infreddolito(Livello)) ? ValdorsoBagnato::FrenoStamina : 0.f;
+	const float Freno = ValdorsoClima::FrenoTotale(FrenoBagnato, ValdorsoClima::FrenoTemperatura(Sentita));
 	float Stamina = Abilita->GetNumericAttributeBase(UValdorsoAttributeSet::GetStaminaAttribute());
 	const float Tornata = Stamina - StaminaPrima;
-	if (StaminaPrima >= 0.f && !bFuoco && ValdorsoBagnato::Infreddolito(Livello) && Tornata > 0.f && Tornata <= BagnatoRitornoAlSecondo * Trascorso + 0.5f
-		&& !(Pericoli && Pericoli->Caduto()))
+	if (StaminaPrima >= 0.f && Freno > 0.f && Tornata > 0.f && Tornata <= BagnatoRitornoAlSecondo * Trascorso + 0.5f && !bCaduto)
 	{
-		Stamina = StaminaPrima + Tornata * (1.f - ValdorsoBagnato::FrenoStamina);
+		Stamina = StaminaPrima + Tornata * (1.f - Freno);
 		Abilita->SetNumericAttributeBase(UValdorsoAttributeSet::GetStaminaAttribute(), Stamina);
 	}
 	StaminaPrima = Stamina;
+
+	// il gelo indebolisce: la salute scende piano, ma mai sotto un quarto (il freddo da solo non uccide)
+	if (!bCaduto && ValdorsoClima::Sensazione(Sentita) == EValdorsoSensazione::Gelo
+		&& Abilita->HasAttributeSetForAttribute(UValdorsoAttributeSet::GetSaluteAttribute()))
+	{
+		const float Massima = Abilita->GetNumericAttribute(UValdorsoAttributeSet::GetSaluteMaxAttribute());
+		const float Salute = Abilita->GetNumericAttributeBase(UValdorsoAttributeSet::GetSaluteAttribute());
+		const float Pavimento = Massima * ValdorsoClima::SaluteMinimaGelo;
+		if (Salute > Pavimento)
+		{
+			Abilita->SetNumericAttributeBase(UValdorsoAttributeSet::GetSaluteAttribute(),
+				FMath::Max(Pavimento, Salute - ValdorsoClima::SaluteGeloAlSecondo * Trascorso));
+		}
+	}
 }

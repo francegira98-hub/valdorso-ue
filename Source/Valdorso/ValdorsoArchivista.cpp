@@ -16,6 +16,59 @@
 
 namespace
 {
+	/** (09/11) Chi è, in una riga, per la scelta del personaggio: "Contadina, 27 anni · Nereia · presso: Mulino". */
+	FString ArchivistaDescrizione(const FValdorsoPersonaggio& Dati)
+	{
+		const FValdorsoRegistro& Registro = Dati.Registro;
+		if (Registro.Sesso.IsEmpty() && Registro.Mestiere.IsEmpty())
+		{
+			return FString();
+		}
+		TArray<FString> Pezzi;
+		const FString Mestiere = ValdorsoRegistro::Testo(ValdorsoRegistro::EDomanda::Mestiere, Registro.Mestiere, Registro.Sesso);
+		FString Chi = Mestiere;
+		if (Registro.Eta > 0)
+		{
+			Chi = Chi.IsEmpty() ? FString::Printf(TEXT("%d anni"), Registro.Eta) : FString::Printf(TEXT("%s, %d anni"), *Chi, Registro.Eta);
+		}
+		if (!Chi.IsEmpty())
+		{
+			Pezzi.Add(Chi);
+		}
+		// la fede, corta: "Nereia, l'Acqua: il mare e i viaggi" diventa "Nereia"
+		FString Fede = ValdorsoRegistro::Testo(ValdorsoRegistro::EDomanda::Fede, Registro.Fede, Registro.Sesso);
+		int32 Virgola = INDEX_NONE;
+		if (Fede.FindChar(TEXT(','), Virgola))
+		{
+			Fede = Fede.Left(Virgola);
+		}
+		if (Registro.Fede == TEXT("vecchidei"))
+		{
+			Fede = TEXT("i Vecchi Dei");
+		}
+		if (!Fede.IsEmpty())
+		{
+			Pezzi.Add(Fede);
+		}
+		// dove è rimasto: il luogo più piccolo che lo contiene
+		if (Dati.bHaPosizione)
+		{
+			const FValdorsoLuogo* Migliore = nullptr;
+			for (const FValdorsoLuogo* Luogo : ValdorsoLuoghi::Intorno(Dati.Posizione))
+			{
+				if (Luogo && (!Migliore || Luogo->Raggio < Migliore->Raggio))
+				{
+					Migliore = Luogo;
+				}
+			}
+			Pezzi.Add(Migliore ? FString::Printf(TEXT("presso: %s"), *Migliore->Nome) : FString(TEXT("in cammino nella valle")));
+		}
+		return FString::Join(Pezzi, TEXT("  ·  "));
+	}
+}
+
+namespace
+{
 	// Regole e file dell'archivio: ora in ValdorsoRegole.h (così i test automatici li controllano).
 	using ValdorsoRegole::TentativiPrimaDelBlocco;
 	using ValdorsoRegole::LunghezzaCodice;
@@ -1762,6 +1815,7 @@ TArray<FValdorsoPersonaggioBreve> UValdorsoArchivista::ElencoPersonaggi(const FS
 			Breve.Fede = Dati->Registro.Fede;
 			Breve.RichiestaStaff = Dati->Registro.bStoriaDaCorreggere ? Dati->Registro.RichiestaStaff : FString();
 			Breve.Aspetto = Dati->Registro.Aspetto;
+			Breve.Descrizione = ArchivistaDescrizione(*Dati);
 			Elenco.Add(Breve);
 		}
 	}

@@ -26,6 +26,7 @@ class USceneCaptureComponent2D;
 class UPointLightComponent;
 class UTextureRenderTarget2D;
 class UValdorsoAspettoComponent;
+class UStaticMeshComponent;
 
 UCLASS(NotPlaceable)
 class VALDORSO_API AValdorsoPalcoRegistro : public AActor
@@ -81,6 +82,14 @@ public:
 	/** Debole e fredda, perché le ombre non siano nere del tutto. */
 	UPROPERTY(VisibleAnywhere, Category = "Valdorso|Palco")
 	TObjectPtr<UPointLightComponent> LuceRiempimento;
+
+	/** (09/11, chiesto da Fra) L'altare di pietra alle spalle del colono, sotto il frammento del Cuore: il blocco e la
+	 *  lastra sopra. Li vede solo la telecamera del palco. */
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso|Palco")
+	TObjectPtr<UStaticMeshComponent> Altare;
+
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso|Palco")
+	TObjectPtr<UStaticMeshComponent> AltareLastra;
 
 private:
 	void PreparaScena();

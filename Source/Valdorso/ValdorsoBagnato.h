@@ -10,7 +10,9 @@
 // - (08/11) Accanto a un falò (ValdorsoFalo.h) ci si asciuga in mezzo minuto, e il freddo non si sente.
 // - Da bagnati (da 0,3 in su) la stamina torna a metà velocità: il freddo si sente. Quando si è di nuovo asciutti torna
 //   come prima. Accanto alle barre, una goccia dice quanto si è bagnati (SValdorsoBarre).
-// - Più avanti: il freddo della notte in quota, i vestiti bagnati che pesano.
+// - (09/11) Il caldo e il freddo (ValdorsoClima.h): lo stesso componente calcola anche la temperatura che sente il
+//   colono (arriva a tutti, a mezzi gradi) e ne applica gli effetti (stamina più lenta, il gelo che indebolisce).
+// - Più avanti: i vestiti bagnati che pesano, i vestiti caldi e leggeri (con l'equipaggiamento).
 // Comando di console (sul server, o giocando da soli): Valdorso.Bagnato <0..1> [nome].
 
 #pragma once
@@ -60,6 +62,10 @@ public:
 	/** Per le prove (console) e per chi lo decide sul server: quanto è bagnato. */
 	void Imposta(float Nuovo);
 
+	/** (09/11) La temperatura che sente il colono (gradi, a mezzi gradi) e quella dell'aria dove sta. */
+	float Temperatura() const { return Percepita; }
+	float TemperaturaAria() const { return GradiAria; }
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -83,4 +89,12 @@ private:
 	double ProssimoTetto = 0.0;
 	/** La stamina di prima (per frenarne il ritorno). */
 	float StaminaPrima = -1.f;
+
+	/** (09/11) La temperatura che sente (arriva a tutti, a mezzi gradi) e, solo sul server, quella dell'aria. */
+	UPROPERTY(Replicated)
+	float Percepita = 15.f;
+	float GradiAria = 15.f;
+	/** Il cielo del livello (per l'ora), cercato una volta. */
+	TWeakObjectPtr<class AValdorsoCielo> Cielo;
+	bool bCieloCercato = false;
 };

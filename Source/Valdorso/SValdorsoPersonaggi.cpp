@@ -291,6 +291,15 @@ TSharedRef<SWidget> SValdorsoSceltaPersonaggio::RigaPersonaggio(const FValdorsoP
 			[
 				SNew(STextBlock).Text(FText::FromString(Nome)).Font(FontNome).ColorAndOpacity(ValdorsoTema::Oro()).AutoWrapText(true)
 			]
+			// (09/11) chi è, in una riga: "Contadina, 27 anni · Nereia · presso: Mulino"
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 2.f, 0.f, 0.f))
+			[
+				SNew(STextBlock).Text(FText::FromString(Personaggio.Descrizione))
+				.Visibility(Personaggio.Descrizione.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
+				.Font(Stile->Caratteri->Testo(18.f))
+				.ColorAndOpacity(ValdorsoTema::Pergamena())
+				.AutoWrapText(true)
+			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 2.f, 0.f, 0.f))
 			[
 				SNew(STextBlock).Text(FText::FromString(Quando))

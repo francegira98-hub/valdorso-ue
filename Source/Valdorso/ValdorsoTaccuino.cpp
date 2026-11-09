@@ -94,6 +94,76 @@ namespace
 		TEXT("Valdorso.Taccuino.Dimentica"),
 		TEXT("Per le prove: svuota il taccuino di ogni giocatore (luoghi e iscrizioni; sul server, o da soli)."),
 		FConsoleCommandWithWorldDelegate::CreateStatic(&TaccuinoDimentica));
+
+	/** (08/11) Il luogo con quel nome: uguale senza maiuscole, altrimenti il primo che lo contiene ("bosch" = Boschetto). */
+	const FValdorsoLuogo* TaccuinoLuogoDaNome(const FString& Nome)
+	{
+		const FString Cercato = Nome.TrimStartAndEnd();
+		if (Cercato.IsEmpty())
+		{
+			return nullptr;
+		}
+		for (const FValdorsoLuogo& Luogo : ValdorsoLuoghi::Tutti())
+		{
+			if (Luogo.Nome.Equals(Cercato, ESearchCase::IgnoreCase))
+			{
+				return &Luogo;
+			}
+		}
+		for (const FValdorsoLuogo& Luogo : ValdorsoLuoghi::Tutti())
+		{
+			if (Luogo.Nome.Contains(Cercato, ESearchCase::IgnoreCase))
+			{
+				return &Luogo;
+			}
+		}
+		return nullptr;
+	}
+
+	/** (08/11) Per le prove: porta i coloni in un luogo della valle (sul terreno, se la linea verso il basso lo trova). */
+	void TaccuinoVai(const TArray<FString>& Argomenti, UWorld* Mondo)
+	{
+		const FValdorsoLuogo* Luogo = TaccuinoLuogoDaNome(FString::Join(Argomenti, TEXT(" ")));
+		if (!Luogo || !Mondo)
+		{
+			TArray<FString> Nomi;
+			for (const FValdorsoLuogo& Uno : ValdorsoLuoghi::Tutti())
+			{
+				Nomi.Add(Uno.Nome);
+			}
+			UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Vai: scrivi un luogo, per esempio Valdorso.Vai Boschetto. I luoghi: %s"), *FString::Join(Nomi, TEXT(", ")));
+			return;
+		}
+		int32 Portati = 0;
+		for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It; ++It)
+		{
+			APlayerController* Controllore = It->Get();
+			APawn* Colono = Controllore ? Controllore->GetPawn() : nullptr;
+			if (!Colono || !Controllore->HasAuthority())
+			{
+				continue;
+			}
+			// la quota dei dati è quella vera del terreno; se la zona è già caricata, la linea trova il punto esatto
+			FVector Dove = Luogo->Posizione + FVector(0.f, 0.f, 250.f);
+			FHitResult Colpo;
+			FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoVai), false, Colono);
+			if (Mondo->LineTraceSingleByChannel(Colpo, Luogo->Posizione + FVector(0.f, 0.f, 20000.f), Luogo->Posizione - FVector(0.f, 0.f, 20000.f),
+				ECC_Visibility, Parametri))
+			{
+				Dove = Colpo.ImpactPoint + FVector(0.f, 0.f, 150.f);
+			}
+			if (Colono->TeleportTo(Dove, Colono->GetActorRotation(), false, true))
+			{
+				++Portati;
+			}
+		}
+		UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Vai: %d coloni a %s"), Portati, *Luogo->Nome);
+	}
+
+	FAutoConsoleCommandWithWorldAndArgs ComandoTaccuinoVai(
+		TEXT("Valdorso.Vai"),
+		TEXT("Per le prove: porta il colono in un luogo della valle, Valdorso.Vai <luogo> (anche solo l'inizio: bosch, palude, passo; sul server, o da soli)."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&TaccuinoVai));
 }
 
 // ------------------------------------------------------------------------------------------------- il componente
