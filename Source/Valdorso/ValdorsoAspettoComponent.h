@@ -101,6 +101,9 @@ public:
 	/** Il volto MetaHuman (nullptr se non c'è). */
 	USkeletalMeshComponent* GetVolto() const { return Volto.Get(); }
 
+	/** (09/11) Il corpo MetaHuman che si vede (nullptr se c'e' solo il manichino): le armi si tengono nelle sue mani. */
+	USkeletalMeshComponent* GetCorpoVisibile() const { return CorpoVisibile.Get(); }
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
@@ -196,6 +199,7 @@ private:
 	TSoftClassPtr<AActor> TestaAttuale;
 
 	TWeakObjectPtr<USkeletalMeshComponent> Volto;
+	TWeakObjectPtr<USkeletalMeshComponent> CorpoVisibile;
 
 	bool bIniziato = false;
 

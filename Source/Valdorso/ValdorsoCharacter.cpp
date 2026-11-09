@@ -18,6 +18,8 @@
 #include "ValdorsoPericoli.h"
 #include "ValdorsoBagnato.h"
 #include "AbilitySystemComponent.h"
+#include "ValdorsoArmi.h"
+#include "ValdorsoCombattimento.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
@@ -72,6 +74,11 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 
 	// Le statistiche (salute, stamina, mana), che il contenitore trova da solo.
 	Attributi = CreateDefaultSubobject<UValdorsoAttributeSet>(TEXT("Attributi"));
+
+	// (09/11) le reazioni ai colpi (ValdorsoCombattimento.h)
+	Reazioni = CreateDefaultSubobject<UValdorsoReazioniComponent>(TEXT("Reazioni"));
+	// (09/11, v0.1.4) Le armi in mano (le decide lo zaino, sul server).
+	Armi = CreateDefaultSubobject<UValdorsoArmiComponent>(TEXT("Armi"));
 
 	// Motion Warping, per scavalcare e salire sopra gli ostacoli.
 	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));

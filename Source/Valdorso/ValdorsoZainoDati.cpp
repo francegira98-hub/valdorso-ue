@@ -33,6 +33,45 @@ namespace ValdorsoZaino
 			}
 			GiaInBarra.Add(Azione);
 		}
+		SistemaMani(Zaino);
+	}
+
+	bool SistemaMani(FValdorsoZaino& Zaino)
+	{
+		bool bCambiato = false;
+		auto Controlla = [&Zaino, &bCambiato](FName& Mano, EValdorsoPosto Voluto)
+		{
+			if (Mano.IsNone())
+			{
+				return;
+			}
+			const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Mano);
+			if (!Tipo || Tipo->Posto != Voluto || Conta(Zaino, Mano) <= 0)
+			{
+				Mano = NAME_None;
+				bCambiato = true;
+			}
+		};
+		Controlla(Zaino.Destra, EValdorsoPosto::ManoDestra);
+		Controlla(Zaino.Sinistra, EValdorsoPosto::ManoSinistra);
+		return bCambiato;
+	}
+
+	bool Impugna(FValdorsoZaino& Zaino, FName Id)
+	{
+		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
+		if (!Tipo || Tipo->Posto == EValdorsoPosto::Nessuno || Conta(Zaino, Id) <= 0)
+		{
+			return false;
+		}
+		FName& Mano = Tipo->Posto == EValdorsoPosto::ManoSinistra ? Zaino.Sinistra : Zaino.Destra;
+		if (Mano == Id)
+		{
+			Mano = NAME_None;
+			return false;
+		}
+		Mano = Id;
+		return true;
 	}
 
 	int32 Aggiungi(FValdorsoZaino& Zaino, FName Id, int32 Quantita, int32 Cariche)

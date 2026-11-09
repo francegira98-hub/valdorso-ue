@@ -8,4 +8,6 @@ namespace ValdorsoEtichette
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Stato_Pugno, "Valdorso.Stato.Pugno", "Il personaggio sta tirando un pugno");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Evento_Colpo, "Valdorso.Evento.Colpo", "Il colpo di un attacco arriva (notifica del montaggio)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dato_Danno, "Valdorso.Dato.Danno", "Quanto danno porta un colpo");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dato_Equilibrio, "Valdorso.Dato.Equilibrio", "Quanto equilibrio toglie un colpo");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dato_Stamina, "Valdorso.Dato.Stamina", "Quanta stamina in piu' costa un colpo con l'arma");
 }

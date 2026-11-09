@@ -71,6 +71,10 @@ public:
 	/** (07/11) La schermata d'avvio (SValdorsoAvvio) si vede una volta sola per avvio del gioco. */
 	bool bAvvioMostrato = false;
 
+	/** (09/11, v0.1.4 passo 4.2) "Esplora da solo": la valle si apre sul PC, senza server, con il personaggio salvato qui
+	 *  (Saved/Solo/Archivio). Lo mette il menu prima di aprire la valle; lo legge il PlayerController (Accogli). */
+	bool bModoSolo = false;
+
 	/** (08/11) Il menu nella valle vera (ValdorsoMenuValle): se in questo avvio si è provato ad aprirla e se si è aperta
 	 *  davvero. Provata e mai aperta = qualcosa non va: fino alla chiusura del gioco resta la scena di sempre (Lvl_Menu). */
 	bool bMenuValleTentato = false;

@@ -140,6 +140,67 @@ namespace
 		C.Add(OggDaLeggere(OggRicordo(TEXT("Ricordo_Libro"), TEXT("Un libro di preghiere"),
 			TEXT("Le pagine sanno di cera. Il primo tomo della luce."), 0.6f),
 			TEXT("«Due colpi e una pausa: così batte il Cuore, così batte chi lo ascolta.»")));
+		// --- (09/11, v0.1.4) Le armi provvisorie, le prede dei lupi, il fondo del lago ----------------------------
+		{
+			FValdorsoTipoOggetto Spada = OggSemplice(TEXT("Spada_Corta"), TEXT("Spada corta"),
+				TEXT("Una lama dritta da un braccio, la guardia di ferro e il manico di cuoio. Da impugnare nella destra."), 1.4f);
+			C.Add(Spada);
+		}
+		C.Add(OggSemplice(TEXT("Scudo_Legno"), TEXT("Scudo di legno"),
+			TEXT("Assi di faggio inchiodate, il bordo e l'umbone di ferro. Si porta nella sinistra: ferma i colpi che arrivano davanti."), 3.5f));
+		C.Add(OggSemplice(TEXT("Pelle_Lupo"), TEXT("Pelle di lupo"),
+			TEXT("Grigia, folta, ancora da conciare. Alla conceria ne fanno un mantello che tiene caldo."), 2.0f, 5));
+		C.Add(OggSemplice(TEXT("Zanne_Lupo"), TEXT("Zanne di lupo"),
+			TEXT("Due zanne lunghe come un dito. Gaspare dice che portano fortuna a chi le ha prese da sé."), 0.05f, 20));
+		{
+			FValdorsoTipoOggetto Mantello = OggSemplice(TEXT("Mantello_Lupo"), TEXT("Mantello di pelle di lupo"),
+				TEXT("Pesante e caldissimo. Finché lo porti con te senti il freddo molto meno, e la pioggia ti bagna la metà."), 2.5f);
+			Mantello.Calore = 6.f;
+			C.Add(Mantello);
+		}
+		C.Add(OggCibo(TEXT("Cozze"), TEXT("Cozze di lago"),
+			TEXT("Raccolte sul fondo del lago, nere e chiuse. Si mangiano anche crude, se hai coraggio."), 0.2f, 10, 8.f, 10.f));
+		C.Add(OggSemplice(TEXT("Perla"), TEXT("Perla di lago"),
+			TEXT("Piccola, grigia, quasi tonda. In una cozza su cento. Al mercato vale qualche Aureus."), 0.01f, 20));
+
+		// le armi: chi si impugna e come colpisce (il pugno: 10 di danno, 30 di equilibrio, 10 di stamina, 90 cm)
+		struct FArmaDati
+		{
+			const TCHAR* Id;
+			EValdorsoPosto Posto;
+			float Danno;
+			float Equilibrio;
+			float Stamina;
+			float Portata;
+			uint8 Tipo;
+			float Parata;
+		};
+		static const FArmaDati Armi[] = {
+			{ TEXT("Coltello"), EValdorsoPosto::ManoDestra, 12.f, 15.f, 2.f, 100.f, 1, 0.f },
+			{ TEXT("Pugnale"), EValdorsoPosto::ManoDestra, 15.f, 18.f, 3.f, 110.f, 1, 0.f },
+			{ TEXT("Falcetto"), EValdorsoPosto::ManoDestra, 14.f, 20.f, 4.f, 115.f, 1, 0.f },
+			{ TEXT("Martello"), EValdorsoPosto::ManoDestra, 16.f, 40.f, 6.f, 105.f, 2, 0.f },
+			{ TEXT("Bastone_Pastore"), EValdorsoPosto::ManoDestra, 11.f, 45.f, 5.f, 170.f, 2, 0.f },
+			{ TEXT("Spada_Corta"), EValdorsoPosto::ManoDestra, 22.f, 25.f, 7.f, 150.f, 1, 0.f },
+			{ TEXT("Scudo_Legno"), EValdorsoPosto::ManoSinistra, 6.f, 50.f, 6.f, 90.f, 4, 0.6f },
+		};
+		for (const FArmaDati& A : Armi)
+		{
+			for (FValdorsoTipoOggetto& Tipo : C)
+			{
+				if (Tipo.Id == FName(A.Id))
+				{
+					Tipo.Uso = EValdorsoUso::Impugna;
+					Tipo.Posto = A.Posto;
+					Tipo.DannoArma = A.Danno;
+					Tipo.EquilibrioArma = A.Equilibrio;
+					Tipo.StaminaArma = A.Stamina;
+					Tipo.PortataArma = A.Portata;
+					Tipo.TipoColpo = A.Tipo;
+					Tipo.Parata = A.Parata;
+				}
+			}
+		}
 		return C;
 	}
 
@@ -402,6 +463,49 @@ namespace
 			L.Add(OggLinea({ { -0.2f, 0.12f }, { -0.05f, 0.22f } }));
 			L.Add(OggLinea({ { 0.f, 0.25f }, { 0.18f, 0.45f } }));
 			L.Add(OggLinea({ { 0.f, 0.45f }, { 0.18f, 0.25f } }));
+		}
+		else if (N == TEXT("Spada_Corta"))
+		{
+			L.Add(OggLinea({ { -0.75f, -0.75f }, { 0.55f, 0.55f }, { 0.8f, 0.85f }, { 0.65f, 0.5f }, { -0.6f, -0.8f } }));
+			L.Add(OggLinea({ { -0.65f, -0.35f }, { -0.35f, -0.65f } }));
+			L.Add(OggCerchio(-0.82f, -0.82f, 0.08f, 8));
+		}
+		else if (N == TEXT("Scudo_Legno"))
+		{
+			L.Add(OggCerchio(0.f, 0.f, 0.8f, 24));
+			L.Add(OggCerchio(0.f, 0.f, 0.22f, 12));
+			L.Add(OggLinea({ { -0.45f, -0.66f }, { -0.45f, 0.66f } }));
+			L.Add(OggLinea({ { 0.45f, -0.66f }, { 0.45f, 0.66f } }));
+		}
+		else if (N == TEXT("Pelle_Lupo"))
+		{
+			L.Add(OggLinea({ { -0.2f, 0.8f }, { 0.2f, 0.8f }, { 0.35f, 0.5f }, { 0.8f, 0.45f }, { 0.5f, 0.1f }, { 0.55f, -0.5f },
+				{ 0.85f, -0.75f }, { 0.25f, -0.6f }, { 0.f, -0.85f }, { -0.25f, -0.6f }, { -0.85f, -0.75f }, { -0.55f, -0.5f },
+				{ -0.5f, 0.1f }, { -0.8f, 0.45f }, { -0.35f, 0.5f }, { -0.2f, 0.8f } }));
+		}
+		else if (N == TEXT("Zanne_Lupo"))
+		{
+			L.Add(OggArco(-0.5f, 0.6f, 0.25f, 1.3f, 270.f, 330.f, 8));
+			L.Add(OggArco(0.5f, 0.6f, 0.25f, 1.3f, 210.f, 270.f, 8));
+			L.Add(OggLinea({ { -0.6f, 0.6f }, { 0.6f, 0.6f } }));
+		}
+		else if (N == TEXT("Mantello_Lupo"))
+		{
+			L.Add(OggLinea({ { -0.3f, 0.75f }, { 0.3f, 0.75f }, { 0.75f, -0.8f }, { -0.75f, -0.8f }, { -0.3f, 0.75f } }));
+			L.Add(OggLinea({ { -0.55f, -0.8f }, { -0.45f, -0.6f }, { -0.3f, -0.8f }, { -0.15f, -0.6f }, { 0.f, -0.8f }, { 0.15f, -0.6f },
+				{ 0.3f, -0.8f }, { 0.45f, -0.6f }, { 0.55f, -0.8f } }));
+			L.Add(OggCerchio(0.f, 0.62f, 0.09f, 8));
+		}
+		else if (N == TEXT("Cozze"))
+		{
+			L.Add(OggArco(0.f, 0.f, 0.75f, 0.38f, 0.f, 360.f, 20));
+			L.Add(OggLinea({ { -0.75f, 0.f }, { 0.75f, 0.f } }));
+			L.Add(OggArco(-0.1f, 0.f, 0.45f, 0.22f, 20.f, 160.f, 8));
+		}
+		else if (N == TEXT("Perla"))
+		{
+			L.Add(OggCerchio(0.f, 0.f, 0.45f, 18));
+			L.Add(OggArco(-0.12f, 0.12f, 0.18f, 0.18f, 100.f, 200.f, 6));
 		}
 		else if (N == TEXT("Ricordo_Libro"))
 		{

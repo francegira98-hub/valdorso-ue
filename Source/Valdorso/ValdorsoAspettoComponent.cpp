@@ -413,6 +413,7 @@ void UValdorsoAspettoComponent::TogliCorpo()
 	}
 	TestaAttuale.Reset();
 	Volto.Reset();
+	CorpoVisibile.Reset();
 
 	if (USkeletalMeshComponent* Manichino = GetManichino())
 	{
@@ -519,6 +520,7 @@ void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 		}
 	}
 
+	CorpoVisibile = Corpo;
 	// Il corpo si attacca direttamente al manichino: così Copy Pose From Mesh (Use Attached Parent) copia la sua posa.
 	Corpo->AttachToComponent(Manichino, FAttachmentTransformRules::SnapToTargetIncludingScale);
 	Corpo->SetAnimInstanceClass(Animazione);

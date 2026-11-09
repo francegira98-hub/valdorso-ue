@@ -83,6 +83,10 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Pericoli")
 	TObjectPtr<UValdorsoChatComponent> Chat;
 
+	/** (09/11, v0.1.4 passo 4.4) L'aggancio del bersaglio e la barra di chi hai colpito (ValdorsoCombattimento.h). */
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso")
+	TObjectPtr<class UValdorsoAggancioComponent> Aggancio;
+
 	/** (08/11, v0.1.4) Lo zaino, con il peso e le monete (ValdorsoZaino.h): lo tiene il server, arriva solo a questo giocatore. */
 	UPROPERTY(VisibleAnywhere, Category = "Pericoli")
 	TObjectPtr<UValdorsoZainoComponent> Zaino;
@@ -331,6 +335,8 @@ private:
 	void TastoTaccuino();
 	/** (08/11) I: lo zaino. */
 	void TastoZaino();
+	/** (09/11) Tab, il tasto centrale del mouse, la levetta destra premuta: aggancia chi hai davanti, o sgancia. */
+	void TastoAggancio();
 	/** (08/11) I tasti 1-8 della barra delle azioni (Indice da 0 a 7) e Invio per la chat: solo in gioco, senza schermate aperte. */
 	void TastoAzione(int32 Indice);
 	void TastoChat();

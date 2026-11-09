@@ -74,6 +74,8 @@ private:
 	bool TettoSopra() const;
 	/** Server: il mantello è nello zaino? */
 	bool HaMantello() const;
+	/** (09/11) Quanti gradi in piu' danno i vestiti caldi nello zaino (il mantello di pelle di lupo). */
+	float CaloreVestiti() const;
 
 	/** Quanto è bagnato, come arriva a tutti (a mezzi centesimi: si manda in rete solo quando cambia davvero). */
 	UPROPERTY(Replicated)

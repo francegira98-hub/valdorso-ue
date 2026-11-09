@@ -35,6 +35,16 @@ enum class EValdorsoUso : uint8
 	Accendi,
 	/** (09/11) Si apre come un foglio vero (la tessera del colono, ValdorsoTessera.h) e si può mostrare. */
 	Documento,
+	/** (09/11, v0.1.4) Si impugna (un'arma nella mano destra, lo scudo nella sinistra); di nuovo, si rimette via. */
+	Impugna,
+};
+
+/** (09/11, v0.1.4) Dove si porta un oggetto addosso. */
+enum class EValdorsoPosto : uint8
+{
+	Nessuno,
+	ManoDestra,
+	ManoSinistra,
 };
 
 /** Un tipo di oggetto del catalogo. */
@@ -58,6 +68,19 @@ struct FValdorsoTipoOggetto
 	bool bRicordo = false;
 	/** Cosa si legge usandolo (Uso Leggi). */
 	const TCHAR* Lettura = TEXT("");
+
+	/** (09/11, v0.1.4) Le armi: dove si impugnano, il danno, quanto equilibrio toglie, la stamina in piu' a colpo
+	 *  (oltre ai 10 del pugno), la portata (cm) e che colpo e' (EValdorsoTipoColpo: 0 pugno, 1 lama, 2 botta, 4 scudo). */
+	EValdorsoPosto Posto = EValdorsoPosto::Nessuno;
+	float DannoArma = 0.f;
+	float EquilibrioArma = 0.f;
+	float StaminaArma = 0.f;
+	float PortataArma = 0.f;
+	uint8 TipoColpo = 0;
+	/** Per lo scudo: quanto del colpo che arriva da davanti si ferma (0..1). */
+	float Parata = 0.f;
+	/** (09/11) Il mantello di pelle di lupo: quanti gradi in piu' si sentono finche' lo si porta nello zaino. */
+	float Calore = 0.f;
 };
 
 namespace ValdorsoOggetti

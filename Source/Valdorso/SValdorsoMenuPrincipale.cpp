@@ -135,6 +135,7 @@ int32 SValdorsoSfumatura::OnPaint(const FPaintArgs& Args, const FGeometry& Allot
 void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 {
 	OnEntra = InArgs._OnEntra;
+	OnDaSolo = InArgs._OnDaSolo;
 	OnEsci = InArgs._OnEsci;
 	OnImpostazioni = InArgs._OnImpostazioni;
 	Caratteri = MakeShared<FValdorsoCaratteri>();
@@ -231,6 +232,17 @@ void SValdorsoMenuPrincipale::Construct(const FArguments& InArgs)
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f))
 			[
 				PulsanteEntra
+			]
+
+			// (09/11, v0.1.4 passo 4.2) la valle senza server, con il personaggio salvato su questo PC
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f))
+			[
+				SNew(SBox)
+				.Visibility(OnDaSolo.IsBound() ? EVisibility::Visible : EVisibility::Collapsed)
+				[
+					CreaPulsante(LOCTEXT("DaSolo", "Esplora da solo"),
+						FSimpleDelegate::CreateLambda([this]() { OnDaSolo.ExecuteIfBound(); }))
+				]
 			]
 
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 3.f))

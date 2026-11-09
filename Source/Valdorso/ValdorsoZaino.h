@@ -115,6 +115,8 @@ private:
 	void Usa(int32 Posto);
 	/** Server: lo zaino è cambiato (al PC arriva da solo); il file si salva fra poco, una volta sola. */
 	void Cambiato();
+	/** Server: (09/11) il colono ha in mano quello che dice lo zaino (ValdorsoArmi.h). */
+	void ArmiInMano();
 	/** Server: troppe richieste dal PC in un secondo? (chi ne manda di più sta barando) */
 	bool TroppeRichieste();
 	/** Server e PC: il peso sul movimento del colono. */

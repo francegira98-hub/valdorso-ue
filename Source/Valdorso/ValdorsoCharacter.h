@@ -55,6 +55,14 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UMotionWarpingComponent* MotionWarping;
 
+	/** (09/11) Le reazioni ai colpi: suono, arresto, telecamera che trema (ValdorsoCombattimento.h) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UValdorsoReazioniComponent> Reazioni;
+
+	/** (09/11, v0.1.4) Le armi in mano: cosa impugna e i modelli sulle mani (vedi ValdorsoArmi.h). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UValdorsoArmiComponent> Armi;
+
 	/** (28/10) L'aspetto: il corpo MetaHuman sopra il manichino e i cursori del volto (vedi ValdorsoAspettoComponent.h) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoAspettoComponent* Aspetto;

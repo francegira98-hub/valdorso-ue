@@ -9,6 +9,7 @@
 #include "Valdorso.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 #include "ValdorsoGameInstance.h"
+#include "ValdorsoCombattimento.h"
 #include "SValdorsoAccesso.h"
 #include "SValdorsoPersonaggi.h"
 #include "SValdorsoRegistro.h"
@@ -81,6 +82,8 @@ AValdorsoPlayerController::AValdorsoPlayerController()
 	// (08/11, v0.1.4) le barre con la barra delle azioni (ValdorsoBarre.h) e la chat di prossimità (ValdorsoChat.h)
 	Barre = CreateDefaultSubobject<UValdorsoBarreComponent>(TEXT("Barre"));
 	Chat = CreateDefaultSubobject<UValdorsoChatComponent>(TEXT("Chat"));
+	// (09/11, v0.1.4 passo 4.4) l'aggancio del bersaglio (ValdorsoCombattimento.h)
+	Aggancio = CreateDefaultSubobject<UValdorsoAggancioComponent>(TEXT("Aggancio"));
 }
 
 void AValdorsoPlayerController::BeginPlay()
@@ -174,6 +177,10 @@ void AValdorsoPlayerController::SetupInputComponent()
 			InputComponent->KeyBindings.Add(Legame);
 		}
 		InputComponent->BindKey(EKeys::Enter, IE_Pressed, this, &AValdorsoPlayerController::TastoChat);
+		// (09/11, v0.1.4 passo 4.4) l'aggancio del bersaglio
+		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
+		InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
+		InputComponent->BindKey(EKeys::Gamepad_RightThumbstick, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
 	}
 
 	// only add IMCs for local player controllers
@@ -601,6 +608,15 @@ bool AValdorsoPlayerController::SchermataAperta() const
 		|| (Chat && Chat->RigaAperta());
 }
 
+void AValdorsoPlayerController::TastoAggancio()
+{
+	if (!Aggancio || !GetPawn() || SchermataAperta())
+	{
+		return;
+	}
+	Aggancio->Alterna();
+}
+
 void AValdorsoPlayerController::TastoAzione(int32 Indice)
 {
 	// solo in gioco, con il colono in piedi e niente di aperto (per ora i posti sono vuoti: si illuminano e basta)
@@ -998,6 +1014,32 @@ FString AValdorsoPlayerController::Indirizzo() const
 
 void AValdorsoPlayerController::Accogli()
 {
+	// (09/11, v0.1.4 passo 4.2) "Esplora da solo": l'archivio del gioco da solo su questo PC, il suo account locale e
+	// la scelta del personaggio come con il server (Registro, zaino, taccuino: tutto si salva qui, in Saved/Solo).
+	const UValdorsoGameInstance* IstanzaSolo = GetGameInstance<UValdorsoGameInstance>();
+	UValdorsoArchivista* ArchivistaSolo = UValdorsoArchivista::Di(this);
+	if (IsLocalController() && IstanzaSolo && IstanzaSolo->bModoSolo && GetNetMode() == NM_Standalone && ArchivistaSolo)
+	{
+		FString Nome;
+		AccountId = ArchivistaSolo->ApriArchivioSolo(Nome);
+		ArchivistaSolo->SegnaCollegato(AccountId);
+		bAutenticato = true;
+		bSenzaPersonaggio = false;
+		NomeAccount = Nome;
+		Ruolo = EValdorsoRuolo::Giocatore;
+		if (PlayerState)
+		{
+			PlayerState->SetPlayerName(Nome);
+		}
+		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Gioco da solo: account locale %s"), *Nome);
+		// al giro dopo (la schermata ha bisogno del mondo pronto): la scelta del personaggio
+		GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			InviaSceltaPersonaggio();
+		}));
+		return;
+	}
+
 	// Chi gioca sul PC del server (gioco autonomo o server in ascolto) non passa dall'anticamera.
 	if (IsLocalController())
 	{

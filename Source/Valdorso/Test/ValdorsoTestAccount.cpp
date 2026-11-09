@@ -800,4 +800,21 @@ bool FValdorsoTestAspetto::RunTest(const FString& Parameters)
 	return true;
 }
 
+// (09/11, v0.1.4 passo 4.2) Il gioco da solo: l'account locale nasce attivo, da giocatore, con il suo nome e un Id suo
+// (che non si confonde con quelli del server); due account nuovi hanno Id diversi.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestAccountSolo, "Valdorso.Account.Solo", ValdorsoTestAccount::Bandiere)
+bool FValdorsoTestAccountSolo::RunTest(const FString& Parameters)
+{
+	const FValdorsoAccount Uno = UValdorsoArchivista::NuovoAccountSolo(1000);
+	const FValdorsoAccount Due = UValdorsoArchivista::NuovoAccountSolo(1000);
+	TestEqual(TEXT("il nome"), Uno.Nome, FString(UValdorsoArchivista::NomeAccountSolo));
+	TestEqual(TEXT("la chiave in minuscolo"), Uno.NomeChiave, FString(UValdorsoArchivista::NomeAccountSolo).ToLower());
+	TestTrue(TEXT("un Id da gioco da solo"), Uno.Id.StartsWith(TEXT("solo-")));
+	TestNotEqual(TEXT("Id diversi"), Uno.Id, Due.Id);
+	TestTrue(TEXT("attivo"), Uno.Stato == EValdorsoStatoAccount::Attivo);
+	TestTrue(TEXT("da giocatore, non da staff"), Uno.Ruolo == EValdorsoRuolo::Giocatore);
+	TestEqual(TEXT("nato adesso"), Uno.CreatoIl, static_cast<int64>(1000));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

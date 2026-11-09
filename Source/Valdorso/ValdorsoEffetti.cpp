@@ -60,6 +60,37 @@ UValdorsoGE_DannoPugno::UValdorsoGE_DannoPugno()
 	Modifiers.Add(Spinta);
 }
 
+UValdorsoGE_Colpo::UValdorsoGE_Colpo()
+{
+	DurationPolicy = EGameplayEffectDurationType::Instant;
+	FSetByCallerFloat QuantaSalute;
+	QuantaSalute.DataTag = ValdorsoEtichette::Dato_Danno;
+	FGameplayModifierInfo Danno;
+	Danno.Attribute = UValdorsoAttributeSet::GetSaluteAttribute();
+	Danno.ModifierOp = EGameplayModOp::Additive;
+	Danno.ModifierMagnitude = FGameplayEffectModifierMagnitude(QuantaSalute);
+	Modifiers.Add(Danno);
+	FSetByCallerFloat QuantoEquilibrio;
+	QuantoEquilibrio.DataTag = ValdorsoEtichette::Dato_Equilibrio;
+	FGameplayModifierInfo Spinta;
+	Spinta.Attribute = UValdorsoAttributeSet::GetEquilibrioAttribute();
+	Spinta.ModifierOp = EGameplayModOp::Additive;
+	Spinta.ModifierMagnitude = FGameplayEffectModifierMagnitude(QuantoEquilibrio);
+	Modifiers.Add(Spinta);
+}
+
+UValdorsoGE_Fatica::UValdorsoGE_Fatica()
+{
+	DurationPolicy = EGameplayEffectDurationType::Instant;
+	FSetByCallerFloat Quanta;
+	Quanta.DataTag = ValdorsoEtichette::Dato_Stamina;
+	FGameplayModifierInfo Fatica;
+	Fatica.Attribute = UValdorsoAttributeSet::GetStaminaAttribute();
+	Fatica.ModifierOp = EGameplayModOp::Additive;
+	Fatica.ModifierMagnitude = FGameplayEffectModifierMagnitude(Quanta);
+	Modifiers.Add(Fatica);
+}
+
 UValdorsoGE_RecuperoStamina::UValdorsoGE_RecuperoStamina()
 {
 	DurationPolicy = EGameplayEffectDurationType::Infinite;

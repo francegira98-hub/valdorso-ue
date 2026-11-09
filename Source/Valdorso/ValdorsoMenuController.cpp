@@ -413,6 +413,7 @@ void AValdorsoMenuController::CreaMenu()
 	// Il menu, sopra la scena.
 	SAssignNew(Menu, SValdorsoMenuPrincipale)
 		.OnEntra(FSimpleDelegate::CreateWeakLambda(this, [this]() { MostraAccesso(FText::GetEmpty()); }))
+		.OnDaSolo(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::EsploraDaSolo))
 		.OnEsci(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::Esci))
 		.OnImpostazioni(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ApriImpostazioni));
 
@@ -618,8 +619,33 @@ void AValdorsoMenuController::SuRichiestaAccesso(const FValdorsoRichiestaAccesso
 	EntraNellaValle();
 }
 
+void AValdorsoMenuController::EsploraDaSolo()
+{
+	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+	{
+		Istanza->bModoSolo = true;
+	}
+	RichiestaDaMandare.Reset();
+	bVersoIlServer = false;
+	bVoloLungo = VoloLungoSempre();
+	if (Menu.IsValid())
+	{
+		Menu->SetVisibility(EVisibility::Collapsed);
+	}
+	if (Accesso.IsValid())
+	{
+		Accesso->SetVisibility(EVisibility::HitTestInvisible);
+	}
+	EntraNellaValle();
+}
+
 void AValdorsoMenuController::ProvaLocale()
 {
+	// la prova dello sviluppo resta quella di sempre: un colono qualunque, niente salvato
+	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
+	{
+		Istanza->bModoSolo = false;
+	}
 	RichiestaDaMandare.Reset();
 	bVersoIlServer = false;
 	bVoloLungo = VoloLungoSempre();
@@ -653,6 +679,10 @@ void AValdorsoMenuController::Arriva()
 
 	// Ora, sul nero, parte il collegamento. La richiesta passa all'istanza del gioco e qui non resta niente.
 	UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>();
+	if (Istanza)
+	{
+		Istanza->bModoSolo = false;   // con il server si gioca con l'account vero
+	}
 	FString Errore;
 	const bool bPartito = Istanza && RichiestaDaMandare.IsSet() && Istanza->Collegati(RichiestaDaMandare.GetValue(), Errore);
 	RichiestaDaMandare.Reset();

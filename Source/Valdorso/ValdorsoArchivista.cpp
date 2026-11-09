@@ -265,6 +265,57 @@ void UValdorsoArchivista::Deinitialize()
 // File
 // ------------------------------------------------------------------------------------------------
 
+// --- (09/11, v0.1.4 passo 4.2) Gioca da solo ---------------------------------------------------------
+
+const TCHAR* UValdorsoArchivista::NomeAccountSolo = TEXT("Colono");
+
+FValdorsoAccount UValdorsoArchivista::NuovoAccountSolo(int64 Ora)
+{
+	FValdorsoAccount Nuovo;
+	Nuovo.Id = TEXT("solo-") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	Nuovo.Nome = NomeAccountSolo;
+	Nuovo.NomeChiave = Chiave(NomeAccountSolo);
+	// niente password: questo account esiste solo nell'archivio del gioco da solo, che non e' mai in rete
+	Nuovo.Algoritmo = TEXT("nessuna");
+	Nuovo.Ruolo = EValdorsoRuolo::Giocatore;
+	Nuovo.Stato = EValdorsoStatoAccount::Attivo;
+	Nuovo.CreatoIl = Ora;
+	Nuovo.UltimoAccesso = Ora;
+	Nuovo.PasswordCambiataIl = Ora;
+	return Nuovo;
+}
+
+FString UValdorsoArchivista::ApriArchivioSolo(FString& OutNome)
+{
+	if (!bArchivioSolo)
+	{
+		bArchivioSolo = true;
+		Cartella = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("Solo/Archivio"));
+		CartellaAccount = Cartella / TEXT("Account");
+		CartellaPersonaggi = Cartella / TEXT("Personaggi");
+		FileNomiRiservati = Cartella / TEXT("NomiRiservati.json");
+		FileInviti = Cartella / TEXT("Inviti.json");
+		FileRegistro = Cartella / TEXT("Registro_accessi.log");
+		IFileManager::Get().MakeDirectory(*CartellaAccount, true);
+		IFileManager::Get().MakeDirectory(*CartellaPersonaggi, true);
+		Inviti = FValdorsoArchivioInviti();
+		NomiRiservati = FValdorsoNomiRiservati();
+		Collegati.Reset();
+		CaricaTutto();
+		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Archivista: gioco da solo, %d personaggi nella cartella %s"), Personaggi.Num(), *Cartella);
+	}
+	FValdorsoAccount* Solo = TrovaAccount(NomeAccountSolo);
+	if (!Solo)
+	{
+		FValdorsoAccount Nuovo = NuovoAccountSolo(Adesso());
+		Solo = &Account.Add(Nuovo.NomeChiave, MoveTemp(Nuovo));
+		SalvaAccount(*Solo);
+		Annota(TEXT("ACCOUNT_SOLO_CREATO"));
+	}
+	OutNome = Solo->Nome;
+	return Solo->Id;
+}
+
 void UValdorsoArchivista::CaricaTutto()
 {
 	Account.Empty();

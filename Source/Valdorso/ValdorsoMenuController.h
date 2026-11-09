@@ -129,6 +129,8 @@ private:
 	void ChiudiAccesso();
 	void SuRichiestaAccesso(const FValdorsoRichiestaAccesso& Richiesta);
 	void ProvaLocale();
+	/** (09/11, v0.1.4 passo 4.2) "Esplora da solo": come la prova senza server, ma con il personaggio salvato sul PC. */
+	void EsploraDaSolo();
 	void Arriva();
 
 	/** Rientro senza password (v0.1.2): dopo un collegamento interrotto, il menu riparte da solo verso il server. */

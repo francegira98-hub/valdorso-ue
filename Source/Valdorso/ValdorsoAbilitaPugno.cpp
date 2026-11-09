@@ -1,9 +1,13 @@
 // Valdorso - Il pugno (vedi il .h).
 
 #include "ValdorsoAbilitaPugno.h"
+#include "ValdorsoArmi.h"
 #include "ValdorsoCharacter.h"
+#include "ValdorsoCombattimento.h"
+#include "ValdorsoPericoli.h"
 #include "ValdorsoEffetti.h"
 #include "ValdorsoEtichette.h"
+#include "ValdorsoOggetti.h"
 #include "ValdorsoRegistroEventi.h"
 #include "CombatDamageable.h"
 #include "AbilitySystemComponent.h"
@@ -111,11 +115,35 @@ void UValdorsoAbilitaPugno::EseguiColpo()
 		return;
 	}
 
-	// Una sfera che parte dalla mano destra e va avanti per la portata del pugno.
+	// (09/11) con l'arma in mano: il suo danno, la sua portata, il suo equilibrio e il suo suono; e piu' fatica
+	const FValdorsoTipoOggetto* Arma = nullptr;
+	const FValdorsoTipoOggetto* Scudo = nullptr;
+	if (const UValdorsoArmiComponent* Armi = UValdorsoArmiComponent::Di(Personaggio))
+	{
+		Arma = Armi->Arma();
+		Scudo = Armi->Scudo();
+	}
+	// solo lo scudo (niente nella destra): si colpisce con lo scudo
+	const FValdorsoTipoOggetto* ConCosa = Arma ? Arma : Scudo;
+	const float DannoColpo = ConCosa ? ConCosa->DannoArma : Danno;
+	const float PortataColpo = ConCosa ? ConCosa->PortataArma : Portata;
+	const float EquilibrioColpo = ConCosa ? ConCosa->EquilibrioArma : ValdorsoPericoli::EquilibrioPerPugno;
+	const EValdorsoTipoColpo TipoColpo = ConCosa ? static_cast<EValdorsoTipoColpo>(ConCosa->TipoColpo) : EValdorsoTipoColpo::Pugno;
+	if (ConCosa && ConCosa->StaminaArma > 0.f)
+	{
+		FGameplayEffectSpecHandle Fatica = MioContenitore->MakeOutgoingSpec(UValdorsoGE_Fatica::StaticClass(), 1.f, MioContenitore->MakeEffectContext());
+		if (Fatica.IsValid())
+		{
+			Fatica.Data->SetSetByCallerMagnitude(ValdorsoEtichette::Dato_Stamina, -ConCosa->StaminaArma);
+			MioContenitore->ApplyGameplayEffectSpecToSelf(*Fatica.Data.Get());
+		}
+	}
+
+	// Una sfera che parte dalla mano destra e va avanti per la portata del pugno (o dell'arma).
 	USkeletalMeshComponent* Corpo = Personaggio->GetMesh();
 	const FVector Inizio = (Corpo && Corpo->DoesSocketExist(OssoMano)) ? Corpo->GetSocketLocation(OssoMano) : Personaggio->GetActorLocation();
 	const FVector Avanti = Personaggio->GetActorForwardVector();
-	const FVector Fine = Inizio + Avanti * Portata;
+	const FVector Fine = Inizio + Avanti * PortataColpo;
 
 	FCollisionObjectQueryParams Oggetti;
 	Oggetti.AddObjectTypesToQuery(ECC_Pawn);
@@ -139,31 +167,12 @@ void UValdorsoAbilitaPugno::EseguiColpo()
 		}
 		GiaColpiti.Add(Bersaglio);
 
-		if (UAbilitySystemComponent* SuoContenitore = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Bersaglio))
-		{
-			// Chi ha le statistiche (giocatori, più avanti PNG e mostri): il danno è un effetto GAS deciso dal server.
-			FGameplayEffectSpecHandle Effetto = MakeOutgoingGameplayEffectSpec(UValdorsoGE_DannoPugno::StaticClass(), GetAbilityLevel());
-			if (!Effetto.IsValid())
-			{
-				continue;
-			}
-			Effetto.Data->SetSetByCallerMagnitude(ValdorsoEtichette::Dato_Danno, -Danno);
-			MioContenitore->ApplyGameplayEffectSpecToTarget(*Effetto.Data.Get(), SuoContenitore);
-		}
-		else if (ICombatDamageable* Colpibile = Cast<ICombatDamageable>(Bersaglio))
-		{
-			// I manichini e le casse di Variant_Combat: si colpiscono con la loro interfaccia (utili per le prove).
-			const FVector Spinta = Avanti * 250.f + FVector::UpVector * 100.f;
-			Colpibile->ApplyDamage(Danno, Personaggio, Colpo.ImpactPoint, Spinta);
-		}
-		else
+		// (09/11) il colpo passa da ValdorsoCombattimento: danno ed equilibrio, la pace del battito, la spinta, il suono,
+		// l'arresto e la telecamera che trema, il registro eventi
+		if (!ValdorsoCombattimento::Colpisci(Personaggio, Bersaglio, DannoColpo, EquilibrioColpo, Colpo.ImpactPoint, TipoColpo))
 		{
 			continue;
 		}
-
-		// Colpire qualcuno un giorno può essere un crimine: passa dal registro eventi.
-		ValdorsoRegistroEventi::Annota(TEXT("Colpo"), Personaggio, Bersaglio, Colpo.ImpactPoint,
-			FString::Printf(TEXT("pugno, danno %.0f"), Danno));
 		bColpitoQualcuno = true;
 	}
 

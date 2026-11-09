@@ -8,6 +8,7 @@
 #include "ValdorsoClima.h"
 #include "ValdorsoStatoMondo.h"
 #include "ValdorsoMovementComponent.h"
+#include "ValdorsoOggetti.h"
 #include "ValdorsoPericoli.h"
 #include "ValdorsoTempo.h"
 #include "ValdorsoZaino.h"
@@ -166,7 +167,30 @@ bool UValdorsoBagnatoComponent::HaMantello() const
 	const APawn* Corpo = Cast<APawn>(GetOwner());
 	const APlayerController* Controllore = Corpo ? Cast<APlayerController>(Corpo->GetController()) : nullptr;
 	const UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::Di(Controllore);
-	return Zaino && ValdorsoZaino::Conta(Zaino->Contenuto(), TEXT("Mantello")) > 0;
+	// (09/11) anche il mantello di pelle di lupo ripara dalla pioggia
+	return Zaino && (ValdorsoZaino::Conta(Zaino->Contenuto(), TEXT("Mantello")) > 0
+		|| ValdorsoZaino::Conta(Zaino->Contenuto(), TEXT("Mantello_Lupo")) > 0);
+}
+
+float UValdorsoBagnatoComponent::CaloreVestiti() const
+{
+	const APawn* Corpo = Cast<APawn>(GetOwner());
+	const APlayerController* Controllore = Corpo ? Cast<APlayerController>(Corpo->GetController()) : nullptr;
+	const UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::Di(Controllore);
+	if (!Zaino)
+	{
+		return 0.f;
+	}
+	// il piu' caldo di quelli che si portano (non si sommano: un mantello alla volta)
+	float Caldo = 0.f;
+	for (const FValdorsoTipoOggetto& Tipo : ValdorsoOggetti::Catalogo())
+	{
+		if (Tipo.Calore > Caldo && ValdorsoZaino::Conta(Zaino->Contenuto(), Tipo.Id) > 0)
+		{
+			Caldo = Tipo.Calore;
+		}
+	}
+	return Caldo;
 }
 
 void UValdorsoBagnatoComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -220,7 +244,12 @@ void UValdorsoBagnatoComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	const FString Stagione = ValdorsoStatoMondo::StagioneDi(FDateTime::Now());
 	const FValdorsoAria Aria = Tempo ? Tempo->AriaAdesso() : FValdorsoAria();
 	GradiAria = ValdorsoClima::Aria(Ora, Stagione, static_cast<float>(Corpo->GetActorLocation().Z), Aria.Nuvole, Aria.Pioggia, Aria.Nebbia);
-	const float Sentita = ValdorsoClima::Percepita(GradiAria, LivelloEsatto, bInAcqua, ValdorsoClima::Acqua(Stagione), HaMantello(), bTetto, bFuoco);
+	float Sentita = ValdorsoClima::Percepita(GradiAria, LivelloEsatto, bInAcqua, ValdorsoClima::Acqua(Stagione), HaMantello(), bTetto, bFuoco);
+	// (09/11) i vestiti caldi (il mantello di pelle di lupo): qualche grado in piu', fuori dall'acqua
+	if (!bInAcqua)
+	{
+		Sentita += CaloreVestiti();
+	}
 	// in rete solo a mezzi gradi (e solo quando cambia davvero)
 	const float Arrotondata = FMath::RoundToFloat(Sentita * 2.f) / 2.f;
 	if (!FMath::IsNearlyEqual(Arrotondata, Percepita))

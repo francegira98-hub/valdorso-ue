@@ -50,6 +50,29 @@ public:
 	UValdorsoGE_DannoPugno();
 };
 
+/**
+ * (09/11) Un colpo qualunque (arma, morso): toglie salute ed equilibrio, quanto lo dice chi colpisce
+ * (Valdorso.Dato.Danno e Valdorso.Dato.Equilibrio, gia' negativi). Lo usa ValdorsoCombattimento::Colpisci.
+ */
+UCLASS()
+class VALDORSO_API UValdorsoGE_Colpo : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UValdorsoGE_Colpo();
+};
+
+/** (09/11) La fatica di un colpo con l'arma, oltre al costo del pugno: toglie stamina (Valdorso.Dato.Stamina, gia' negativo). */
+UCLASS()
+class VALDORSO_API UValdorsoGE_Fatica : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UValdorsoGE_Fatica();
+};
+
 /** Recupero della stamina: per sempre, ogni 0,25 secondi ridà 2,5 di stamina (10 al secondo). */
 UCLASS()
 class VALDORSO_API UValdorsoGE_RecuperoStamina : public UGameplayEffect

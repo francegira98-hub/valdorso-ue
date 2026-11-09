@@ -99,6 +99,17 @@ public:
 	/** La forza di adesso (0..1). La decide il server. */
 	float GetForza() const { return Forza; }
 
+	/**
+	 * (09/11, P10 approvata da Fra: "la pace del battito") Fin dove arriva la pace di questo frammento (cm). Il frammento
+	 * di Val d'Orso e' piccolo: solo il tempio. Dentro nessun giocatore puo' uccidere un altro giocatore
+	 * (ValdorsoCombattimento.h), e i lupi non entrano.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Pietra")
+	float RaggioPace = 1800.f;
+
+	/** Vero se in quel punto, adesso, vale la pace: la pietra batte e questo colpo non e' saltato (allora la pace trema). */
+	bool Protegge(const FVector& Dove) const;
+
 	/** Solo sul server: cambia la forza (per le prove; più avanti i giorni e i rituali). */
 	void ImpostaForza(float Nuova);
 

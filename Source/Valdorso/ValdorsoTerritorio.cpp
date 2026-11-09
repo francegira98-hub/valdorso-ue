@@ -116,6 +116,17 @@ namespace ValdorsoTerritori
 	}
 }
 
+bool AValdorsoPietraVillaggio::Protegge(const FVector& Dove) const
+{
+	if (Forza <= 0.f || FVector::DistSquared(Dove, GetActorLocation()) > FMath::Square(RaggioPace))
+	{
+		return false;
+	}
+	const UWorld* Mondo = GetWorld();
+	const double Secondi = Mondo ? FMath::Max(0.0, Mondo->GetTimeSeconds()) : 0.0;
+	return !ValdorsoTerritori::SaltaIlBattito(static_cast<int64>(Secondi / 1.6), Forza);
+}
+
 namespace
 {
 	void ImpostaForzaPietre(float Forza)

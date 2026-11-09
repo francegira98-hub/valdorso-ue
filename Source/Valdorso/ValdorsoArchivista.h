@@ -539,6 +539,24 @@ public:
 
 	int32 NumeroAccount() const { return Account.Num(); }
 
+	// --- (09/11, v0.1.4 passo 4.2) Gioca da solo ------------------------------------------------------
+
+	/**
+	 * "Esplora da solo": l'archivio passa alla cartella del gioco da solo (Saved/Solo/Archivio, separata da quella del
+	 * server, anche se sono sullo stesso PC) e c'e' sempre un account locale, senza password ("Colono"). Restituisce il
+	 * suo Id (OutNome il nome). Si puo' chiamare piu' volte: la seconda volta non ricarica niente.
+	 */
+	FString ApriArchivioSolo(FString& OutNome);
+
+	/** Vero se l'archivio e' quello del gioco da solo. */
+	bool ArchivioSolo() const { return bArchivioSolo; }
+
+	/** Il nome dell'account del gioco da solo. */
+	static const TCHAR* NomeAccountSolo;
+
+	/** L'account del gioco da solo, appena nato (senza password: si entra solo da questo PC, senza rete). */
+	static FValdorsoAccount NuovoAccountSolo(int64 Ora);
+
 	/** L'Id dell'account con questo nome (vuoto se non c'è). */
 	FString IdDi(const FString& Nome) const;
 
@@ -592,6 +610,9 @@ private:
 	FValdorsoInvito* TrovaInvitoValido(const FString& ImprontaCodice, int64 Ora);
 	FValdorsoAccount* TrovaAccount(const FString& Nome);
 	const FValdorsoAccount* TrovaAccount(const FString& Nome) const;
+
+	/** (09/11) L'archivio del gioco da solo (ApriArchivioSolo). */
+	bool bArchivioSolo = false;
 
 	FString Cartella;
 	FString CartellaAccount;

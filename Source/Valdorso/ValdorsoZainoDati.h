@@ -63,6 +63,14 @@ struct FValdorsoZaino
 	 *  1 = la mappa della valle. */
 	UPROPERTY()
 	int32 Aggiornamenti = 0;
+
+	/** (09/11, v0.1.4) Quello che si impugna: nella destra (un'arma) e nella sinistra (lo scudo). NAME_None = niente.
+	 *  Si impugna solo quello che c'e' nello zaino (Sistema toglie dalle mani quello che non c'e' piu'). */
+	UPROPERTY()
+	FName Destra;
+
+	UPROPERTY()
+	FName Sinistra;
 };
 
 namespace ValdorsoZaino
@@ -123,4 +131,11 @@ namespace ValdorsoZaino
 
 	/** Riempie le borracce (falso se erano già piene, o non ce n'è). */
 	VALDORSO_API bool RiempiBorracce(FValdorsoZaino& Zaino);
+
+	/** (09/11, v0.1.4) Impugna un oggetto nella sua mano, o lo rimette via se e' gia' in mano. Vero se adesso e' in mano.
+	 *  Falso anche se non si impugna o non c'e' nello zaino. */
+	VALDORSO_API bool Impugna(FValdorsoZaino& Zaino, FName Id);
+
+	/** (09/11) Toglie dalle mani quello che non c'e' piu' nello zaino (o non si impugna in quella mano). Vero se cambia. */
+	VALDORSO_API bool SistemaMani(FValdorsoZaino& Zaino);
 }

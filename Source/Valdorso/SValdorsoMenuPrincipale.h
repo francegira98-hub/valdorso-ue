@@ -73,6 +73,8 @@ class VALDORSO_API SValdorsoMenuPrincipale : public SCompoundWidget
 public:
 	SLATE_BEGIN_ARGS(SValdorsoMenuPrincipale) {}
 		SLATE_EVENT(FSimpleDelegate, OnEntra)
+		/** (09/11) "Esplora da solo": la valle senza server (se non c'e', il pulsante non si vede). */
+		SLATE_EVENT(FSimpleDelegate, OnDaSolo)
 		SLATE_EVENT(FSimpleDelegate, OnEsci)
 		/** (07/11) "Impostazioni": se c'è, apre le impostazioni vere (le stesse della pausa); se no, il pannello. */
 		SLATE_EVENT(FSimpleDelegate, OnImpostazioni)
@@ -106,6 +108,7 @@ private:
 	EActiveTimerReturnType Anima(double Tempo, float Delta);
 
 	FSimpleDelegate OnEntra;
+	FSimpleDelegate OnDaSolo;
 	FSimpleDelegate OnEsci;
 	FSimpleDelegate OnImpostazioni;
 

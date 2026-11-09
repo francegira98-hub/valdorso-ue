@@ -5,6 +5,11 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "ValdorsoCombattimento.h"
+#include "ValdorsoLupi.h"
+#include "ValdorsoOggetti.h"
+#include "ValdorsoZainoDati.h"
+
 #include "ValdorsoBarre.h"
 #include "ValdorsoChat.h"
 #include "ValdorsoPericoli.h"
@@ -241,6 +246,106 @@ bool FValdorsoTestPericoliChat::RunTest(const FString& Parameters)
 	TestEqual(TEXT("si tengono le ultime 8"), Elenco.Num(), ValdorsoChat::FrasiTenute);
 	TestEqual(TEXT("la più vecchia rimasta è la quarta"), Elenco[0].Testo, FString(TEXT("3")));
 	TestEqual(TEXT("l'ultima è l'ultima arrivata"), Elenco.Last().Testo, FString(TEXT("10")));
+	return true;
+}
+
+// (09/11, v0.1.4 passo 4.4) La pace del battito: un colpo tra giocatori lascia sempre almeno 1 di salute (e si sa che e'
+// stato fermato); chi e' gia' a 1 non perde piu' niente; fuori dalla pace o se il colpo e' piccolo passa tutto.
+// Le spinte e i tremori dei colpi stanno nei limiti; i suoni hanno un nome per tipo.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestPaceBattito, "Valdorso.Pericoli.PaceDelBattito", ValdorsoTestPericoli::Bandiere)
+bool FValdorsoTestPaceBattito::RunTest(const FString& Parameters)
+{
+	bool bFermato = false;
+	TestEqual(TEXT("un colpo piccolo passa"), ValdorsoCombattimento::DannoNellaPace(10.f, 100.f, bFermato), 10.f);
+	TestFalse(TEXT("non fermato"), bFermato);
+	TestEqual(TEXT("il colpo che uccide lascia 1"), ValdorsoCombattimento::DannoNellaPace(50.f, 30.f, bFermato), 29.f);
+	TestTrue(TEXT("fermato"), bFermato);
+	TestEqual(TEXT("a 1 non si perde piu' niente"), ValdorsoCombattimento::DannoNellaPace(15.f, 1.f, bFermato), 0.f);
+	TestTrue(TEXT("fermato anche qui"), bFermato);
+	TestEqual(TEXT("niente danno negativo"), ValdorsoCombattimento::DannoNellaPace(-5.f, 80.f, bFermato), 0.f);
+	TestFalse(TEXT("nessun mondo, nessuna pace"), ValdorsoCombattimento::InPace(nullptr, FVector::ZeroVector));
+	for (uint8 i = 0; i <= static_cast<uint8>(EValdorsoTipoColpo::Scudo); ++i)
+	{
+		const EValdorsoTipoColpo Tipo = static_cast<EValdorsoTipoColpo>(i);
+		TestTrue(TEXT("spinta ragionevole"), ValdorsoCombattimento::Spinta(Tipo) > 50.f && ValdorsoCombattimento::Spinta(Tipo) < 500.f);
+		TestTrue(TEXT("tremore fra 0 e 1"), ValdorsoCombattimento::Tremore(Tipo) > 0.f && ValdorsoCombattimento::Tremore(Tipo) <= 1.f);
+		TestTrue(TEXT("il suono ha un nome"), FString(ValdorsoCombattimento::NomeSuono(Tipo)).StartsWith(TEXT("S_Colpo_")));
+	}
+	return true;
+}
+
+
+// (09/11, v0.1.4 passo 4.5) Le armi in mano: si impugna solo quello che c'e' nello zaino e nella mano giusta (lo scudo
+// nella sinistra), di nuovo lo si rimette via; quello che si getta sparisce anche di mano. Lo scudo para solo davanti.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestArmi, "Valdorso.Pericoli.Armi", ValdorsoTestPericoli::Bandiere)
+bool FValdorsoTestArmi::RunTest(const FString& Parameters)
+{
+	FValdorsoZaino Zaino;
+	ValdorsoZaino::Sistema(Zaino);
+	TestFalse(TEXT("senza la spada non la si impugna"), ValdorsoZaino::Impugna(Zaino, TEXT("Spada_Corta")));
+	TestTrue(TEXT("mano vuota"), Zaino.Destra.IsNone());
+	ValdorsoZaino::Aggiungi(Zaino, TEXT("Spada_Corta"), 1, -1);
+	ValdorsoZaino::Aggiungi(Zaino, TEXT("Scudo_Legno"), 1, -1);
+	ValdorsoZaino::Aggiungi(Zaino, TEXT("Pane_Nero"), 1, -1);
+	TestTrue(TEXT("la spada nella destra"), ValdorsoZaino::Impugna(Zaino, TEXT("Spada_Corta")));
+	TestTrue(TEXT("destra"), Zaino.Destra == FName(TEXT("Spada_Corta")));
+	TestTrue(TEXT("lo scudo nella sinistra"), ValdorsoZaino::Impugna(Zaino, TEXT("Scudo_Legno")));
+	TestTrue(TEXT("sinistra"), Zaino.Sinistra == FName(TEXT("Scudo_Legno")));
+	TestFalse(TEXT("il pane non si impugna"), ValdorsoZaino::Impugna(Zaino, TEXT("Pane_Nero")));
+	TestFalse(TEXT("niente da sistemare"), ValdorsoZaino::SistemaMani(Zaino));
+	TestFalse(TEXT("di nuovo: la spada torna via"), ValdorsoZaino::Impugna(Zaino, TEXT("Spada_Corta")));
+	TestTrue(TEXT("mano destra vuota"), Zaino.Destra.IsNone());
+	ValdorsoZaino::TogliOggetto(Zaino, TEXT("Scudo_Legno"), 1);
+	TestTrue(TEXT("lo scudo gettato non resta in mano"), ValdorsoZaino::SistemaMani(Zaino));
+	TestTrue(TEXT("mano sinistra vuota"), Zaino.Sinistra.IsNone());
+	// ogni arma ha danno, portata e la mano giusta
+	for (const TCHAR* Id : { TEXT("Coltello"), TEXT("Pugnale"), TEXT("Falcetto"), TEXT("Martello"), TEXT("Bastone_Pastore"), TEXT("Spada_Corta") })
+	{
+		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
+		TestNotNull(Id, Tipo);
+		if (Tipo)
+		{
+			TestTrue(TEXT("nella destra"), Tipo->Posto == EValdorsoPosto::ManoDestra && Tipo->Uso == EValdorsoUso::Impugna);
+			TestTrue(TEXT("danno piu' del pugno"), Tipo->DannoArma > 10.f && Tipo->PortataArma > 70.f);
+		}
+	}
+	TestTrue(TEXT("davanti si para"), ValdorsoCombattimento::DaDavanti(FVector(1, 0, 0), FVector(300, 50, 0)));
+	TestFalse(TEXT("di lato no"), ValdorsoCombattimento::DaDavanti(FVector(1, 0, 0), FVector(0, 300, 0)));
+	TestFalse(TEXT("da dietro no"), ValdorsoCombattimento::DaDavanti(FVector(1, 0, 0), FVector(-300, 0, 0)));
+	return true;
+}
+
+// (09/11, v0.1.4 passo 4.6) I lupi: escono di notte o con la nebbia; fiutano, accerchiano, mordono; chi sta al fuoco o
+// nella pace non viene morso; feriti fuggono; il branco e' di 3 o 4.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestLupi, "Valdorso.Pericoli.Lupi", ValdorsoTestPericoli::Bandiere)
+bool FValdorsoTestLupi::RunTest(const FString& Parameters)
+{
+	using E = EValdorsoStatoLupo;
+	TestTrue(TEXT("di notte escono"), ValdorsoLupi::Fuori(0.f, false));
+	TestTrue(TEXT("con la nebbia escono"), ValdorsoLupi::Fuori(1.f, true));
+	TestFalse(TEXT("di giorno no"), ValdorsoLupi::Fuori(1.f, false));
+	TestTrue(TEXT("nessuno: vaga"), ValdorsoLupi::Prossimo(E::Vaga, 1.f, -1.f, false, 0.f) == E::Vaga);
+	TestTrue(TEXT("lontano: vaga"), ValdorsoLupi::Prossimo(E::Vaga, 1.f, 4000.f, false, 0.f) == E::Vaga);
+	TestTrue(TEXT("a 25 m fiuta"), ValdorsoLupi::Prossimo(E::Vaga, 1.f, 2500.f, false, 0.f) == E::Fiuta);
+	TestTrue(TEXT("a 10 m accerchia"), ValdorsoLupi::Prossimo(E::Fiuta, 1.f, 1000.f, false, 0.f) == E::Accerchia);
+	TestTrue(TEXT("presto: gira ancora"), ValdorsoLupi::Prossimo(E::Accerchia, 1.f, 650.f, false, 2.f) == E::Accerchia);
+	TestTrue(TEXT("dopo 5 secondi morde"), ValdorsoLupi::Prossimo(E::Accerchia, 1.f, 650.f, false, 5.5f) == E::Morde);
+	TestTrue(TEXT("al fuoco non si morde"), ValdorsoLupi::Prossimo(E::Accerchia, 1.f, 900.f, true, 30.f) == E::Accerchia);
+	TestTrue(TEXT("corso al fuoco: si torna a girare"), ValdorsoLupi::Prossimo(E::Morde, 1.f, 300.f, true, 1.f) == E::Accerchia);
+	TestTrue(TEXT("ferito fugge"), ValdorsoLupi::Prossimo(E::Morde, 0.2f, 150.f, false, 1.f) == E::Fuggi);
+	TestTrue(TEXT("fugge per un po'"), ValdorsoLupi::Prossimo(E::Fuggi, 0.2f, 150.f, false, 3.f) == E::Fuggi);
+	TestTrue(TEXT("poi torna a vagare"), ValdorsoLupi::Prossimo(E::Fuggi, 0.2f, 150.f, false, 11.f) == E::Vaga);
+	TestTrue(TEXT("ferito, dopo la fuga, non caccia piu'"), ValdorsoLupi::Prossimo(E::Vaga, 0.2f, 1500.f, false, 1.f) == E::Vaga);
+	TestTrue(TEXT("morto resta morto"), ValdorsoLupi::Prossimo(E::Morto, 1.f, 150.f, false, 1.f) == E::Morto);
+	TestTrue(TEXT("senza salute muore"), ValdorsoLupi::Prossimo(E::Accerchia, 0.f, 150.f, false, 1.f) == E::Morto);
+	for (int32 i = 0; i < 6; ++i)
+	{
+		const int32 Quanti = ValdorsoLupi::QuantiNelBranco(i);
+		TestTrue(TEXT("3 o 4"), Quanti == 3 || Quanti == 4);
+	}
+	TestTrue(TEXT("morde piu' veloce di quanto vaga"), ValdorsoLupi::Velocita(E::Morde) > ValdorsoLupi::Velocita(E::Vaga));
+	TestNotNull(TEXT("la pelle"), ValdorsoOggetti::Trova(TEXT("Pelle_Lupo")));
+	TestNotNull(TEXT("le zanne"), ValdorsoOggetti::Trova(TEXT("Zanne_Lupo")));
 	return true;
 }
 

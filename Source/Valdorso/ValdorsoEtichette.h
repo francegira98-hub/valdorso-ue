@@ -21,4 +21,10 @@ namespace ValdorsoEtichette
 
 	/** Il numero del danno, passato all'effetto del danno al momento del colpo. */
 	VALDORSO_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Dato_Danno);
+
+	/** (09/11) Quanto equilibrio toglie un colpo (armi e morsi: ValdorsoCombattimento.h). */
+	VALDORSO_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Dato_Equilibrio);
+
+	/** (09/11) Quanta stamina in piu' costa un colpo con l'arma (UValdorsoGE_Fatica). */
+	VALDORSO_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Dato_Stamina);
 }

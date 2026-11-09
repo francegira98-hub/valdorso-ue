@@ -99,6 +99,17 @@ namespace
 		case EValdorsoUso::Documento: return TEXT("Clic destro: la apri (e la puoi mostrare a chi hai davanti)");
 		case EValdorsoUso::Accendi: return FString::Printf(TEXT("Clic destro: accendi un falò davanti a te (servono %d fasci di rami secchi)"),
 			ValdorsoOggetti::RamiPerFalo);
+		case EValdorsoUso::Impugna:
+		{
+			// (09/11) le armi: il danno e la portata, senza troppi numeri; lo scudo dice quanto ferma
+			if (Tipo.Posto == EValdorsoPosto::ManoSinistra)
+			{
+				return FString::Printf(TEXT("Clic destro: lo imbracci nella sinistra (dei colpi che arrivano davanti ne ferma il %d%%)"),
+					FMath::RoundToInt(Tipo.Parata * 100.f));
+			}
+			return FString::Printf(TEXT("Clic destro: la impugni nella destra (danno %d, portata %s m). Di nuovo: la rimetti via"),
+				FMath::RoundToInt(Tipo.DannoArma), *FString::SanitizeFloat(FMath::RoundToFloat(Tipo.PortataArma / 10.f) / 10.f));
+		}
 		default: return FString();
 		}
 	}
@@ -281,6 +292,21 @@ int32 SValdorsoGrigliaZaino::OnPaint(const FPaintArgs& Args, const FGeometry& Al
 	const FSlateFontInfo FontTasto = Caratteri->Titolo(11.f, TEXT("Bold"));
 	const FSlateFontInfo FontEtichetta = Caratteri->Testo(15.f, TEXT("Italic"));
 
+	// (09/11) quello che si impugna: il primo posto con quell'oggetto ha il segno della mano
+	int32 PostoDestra = INDEX_NONE;
+	int32 PostoSinistra = INDEX_NONE;
+	for (int32 i = 0; i < Contenuto.Posti.Num(); ++i)
+	{
+		if (PostoDestra == INDEX_NONE && !Contenuto.Destra.IsNone() && Contenuto.Posti[i].Id == Contenuto.Destra)
+		{
+			PostoDestra = i;
+		}
+		if (PostoSinistra == INDEX_NONE && !Contenuto.Sinistra.IsNone() && Contenuto.Posti[i].Id == Contenuto.Sinistra)
+		{
+			PostoSinistra = i;
+		}
+	}
+
 	// --- la griglia
 	for (int32 i = 0; i < ValdorsoZaino::NumeroPosti; ++i)
 	{
@@ -323,6 +349,16 @@ int32 SValdorsoGrigliaZaino::OnPaint(const FPaintArgs& Args, const FGeometry& Al
 				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(FVector2f(Larga, 4.f), FSlateLayoutTransform(Dove)),
 					&Casella, ESlateDrawEffect::None, Tacca.CopyWithNewOpacity(Tacca.A * Alfa));
 			}
+		}
+		if (i == PostoDestra || i == PostoSinistra)
+		{
+			// in mano: una cornice d'oro e la lettera della mano, in alto a sinistra
+			const FVector2f Q[5] = { A + FVector2f(2.f, 2.f), A + FVector2f(LatoPosto - 2.f, 2.f), A + FVector2f(LatoPosto - 2.f, LatoPosto - 2.f),
+				A + FVector2f(2.f, LatoPosto - 2.f), A + FVector2f(2.f, 2.f) };
+			FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(), TArray<FVector2f>(Q, 5),
+				ESlateDrawEffect::None, ValdorsoTema::OroScuro().CopyWithNewOpacity(Alfa), true, 2.f);
+			ZainoScrivi(OutDrawElements, LayerId + 2, AllottedGeometry, i == PostoDestra ? TEXT("D") : TEXT("S"), FontTasto,
+				A + FVector2f(6.f, 3.f), ValdorsoTema::OroScuro().CopyWithNewOpacity(Alfa));
 		}
 		if (Tipo->bRicordo)
 		{

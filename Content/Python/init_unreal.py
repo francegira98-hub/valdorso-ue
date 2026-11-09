@@ -97,6 +97,12 @@ def crea_menu_valdorso():
         voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_BOSCO % densita)
         valdorso.add_menu_entry("Villaggio", voce)
 
+    # (09/11) i pericoli: i pezzi del lupo, le armi e i suoni dei colpi (crea_pericoli.py)
+    voce = unreal.ToolMenuEntry(name="Pericoli", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Pericoli: importa lupi, armi e suoni")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_pericoli.py")
+    valdorso.add_menu_entry("Pericoli", voce)
+
     # (07/11 sera) i piedi in piazza, il materiale delle rocce, Nanite sui trasparenti
     voce = unreal.ToolMenuEntry(name="SistemaValle", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Valle: sistema (piedi, materiali, Nanite)")

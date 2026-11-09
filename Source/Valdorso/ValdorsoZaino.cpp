@@ -3,6 +3,7 @@
 #include "ValdorsoZaino.h"
 #include "SValdorsoZaino.h"
 #include "Valdorso.h"
+#include "ValdorsoArmi.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoFalo.h"
 #include "ValdorsoModoFoto.h"
@@ -15,6 +16,7 @@
 #include "SValdorsoTessera.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -40,7 +42,29 @@ namespace
 	constexpr float ZainoAcquaPerBorraccia = 0.3f;
 
 	/** Su ogni zaino con autorità (server, o da soli) del mondo, del giocatore con quel nome (vuoto = tutti). */
+	int32 ZainoNelMondo(UWorld* Mondo, const FString& Nome, TFunctionRef<void(UValdorsoZainoComponent&)> Fai);
+
 	int32 ZainoPerOgniGiocatore(UWorld* Mondo, const FString& Nome, TFunctionRef<void(UValdorsoZainoComponent&)> Fai)
+	{
+		const int32 Trovati = ZainoNelMondo(Mondo, Nome, Fai);
+		if (Trovati > 0 || !GEngine)
+		{
+			return Trovati;
+		}
+		// (09/11) scritto nella console dell'editor durante il Play: il mondo giusto e' quello del gioco, non quello dell'editor
+		int32 Altri = 0;
+		for (const FWorldContext& Contesto : GEngine->GetWorldContexts())
+		{
+			UWorld* Gioco = Contesto.World();
+			if (Gioco && Gioco != Mondo && (Contesto.WorldType == EWorldType::PIE || Contesto.WorldType == EWorldType::Game))
+			{
+				Altri += ZainoNelMondo(Gioco, Nome, Fai);
+			}
+		}
+		return Altri;
+	}
+
+	int32 ZainoNelMondo(UWorld* Mondo, const FString& Nome, TFunctionRef<void(UValdorsoZainoComponent&)> Fai)
 	{
 		int32 Trovati = 0;
 		if (!Mondo)
@@ -177,6 +201,8 @@ void UValdorsoZainoComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		{
 			ProssimoControllo = Adesso + ZainoSecondiControllo;
 			ControllaAcqua();
+			// (09/11) le armi in mano anche sul colono nuovo (dopo la rinascita, o appena entrato)
+			ArmiInMano();
 		}
 		if (bDaSalvare && Adesso >= SalvaDopo)
 		{
@@ -377,8 +403,24 @@ void UValdorsoZainoComponent::ClientTessera_Implementation(const FValdorsoTesser
 	ValdorsoTesseraSchermo::Apri(Cast<APlayerController>(GetOwner()), Vista, Colono, bPropria);
 }
 
+void UValdorsoZainoComponent::ArmiInMano()
+{
+	const APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	if (!Controllore || !Controllore->HasAuthority())
+	{
+		return;
+	}
+	if (UValdorsoArmiComponent* Armi = UValdorsoArmiComponent::Di(Controllore->GetPawn()))
+	{
+		Armi->Imposta(Zaino.Destra, Zaino.Sinistra);
+	}
+}
+
 void UValdorsoZainoComponent::Cambiato()
 {
+	// (09/11) quello che non c'e' piu' nello zaino non resta in mano (gettato, dato, consumato)
+	ValdorsoZaino::SistemaMani(Zaino);
+	ArmiInMano();
 	++NumeroCambiamenti;
 	if (!bDaSalvare)
 	{
@@ -578,6 +620,16 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 		ValdorsoZaino::TogliOggetto(Zaino, TEXT("Rami_Secchi"), ValdorsoOggetti::RamiPerFalo);
 		Cambiato();
 		Avvisa(LOCTEXT("Acceso", "Accendi il falò. Al fuoco ti asciughi e ti scaldi."), 3.f);
+		return;
+	}
+	case EValdorsoUso::Impugna:
+	{
+		// (09/11) le armi: in mano o via; il modello lo mette il tick (ArmiInMano), qui solo lo zaino
+		const bool bInMano = ValdorsoZaino::Impugna(Zaino, Dove.Id);
+		Cambiato();
+		const bool bSinistra = Tipo->Posto == EValdorsoPosto::ManoSinistra;
+		Avvisa(bInMano ? FText::Format(bSinistra ? LOCTEXT("Imbracci", "Imbracci: {0}") : LOCTEXT("Impugni", "Impugni: {0}"), Nome)
+			: FText::Format(LOCTEXT("RimettiVia", "Rimetti via: {0}"), Nome), 2.f);
 		return;
 	}
 	case EValdorsoUso::Bevi:
