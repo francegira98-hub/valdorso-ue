@@ -163,6 +163,84 @@ namespace
 		C.Add(OggSemplice(TEXT("Perla"), TEXT("Perla di lago"),
 			TEXT("Piccola, grigia, quasi tonda. In una cozza su cento. Al mercato vale qualche Aureus."), 0.01f, 20));
 
+		// --- (10/11, v0.1.4) L'armeria provvisoria: armi della valle, della Corona e dell'Impero, e gli scudi ------
+		C.Add(OggSemplice(TEXT("Accetta"), TEXT("Accetta"),
+			TEXT("Per la legna, ma anche no. Il ferro è corto e pesante: colpisce forte e da vicino."), 1.2f));
+		C.Add(OggSemplice(TEXT("Ascia_Guerra"), TEXT("Ascia da guerra"),
+			TEXT("Il manico lungo un braccio e mezzo, la lama a mezzaluna. Faticosa, ma chi la prende in pieno non si rialza in fretta."), 2.6f));
+		C.Add(OggSemplice(TEXT("Mazza"), TEXT("Mazza ferrata"),
+			TEXT("Una testa di ferro a sei alette su un manico di frassino. Non taglia: rompe, e fa perdere l'equilibrio."), 2.2f));
+		C.Add(OggSemplice(TEXT("Clava"), TEXT("Clava di quercia"),
+			TEXT("Un ramo nodoso, tagliato e lisciato dove si tiene. L'arma di chi non ha di meglio."), 1.6f));
+		C.Add(OggSemplice(TEXT("Lancia"), TEXT("Lancia"),
+			TEXT("Due metri di frassino e una punta a foglia. Tiene lontano chi ti viene addosso: lupi compresi."), 2.0f));
+		C.Add(OggSemplice(TEXT("Forcone"), TEXT("Forcone"),
+			TEXT("Tre denti di ferro per il fieno. Nelle mani giuste, il primo arnese della milizia di un villaggio."), 1.8f));
+		C.Add(OggSemplice(TEXT("Bastone_Ferrato"), TEXT("Bastone ferrato"),
+			TEXT("Un bastone da viaggio con le punte rivestite di ferro. Colpisce lontano e fa barcollare."), 1.5f));
+		C.Add(OggSemplice(TEXT("Spada_Lunga"), TEXT("Spada lunga"),
+			TEXT("La spada dei cavalieri della Corona: la lama lunga, l'elsa a croce e il pomo tondo. Pesa, ma arriva lontano."), 1.9f));
+		C.Add(OggSemplice(TEXT("Gladio"), TEXT("Gladio"),
+			TEXT("La spada corta delle legioni dell'Impero: larga, appuntita, fatta per colpire di punta da dietro lo scudo."), 1.2f));
+		C.Add(OggSemplice(TEXT("Brocchiere"), TEXT("Brocchiere"),
+			TEXT("Uno scudo piccolo di ferro, da pugno. Leggero: devia i colpi, ma ne ferma meno di uno grande."), 1.6f));
+		C.Add(OggSemplice(TEXT("Scudo_Rotondo"), TEXT("Scudo rotondo dipinto"),
+			TEXT("Tondo, di tavole incollate, dipinto di rosso e d'oro come gli scudi della milizia di Aurelia."), 4.0f));
+		C.Add(OggSemplice(TEXT("Scudo_Aquilone"), TEXT("Scudo a mandorla"),
+			TEXT("Lungo, stretto in basso: copre dalla spalla al ginocchio. Lo portano i cavalieri della Corona."), 5.0f));
+		C.Add(OggSemplice(TEXT("Scudo_Legione"), TEXT("Scudo della legione"),
+			TEXT("Lo scudo ricurvo delle legioni dell'Impero, con l'umbone di bronzo. Ferma quasi tutto, ma pesa come un bambino."), 7.0f));
+
+		// --- (10/11) Quello che danno gli animali (si scuoiano col coltello: E sull'animale a terra) ----------------
+		C.Add(OggCibo(TEXT("Carne_Cruda"), TEXT("Carne cruda"),
+			TEXT("Un taglio di carne fresca. Cruda sazia poco e non fa bene: al fuoco sarà un'altra cosa."), 0.5f, 10, -2.f, 15.f));
+		C.Add(OggSemplice(TEXT("Pelle_Cinghiale"), TEXT("Pelle di cinghiale"),
+			TEXT("Dura e setolosa. Il conciatore ne fa cuoio per stivali e cinghie."), 3.0f, 5));
+		C.Add(OggSemplice(TEXT("Zanne_Cinghiale"), TEXT("Zanne di cinghiale"),
+			TEXT("Due zanne ricurve, bianche e affilate. I ragazzi del villaggio le portano al collo."), 0.1f, 20));
+		C.Add(OggSemplice(TEXT("Pelle_Orso"), TEXT("Pelle d'orso"),
+			TEXT("Enorme, bruna, pesante. Chi la porta al villaggio non paga da bere per un mese."), 8.0f, 2));
+		C.Add(OggSemplice(TEXT("Artigli_Orso"), TEXT("Artigli d'orso"),
+			TEXT("Cinque artigli lunghi come un dito, neri in punta. Dicono che l'orso della collina sia il guardiano della valle."), 0.2f, 20));
+		C.Add(OggSemplice(TEXT("Pelle_Cervo"), TEXT("Pelle di cervo"),
+			TEXT("Morbida e fulva. Se ne fanno guanti, borse e le copertine dei libri del tempio."), 2.5f, 5));
+		C.Add(OggSemplice(TEXT("Palchi_Cervo"), TEXT("Palchi di cervo"),
+			TEXT("Le corna ramificate di un cervo adulto. Si intagliano: manici, pettini, bottoni."), 1.5f, 4));
+		C.Add(OggSemplice(TEXT("Pelle_Lepre"), TEXT("Pelle di lepre"),
+			TEXT("Piccola e morbidissima. Ne servono tante per un colletto."), 0.2f, 20));
+		C.Add(OggSemplice(TEXT("Pelle_Volpe"), TEXT("Pelle di volpe"),
+			TEXT("Rossa, con la coda bianca in punta. I mercanti della carovana la pagano bene."), 0.6f, 10));
+
+		// --- (10/11) Dal fuoco, dalla conceria e dalla locanda (ValdorsoBotteghe.h) --------------------------------
+		C.Add(OggCibo(TEXT("Carne_Cotta"), TEXT("Carne arrostita"),
+			TEXT("Cotta sulla brace finché il grasso sfrigola. Rimette in forze come poche altre cose."), 0.4f, 10, 15.f, 35.f));
+		C.Add(OggCibo(TEXT("Funghi_Arrosto"), TEXT("Funghi arrosto"),
+			TEXT("Infilzati su un ramo e girati sul fuoco. Sanno di bosco e di fumo."), 0.1f, 10, 8.f, 15.f));
+		C.Add(OggCibo(TEXT("Stufato"), TEXT("Stufato di carne e funghi"),
+			TEXT("In una ciotola di legno, ancora caldo. Bruno dice che è la ricetta di sua madre."), 0.6f, 5, 30.f, 50.f));
+		C.Add(OggCibo(TEXT("Zuppa_Bruno"), TEXT("Zuppa calda di Bruno"),
+			TEXT("Orzo, cipolle e lardo. Una scodella di questa e anche la notte più fredda sembra meno lunga."), 0.5f, 5, 20.f, 40.f));
+		C.Add(OggSemplice(TEXT("Cuoio"), TEXT("Cuoio conciato"),
+			TEXT("Pelle conciata e battuta, pronta da tagliare. Serve per mantelli, cinghie e guanti."), 0.6f, 10));
+		{
+			FValdorsoTipoOggetto Mantello = OggSemplice(TEXT("Mantello_Orso"), TEXT("Mantello di pelle d'orso"),
+				TEXT("Enorme e pesantissimo. Con questo addosso il freddo della valle quasi non si sente."), 4.0f);
+			Mantello.Calore = 8.f;
+			C.Add(Mantello);
+		}
+		{
+			FValdorsoTipoOggetto Cappuccio = OggSemplice(TEXT("Cappuccio_Volpe"), TEXT("Cappuccio di volpe"),
+				TEXT("Rosso, con la coda che ricade sulla spalla. Tiene calde le orecchie e fa voltare la gente."), 0.6f);
+			Cappuccio.Calore = 2.f;
+			C.Add(Cappuccio);
+		}
+		{
+			FValdorsoTipoOggetto Guanti = OggSemplice(TEXT("Guanti_Lepre"), TEXT("Guanti foderati"),
+				TEXT("Guanti di cuoio foderati di pelo di lepre. Le dita ringraziano."), 0.3f);
+			Guanti.Calore = 1.f;
+			C.Add(Guanti);
+		}
+
 		// le armi: chi si impugna e come colpisce (il pugno: 10 di danno, 30 di equilibrio, 10 di stamina, 90 cm)
 		struct FArmaDati
 		{
@@ -183,6 +261,20 @@ namespace
 			{ TEXT("Bastone_Pastore"), EValdorsoPosto::ManoDestra, 11.f, 45.f, 5.f, 170.f, 2, 0.f },
 			{ TEXT("Spada_Corta"), EValdorsoPosto::ManoDestra, 22.f, 25.f, 7.f, 150.f, 1, 0.f },
 			{ TEXT("Scudo_Legno"), EValdorsoPosto::ManoSinistra, 6.f, 50.f, 6.f, 90.f, 4, 0.6f },
+			// (10/11) l'armeria: Danno, Equilibrio, Stamina, Portata (cm), Tipo (1 lama, 2 botta, 4 scudo), Parata
+			{ TEXT("Accetta"), EValdorsoPosto::ManoDestra, 18.f, 30.f, 5.f, 115.f, 1, 0.f },
+			{ TEXT("Ascia_Guerra"), EValdorsoPosto::ManoDestra, 27.f, 45.f, 9.f, 150.f, 1, 0.f },
+			{ TEXT("Mazza"), EValdorsoPosto::ManoDestra, 21.f, 55.f, 7.f, 120.f, 2, 0.f },
+			{ TEXT("Clava"), EValdorsoPosto::ManoDestra, 15.f, 45.f, 6.f, 120.f, 2, 0.f },
+			{ TEXT("Lancia"), EValdorsoPosto::ManoDestra, 20.f, 25.f, 6.f, 230.f, 1, 0.f },
+			{ TEXT("Forcone"), EValdorsoPosto::ManoDestra, 13.f, 30.f, 5.f, 200.f, 1, 0.f },
+			{ TEXT("Bastone_Ferrato"), EValdorsoPosto::ManoDestra, 14.f, 50.f, 5.f, 190.f, 2, 0.f },
+			{ TEXT("Spada_Lunga"), EValdorsoPosto::ManoDestra, 28.f, 30.f, 9.f, 175.f, 1, 0.f },
+			{ TEXT("Gladio"), EValdorsoPosto::ManoDestra, 24.f, 22.f, 6.f, 140.f, 1, 0.f },
+			{ TEXT("Brocchiere"), EValdorsoPosto::ManoSinistra, 8.f, 40.f, 4.f, 80.f, 4, 0.4f },
+			{ TEXT("Scudo_Rotondo"), EValdorsoPosto::ManoSinistra, 7.f, 50.f, 6.f, 90.f, 4, 0.65f },
+			{ TEXT("Scudo_Aquilone"), EValdorsoPosto::ManoSinistra, 7.f, 55.f, 7.f, 90.f, 4, 0.75f },
+			{ TEXT("Scudo_Legione"), EValdorsoPosto::ManoSinistra, 9.f, 65.f, 8.f, 90.f, 4, 0.85f },
 		};
 		for (const FArmaDati& A : Armi)
 		{
@@ -506,6 +598,199 @@ namespace
 		{
 			L.Add(OggCerchio(0.f, 0.f, 0.45f, 18));
 			L.Add(OggArco(-0.12f, 0.12f, 0.18f, 0.18f, 100.f, 200.f, 6));
+		}
+		// (10/11) l'armeria e le prede: disegni a penna, con l'impugnatura in basso a sinistra come la spada corta
+		else if (N == TEXT("Accetta"))
+		{
+			L.Add(OggLinea({ { -0.75f, -0.8f }, { 0.35f, 0.5f } }));
+			L.Add(OggLinea({ { -0.68f, -0.86f }, { 0.42f, 0.44f } }));
+			L.Add(OggLinea({ { 0.2f, 0.62f }, { 0.75f, 0.5f }, { 0.62f, 0.05f }, { 0.4f, 0.32f } }));
+		}
+		else if (N == TEXT("Ascia_Guerra"))
+		{
+			L.Add(OggLinea({ { -0.85f, -0.85f }, { 0.55f, 0.55f } }));
+			L.Add(OggArco(0.45f, 0.45f, 0.42f, 0.42f, -45.f, 135.f, 12));
+			L.Add(OggLinea({ { 0.75f, 0.15f }, { 0.15f, 0.75f } }));
+		}
+		else if (N == TEXT("Mazza"))
+		{
+			L.Add(OggLinea({ { -0.8f, -0.8f }, { 0.3f, 0.3f } }));
+			L.Add(OggCerchio(0.45f, 0.45f, 0.25f, 12));
+			L.Add(OggLinea({ { 0.45f, 0.1f }, { 0.45f, 0.8f } }));
+			L.Add(OggLinea({ { 0.1f, 0.45f }, { 0.8f, 0.45f } }));
+		}
+		else if (N == TEXT("Clava"))
+		{
+			L.Add(OggLinea({ { -0.8f, -0.75f }, { -0.1f, 0.05f }, { 0.25f, 0.65f }, { 0.7f, 0.8f }, { 0.8f, 0.4f }, { 0.4f, 0.0f }, { -0.7f, -0.85f } }));
+			L.Add(OggCerchio(0.4f, 0.45f, 0.06f, 6));
+		}
+		else if (N == TEXT("Lancia"))
+		{
+			L.Add(OggLinea({ { -0.9f, -0.9f }, { 0.5f, 0.5f } }));
+			L.Add(OggLinea({ { 0.5f, 0.5f }, { 0.55f, 0.75f }, { 0.9f, 0.9f }, { 0.75f, 0.55f }, { 0.5f, 0.5f } }));
+		}
+		else if (N == TEXT("Forcone"))
+		{
+			L.Add(OggLinea({ { -0.9f, -0.9f }, { 0.3f, 0.3f } }));
+			L.Add(OggLinea({ { 0.1f, 0.5f }, { 0.5f, 0.1f } }));
+			L.Add(OggLinea({ { 0.1f, 0.5f }, { 0.5f, 0.9f } }));
+			L.Add(OggLinea({ { 0.3f, 0.3f }, { 0.7f, 0.7f } }));
+			L.Add(OggLinea({ { 0.5f, 0.1f }, { 0.9f, 0.5f } }));
+		}
+		else if (N == TEXT("Bastone_Ferrato"))
+		{
+			L.Add(OggLinea({ { -0.85f, -0.85f }, { 0.85f, 0.85f } }));
+			L.Add(OggLinea({ { -0.85f, -0.7f }, { -0.7f, -0.85f } }));
+			L.Add(OggLinea({ { 0.7f, 0.85f }, { 0.85f, 0.7f } }));
+			L.Add(OggLinea({ { -0.62f, -0.48f }, { -0.48f, -0.62f } }));
+			L.Add(OggLinea({ { 0.48f, 0.62f }, { 0.62f, 0.48f } }));
+		}
+		else if (N == TEXT("Spada_Lunga"))
+		{
+			L.Add(OggLinea({ { -0.6f, -0.6f }, { 0.75f, 0.75f }, { 0.9f, 0.9f }, { 0.8f, 0.68f }, { -0.48f, -0.62f } }));
+			L.Add(OggLinea({ { -0.72f, -0.3f }, { -0.3f, -0.72f } }));
+			L.Add(OggCerchio(-0.82f, -0.82f, 0.09f, 8));
+		}
+		else if (N == TEXT("Gladio"))
+		{
+			L.Add(OggLinea({ { -0.55f, -0.7f }, { 0.35f, 0.25f }, { 0.75f, 0.75f }, { 0.25f, 0.35f }, { -0.7f, -0.55f } }));
+			L.Add(OggLinea({ { -0.75f, -0.4f }, { -0.4f, -0.75f } }));
+			L.Add(OggCerchio(-0.85f, -0.85f, 0.11f, 8));
+		}
+		else if (N == TEXT("Brocchiere"))
+		{
+			L.Add(OggCerchio(0.f, 0.f, 0.55f, 20));
+			L.Add(OggCerchio(0.f, 0.f, 0.2f, 12));
+			L.Add(OggCerchio(0.f, 0.f, 0.08f, 8));
+		}
+		else if (N == TEXT("Scudo_Rotondo"))
+		{
+			L.Add(OggCerchio(0.f, 0.f, 0.82f, 24));
+			L.Add(OggCerchio(0.f, 0.f, 0.68f, 24));
+			L.Add(OggCerchio(0.f, 0.f, 0.18f, 12));
+			L.Add(OggLinea({ { 0.f, 0.68f }, { 0.f, -0.68f } }));
+			L.Add(OggLinea({ { -0.68f, 0.f }, { 0.68f, 0.f } }));
+		}
+		else if (N == TEXT("Scudo_Aquilone"))
+		{
+			L.Add(OggLinea({ { -0.55f, 0.75f }, { 0.55f, 0.75f }, { 0.6f, 0.2f }, { 0.f, -0.9f }, { -0.6f, 0.2f }, { -0.55f, 0.75f } }));
+			L.Add(OggLinea({ { 0.f, 0.75f }, { 0.f, -0.9f } }));
+			L.Add(OggLinea({ { -0.55f, 0.35f }, { 0.55f, 0.35f } }));
+		}
+		else if (N == TEXT("Scudo_Legione"))
+		{
+			L.Add(OggRett(-0.55f, -0.85f, 0.55f, 0.85f));
+			L.Add(OggCerchio(0.f, 0.f, 0.2f, 12));
+			L.Add(OggLinea({ { -0.4f, 0.55f }, { -0.15f, 0.25f } }));
+			L.Add(OggLinea({ { 0.4f, 0.55f }, { 0.15f, 0.25f } }));
+			L.Add(OggLinea({ { -0.4f, -0.55f }, { -0.15f, -0.25f } }));
+			L.Add(OggLinea({ { 0.4f, -0.55f }, { 0.15f, -0.25f } }));
+		}
+		else if (N == TEXT("Carne_Cruda"))
+		{
+			L.Add(OggArco(0.f, 0.f, 0.75f, 0.5f, 0.f, 360.f, 20));
+			L.Add(OggArco(0.15f, 0.05f, 0.3f, 0.18f, 0.f, 360.f, 12));
+			L.Add(OggLinea({ { -0.55f, -0.2f }, { -0.2f, -0.35f } }));
+		}
+		else if (N == TEXT("Pelle_Cinghiale") || N == TEXT("Pelle_Orso") || N == TEXT("Pelle_Cervo") || N == TEXT("Pelle_Volpe")
+			|| N == TEXT("Pelle_Lepre"))
+		{
+			// la stessa pelle distesa del lupo, piu' larga o piu' piccola, con un segno per specie
+			const float K = N == TEXT("Pelle_Orso") ? 1.0f : (N == TEXT("Pelle_Lepre") ? 0.55f : (N == TEXT("Pelle_Volpe") ? 0.75f : 0.9f));
+			TArray<FVector2D> Bordo = OggLinea({ { -0.2f, 0.8f }, { 0.2f, 0.8f }, { 0.35f, 0.5f }, { 0.8f, 0.45f }, { 0.5f, 0.1f },
+				{ 0.55f, -0.5f }, { 0.85f, -0.75f }, { 0.25f, -0.6f }, { 0.f, -0.85f }, { -0.25f, -0.6f }, { -0.85f, -0.75f },
+				{ -0.55f, -0.5f }, { -0.5f, 0.1f }, { -0.8f, 0.45f }, { -0.35f, 0.5f }, { -0.2f, 0.8f } });
+			for (FVector2D& P : Bordo)
+			{
+				P *= K;
+			}
+			L.Add(Bordo);
+			if (N == TEXT("Pelle_Cinghiale"))
+			{
+				L.Add(OggLinea({ { 0.f, 0.6f }, { 0.f, -0.6f } }));   // la cresta di setole
+			}
+			else if (N == TEXT("Pelle_Volpe"))
+			{
+				L.Add(OggLinea({ { 0.f, -0.64f }, { 0.1f, -0.95f } })); // la coda
+			}
+			else if (N == TEXT("Pelle_Cervo"))
+			{
+				L.Add(OggCerchio(-0.2f, 0.f, 0.06f, 6));
+				L.Add(OggCerchio(0.2f, 0.2f, 0.06f, 6));
+				L.Add(OggCerchio(0.15f, -0.25f, 0.06f, 6));
+			}
+		}
+		else if (N == TEXT("Zanne_Cinghiale"))
+		{
+			L.Add(OggArco(-0.15f, -0.2f, 0.6f, 0.75f, 180.f, 290.f, 10));
+			L.Add(OggArco(0.15f, -0.2f, 0.6f, 0.75f, 250.f, 360.f, 10));
+		}
+		else if (N == TEXT("Artigli_Orso"))
+		{
+			for (int32 i = 0; i < 4; ++i)
+			{
+				const float X = -0.6f + i * 0.4f;
+				L.Add(OggLinea({ { X, -0.6f }, { X + 0.05f, 0.3f }, { X + 0.2f, 0.7f } }));
+			}
+		}
+		else if (N == TEXT("Palchi_Cervo"))
+		{
+			L.Add(OggLinea({ { 0.f, -0.85f }, { -0.15f, 0.f }, { -0.45f, 0.75f } }));
+			L.Add(OggLinea({ { -0.15f, 0.f }, { -0.6f, 0.15f } }));
+			L.Add(OggLinea({ { -0.3f, 0.4f }, { 0.05f, 0.7f } }));
+			L.Add(OggLinea({ { 0.f, -0.85f }, { 0.2f, -0.1f }, { 0.5f, 0.7f } }));
+			L.Add(OggLinea({ { 0.2f, -0.1f }, { 0.65f, 0.05f } }));
+		}
+		// (10/11) cibi cotti, cuoio e vestiti
+		else if (N == TEXT("Carne_Cotta"))
+		{
+			L.Add(OggArco(0.1f, 0.f, 0.65f, 0.45f, 0.f, 360.f, 20));
+			L.Add(OggLinea({ { -0.85f, -0.6f }, { -0.45f, -0.25f } }));
+			L.Add(OggCerchio(-0.88f, -0.65f, 0.08f, 6));
+			L.Add(OggLinea({ { -0.2f, -0.15f }, { 0.1f, 0.15f } }));
+			L.Add(OggLinea({ { 0.15f, -0.2f }, { 0.45f, 0.1f } }));
+		}
+		else if (N == TEXT("Funghi_Arrosto"))
+		{
+			L.Add(OggLinea({ { -0.85f, -0.85f }, { 0.85f, 0.85f } }));
+			L.Add(OggArco(-0.25f, -0.15f, 0.3f, 0.22f, 0.f, 180.f, 10));
+			L.Add(OggArco(0.3f, 0.4f, 0.3f, 0.22f, 0.f, 180.f, 10));
+		}
+		else if (N == TEXT("Stufato") || N == TEXT("Zuppa_Bruno"))
+		{
+			L.Add(OggArco(0.f, 0.f, 0.8f, 0.7f, 180.f, 360.f, 16));
+			L.Add(OggLinea({ { -0.8f, 0.f }, { 0.8f, 0.f } }));
+			L.Add(OggArco(-0.25f, 0.35f, 0.12f, 0.2f, 180.f, 360.f, 6));
+			L.Add(OggArco(0.2f, 0.45f, 0.12f, 0.2f, 0.f, 180.f, 6));
+			if (N == TEXT("Stufato"))
+			{
+				L.Add(OggLinea({ { 0.45f, -0.1f }, { 0.85f, 0.7f } }));
+			}
+		}
+		else if (N == TEXT("Cuoio"))
+		{
+			L.Add(OggRett(-0.7f, -0.5f, 0.7f, 0.5f));
+			L.Add(OggArco(0.7f, 0.f, 0.2f, 0.5f, 270.f, 450.f, 8));
+			L.Add(OggLinea({ { -0.5f, -0.3f }, { 0.4f, -0.3f } }));
+		}
+		else if (N == TEXT("Mantello_Orso"))
+		{
+			L.Add(OggLinea({ { -0.35f, 0.75f }, { 0.35f, 0.75f }, { 0.85f, -0.85f }, { -0.85f, -0.85f }, { -0.35f, 0.75f } }));
+			L.Add(OggCerchio(-0.25f, 0.82f, 0.1f, 8));
+			L.Add(OggCerchio(0.25f, 0.82f, 0.1f, 8));
+			L.Add(OggLinea({ { -0.4f, -0.3f }, { 0.4f, -0.3f } }));
+		}
+		else if (N == TEXT("Cappuccio_Volpe"))
+		{
+			L.Add(OggArco(0.f, -0.1f, 0.6f, 0.7f, 0.f, 180.f, 14));
+			L.Add(OggLinea({ { -0.6f, -0.1f }, { -0.6f, -0.5f }, { 0.6f, -0.5f }, { 0.6f, -0.1f } }));
+			L.Add(OggLinea({ { 0.6f, -0.3f }, { 0.85f, -0.6f }, { 0.75f, -0.9f } }));
+		}
+		else if (N == TEXT("Guanti_Lepre"))
+		{
+			L.Add(OggLinea({ { -0.4f, -0.8f }, { -0.4f, 0.3f }, { -0.25f, 0.7f }, { -0.1f, 0.3f }, { 0.05f, 0.75f }, { 0.2f, 0.3f },
+				{ 0.35f, 0.65f }, { 0.45f, 0.2f }, { 0.75f, 0.35f }, { 0.45f, -0.3f }, { 0.45f, -0.8f }, { -0.4f, -0.8f } }));
+			L.Add(OggLinea({ { -0.4f, -0.55f }, { 0.45f, -0.55f } }));
 		}
 		else if (N == TEXT("Ricordo_Libro"))
 		{

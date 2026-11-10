@@ -10,6 +10,9 @@
 // - Il colpo: il tasto del pugno, con l'arma in mano, usa il danno, l'equilibrio, la stamina e la portata dell'arma
 //   (ValdorsoOggetti.cpp, "le armi") e il suo suono (lama o botta). Lo scudo nella sinistra ferma una parte dei colpi
 //   che arrivano davanti (ValdorsoCombattimento::Colpisci).
+// - (09/11) Il tasto Z ripone le armi: la spada nel fodero al fianco, lo scudo dietro la schiena (suono del fodero);
+//   di nuovo Z, si riprendono in mano. Riposte non contano nel colpo (si colpisce a mani nude, lo scudo non para).
+//   Le animazioni del riporre arriveranno con quelle vere (Fab o Mixamo); per ora le armi cambiano posto e basta.
 // - Come stanno in mano (posizione e rotazione rispetto all'osso): per sistemarle a occhio, in gioco,
 //   Valdorso.Arma.Presa destra <x> <y> <z> <pitch> <yaw> <roll> (o sinistra): cambia subito e scrive i numeri nel
 //   registro (da mandare a Claude, che li scrive qui come valori di serie). Per trovare il verso: Valdorso.Arma.Prova
@@ -30,11 +33,17 @@ namespace ValdorsoArmi
 	/** Il modello di un'arma ("/Game/Valle/Pericoli/Armi/SM_Arma_Coltello.SM_Arma_Coltello"). */
 	VALDORSO_API FString PercorsoModello(FName Id);
 
-	/** Come sta un'arma nella mano (rispetto all'osso della mano). */
-	VALDORSO_API FTransform Presa(bool bSinistra);
+	/** (09/11) I posti delle armi: le due mani, il fianco (la spada riposta) e la schiena (lo scudo riposto). */
+	inline constexpr int32 PostoDestra = 0;
+	inline constexpr int32 PostoSinistra = 1;
+	inline constexpr int32 PostoFianco = 2;
+	inline constexpr int32 PostoSchiena = 3;
 
-	/** L'osso a cui si attacca ("hand_r", "hand_l"). */
-	VALDORSO_API FName Osso(bool bSinistra);
+	/** Come sta un'arma in quel posto (rispetto al suo osso). */
+	VALDORSO_API FTransform Presa(int32 Posto);
+
+	/** L'osso del posto ("hand_r", "hand_l", "pelvis", "spine_05"). */
+	VALDORSO_API FName Osso(int32 Posto);
 }
 
 UCLASS(ClassGroup = (Valdorso))
@@ -53,9 +62,20 @@ public:
 	FName GetDestra() const { return Destra; }
 	FName GetSinistra() const { return Sinistra; }
 
-	/** L'arma nella destra (nullptr = a mani nude) e lo scudo nella sinistra (nullptr = niente). */
+	/** L'arma nella destra (nullptr = a mani nude, o riposta) e lo scudo nella sinistra (nullptr = niente, o sulla schiena). */
 	const FValdorsoTipoOggetto* Arma() const;
 	const FValdorsoTipoOggetto* Scudo() const;
+
+	/** (09/11) Quello che porta, in mano o riposto. */
+	const FValdorsoTipoOggetto* ArmaPortata() const;
+	const FValdorsoTipoOggetto* ScudoPortato() const;
+
+	/** (09/11) Riposte: la spada nel fodero, lo scudo dietro la schiena (si colpisce a mani nude). */
+	bool Riposte() const { return bRiposte; }
+
+	/** (09/11) Il tasto Z: ripone le armi o le riprende in mano. */
+	UFUNCTION(Server, Reliable)
+	void ServerAlterna();
 
 	/** Rimette i modelli in mano (anche dopo Valdorso.Arma.Presa). */
 	void Mostra();
@@ -74,13 +94,21 @@ private:
 	/** (09/11) Le mani che si vedono: il corpo MetaHuman se c'e', se no il manichino. */
 	USkeletalMeshComponent* Mano() const;
 
-	UStaticMeshComponent* Pezzo(UStaticMeshComponent* Attuale, FName Id, bool bSinistra);
+	UStaticMeshComponent* Pezzo(UStaticMeshComponent* Attuale, FName Id, int32 Posto);
 
 	UPROPERTY(ReplicatedUsing = OnRep_Armi)
 	FName Destra;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Armi)
 	FName Sinistra;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Armi)
+	bool bRiposte = false;
+
+	/** Su questo PC: com'erano l'ultima volta (per il suono solo quando cambia). */
+	bool bRiposteMostrate = false;
+	/** Sul server: non si ripone e si sfodera di continuo. */
+	double ProssimoCambio = 0.0;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMeshComponent> InDestra;

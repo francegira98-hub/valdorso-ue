@@ -219,7 +219,7 @@ namespace ValdorsoCombattimento
 			return false;
 		}
 		// (09/11) un lupo morto non si colpisce piu'
-		if (const AValdorsoLupo* Morto = Cast<AValdorsoLupo>(A); Morto && !Morto->Vivo())
+		if (const AValdorsoAnimale* Morto = Cast<AValdorsoAnimale>(A); Morto && !Morto->Vivo())
 		{
 			return false;
 		}
@@ -302,7 +302,7 @@ namespace ValdorsoCombattimento
 			return false;
 		}
 		// (09/11) un lupo colpito si gira verso chi l'ha colpito (e sa a chi dare la pelle)
-		if (AValdorsoLupo* Lupo = Cast<AValdorsoLupo>(A))
+		if (AValdorsoAnimale* Lupo = Cast<AValdorsoAnimale>(A))
 		{
 			Lupo->Ferito(Da);
 		}

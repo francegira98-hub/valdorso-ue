@@ -831,7 +831,14 @@ namespace Valdorso.Launcher
                     break;
                 case StatoLauncher.Pronto:
                 case StatoLauncher.SenzaRete:
-                    Gioca();
+                    if (ValleAperta())
+                    {
+                        Gioca();
+                    }
+                    else
+                    {
+                        ChiediStato();
+                    }
                     break;
                 case StatoLauncher.Lavoro:
                     aggiornatore.Ferma();
@@ -1078,6 +1085,7 @@ namespace Valdorso.Launcher
             {
                 mondo = null;
                 mondoChiesto = true;
+                AggiornaAttivo();
                 Ridisegna();
                 return;
             }
@@ -1101,6 +1109,7 @@ namespace Valdorso.Launcher
                     mondo = letto;
                     mondoLetto = DateTime.UtcNow;
                     mondoChiesto = true;
+                    AggiornaAttivo();
                     Ridisegna();
                 });
             });
@@ -1206,8 +1215,21 @@ namespace Valdorso.Launcher
             rigaStato = riga;
             avanzamento = parte;
             erroreRiga = errore;
-            principale.Attivo = nuovo != StatoLauncher.Avvio && nuovo != StatoLauncher.Controllo;
+            AggiornaAttivo();
             Ridisegna();
+        }
+
+        /// <summary>(10/11, deciso da Fra) Si gioca solo con il server acceso: se la valle dorme (il server non risponde)
+        /// o e' chiusa per lavori, GIOCA resta spento. Niente partite in locale dal launcher.</summary>
+        bool ValleAperta()
+        {
+            return mondo != null && mondo.Aperto;
+        }
+
+        void AggiornaAttivo()
+        {
+            bool pronto = stato == StatoLauncher.Pronto || stato == StatoLauncher.SenzaRete;
+            principale.Attivo = stato != StatoLauncher.Avvio && stato != StatoLauncher.Controllo && (!pronto || ValleAperta());
         }
 
         /// <summary>La scritta del pulsante grande e la riga piccola sotto.</summary>
@@ -1230,6 +1252,12 @@ namespace Valdorso.Launcher
                     return ripara ? "RIPARA" : "AGGIORNA";
                 case StatoLauncher.Pronto:
                 case StatoLauncher.SenzaRete:
+                    if (!ValleAperta())
+                    {
+                        // il server e' spento (o chiuso per lavori): si aspetta, il launcher ricontrolla da solo
+                        sotto = !mondoChiesto ? "cerco il server..." : (mondo != null ? "la valle è chiusa per lavori" : "la valle dorme: il server è spento");
+                        return "DORME";
+                    }
                     sotto = versioneInstallata.Length > 0 ? "v" + versioneInstallata + (stato == StatoLauncher.SenzaRete ? " · senza rete" : "") : "";
                     return "GIOCA";
                 case StatoLauncher.Lavoro:

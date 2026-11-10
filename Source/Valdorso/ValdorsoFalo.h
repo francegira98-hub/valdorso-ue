@@ -17,6 +17,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ValdorsoInterazione.h"
 #include "ValdorsoFalo.generated.h"
 
 class AController;
@@ -26,6 +27,7 @@ class UMaterialInterface;
 class UPointLightComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
+class USphereComponent;
 
 namespace ValdorsoFaloRegole
 {
@@ -43,7 +45,7 @@ namespace ValdorsoFaloRegole
 }
 
 UCLASS()
-class VALDORSO_API AValdorsoFalo : public AActor
+class VALDORSO_API AValdorsoFalo : public AActor, public IValdorsoInterattivo
 {
 	GENERATED_BODY()
 
@@ -59,6 +61,11 @@ public:
 	/** Vero se in quel punto c'è un falò acceso vicino (entro RaggioCaldo). */
 	static bool CaldoVicino(const UWorld* Mondo, const FVector& Dove);
 
+	// (10/11) IValdorsoInterattivo: al fuoco acceso si cucina (E: la bottega del fuoco, ValdorsoBotteghe.h)
+	virtual FText TestoInterazione(const APawn* Chi) const override;
+	virtual void Interagisci(APawn* Chi) override;
+	virtual FVector PuntoInterazione() const override { return GetActorLocation(); }
+
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -73,6 +80,10 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Falo")
 	TObjectPtr<UPointLightComponent> Luce;
+
+	/** (10/11) Per trovarlo con E (non ferma niente). */
+	UPROPERTY(VisibleAnywhere, Category = "Falo")
+	TObjectPtr<USphereComponent> Presa;
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Sassi;

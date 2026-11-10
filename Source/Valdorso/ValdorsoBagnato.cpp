@@ -169,7 +169,8 @@ bool UValdorsoBagnatoComponent::HaMantello() const
 	const UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::Di(Controllore);
 	// (09/11) anche il mantello di pelle di lupo ripara dalla pioggia
 	return Zaino && (ValdorsoZaino::Conta(Zaino->Contenuto(), TEXT("Mantello")) > 0
-		|| ValdorsoZaino::Conta(Zaino->Contenuto(), TEXT("Mantello_Lupo")) > 0);
+		|| ValdorsoZaino::Conta(Zaino->Contenuto(), TEXT("Mantello_Lupo")) > 0
+		|| ValdorsoZaino::Conta(Zaino->Contenuto(), TEXT("Mantello_Orso")) > 0);
 }
 
 float UValdorsoBagnatoComponent::CaloreVestiti() const

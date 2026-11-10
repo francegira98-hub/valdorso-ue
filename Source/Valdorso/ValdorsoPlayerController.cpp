@@ -9,6 +9,8 @@
 #include "Valdorso.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 #include "ValdorsoGameInstance.h"
+#include "SValdorsoBottega.h"
+#include "ValdorsoArmi.h"
 #include "ValdorsoCombattimento.h"
 #include "SValdorsoAccesso.h"
 #include "SValdorsoPersonaggi.h"
@@ -181,6 +183,8 @@ void AValdorsoPlayerController::SetupInputComponent()
 		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
 		InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
 		InputComponent->BindKey(EKeys::Gamepad_RightThumbstick, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
+		// (09/11) Z: riponi o riprendi le armi
+		InputComponent->BindKey(EKeys::Z, IE_Pressed, this, &AValdorsoPlayerController::TastoRiponi);
 	}
 
 	// only add IMCs for local player controllers
@@ -605,7 +609,7 @@ bool AValdorsoPlayerController::SchermataAperta() const
 	return Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
 		|| SchermataImpostazioni.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoFoto::Aperta(this)
-		|| (Chat && Chat->RigaAperta());
+		|| ValdorsoBottegaSchermo::Aperta(this) || (Chat && Chat->RigaAperta());
 }
 
 void AValdorsoPlayerController::TastoAggancio()
@@ -615,6 +619,18 @@ void AValdorsoPlayerController::TastoAggancio()
 		return;
 	}
 	Aggancio->Alterna();
+}
+
+void AValdorsoPlayerController::TastoRiponi()
+{
+	if (!GetPawn() || SchermataAperta())
+	{
+		return;
+	}
+	if (UValdorsoArmiComponent* Armi = UValdorsoArmiComponent::Di(GetPawn()))
+	{
+		Armi->ServerAlterna();
+	}
 }
 
 void AValdorsoPlayerController::TastoAzione(int32 Indice)
@@ -786,7 +802,7 @@ void AValdorsoPlayerController::ChiudiMappa()
 
 void AValdorsoPlayerController::TastoInteragisci()
 {
-	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || !GetPawn())
+	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoBottegaSchermo::Aperta(this) || !GetPawn())
 	{
 		return;
 	}

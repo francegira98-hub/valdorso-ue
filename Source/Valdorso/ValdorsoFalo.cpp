@@ -3,7 +3,10 @@
 #include "ValdorsoFalo.h"
 #include "Valdorso.h"
 #include "ValdorsoMovementComponent.h"
+#include "ValdorsoBotteghe.h"
+#include "ValdorsoZaino.h"
 #include "Components/PointLightComponent.h"
+#include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
@@ -85,6 +88,17 @@ AValdorsoFalo::AValdorsoFalo()
 
 	Radice = CreateDefaultSubobject<USceneComponent>(TEXT("Radice"));
 	RootComponent = Radice;
+	// (10/11) una sfera che non ferma niente: serve solo a trovarlo con E (cucinare)
+	Presa = CreateDefaultSubobject<USphereComponent>(TEXT("Presa"));
+	Presa->SetupAttachment(Radice);
+	Presa->InitSphereRadius(70.f);
+	Presa->SetRelativeLocation(FVector(0.f, 0.f, 40.f));
+	Presa->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	Presa->SetCollisionResponseToAllChannels(ECR_Overlap);
+	Presa->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	Presa->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
+	Presa->SetGenerateOverlapEvents(false);
+	Presa->SetCanEverAffectNavigation(false);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sfera(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cilindro(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -221,6 +235,21 @@ void AValdorsoFalo::BeginPlay()
 			}
 		}
 		++Numero;
+	}
+}
+
+FText AValdorsoFalo::TestoInterazione(const APawn* Chi) const
+{
+	return Rimasti() > 0.f ? ValdorsoBotteghe::Invito(EValdorsoTipoBanco::Fuoco) : FText::GetEmpty();
+}
+
+void AValdorsoFalo::Interagisci(APawn* Chi)
+{
+	const APlayerController* Controllore = Chi ? Cast<APlayerController>(Chi->GetController()) : nullptr;
+	UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::Di(Controllore);
+	if (Zaino && Rimasti() > 0.f)
+	{
+		Zaino->ClientApriBottega(static_cast<uint8>(EValdorsoTipoBanco::Fuoco));
 	}
 }
 

@@ -3,6 +3,7 @@
 #include "ValdorsoArmi.h"
 #include "Valdorso.h"
 #include "ValdorsoAspettoComponent.h"
+#include "ValdorsoCombattimento.h"
 #include "ValdorsoOggetti.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -15,12 +16,46 @@
 
 namespace
 {
-	// Come stanno in mano: valori provvisori (il manichino di Epic: hand_r con la X verso le dita). Si sistemano in gioco
-	// con Valdorso.Arma.Presa; poi Claude scrive qui quelli giusti.
-	FVector ArmiPosDestra(9.f, 3.f, -1.f);
-	FRotator ArmiRotDestra(0.f, 0.f, 90.f);
-	FVector ArmiPosSinistra(-8.f, -4.f, 1.f);
-	FRotator ArmiRotSinistra(0.f, 90.f, 0.f);
+	// I quattro posti: le due mani, il fianco (la spada nel fodero) e la schiena (lo scudo). Valori di serie: provati da Fra
+	// il 09/11 (destra: prova 5 giro 1; sinistra: prova 5); si sistemano in gioco con Valdorso.Arma.Prova / Sposta / Presa.
+	const TCHAR* const ArmiNomiPosti[4] = { TEXT("destra"), TEXT("sinistra"), TEXT("fianco"), TEXT("schiena") };
+	const TCHAR* const ArmiOssi[4] = { TEXT("hand_r"), TEXT("hand_l"), TEXT("pelvis"), TEXT("spine_05") };
+
+	FRotator ArmiDirezione(int32 Quale, int32 Giro)
+	{
+		static const FRotator Direzioni[6] = { FRotator(0.f, 0.f, 0.f), FRotator(0.f, 180.f, 0.f), FRotator(0.f, 90.f, 0.f),
+			FRotator(0.f, -90.f, 0.f), FRotator(90.f, 0.f, 0.f), FRotator(-90.f, 0.f, 0.f) };
+		// prima il giro intorno alla lama, poi la direzione
+		return (FQuat(Direzioni[FMath::Clamp(Quale, 1, 6) - 1]) * FQuat(FRotator(0.f, 0.f, 90.f * FMath::Clamp(Giro, 0, 3)))).Rotator();
+	}
+
+	FVector ArmiPos[4] = { FVector(9.f, 3.f, -1.f), FVector(-8.f, -4.f, 1.f), FVector(0.f, -18.f, 12.f), FVector(-5.f, 20.f, 0.f) };
+	FRotator ArmiRot[4] = { ArmiDirezione(5, 1), ArmiDirezione(5, 0), ArmiDirezione(6, 0), ArmiDirezione(3, 0) };
+
+	/** Il posto dal suo nome ("destra", "s", "fianco"...); -1 se non c'e'. */
+	int32 ArmiPosto(const TArray<FString>& Argomenti)
+	{
+		if (Argomenti.Num() == 0)
+		{
+			return -1;
+		}
+		for (int32 i = 0; i < 4; ++i)
+		{
+			if (FString(ArmiNomiPosti[i]).StartsWith(Argomenti[0], ESearchCase::IgnoreCase))
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void ArmiScrivi(int32 Posto, const TCHAR* Come)
+	{
+		const FVector& Pos = ArmiPos[Posto];
+		const FRotator& Rot = ArmiRot[Posto];
+		UE_LOG(LogValdorso, Display, TEXT("Valdorso.Arma.Presa %s %.1f %.1f %.1f %.1f %.1f %.1f  (%s: da mandare a Claude)"),
+			ArmiNomiPosti[Posto], Pos.X, Pos.Y, Pos.Z, Rot.Pitch, Rot.Yaw, Rot.Roll, Come);
+	}
 
 	void ArmiRimettiTutte(UWorld* Mondo)
 	{
@@ -37,42 +72,62 @@ namespace
 		}
 	}
 
+	const TCHAR* ArmiSpiega = TEXT(" (posti: destra, sinistra, fianco, schiena)");
+
 	FAutoConsoleCommandWithWorldAndArgs ComandoArmaPresa(
 		TEXT("Valdorso.Arma.Presa"),
-		TEXT("Valdorso.Arma.Presa destra|sinistra <x> <y> <z> <pitch> <yaw> <roll>: come sta l'arma nella mano (cm e gradi, rispetto all'osso). Senza numeri: scrive quelli di adesso."),
+		TEXT("Valdorso.Arma.Presa <posto> <x> <y> <z> <pitch> <yaw> <roll>: come sta l'arma (cm e gradi, rispetto all'osso). Senza numeri: scrive quelli di adesso. Posti: destra, sinistra, fianco, schiena."),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
 		{
-			const bool bSinistra = Argomenti.Num() > 0 && Argomenti[0].StartsWith(TEXT("s"), ESearchCase::IgnoreCase);
-			FVector& Pos = bSinistra ? ArmiPosSinistra : ArmiPosDestra;
-			FRotator& Rot = bSinistra ? ArmiRotSinistra : ArmiRotDestra;
+			const int32 Posto = ArmiPosto(Argomenti);
+			if (Posto < 0)
+			{
+				UE_LOG(LogValdorso, Display, TEXT("Valdorso.Arma.Presa: quale posto?%s"), ArmiSpiega);
+				return;
+			}
 			if (Argomenti.Num() >= 7)
 			{
-				Pos = FVector(FCString::Atof(*Argomenti[1]), FCString::Atof(*Argomenti[2]), FCString::Atof(*Argomenti[3]));
-				Rot = FRotator(FCString::Atof(*Argomenti[4]), FCString::Atof(*Argomenti[5]), FCString::Atof(*Argomenti[6]));
+				ArmiPos[Posto] = FVector(FCString::Atof(*Argomenti[1]), FCString::Atof(*Argomenti[2]), FCString::Atof(*Argomenti[3]));
+				ArmiRot[Posto] = FRotator(FCString::Atof(*Argomenti[4]), FCString::Atof(*Argomenti[5]), FCString::Atof(*Argomenti[6]));
 				ArmiRimettiTutte(Mondo);
 			}
-			UE_LOG(LogValdorso, Display, TEXT("Valdorso.Arma.Presa %s %.1f %.1f %.1f %.1f %.1f %.1f  (da mandare a Claude)"),
-				bSinistra ? TEXT("sinistra") : TEXT("destra"), Pos.X, Pos.Y, Pos.Z, Rot.Pitch, Rot.Yaw, Rot.Roll);
+			ArmiScrivi(Posto, TEXT("presa"));
 		}));
 
 	// (09/11) Per trovare in fretta il verso giusto: sei direzioni della lama (o della faccia dello scudo) e quattro giri.
 	FAutoConsoleCommandWithWorldAndArgs ComandoArmaProva(
 		TEXT("Valdorso.Arma.Prova"),
-		TEXT("Valdorso.Arma.Prova destra|sinistra <1-6> [giro 0-3]: prova una delle sei direzioni dell'arma nella mano (e quanto e' girata)."),
+		TEXT("Valdorso.Arma.Prova <posto> <1-6> [giro 0-3]: prova una delle sei direzioni dell'arma (e quanto e' girata). Posti: destra, sinistra, fianco, schiena."),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
 		{
-			const bool bSinistra = Argomenti.Num() > 0 && Argomenti[0].StartsWith(TEXT("s"), ESearchCase::IgnoreCase);
-			const int32 Quale = Argomenti.Num() > 1 ? FMath::Clamp(FCString::Atoi(*Argomenti[1]), 1, 6) : 1;
-			const int32 Giro = Argomenti.Num() > 2 ? FMath::Clamp(FCString::Atoi(*Argomenti[2]), 0, 3) : 0;
-			static const FRotator Direzioni[6] = { FRotator(0.f, 0.f, 0.f), FRotator(0.f, 180.f, 0.f), FRotator(0.f, 90.f, 0.f),
-				FRotator(0.f, -90.f, 0.f), FRotator(90.f, 0.f, 0.f), FRotator(-90.f, 0.f, 0.f) };
-			FRotator& Rot = bSinistra ? ArmiRotSinistra : ArmiRotDestra;
-			// prima il giro intorno alla lama, poi la direzione
-			Rot = (FQuat(Direzioni[Quale - 1]) * FQuat(FRotator(0.f, 0.f, 90.f * Giro))).Rotator();
+			const int32 Posto = ArmiPosto(Argomenti);
+			if (Posto < 0)
+			{
+				UE_LOG(LogValdorso, Display, TEXT("Valdorso.Arma.Prova: quale posto?%s"), ArmiSpiega);
+				return;
+			}
+			const int32 Quale = Argomenti.Num() > 1 ? FCString::Atoi(*Argomenti[1]) : 1;
+			const int32 Giro = Argomenti.Num() > 2 ? FCString::Atoi(*Argomenti[2]) : 0;
+			ArmiRot[Posto] = ArmiDirezione(Quale, Giro);
 			ArmiRimettiTutte(Mondo);
-			const FVector& Pos = bSinistra ? ArmiPosSinistra : ArmiPosDestra;
-			UE_LOG(LogValdorso, Display, TEXT("Valdorso.Arma.Presa %s %.1f %.1f %.1f %.1f %.1f %.1f  (prova %d, giro %d)"),
-				bSinistra ? TEXT("sinistra") : TEXT("destra"), Pos.X, Pos.Y, Pos.Z, Rot.Pitch, Rot.Yaw, Rot.Roll, Quale, Giro);
+			ArmiScrivi(Posto, TEXT("prova"));
+		}));
+
+	// (09/11) Spostare un poco l'arma (cm, lungo gli assi dell'osso): Valdorso.Arma.Sposta destra 0 0 -3
+	FAutoConsoleCommandWithWorldAndArgs ComandoArmaSposta(
+		TEXT("Valdorso.Arma.Sposta"),
+		TEXT("Valdorso.Arma.Sposta <posto> <dx> <dy> <dz>: sposta l'arma di qualche cm (lungo gli assi dell'osso). Posti: destra, sinistra, fianco, schiena."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
+		{
+			const int32 Posto = ArmiPosto(Argomenti);
+			if (Posto < 0 || Argomenti.Num() < 4)
+			{
+				UE_LOG(LogValdorso, Display, TEXT("Valdorso.Arma.Sposta <posto> <dx> <dy> <dz>%s"), ArmiSpiega);
+				return;
+			}
+			ArmiPos[Posto] += FVector(FCString::Atof(*Argomenti[1]), FCString::Atof(*Argomenti[2]), FCString::Atof(*Argomenti[3]));
+			ArmiRimettiTutte(Mondo);
+			ArmiScrivi(Posto, TEXT("sposta"));
 		}));
 }
 
@@ -84,14 +139,15 @@ namespace ValdorsoArmi
 		return FString::Printf(TEXT("/Game/Valle/Pericoli/Armi/%s.%s"), *Nome, *Nome);
 	}
 
-	FTransform Presa(bool bSinistra)
+	FTransform Presa(int32 Posto)
 	{
-		return bSinistra ? FTransform(ArmiRotSinistra, ArmiPosSinistra) : FTransform(ArmiRotDestra, ArmiPosDestra);
+		const int32 Quale = FMath::Clamp(Posto, 0, 3);
+		return FTransform(ArmiRot[Quale], ArmiPos[Quale]);
 	}
 
-	FName Osso(bool bSinistra)
+	FName Osso(int32 Posto)
 	{
-		return bSinistra ? FName(TEXT("hand_l")) : FName(TEXT("hand_r"));
+		return FName(ArmiOssi[FMath::Clamp(Posto, 0, 3)]);
 	}
 }
 
@@ -102,7 +158,7 @@ USkeletalMeshComponent* UValdorsoArmiComponent::Mano() const
 	if (const UValdorsoAspettoComponent* Aspetto = GetOwner() ? GetOwner()->FindComponentByClass<UValdorsoAspettoComponent>() : nullptr)
 	{
 		USkeletalMeshComponent* Visibile = Aspetto->GetCorpoVisibile();
-		if (Visibile && Visibile->DoesSocketExist(ValdorsoArmi::Osso(false)))
+		if (Visibile && Visibile->DoesSocketExist(ValdorsoArmi::Osso(ValdorsoArmi::PostoDestra)))
 		{
 			return Visibile;
 		}
@@ -140,6 +196,7 @@ void UValdorsoArmiComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UValdorsoArmiComponent, Destra);
 	DOREPLIFETIME(UValdorsoArmiComponent, Sinistra);
+	DOREPLIFETIME(UValdorsoArmiComponent, bRiposte);
 }
 
 void UValdorsoArmiComponent::BeginPlay()
@@ -167,26 +224,69 @@ void UValdorsoArmiComponent::Imposta(FName NuovaDestra, FName NuovaSinistra)
 	{
 		return;
 	}
+	// prendere in mano un'arma nuova dallo zaino la sfodera
+	if ((NuovaDestra != Destra && !NuovaDestra.IsNone()) || (NuovaSinistra != Sinistra && !NuovaSinistra.IsNone()))
+	{
+		bRiposte = false;
+		bRiposteMostrate = false;
+	}
 	Destra = NuovaDestra;
 	Sinistra = NuovaSinistra;
 	// sul server (o giocando da soli) OnRep non arriva: si mostra subito
 	Mostra();
 }
 
-const FValdorsoTipoOggetto* UValdorsoArmiComponent::Arma() const
+const FValdorsoTipoOggetto* UValdorsoArmiComponent::ArmaPortata() const
 {
 	const FValdorsoTipoOggetto* Tipo = Destra.IsNone() ? nullptr : ValdorsoOggetti::Trova(Destra);
 	return Tipo && Tipo->Posto == EValdorsoPosto::ManoDestra ? Tipo : nullptr;
 }
 
-const FValdorsoTipoOggetto* UValdorsoArmiComponent::Scudo() const
+const FValdorsoTipoOggetto* UValdorsoArmiComponent::ScudoPortato() const
 {
 	const FValdorsoTipoOggetto* Tipo = Sinistra.IsNone() ? nullptr : ValdorsoOggetti::Trova(Sinistra);
 	return Tipo && Tipo->Posto == EValdorsoPosto::ManoSinistra ? Tipo : nullptr;
 }
 
+const FValdorsoTipoOggetto* UValdorsoArmiComponent::Arma() const
+{
+	return bRiposte ? nullptr : ArmaPortata();
+}
+
+const FValdorsoTipoOggetto* UValdorsoArmiComponent::Scudo() const
+{
+	return bRiposte ? nullptr : ScudoPortato();
+}
+
+void UValdorsoArmiComponent::ServerAlterna_Implementation()
+{
+	if (!ArmaPortata() && !ScudoPortato())
+	{
+		return;
+	}
+	const UWorld* Mondo = GetWorld();
+	const double OraMondo = Mondo ? Mondo->GetTimeSeconds() : 0.0;
+	if (OraMondo < ProssimoCambio)
+	{
+		return;
+	}
+	ProssimoCambio = OraMondo + 0.6;
+	bRiposte = !bRiposte;
+	// sul server (o da soli) OnRep non arriva
+	OnRep_Armi();
+}
+
 void UValdorsoArmiComponent::OnRep_Armi()
 {
+	// il suono del fodero (o delle cinghie dello scudo) quando si ripone o si sfodera, non quando si entra in gioco
+	const bool bCambiato = bRiposte != bRiposteMostrate;
+	bRiposteMostrate = bRiposte;
+	if (bCambiato && HasBegunPlay() && GetOwner() && GetNetMode() != NM_DedicatedServer)
+	{
+		const TCHAR* Nome = bRiposte ? TEXT("S_Fodero_Riponi") : TEXT("S_Fodero_Sfodera");
+		ValdorsoCombattimento::Suona(GetWorld(), ValdorsoCombattimento::SuonoPericoli(Nome), GetOwner()->GetActorLocation(), 1500.f,
+			1.f, FMath::FRandRange(0.95f, 1.05f));
+	}
 	Mostra();
 }
 
@@ -197,11 +297,12 @@ void UValdorsoArmiComponent::Mostra()
 	{
 		return;
 	}
-	InDestra = Pezzo(InDestra, Arma() ? Destra : NAME_None, false);
-	InSinistra = Pezzo(InSinistra, Scudo() ? Sinistra : NAME_None, true);
+	// riposte: la spada nel fodero al fianco, lo scudo dietro la schiena
+	InDestra = Pezzo(InDestra, ArmaPortata() ? Destra : NAME_None, bRiposte ? ValdorsoArmi::PostoFianco : ValdorsoArmi::PostoDestra);
+	InSinistra = Pezzo(InSinistra, ScudoPortato() ? Sinistra : NAME_None, bRiposte ? ValdorsoArmi::PostoSchiena : ValdorsoArmi::PostoSinistra);
 }
 
-UStaticMeshComponent* UValdorsoArmiComponent::Pezzo(UStaticMeshComponent* Attuale, FName Id, bool bSinistra)
+UStaticMeshComponent* UValdorsoArmiComponent::Pezzo(UStaticMeshComponent* Attuale, FName Id, int32 Posto)
 {
 	USkeletalMeshComponent* Manichino = Mano();
 	UStaticMesh* Modello = nullptr;
@@ -241,8 +342,8 @@ UStaticMeshComponent* UValdorsoArmiComponent::Pezzo(UStaticMeshComponent* Attual
 		Attuale->RegisterComponent();
 	}
 	Attuale->SetStaticMesh(Modello);
-	Attuale->AttachToComponent(Manichino, FAttachmentTransformRules::SnapToTargetNotIncludingScale, ValdorsoArmi::Osso(bSinistra));
-	Attuale->SetRelativeTransform(ValdorsoArmi::Presa(bSinistra));
+	Attuale->AttachToComponent(Manichino, FAttachmentTransformRules::SnapToTargetNotIncludingScale, ValdorsoArmi::Osso(Posto));
+	Attuale->SetRelativeTransform(ValdorsoArmi::Presa(Posto));
 	Attuale->SetVisibility(true);
 	return Attuale;
 }

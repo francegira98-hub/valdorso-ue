@@ -1,22 +1,26 @@
-// Valdorso - I lupi (v0.1.4 passo 4.6, provvisori, 09/11/2026). Scritto da Claude. Dalla Roadmap ("I pericoli della
-// valle: i lupi di notte e nella nebbia") e dal Design (i lupi non sono mostri: hanno paura del fuoco e del battito).
+// Valdorso - Gli animali della valle (v0.1.4: i lupi il 09/11, tutti gli altri il 10/11, provvisori). Scritto da Claude.
+// Dalla Roadmap ("I pericoli della valle") e dal Design (gli animali non sono mostri: hanno paura del fuoco e del
+// battito). Il file si chiama ancora ValdorsoLupi perche' e' nato con i lupi.
 //
 // Come funziona:
-// - AValdorsoTaneLupi (una sola per mondo, la fa nascere la modalita' di gioco, solo sul server) tiene due tane: il
-//   Boschetto e la Collina dell'Orso. Di notte o con la nebbia, se un colono e' entro 120 m da una tana, ne esce un
-//   branco di 3 o 4 lupi. Di giorno (e se non c'e' piu' nessuno vicino) i lupi che non stanno cacciando tornano alla
-//   tana (spariscono). Un branco ucciso tutto torna dopo 20 minuti.
-// - AValdorsoLupo: un ACharacter con le statistiche (GAS, 60 di salute), mosso dal server. Gli stati:
-//   Vaga (intorno alla tana) -> Fiuta (un colono entro 30 m: si avvicina piano) -> Accerchia (gira intorno a 6-7 m,
-//   ringhia) -> Morde (corre e morde: 8 di salute, 25 di equilibrio, ValdorsoCombattimento::Colpisci) -> di nuovo
-//   Accerchia. Sotto il 30% di salute Fugge. Chi sta vicino a un fuoco acceso o nella pace del battito non viene morso
-//   (i lupi girano al largo, a 9 m). Chi lo colpisce diventa la sua preda.
-// - Morto: si accascia, guaisce; a chi l'ha ucciso vanno la pelle e le zanne (nello zaino). Dopo 30 secondi sparisce.
-// - L'aspetto (provvisorio, Tools/Generatori/pericoli.py -> /Game/Valle/Pericoli/Lupo): corpo, testa, coda e quattro
-//   zampe; ogni PC le muove da se' (il passo dalla velocita', la coda, la testa che si abbassa per mordere). Di notte,
-//   ogni tanto, un lupo che vaga ulula (si sente fino a 150 m).
-// Comandi di console (sul server, o da soli): Valdorso.Lupi.Chiama (un branco a 25 m da te, anche di giorno, per le
-// prove), Valdorso.Lupi.Via (tutti i lupi tornano alla tana).
+// - Sei specie (ValdorsoAnimali::Specie): Lupo (predatore, di notte e con la nebbia, in branco), Cinghiale e Orso
+//   (difendono il loro posto: se ti avvicini ringhiano, avanzano e poi caricano; l'orso e' raro e fortissimo), Cervo,
+//   Lepre e Volpe (fuggono appena ti sentono). Ognuna con la sua salute, i suoi colpi, le sue velocita', i suoi suoni.
+// - AValdorsoAnimale: un ACharacter con le statistiche (GAS), mosso dal server. Gli stati: Vaga (intorno alla tana),
+//   Fiuta (il lupo si avvicina piano), Accerchia (il lupo gira intorno; cinghiale e orso avvertono e avanzano), Morde
+//   (corre e colpisce: ValdorsoCombattimento::Colpisci), Fuggi (le prede sempre; gli altri feriti). Chi sta vicino a un
+//   fuoco acceso o nella pace del battito non viene attaccato. Chi lo colpisce diventa la sua preda (o il suo nemico).
+// - Morto: si accascia e resta a terra 5 minuti. Niente bottino da solo: E sull'animale a terra, "Scuoia il lupo",
+//   con un coltello (o un pugnale) nello zaino; pelle, zanne, artigli, palchi e carne a chi lo scuoia.
+// - AValdorsoTane (una per mondo, solo sul server, la fa nascere la modalita' di gioco): le tane nei luoghi della valle
+//   (ValdorsoAnimali::Tane). Un gruppo esce quando e' la sua ora (di notte, di giorno o sempre) e un colono e' entro
+//   120 m; torna alla tana (sparisce) quando non e' piu' la sua ora o non c'e' piu' nessuno, se non sta cacciando.
+//   Un gruppo ucciso tutto torna dopo i suoi minuti (il lupo 20, l'orso 60).
+// - L'aspetto (provvisorio, Tools/Generatori/animali.py -> /Game/Valle/Pericoli/Animali): corpo, testa, coda e quattro
+//   zampe; ogni PC li muove da se'. Dove vanno i pezzi: ValdorsoAnimaliForme.inl (scritto dal generatore).
+// Comandi di console (sul server, o da soli; dalla console dell'editor durante il Play vanno al server da soli):
+//   Valdorso.Animali.Chiama <Specie> (un gruppo a 25 m da te, anche fuori dalla sua ora), Valdorso.Animali.Via (tutti
+//   tornano alla tana), Valdorso.Lupi.Chiama (= Chiama Lupo), Valdorso.Lupi.Via.
 
 #pragma once
 
@@ -24,12 +28,14 @@
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
+#include "ValdorsoInterazione.h"
 #include "ValdorsoLupi.generated.h"
 
 class UAbilitySystemComponent;
 class UStaticMeshComponent;
 class UValdorsoAttributeSet;
 class UValdorsoReazioniComponent;
+struct FValdorsoZaino;
 
 UENUM()
 enum class EValdorsoStatoLupo : uint8
@@ -42,68 +48,164 @@ enum class EValdorsoStatoLupo : uint8
 	Morto,
 };
 
+/** Come si comporta una specie con chi le si avvicina. */
+enum class EValdorsoIndole : uint8
+{
+	/** Caccia: fiuta, accerchia e morde (il lupo). */
+	Predatore,
+	/** Difende il suo posto: avverte, avanza e carica chi gli si avvicina troppo (cinghiale, orso). */
+	Territoriale,
+	/** Fugge appena sente qualcuno (cervo, lepre, volpe). */
+	Preda,
+};
+
+/** Quando esce dalla tana. */
+enum class EValdorsoOraTana : uint8
+{
+	Notte,
+	Giorno,
+	Sempre,
+};
+
+/** Una specie: le regole, i suoni e quello che si ricava a scuoiarla. */
+struct FValdorsoSpecie
+{
+	const TCHAR* Id = TEXT("");
+	/** Il nome con l'articolo, per gli avvisi ("il lupo", "l'orso"). */
+	const TCHAR* ConArticolo = TEXT("");
+	EValdorsoIndole Indole = EValdorsoIndole::Preda;
+	float Salute = 50.f;
+	float Danno = 0.f;
+	float Equilibrio = 0.f;
+	float SecondiMorso = 1.5f;
+	/** Entro quanto sente un colono e oltre quanto lo lascia (cm). */
+	float Fiuto = 2000.f;
+	float Lascia = 4000.f;
+	/** Quanto lontano gira intorno (il lupo) o da quanto vicino avverte (cinghiale, orso), e per quanti secondi. */
+	float Giro = 650.f;
+	float SecondiAvviso = 5.f;
+	/** Da quanto vicino colpisce (cm, da centro a centro). */
+	float Portata = 170.f;
+	/** Velocita': a spasso e di corsa (cm/s). */
+	float Passo = 150.f;
+	float Corsa = 600.f;
+	/** Sotto questa parte della salute fugge (gli animali che attaccano). */
+	float Paura = 0.3f;
+	/** I suoni: quando avverte o accerchia, quando e' ferito o muore, il richiamo (ogni tanto, mentre vaga). */
+	const TCHAR* SuonoAvviso = nullptr;
+	const TCHAR* SuonoDolore = nullptr;
+	const TCHAR* SuonoRichiamo = nullptr;
+	bool bRichiamoDiNotte = true;
+	/** Quello che si ricava a scuoiarlo (fino a tre oggetti). */
+	const TCHAR* Bottino[3] = { nullptr, nullptr, nullptr };
+	int32 Quanti[3] = { 0, 0, 0 };
+};
+
+/** Dove si attaccano i pezzi di una specie (cm, da terra): ValdorsoAnimaliForme.inl, scritto da animali.py. */
+struct FValdorsoForma
+{
+	const TCHAR* Id;
+	float CorpoZ;
+	float TestaX;
+	float TestaZ;
+	float CodaX;
+	float CodaZ;
+	float ZampeAvantiX;
+	float ZampeDietroX;
+	float ZampeY;
+	float ZampaLunga;
+	float MezzoLargo;
+	float MezzoLungo;
+};
+
+/** Una tana: dove, chi, quanti, quando e dopo quanto torna un gruppo ucciso. */
+struct FValdorsoTana
+{
+	const TCHAR* Luogo;
+	const TCHAR* Specie;
+	int32 Minimo;
+	int32 Massimo;
+	EValdorsoOraTana Ora;
+	float MinutiRitorno;
+};
+
+namespace ValdorsoAnimali
+{
+	VALDORSO_API TArrayView<const FValdorsoSpecie> Tutte();
+	VALDORSO_API const FValdorsoSpecie* Specie(FName Id);
+	VALDORSO_API const FValdorsoForma* Forma(FName Id);
+	VALDORSO_API TArrayView<const FValdorsoTana> Tane();
+
+	/** Vero se a quell'ora esce (di notte: poca luce o nebbia). */
+	VALDORSO_API bool Fuori(EValdorsoOraTana Ora, float LuceDelGiorno, bool bNebbia);
+
+	/** Lo stato che viene dopo, per quella specie (le regole, senza il mondo). Distanza negativa: nessuno vicino. */
+	VALDORSO_API EValdorsoStatoLupo Prossimo(const FValdorsoSpecie& Specie, EValdorsoStatoLupo Attuale, float SaluteParte,
+		float Distanza, bool bProtetta, float Secondi);
+
+	/** Quanto e' veloce in quello stato (cm/s). */
+	VALDORSO_API float Velocita(const FValdorsoSpecie& Specie, EValdorsoStatoLupo Stato);
+
+	/** Quanti nel gruppo, dal numero della volta (tra il minimo e il massimo della tana). */
+	VALDORSO_API int32 QuantiNelGruppo(const FValdorsoTana& Tana, int32 Volta);
+
+	/** Si puo' scuoiare con quello che c'e' nello zaino? (un coltello o un pugnale) */
+	VALDORSO_API bool HaLama(const FValdorsoZaino& Zaino);
+}
+
+/** I lupi del 09/11: le stesse regole, per i test e per chi le chiama ancora cosi'. */
 namespace ValdorsoLupi
 {
 	inline constexpr float SaluteLupo = 60.f;
 	inline constexpr float DannoMorso = 8.f;
 	inline constexpr float EquilibrioMorso = 25.f;
-	/** Tra un morso e l'altro (secondi). */
 	inline constexpr float SecondiMorso = 1.5f;
-	/** Da quanto vicino morde (cm, dal centro del lupo al centro del colono). */
 	inline constexpr float PortataMorso = 170.f;
-	/** Entro quanto sente un colono, e oltre quanto lo lascia (cm). */
 	inline constexpr float Fiuto = 3000.f;
 	inline constexpr float Lascia = 4500.f;
-	/** Quanto lontano gira intorno: a chi caccia, e a chi e' protetto (fuoco, pace del battito). */
 	inline constexpr float GiroCaccia = 650.f;
 	inline constexpr float GiroAlLargo = 900.f;
-	/** Sotto questa parte della salute fugge. */
 	inline constexpr float PauraSotto = 0.3f;
-	/** Per quanto gira intorno prima di mordere, e per quanto fugge (secondi). */
 	inline constexpr float SecondiAccerchia = 5.f;
 	inline constexpr float SecondiFuga = 10.f;
-	/** Il branco ucciso tutto torna dopo (secondi). */
 	inline constexpr float SecondiRitorno = 20.f * 60.f;
-	/** Entro quanto deve esserci un colono perche' il branco esca, e oltre quanto torna alla tana (cm). */
 	inline constexpr float VicinoTana = 12000.f;
 	inline constexpr float LontanoTana = 20000.f;
+	/** Per quanto resta a terra un animale morto (secondi). */
+	inline constexpr float SecondiATerra = 300.f;
 
-	/** Vero se i lupi escono: di notte (poca luce del giorno) o con la nebbia. */
 	VALDORSO_API bool Fuori(float LuceDelGiorno, bool bNebbia);
-
-	/**
-	 * Lo stato che viene dopo (le regole, senza il mondo). SaluteParte 0..1; Distanza dalla preda in cm (negativa: nessuna
-	 * preda); bProtetta: la preda sta vicino a un fuoco o nella pace; Secondi: da quanto e' nello stato di adesso.
-	 */
 	VALDORSO_API EValdorsoStatoLupo Prossimo(EValdorsoStatoLupo Attuale, float SaluteParte, float Distanza, bool bProtetta, float Secondi);
-
-	/** Quanti lupi nel branco (3 o 4), dal numero della volta. */
 	VALDORSO_API int32 QuantiNelBranco(int32 Volta);
-
-	/** Quanto e' veloce in quello stato (cm/s). */
 	VALDORSO_API float Velocita(EValdorsoStatoLupo Stato);
 }
 
 UCLASS()
-class VALDORSO_API AValdorsoLupo : public ACharacter, public IAbilitySystemInterface
+class VALDORSO_API AValdorsoAnimale : public ACharacter, public IAbilitySystemInterface, public IValdorsoInterattivo
 {
 	GENERATED_BODY()
 
 public:
-	AValdorsoLupo();
+	AValdorsoAnimale();
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return Abilita; }
 
-	/** Solo sul server: da dove viene (la tana: ci vaga intorno). */
-	void Casa(const FVector& Dove) { Tana = Dove; }
+	/** Solo sul server, prima di FinishSpawning: che animale e', e da dove viene (la tana: ci vaga intorno). */
+	void Prepara(FName QualeSpecie, const FVector& DoveTana);
 
-	/** Solo sul server: qualcuno l'ha colpito (diventa la sua preda). */
+	/** Solo sul server: qualcuno l'ha colpito (diventa la sua preda, o lo fa fuggire). */
 	void Ferito(AActor* Da);
 
+	const FValdorsoSpecie* GetSpecie() const;
 	EValdorsoStatoLupo GetStato() const { return Stato; }
 	bool Vivo() const { return Stato != EValdorsoStatoLupo::Morto; }
 	/** Sta cacciando (accerchia o morde): non torna alla tana adesso. */
 	bool Caccia() const { return Stato == EValdorsoStatoLupo::Accerchia || Stato == EValdorsoStatoLupo::Morde; }
+
+	// IValdorsoInterattivo: scuoiare l'animale a terra
+	virtual FText TestoInterazione(const APawn* Chi) const override;
+	virtual void Interagisci(APawn* Chi) override;
+	virtual FVector PuntoInterazione() const override { return GetActorLocation(); }
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -112,6 +214,7 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	void Vesti();
 	void Pensa(float DeltaSeconds);
 	void Muoviti(float DeltaSeconds);
 	void Anima(float DeltaSeconds);
@@ -123,33 +226,45 @@ private:
 	UFUNCTION()
 	void OnRep_Stato();
 
-	UPROPERTY(VisibleAnywhere, Category = "Lupo")
+	UFUNCTION()
+	void OnRep_Specie();
+
+	UFUNCTION()
+	void OnRep_Scuoiato();
+
+	UPROPERTY(VisibleAnywhere, Category = "Animale")
 	TObjectPtr<UAbilitySystemComponent> Abilita;
 
 	UPROPERTY()
 	TObjectPtr<UValdorsoAttributeSet> Attributi;
 
-	UPROPERTY(VisibleAnywhere, Category = "Lupo")
+	UPROPERTY(VisibleAnywhere, Category = "Animale")
 	TObjectPtr<UValdorsoReazioniComponent> Reazioni;
 
-	/** Il lupo disegnato: a terra (la capsula e' sollevata), si accascia quando muore. */
-	UPROPERTY(VisibleAnywhere, Category = "Lupo")
+	/** L'animale disegnato: a terra (la capsula e' sollevata), si accascia quando muore. */
+	UPROPERTY(VisibleAnywhere, Category = "Animale")
 	TObjectPtr<USceneComponent> Figura;
 
-	UPROPERTY(VisibleAnywhere, Category = "Lupo")
+	UPROPERTY(VisibleAnywhere, Category = "Animale")
 	TObjectPtr<UStaticMeshComponent> Corpo;
 
-	UPROPERTY(VisibleAnywhere, Category = "Lupo")
+	UPROPERTY(VisibleAnywhere, Category = "Animale")
 	TObjectPtr<UStaticMeshComponent> Testa;
 
-	UPROPERTY(VisibleAnywhere, Category = "Lupo")
+	UPROPERTY(VisibleAnywhere, Category = "Animale")
 	TObjectPtr<UStaticMeshComponent> Coda;
 
-	UPROPERTY(VisibleAnywhere, Category = "Lupo")
+	UPROPERTY(VisibleAnywhere, Category = "Animale")
 	TArray<TObjectPtr<UStaticMeshComponent>> Zampe;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Specie)
+	FName Specie = TEXT("Lupo");
 
 	UPROPERTY(ReplicatedUsing = OnRep_Stato)
 	EValdorsoStatoLupo Stato = EValdorsoStatoLupo::Vaga;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Scuoiato)
+	bool bScuoiato = false;
 
 	// --- solo sul server
 	FVector Tana = FVector::ZeroVector;
@@ -170,45 +285,46 @@ private:
 	// --- su ogni PC (l'aspetto)
 	float Passo = 0.f;
 	float Accasciato = 0.f;
-	double ProssimoUlulato = 0.0;
+	double ProssimoRichiamo = 0.0;
+	FName Vestito;
 };
 
-/** Le tane dei lupi (una per mondo, solo sul server): fa uscire i branchi e li richiama. */
+/** Le tane degli animali (una per mondo, solo sul server): fa uscire i gruppi e li richiama. */
 UCLASS()
-class VALDORSO_API AValdorsoTaneLupi : public AActor
+class VALDORSO_API AValdorsoTane : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	AValdorsoTaneLupi();
+	AValdorsoTane();
 
-	static AValdorsoTaneLupi* Di(const UWorld* Mondo);
+	static AValdorsoTane* Di(const UWorld* Mondo);
 
-	/** Per le prove: un branco vicino a quel punto, adesso (anche di giorno). Quanti ne sono usciti. */
-	int32 Chiama(const FVector& Vicino);
+	/** Per le prove: un gruppo di quella specie vicino a quel punto, adesso. Quanti ne sono usciti. */
+	int32 Chiama(FName QualeSpecie, const FVector& Vicino);
 
-	/** Tutti i lupi tornano alla tana (spariscono). */
+	/** Tutti gli animali tornano alla tana (spariscono). */
 	void Via();
 
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
-	struct FTana
+	struct FTanaViva
 	{
-		FString Nome;
+		const FValdorsoTana* Regola = nullptr;
 		FVector Centro = FVector::ZeroVector;
-		TArray<TWeakObjectPtr<AValdorsoLupo>> Lupi;
+		TArray<TWeakObjectPtr<AValdorsoAnimale>> Animali;
 		bool bFuori = false;
 		double Ritorno = 0.0;
 	};
 
 	void Prepara();
-	int32 Branco(FTana& Tana, const FVector& Dove);
+	int32 Gruppo(FName QualeSpecie, int32 Quanti, const FVector& Dove, TArray<TWeakObjectPtr<AValdorsoAnimale>>& Dentro);
 	bool Terra(const FVector& Sopra, FVector& OutTerra) const;
 
-	TArray<FTana> Tane;
-	/** I lupi chiamati con la console (non hanno tana). */
-	TArray<TWeakObjectPtr<AValdorsoLupo>> Chiamati;
+	TArray<FTanaViva> Vive;
+	/** Gli animali chiamati con la console (non hanno tana). */
+	TArray<TWeakObjectPtr<AValdorsoAnimale>> Chiamati;
 	bool bPronte = false;
 	int32 Volte = 0;
 	double ProssimoControllo = 0.0;

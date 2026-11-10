@@ -2,6 +2,8 @@
 
 #include "ValdorsoZaino.h"
 #include "SValdorsoZaino.h"
+#include "SValdorsoBottega.h"
+#include "ValdorsoBotteghe.h"
 #include "Valdorso.h"
 #include "ValdorsoArmi.h"
 #include "ValdorsoAttributeSet.h"
@@ -112,6 +114,25 @@ namespace
 			const FString Nome = Argomenti.Num() > 2 ? Argomenti[2] : FString();
 			ZainoEsito(ZainoPerOgniGiocatore(Mondo, Nome, [Id, Quanti](UValdorsoZainoComponent& Zaino) { Zaino.Dai(Id, Quanti); }),
 				FString::Printf(TEXT("dati %d %s"), Quanti, *Id.ToString()));
+		}));
+
+	// (10/11) Per le prove: tutte le armi e gli scudi che si impugnano (quelli che entrano nello zaino)
+	FAutoConsoleCommandWithWorldAndArgs ComandoZainoArmeria(
+		TEXT("Valdorso.Zaino.Armeria"),
+		TEXT("Per le prove: dà una di ogni arma e scudo che si impugna (quelli che entrano), Valdorso.Zaino.Armeria [nome]."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
+		{
+			const FString Nome = Argomenti.Num() > 0 ? Argomenti[0] : FString();
+			ZainoEsito(ZainoPerOgniGiocatore(Mondo, Nome, [](UValdorsoZainoComponent& Zaino)
+			{
+				for (const FValdorsoTipoOggetto& Tipo : ValdorsoOggetti::Catalogo())
+				{
+					if (Tipo.Uso == EValdorsoUso::Impugna && ValdorsoZaino::Conta(Zaino.Contenuto(), Tipo.Id) == 0)
+					{
+						Zaino.Dai(Tipo.Id, 1, false);
+					}
+				}
+			}), TEXT("l'armeria"));
 		}));
 
 	FAutoConsoleCommandWithWorldAndArgs ComandoZainoMonete(
@@ -233,6 +254,15 @@ void UValdorsoZainoComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			Viewport->RemoveViewportWidgetContent(Schermata.ToSharedRef());
 		}
 		Schermata.Reset();
+	}
+	if (SchermataBottega.IsValid())
+	{
+		UWorld* Mondo = GetWorld();
+		if (UGameViewportClient* Viewport = Mondo ? Mondo->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(SchermataBottega.ToSharedRef());
+		}
+		SchermataBottega.Reset();
 	}
 	if (SchermataTessera.IsValid())
 	{
@@ -396,6 +426,43 @@ void UValdorsoZainoComponent::TesseraDiProva()
 	const APlayerState* Stato = Controllore ? Controllore->PlayerState.Get() : nullptr;
 	const FString Nome = Stato ? Stato->GetPlayerName() : FString(TEXT("Colono"));
 	Tessera = ValdorsoTessera::Vista(Nome, nullptr, ValdorsoTessera::Nuova(Nome));
+}
+
+void UValdorsoZainoComponent::ClientApriBottega_Implementation(uint8 Banco)
+{
+	ValdorsoBottegaSchermo::Apri(Cast<APlayerController>(GetOwner()),
+		static_cast<EValdorsoTipoBanco>(FMath::Min<uint8>(Banco, static_cast<uint8>(EValdorsoTipoBanco::Locanda))));
+}
+
+void UValdorsoZainoComponent::ServerRicetta_Implementation(FName Ricetta)
+{
+	APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	const APawn* Corpo = Controllore ? Controllore->GetPawn() : nullptr;
+	const FValdorsoRicetta* R = ValdorsoBotteghe::Trova(Ricetta);
+	if (!Corpo || !R || TroppeRichieste())
+	{
+		return;
+	}
+	const UValdorsoPericoliComponent* Pericoli = UValdorsoPericoliComponent::Di(Corpo);
+	if (Pericoli && Pericoli->Caduto())
+	{
+		return;
+	}
+	// il server non si fida: il colono deve essere davvero al banco giusto (o vicino a un fuoco acceso)
+	if (!ValdorsoBotteghe::BancoVicino(Corpo, R->Banco))
+	{
+		Avvisa(LOCTEXT("LontanoBanco", "Sei troppo lontano dal banco."), 2.f);
+		return;
+	}
+	const FText Perche = ValdorsoBotteghe::Manca(Zaino, *R);
+	if (!Perche.IsEmpty() || !ValdorsoBotteghe::Fai(Zaino, *R))
+	{
+		Avvisa(Perche.IsEmpty() ? LOCTEXT("NonRiesce", "Non si può fare.") : Perche, 2.5f);
+		return;
+	}
+	Cambiato();
+	Avvisa(FText::Format(LOCTEXT("Fatto", "{0}: {1}"), FText::FromString(R->Verbo), R->Guadagno > 0 && !R->Risultato
+		? ValdorsoBotteghe::TestoServe(*R) : ValdorsoBotteghe::TestoDa(*R)), 2.f);
 }
 
 void UValdorsoZainoComponent::ClientTessera_Implementation(const FValdorsoTesseraVista& Vista, APawn* Colono, bool bPropria)

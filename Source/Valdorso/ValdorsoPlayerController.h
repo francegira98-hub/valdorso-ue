@@ -337,6 +337,8 @@ private:
 	void TastoZaino();
 	/** (09/11) Tab, il tasto centrale del mouse, la levetta destra premuta: aggancia chi hai davanti, o sgancia. */
 	void TastoAggancio();
+	/** (09/11) Il tasto Z: ripone le armi (spada al fianco, scudo sulla schiena) o le riprende in mano. */
+	void TastoRiponi();
 	/** (08/11) I tasti 1-8 della barra delle azioni (Indice da 0 a 7) e Invio per la chat: solo in gioco, senza schermate aperte. */
 	void TastoAzione(int32 Indice);
 	void TastoChat();

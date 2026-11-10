@@ -31,6 +31,7 @@
 class APlayerController;
 class SValdorsoZaino;
 class SValdorsoTessera;
+class SValdorsoBottega;
 struct FValdorsoRegistro;
 
 UCLASS(ClassGroup = (Valdorso))
@@ -97,6 +98,17 @@ public:
 	/** Mette l'oggetto di un posto dello zaino in un tasto della barra (Posto INDEX_NONE = vuota il tasto). */
 	UFUNCTION(Server, Reliable)
 	void ServerAssegna(int32 Tasto, int32 Posto);
+
+	/** (10/11) Il colono e' a un banco (o a un falo'): si apre la sua bottega su questo PC (ValdorsoBotteghe.h). */
+	UFUNCTION(Client, Reliable)
+	void ClientApriBottega(uint8 Banco);
+
+	/** (10/11) Fa una ricetta di bottega (cuocere, conciare, comprare, vendere): il server controlla il banco e lo zaino. */
+	UFUNCTION(Server, Reliable)
+	void ServerRicetta(FName Ricetta);
+
+	/** (10/11) La bottega aperta (solo sul PC del giocatore). */
+	TSharedPtr<SValdorsoBottega> SchermataBottega;
 
 	/** La schermata aperta (solo sul PC del giocatore). */
 	TSharedPtr<SValdorsoZaino> Schermata;

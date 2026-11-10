@@ -97,9 +97,15 @@ def crea_menu_valdorso():
         voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_BOSCO % densita)
         valdorso.add_menu_entry("Villaggio", voce)
 
+    # (10/11) i banchi delle botteghe (fucina, conceria, falegname, locanda): crea_botteghe.py
+    voce = unreal.ToolMenuEntry(name="Botteghe", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Botteghe: metti i banchi (fucina, conceria, falegname, locanda)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_botteghe.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
     # (09/11) i pericoli: i pezzi del lupo, le armi e i suoni dei colpi (crea_pericoli.py)
     voce = unreal.ToolMenuEntry(name="Pericoli", type=unreal.MultiBlockType.MENU_ENTRY)
-    voce.set_label("Pericoli: importa lupi, armi e suoni")
+    voce.set_label("Pericoli: importa animali, armi e suoni")
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_pericoli.py")
     valdorso.add_menu_entry("Pericoli", voce)
 

@@ -29,7 +29,9 @@
 #include "ValdorsoMenuValle.h"
 #include "ValdorsoImpostazioni.h"
 #include "Components/SplineComponent.h"
+#include "Misc/CommandLine.h"
 #include "Misc/PackageName.h"
+#include "Misc/Parse.h"
 #include "CollisionQueryParams.h"
 #include "Engine/HitResult.h"
 
@@ -50,6 +52,18 @@ namespace
 		TEXT("Valdorso.Avvio"),
 		1,
 		TEXT("1 = la schermata d'avvio (logo, avviso, premi un tasto) una volta per avvio del gioco; 0 = mai."));
+
+	/** (10/11, deciso da Fra) Le partite in locale ("Esplora da solo", "prova senza server") solo per le prove di Fra
+	 *  nell'editor (anche "Avvia gioco Valdorso.cmd", che usa l'editor): mai nel gioco pacchettizzato che scaricano gli
+	 *  amici, ne' aperto dal launcher (-DalLauncher). Gli amici entrano solo nel server. */
+	bool MenuPartiteLocali()
+	{
+#if WITH_EDITOR
+		return !FParse::Param(FCommandLine::Get(), TEXT("DalLauncher"));
+#else
+		return false;
+#endif
+	}
 
 	/** (07/11) Ogni quanti secondi il menu richiede lo stato del mondo al server. */
 	constexpr float OgniQuantoLoStato = 30.f;
@@ -413,7 +427,7 @@ void AValdorsoMenuController::CreaMenu()
 	// Il menu, sopra la scena.
 	SAssignNew(Menu, SValdorsoMenuPrincipale)
 		.OnEntra(FSimpleDelegate::CreateWeakLambda(this, [this]() { MostraAccesso(FText::GetEmpty()); }))
-		.OnDaSolo(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::EsploraDaSolo))
+		.OnDaSolo(MenuPartiteLocali() ? FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::EsploraDaSolo) : FSimpleDelegate())
 		.OnEsci(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::Esci))
 		.OnImpostazioni(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ApriImpostazioni));
 
@@ -551,7 +565,7 @@ void AValdorsoMenuController::MostraAccesso(const FText& Messaggio)
 		.Messaggio(Messaggio)
 		.OnRichiesta(FValdorsoSuRichiestaAccesso::CreateUObject(this, &AValdorsoMenuController::SuRichiestaAccesso))
 		.OnIndietro(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ChiudiAccesso))
-		.OnProvaLocale(FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ProvaLocale));
+		.OnProvaLocale(MenuPartiteLocali() ? FSimpleDelegate::CreateUObject(this, &AValdorsoMenuController::ProvaLocale) : FSimpleDelegate());
 
 	if (UGameViewportClient* Viewport = GetWorld()->GetGameViewport())
 	{
@@ -621,6 +635,10 @@ void AValdorsoMenuController::SuRichiestaAccesso(const FValdorsoRichiestaAccesso
 
 void AValdorsoMenuController::EsploraDaSolo()
 {
+	if (!MenuPartiteLocali())
+	{
+		return;
+	}
 	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
 	{
 		Istanza->bModoSolo = true;
@@ -641,6 +659,10 @@ void AValdorsoMenuController::EsploraDaSolo()
 
 void AValdorsoMenuController::ProvaLocale()
 {
+	if (!MenuPartiteLocali())
+	{
+		return;
+	}
 	// la prova dello sviluppo resta quella di sempre: un colono qualunque, niente salvato
 	if (UValdorsoGameInstance* Istanza = GetGameInstance<UValdorsoGameInstance>())
 	{

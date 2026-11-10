@@ -71,13 +71,13 @@ void AValdorsoGameMode::StartPlay()
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		Mondo->SpawnActor<AValdorsoRuneNotte>(AValdorsoRuneNotte::StaticClass(), FTransform::Identity, Parametri);
 	}
-	// (09/11, v0.1.4) Le tane dei lupi (solo il server: i lupi arrivano a tutti come personaggi).
-	if (Mondo && GetNetMode() != NM_Client && !TActorIterator<AValdorsoTaneLupi>(Mondo))
+	// (09/11, v0.1.4) Le tane degli animali (dal 10/11 non solo i lupi) (solo il server: i lupi arrivano a tutti come personaggi).
+	if (Mondo && GetNetMode() != NM_Client && !TActorIterator<AValdorsoTane>(Mondo))
 	{
 		FActorSpawnParameters Parametri;
-		Parametri.Name = TEXT("ValdorsoTaneLupi");
+		Parametri.Name = TEXT("ValdorsoTane");
 		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		Mondo->SpawnActor<AValdorsoTaneLupi>(AValdorsoTaneLupi::StaticClass(), FTransform::Identity, Parametri);
+		Mondo->SpawnActor<AValdorsoTane>(AValdorsoTane::StaticClass(), FTransform::Identity, Parametri);
 	}
 	// (07/11) Lo stato del mondo che il server racconta al menu e al launcher (ora, tempo, coloni, notizia): solo il server.
 	if (Mondo && GetNetMode() != NM_Client && !TActorIterator<AValdorsoStatoMondo>(Mondo))

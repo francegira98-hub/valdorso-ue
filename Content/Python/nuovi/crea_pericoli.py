@@ -3,14 +3,18 @@
 # Si puo' rilanciare (rimpiazza quello che c'e').
 #
 # Legge V:/Texture/valdorso/pericoli (o pericoli.zip accanto), fatta da Tools/Generatori/pericoli.py:
-#   SM_Lupo_*.glb   -> /Game/Valle/Pericoli/Lupo   (corpo, testa, coda, zampa: li monta AValdorsoLupo, C++)
-#   SM_Arma_*.glb   -> /Game/Valle/Pericoli/Armi   (coltello, pugnale, falcetto, martello, bastone, spada, scudo)
-#   S_*.wav         -> /Game/Valle/Pericoli/Suoni  (i colpi, il lupo, le bolle e il respiro sott'acqua)
-# I materiali sono quelli del villaggio (MI_Villaggio_Canna: il colore dei vertici; MI_Villaggio_Assi: il legno):
-# serve aver fatto il villaggio almeno una volta. Senza collisione (i lupi hanno la loro capsula, le armi non toccano).
+#   SM_<Animale>_*.glb -> /Game/Valle/Pericoli/Animali (lupo, cinghiale, orso, cervo, lepre, volpe: corpo, testa, coda,
+#                         zampa; li monta AValdorsoAnimale, C++)
+#   SM_Arma_*.glb      -> /Game/Valle/Pericoli/Armi    (20 armi e scudi)
+#   S_*.wav            -> /Game/Valle/Pericoli/Suoni   (i colpi, i versi degli animali, il fodero, lo scuoiare, l'acqua)
+#   Colori.json        -> /Game/Valle/Pericoli/Materiali: MI_Pericoli_<Colore> (10/11: i colori sono materiali, il
+#                         colore dei vertici del 09/11 non arrivava e i lupi erano bianchi)
+# I materiali di partenza sono quelli del villaggio (M_VillaggioColore, MI_Villaggio_Assi): serve aver fatto il
+# villaggio almeno una volta. Senza collisione (i lupi hanno la loro capsula, le armi non toccano).
 # I lupi non si mettono nel livello: escono da soli dalle tane (AValdorsoTaneLupi, C++). Resoconto in
 # Saved/Claude/pericoli.txt.
 
+import json
 import os
 import zipfile
 
@@ -78,6 +82,32 @@ def cerca(cartella, nome, classe):
 
 def materiali():
     mat = {}
+    # (10/11) i colori: un'istanza di M_VillaggioColore per colore, con la sua tinta
+    genitore = unreal.load_asset(MATERIALI + "/M_VillaggioColore")
+    colori = {}
+    f = CARTELLA + "/Colori.json"
+    if os.path.exists(f):
+        with open(f, encoding="utf-8") as dentro:
+            colori = json.load(dentro)
+    if genitore is None:
+        avviso("manca %s/M_VillaggioColore: prima fai il villaggio" % MATERIALI)
+    else:
+        mel = unreal.MaterialEditingLibrary
+        dest = DEST + "/Materiali"
+        for nome, (r, g, b) in colori.items():
+            percorso = "%s/MI_Pericoli_%s" % (dest, nome)
+            mi = unreal.load_asset(percorso) if libreria.does_asset_exist(percorso) else None
+            if mi is None:
+                mi = strumenti.create_asset("MI_Pericoli_" + nome, dest, unreal.MaterialInstanceConstant,
+                                            unreal.MaterialInstanceConstantFactoryNew())
+            mel.set_material_instance_parent(mi, genitore)
+            mel.set_material_instance_vector_parameter_value(mi, "Tinta", unreal.LinearColor(r, g, b, 1.0))
+            metallo = nome in ("Ferro", "Acciaio", "Ottone", "Oro")
+            mel.set_material_instance_scalar_parameter_value(mi, "Ruvidezza", 0.45 if metallo else 0.85)
+            mel.update_material_instance(mi)
+            libreria.save_loaded_asset(mi)
+            mat[nome] = mi
+        scrivi("colori: %d" % len(colori))
     for n in ("Canna", "Assi"):
         m = unreal.load_asset("%s/MI_Villaggio_%s" % (MATERIALI, n))
         if m is None:
@@ -160,12 +190,14 @@ def esegui():
         salva_resoconto()
         return
     mat = materiali()
-    lupo = importa_modelli("SM_Lupo_", DEST + "/Lupo", mat)
+    animali = 0
+    for specie in ("Lupo", "Cinghiale", "Orso", "Cervo", "Lepre", "Volpe"):
+        animali += importa_modelli("SM_%s_" % specie, DEST + "/Animali", mat)
     armi = importa_modelli("SM_Arma_", DEST + "/Armi", mat)
     suoni = importa_suoni()
-    scrivi("fatto: %d pezzi del lupo, %d armi, %d suoni" % (lupo, armi, suoni))
+    scrivi("fatto: %d pezzi di animali, %d armi, %d suoni" % (animali, armi, suoni))
     # controllo: il lupo guarda +X (la testa ha il muso a +X)
-    testa = cerca(DEST + "/Lupo", "SM_Lupo_Testa", unreal.StaticMesh)
+    testa = cerca(DEST + "/Animali", "SM_Lupo_Testa", unreal.StaticMesh)
     if testa is not None:
         b = testa.get_bounding_box()
         if b.max.x < 40:

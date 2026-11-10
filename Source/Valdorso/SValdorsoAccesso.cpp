@@ -496,7 +496,8 @@ void SValdorsoPrimaDiEntrare::Construct(const FArguments& InArgs)
 						.ButtonStyle(&FCoreStyle::Get(), "NoBorder")
 						.IsEnabled(Libero)
 						// (05/10) Nascosto in "Ho perso la password": il pannello è il più alto e a 720p usciva dallo schermo.
-						.Visibility_Lambda([this]() { return bRecupero ? EVisibility::Collapsed : EVisibility::Visible; })
+						// (10/11) e mai nel gioco aperto dal launcher (il menu non lo collega: niente partite in locale per gli amici)
+						.Visibility_Lambda([this]() { return bRecupero || !OnProvaLocale.IsBound() ? EVisibility::Collapsed : EVisibility::Visible; })
 						.OnClicked_Lambda([this]() { OnProvaLocale.ExecuteIfBound(); return FReply::Handled(); })
 						[
 							SNew(STextBlock)

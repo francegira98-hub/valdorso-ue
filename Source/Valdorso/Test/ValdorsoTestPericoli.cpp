@@ -6,6 +6,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "ValdorsoCombattimento.h"
+#include "ValdorsoBotteghe.h"
 #include "ValdorsoLupi.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoZainoDati.h"
@@ -299,7 +300,9 @@ bool FValdorsoTestArmi::RunTest(const FString& Parameters)
 	TestTrue(TEXT("lo scudo gettato non resta in mano"), ValdorsoZaino::SistemaMani(Zaino));
 	TestTrue(TEXT("mano sinistra vuota"), Zaino.Sinistra.IsNone());
 	// ogni arma ha danno, portata e la mano giusta
-	for (const TCHAR* Id : { TEXT("Coltello"), TEXT("Pugnale"), TEXT("Falcetto"), TEXT("Martello"), TEXT("Bastone_Pastore"), TEXT("Spada_Corta") })
+	for (const TCHAR* Id : { TEXT("Coltello"), TEXT("Pugnale"), TEXT("Falcetto"), TEXT("Martello"), TEXT("Bastone_Pastore"), TEXT("Spada_Corta"),
+		TEXT("Accetta"), TEXT("Ascia_Guerra"), TEXT("Mazza"), TEXT("Clava"), TEXT("Lancia"), TEXT("Forcone"), TEXT("Bastone_Ferrato"),
+		TEXT("Spada_Lunga"), TEXT("Gladio") })
 	{
 		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
 		TestNotNull(Id, Tipo);
@@ -346,6 +349,130 @@ bool FValdorsoTestLupi::RunTest(const FString& Parameters)
 	TestTrue(TEXT("morde piu' veloce di quanto vaga"), ValdorsoLupi::Velocita(E::Morde) > ValdorsoLupi::Velocita(E::Vaga));
 	TestNotNull(TEXT("la pelle"), ValdorsoOggetti::Trova(TEXT("Pelle_Lupo")));
 	TestNotNull(TEXT("le zanne"), ValdorsoOggetti::Trova(TEXT("Zanne_Lupo")));
+	return true;
+}
+
+
+// (10/11) Gli animali: ogni specie ha la sua forma, il suo bottino nel catalogo e le sue tane in luoghi veri. Il
+// cinghiale avverte e poi carica (e lascia stare chi se ne va o sta al fuoco); il cervo fugge e non attacca mai.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestAnimali, "Valdorso.Pericoli.Animali", ValdorsoTestPericoli::Bandiere)
+bool FValdorsoTestAnimali::RunTest(const FString& Parameters)
+{
+	using E = EValdorsoStatoLupo;
+	TestTrue(TEXT("sei specie"), ValdorsoAnimali::Tutte().Num() >= 6);
+	for (const FValdorsoSpecie& S : ValdorsoAnimali::Tutte())
+	{
+		TestNotNull(S.Id, ValdorsoAnimali::Forma(S.Id));
+		TestTrue(TEXT("salute"), S.Salute > 0.f);
+		TestTrue(TEXT("corre piu' di quanto cammina"), S.Corsa > S.Passo);
+		for (int32 i = 0; i < 3; ++i)
+		{
+			if (S.Bottino[i])
+			{
+				TestNotNull(S.Bottino[i], ValdorsoOggetti::Trova(S.Bottino[i]));
+			}
+		}
+	}
+	for (const FValdorsoTana& T : ValdorsoAnimali::Tane())
+	{
+		TestNotNull(T.Luogo, ValdorsoLuoghi::Trova(T.Luogo));
+		TestNotNull(T.Specie, ValdorsoAnimali::Specie(T.Specie));
+		for (int32 Volta = 0; Volta < 5; ++Volta)
+		{
+			const int32 Quanti = ValdorsoAnimali::QuantiNelGruppo(T, Volta);
+			TestTrue(TEXT("quanti nel gruppo"), Quanti >= T.Minimo && Quanti <= T.Massimo);
+		}
+	}
+	const FValdorsoSpecie* Cinghiale = ValdorsoAnimali::Specie(TEXT("Cinghiale"));
+	const FValdorsoSpecie* Cervo = ValdorsoAnimali::Specie(TEXT("Cervo"));
+	TestNotNull(TEXT("il cinghiale"), Cinghiale);
+	TestNotNull(TEXT("il cervo"), Cervo);
+	if (Cinghiale && Cervo)
+	{
+		TestTrue(TEXT("cinghiale: lontano vaga"), ValdorsoAnimali::Prossimo(*Cinghiale, E::Vaga, 1.f, 2000.f, false, 0.f) == E::Vaga);
+		TestTrue(TEXT("cinghiale: vicino avverte"), ValdorsoAnimali::Prossimo(*Cinghiale, E::Vaga, 1.f, 600.f, false, 0.f) == E::Accerchia);
+		TestTrue(TEXT("cinghiale: poi carica"), ValdorsoAnimali::Prossimo(*Cinghiale, E::Accerchia, 1.f, 600.f, false, 3.f) == E::Morde);
+		TestTrue(TEXT("cinghiale: chi se ne va e' lasciato stare"), ValdorsoAnimali::Prossimo(*Cinghiale, E::Accerchia, 1.f, 1600.f, false, 1.f) == E::Vaga);
+		TestTrue(TEXT("cinghiale: al fuoco no"), ValdorsoAnimali::Prossimo(*Cinghiale, E::Vaga, 1.f, 600.f, true, 0.f) == E::Vaga);
+		TestTrue(TEXT("cervo: sente e fugge"), ValdorsoAnimali::Prossimo(*Cervo, E::Vaga, 1.f, 2000.f, false, 0.f) == E::Fuggi);
+		TestTrue(TEXT("cervo: fugge finche' sente"), ValdorsoAnimali::Prossimo(*Cervo, E::Fuggi, 1.f, 2000.f, false, 30.f) == E::Fuggi);
+		TestTrue(TEXT("cervo: lontano torna a brucare"), ValdorsoAnimali::Prossimo(*Cervo, E::Fuggi, 1.f, 5000.f, false, 30.f) == E::Vaga);
+		TestTrue(TEXT("cervo: non attacca"), Cervo->Danno <= 0.f);
+	}
+	TestTrue(TEXT("di giorno i cervi"), ValdorsoAnimali::Fuori(EValdorsoOraTana::Giorno, 1.f, false));
+	TestFalse(TEXT("di notte no"), ValdorsoAnimali::Fuori(EValdorsoOraTana::Giorno, 0.f, false));
+	TestTrue(TEXT("l'orso sempre"), ValdorsoAnimali::Fuori(EValdorsoOraTana::Sempre, 0.f, false));
+	FValdorsoZaino Zaino;
+	ValdorsoZaino::Sistema(Zaino);
+	TestFalse(TEXT("senza coltello non si scuoia"), ValdorsoAnimali::HaLama(Zaino));
+	ValdorsoZaino::Aggiungi(Zaino, TEXT("Coltello"), 1, -1);
+	TestTrue(TEXT("col coltello si'"), ValdorsoAnimali::HaLama(Zaino));
+	return true;
+}
+
+
+// (10/11) Le botteghe: ogni ricetta usa oggetti che esistono, ha un Id solo suo e qualcosa da dare; cuocere toglie la
+// carne cruda e da' quella cotta; comprare costa Aureus (senza non si compra); vendere li da'; lo zaino pieno ferma.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestBotteghe, "Valdorso.Pericoli.Botteghe", ValdorsoTestPericoli::Bandiere)
+bool FValdorsoTestBotteghe::RunTest(const FString& Parameters)
+{
+	TSet<FName> Visti;
+	for (const FValdorsoRicetta& R : ValdorsoBotteghe::Ricette())
+	{
+		TestFalse(FString::Printf(TEXT("%s: non doppia"), R.Id), Visti.Contains(FName(R.Id)));
+		Visti.Add(FName(R.Id));
+		TestTrue(FString::Printf(TEXT("%s: da' qualcosa"), R.Id), (R.Risultato && R.QuantiRisultato > 0) || R.Guadagno > 0);
+		if (R.Risultato)
+		{
+			TestNotNull(R.Risultato, ValdorsoOggetti::Trova(R.Risultato));
+		}
+		for (const FValdorsoIngrediente& I : R.Serve)
+		{
+			if (I.Id)
+			{
+				TestNotNull(I.Id, ValdorsoOggetti::Trova(I.Id));
+			}
+		}
+	}
+	for (uint8 b = 0; b <= static_cast<uint8>(EValdorsoTipoBanco::Locanda); ++b)
+	{
+		TestTrue(TEXT("ogni banco ha le sue ricette"), ValdorsoBotteghe::Del(static_cast<EValdorsoTipoBanco>(b)).Num() > 0);
+	}
+	FValdorsoZaino Zaino;
+	ValdorsoZaino::Sistema(Zaino);
+	const FValdorsoRicetta* Cuoci = ValdorsoBotteghe::Trova(TEXT("Cuoci_Carne"));
+	const FValdorsoRicetta* Compra = ValdorsoBotteghe::Trova(TEXT("Compra_Spada_Corta"));
+	const FValdorsoRicetta* Vendi = ValdorsoBotteghe::Trova(TEXT("Vendi_Pelle_Lupo"));
+	TestNotNull(TEXT("cuocere"), Cuoci);
+	TestNotNull(TEXT("comprare"), Compra);
+	TestNotNull(TEXT("vendere"), Vendi);
+	if (Cuoci && Compra && Vendi)
+	{
+		TestFalse(TEXT("senza carne non si cuoce"), ValdorsoBotteghe::Fai(Zaino, *Cuoci));
+		ValdorsoZaino::Aggiungi(Zaino, TEXT("Carne_Cruda"), 2, -1);
+		TestTrue(TEXT("si cuoce"), ValdorsoBotteghe::Fai(Zaino, *Cuoci));
+		TestEqual(TEXT("una cruda in meno"), ValdorsoZaino::Conta(Zaino, TEXT("Carne_Cruda")), 1);
+		TestEqual(TEXT("una cotta"), ValdorsoZaino::Conta(Zaino, TEXT("Carne_Cotta")), 1);
+		Zaino.Monete = 10;
+		TestFalse(TEXT("10 Aureus non bastano"), ValdorsoBotteghe::Manca(Zaino, *Compra).IsEmpty());
+		TestFalse(TEXT("e non si compra"), ValdorsoBotteghe::Fai(Zaino, *Compra));
+		TestEqual(TEXT("gli Aureus restano"), Zaino.Monete, 10);
+		Zaino.Monete = 40;
+		TestTrue(TEXT("con 40 si'"), ValdorsoBotteghe::Fai(Zaino, *Compra));
+		TestEqual(TEXT("ne restano 5"), Zaino.Monete, 5);
+		TestEqual(TEXT("la spada c'e'"), ValdorsoZaino::Conta(Zaino, TEXT("Spada_Corta")), 1);
+		ValdorsoZaino::Aggiungi(Zaino, TEXT("Pelle_Lupo"), 1, -1);
+		TestTrue(TEXT("si vende"), ValdorsoBotteghe::Fai(Zaino, *Vendi));
+		TestEqual(TEXT("8 Aureus in piu'"), Zaino.Monete, 13);
+		TestEqual(TEXT("la pelle non c'e' piu'"), ValdorsoZaino::Conta(Zaino, TEXT("Pelle_Lupo")), 0);
+		// lo zaino pieno: 24 posti occupati da cose che non si impilano
+		FValdorsoZaino Pieno;
+		ValdorsoZaino::Sistema(Pieno);
+		ValdorsoZaino::Aggiungi(Pieno, TEXT("Scudo_Legno"), ValdorsoZaino::NumeroPosti, -1);
+		Pieno.Monete = 100;
+		TestFalse(TEXT("zaino pieno: non si compra"), ValdorsoBotteghe::Fai(Pieno, *Compra));
+		TestEqual(TEXT("e non si paga"), Pieno.Monete, 100);
+	}
 	return true;
 }
 
