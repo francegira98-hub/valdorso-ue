@@ -139,6 +139,11 @@ private:
 
 	FTimerHandle TimerRitorno;
 
+	/** (10/11) I saluti a chi passa vicino (solo sul server): una riga nella chat di quel colono, ogni tanto. */
+	void Saluta();
+	FTimerHandle TimerSaluti;
+	TMap<TWeakObjectPtr<APlayerController>, double> Salutati;
+
 	UPROPERTY()
 	TObjectPtr<USkeletalMesh> ManichinoUomo;
 

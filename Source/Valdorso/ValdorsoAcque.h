@@ -62,6 +62,10 @@ namespace ValdorsoAcqua
 	/** Il pelo di un corso d'acqua in quel punto, se il punto è sull'acqua (entro mezza larghezza + Margine). */
 	VALDORSO_API bool PeloSulCorso(const FValdorsoCorsoAcqua& Corso, const FVector2D& Punto, float Margine, float& OutPelo);
 
+	/** (10/11, v0.1.4) Dove va la corrente di un corso d'acqua in quel punto (verso il pelo piu' basso del tratto piu'
+	 *  vicino; a pari pelo, nell'ordine dei punti): vero se il punto e' sull'acqua del corso. OutVerso e' lungo 1. */
+	VALDORSO_API bool CorrenteSulCorso(const FValdorsoCorsoAcqua& Corso, const FVector2D& Punto, float Margine, FVector2D& OutVerso);
+
 	/** Quanto del corpo è sott'acqua (0 = niente, 1 = tutto): dal fondo della capsula al pelo, diviso l'altezza. */
 	VALDORSO_API float Immersione(float Pelo, float ZCentro, float MezzaAltezza);
 }
@@ -87,6 +91,14 @@ public:
 
 	/** Il pelo dell'acqua in quel punto (X, Y nel mondo): vero se lì c'è acqua. Se ce n'è più d'una, la più alta. */
 	bool PeloQui(const FVector2D& Punto, float& OutPelo) const;
+
+	/** (10/11, v0.1.4) Quanto veloce va la corrente dei corsi d'acqua (cm/s): chi nuota ci viene portato. Nel lago e
+	 *  nella pozza niente corrente. */
+	UPROPERTY(EditAnywhere, Category = "Acqua", meta = (ClampMin = "0"))
+	float VelocitaCorrente = 90.f;
+
+	/** (10/11) La corrente in quel punto (cm/s, in piano): zero fuori dai corsi e negli specchi d'acqua. */
+	FVector2D CorrenteQui(const FVector2D& Punto) const;
 
 	/** L'attore delle acque del mondo (nullptr se il livello non ne ha). */
 	static AValdorsoAcque* Di(const UWorld* Mondo);

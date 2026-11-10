@@ -1,6 +1,7 @@
 // Valdorso - Le cose da raccogliere nella valle (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoRaccolta.h"
+#include "ValdorsoAcque.h"
 #include "Valdorso.h"
 #include "ValdorsoCharacter.h"
 #include "ValdorsoOggetti.h"
@@ -40,7 +41,12 @@ namespace
 		int32 Posti;
 		float Lontano;
 		float Ricrescita;
+		/** (10/11) Sul fondo dell'acqua. */
+		bool bFondale = false;
 	};
+	/** (10/11) Quanto sott'acqua deve stare il fondo per le cose del fondale (cm), e la probabilita' di una perla. */
+	constexpr float RaccoltaFondoMinimo = 200.f;
+	constexpr float RaccoltaProbabilitaPerla = 0.1f;
 
 	const FRaccoltaRegola RaccoltaRegole[] = {
 		{ TEXT("Boschetto"), TEXT("Rami_Secchi"), 2, 14, 0.8f, 360.f },
@@ -48,6 +54,8 @@ namespace
 		{ TEXT("Collina dell'Orso"), TEXT("Rami_Secchi"), 2, 8, 0.6f, 360.f },
 		{ TEXT("Collina dell'Orso"), TEXT("Funghi"), 2, 6, 0.6f, 600.f },
 		{ TEXT("Palude"), TEXT("Erbe_Palude"), 1, 10, 0.7f, 600.f },
+		// (10/11) le cozze sul fondo del lago (molti posti: quelli troppo bassi o sulla riva si saltano)
+		{ TEXT("Lago"), TEXT("Cozze"), 3, 30, 0.7f, 600.f, true },
 	};
 
 	TArray<FValdorsoPuntoRaccolta> RaccoltaCreaPunti()
@@ -87,6 +95,7 @@ namespace
 						Punto.Quantita = Regola.Quantita;
 						Punto.Posizione = Dove;
 						Punto.Ricrescita = Regola.Ricrescita;
+						Punto.bFondale = Regola.bFondale;
 						Tutti.Add(Punto);
 						break;
 					}
@@ -233,6 +242,16 @@ void AValdorsoRaccolta::Sistema()
 				FVector(0.15f * G, 0.15f * G, 0.07f * G), FLinearColor(0.36f, 0.19f, 0.07f) });
 		}
 	}
+	else if (Nome == TEXT("Cozze"))
+	{
+		// (10/11) un mucchietto di cozze sul fondo: gusci scuri, schiacciati e allungati
+		const FVector Dove[4] = { FVector(0.f, 0.f, 0.f), FVector(10.f, 4.f, 0.f), FVector(-7.f, 9.f, 0.f), FVector(3.f, -10.f, 0.f) };
+		for (int32 i = 0; i < 4; ++i)
+		{
+			Forme.Add({ FormaSfera, Dove[i] + FVector(0.f, 0.f, Giu + 3.f), FRotator(0.f, i * 47.f, 8.f * i),
+				FVector(0.12f, 0.06f, 0.04f), FLinearColor(0.04f, 0.05f, 0.09f) });
+		}
+	}
 	else
 	{
 		// un ciuffo d'erba: coni sottili, un poco storti (le erbe della palude e tutto il resto)
@@ -315,6 +334,11 @@ void AValdorsoRaccolta::Interagisci(APawn* Chi)
 		// lo zaino era quasi pieno: il resto rimane qui per dopo
 		Quantita -= Entrati;
 		return;
+	}
+	// (10/11) dentro le cozze, ogni tanto, una perla
+	if (Oggetto == FName(TEXT("Cozze")) && FMath::FRand() < RaccoltaProbabilitaPerla)
+	{
+		Zaino->Dai(TEXT("Perla"), 1);
 	}
 	bDisponibile = false;
 	MostraDisponibile();
@@ -448,7 +472,20 @@ bool UValdorsoRaccolteSubsystem::Metti(int32 Indice)
 	{
 		return false;  // il terreno lì non è ancora caricato: si riprova al prossimo giro
 	}
-	if (SopraPiuBasso < Colpo.ImpactPoint.Z + 300.f || Colpo.ImpactNormal.Z < 0.85f)
+	if (Punto.bFondale)
+	{
+		// (10/11) sul fondale: sopra c'e' l'acqua (e la sua superficie, che la linea trova), il fondo deve essere ben sotto
+		// il pelo; un po' di pendenza va bene
+		const AValdorsoAcque* Acque = AValdorsoAcque::Di(Mondo);
+		float Pelo = 0.f;
+		if (!Acque || !Acque->PeloQui(FVector2D(Colpo.ImpactPoint), Pelo) || Pelo < Colpo.ImpactPoint.Z + RaccoltaFondoMinimo
+			|| Colpo.ImpactNormal.Z < 0.7f)
+		{
+			Saltati.Add(Indice);
+			return false;
+		}
+	}
+	else if (SopraPiuBasso < Colpo.ImpactPoint.Z + 300.f || Colpo.ImpactNormal.Z < 0.85f)
 	{
 		Saltati.Add(Indice);  // sopra c'è altro, o è troppo ripido: questo posto si lascia stare
 		return false;

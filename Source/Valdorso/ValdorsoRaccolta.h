@@ -9,6 +9,8 @@
 //   vede "E · Raccogli: Rami secchi"; raccolta, la cosa sparisce per tutti e ricresce dopo qualche minuto.
 // - Com'è fatta: rami, ciuffi d'erba e funghi con le forme di serie di Unreal (cilindri, coni, sfere) colorate.
 //   Niente da importare; i modelli veri arriveranno con gli alberi.
+// - (10/11, v0.1.4) Sul fondo del lago le cozze (almeno 2 m sott'acqua: ci si tuffa con Ctrl). Ogni tanto dentro c'e'
+//   una perla (la compra Bruno).
 // Comando di console (server): Valdorso.Raccolta.Ricresci (tutto torna subito al suo posto).
 
 #pragma once
@@ -34,6 +36,8 @@ struct FValdorsoPuntoRaccolta
 	FVector Posizione = FVector::ZeroVector;
 	/** In quanti secondi ricresce. */
 	float Ricrescita = 300.f;
+	/** (10/11, v0.1.4) Sul fondo dell'acqua (le cozze del lago): ci si tuffa per prenderle. */
+	bool bFondale = false;
 };
 
 namespace ValdorsoRaccolta

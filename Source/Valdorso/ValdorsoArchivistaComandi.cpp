@@ -8,6 +8,7 @@
 //   Valdorso.Account.Elenco
 //   Valdorso.Account.Info <nome>
 //   Valdorso.Account.Ruolo <nome> <Giocatore|Staff|Amministratore>
+//   (10/11) Valdorso.Account.Permessi <nome> <gilda,bacheche,registro,prove,mondo,giocatori|tutti|nessuno>
 //   Valdorso.Account.ReimpostaPassword <nome>     dà una password temporanea da cambiare al primo accesso
 //   Valdorso.Account.Sospendi <nome> <ore> <motivo>
 //   Valdorso.Account.Banna <nome> <motivo>
@@ -162,6 +163,14 @@ namespace
 		}
 	}
 
+	void AccountPermessi(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
+	{
+		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 2, TEXT("Valdorso.Account.Permessi <nome> <gilda,bacheche,registro,prove,mondo,giocatori|tutti|nessuno>"), Uscita))
+		{
+			Scrivi(Uscita, A->ImpostaPermessi(Argomenti[0], Argomenti[1], AutoreConsole));
+		}
+	}
+
 	void AccountReimposta(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
 	{
 		if (UValdorsoArchivista* A = TrovaArchivista(Mondo, Uscita); A && Servono(Argomenti, 1, TEXT("Valdorso.Account.ReimpostaPassword <nome>"), Uscita))
@@ -292,6 +301,9 @@ namespace
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountRuolo(TEXT("Valdorso.Account.Ruolo"),
 		TEXT("Cambia il ruolo. Valdorso.Account.Ruolo <nome> <Giocatore|Staff|Amministratore>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountRuolo));
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountPermessi(TEXT("Valdorso.Account.Permessi"),
+		TEXT("(10/11) I permessi di uno Staff. Valdorso.Account.Permessi <nome> <gilda,bacheche,registro,prove,mondo,giocatori|tutti|nessuno>"),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountPermessi));
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ComandoAccountReimposta(TEXT("Valdorso.Account.ReimpostaPassword"),
 		TEXT("Dà una password temporanea. Valdorso.Account.ReimpostaPassword <nome>"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&AccountReimposta));

@@ -10,6 +10,7 @@
 #include "ValdorsoMovementComponent.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoPericoli.h"
+#include "ValdorsoPlayerController.h"
 #include "ValdorsoTempo.h"
 #include "ValdorsoZaino.h"
 #include "AbilitySystemComponent.h"
@@ -117,6 +118,12 @@ namespace ValdorsoBagnato
 	{
 		return Bagnato >= Soglia;
 	}
+
+	float PassoFiato(float Fiato, float Delta, bool bSottAcqua)
+	{
+		Delta = FMath::Max(0.f, Delta);
+		return FMath::Clamp(Fiato + (bSottAcqua ? -Delta / SecondiFiato : Delta / SecondiRespiro), 0.f, 1.f);
+	}
 }
 
 UValdorsoBagnatoComponent::UValdorsoBagnatoComponent()
@@ -136,6 +143,8 @@ void UValdorsoBagnatoComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UValdorsoBagnatoComponent, Livello);
 	DOREPLIFETIME(UValdorsoBagnatoComponent, Percepita);
+	// (10/11) il fiato lo vede solo chi nuota
+	DOREPLIFETIME_CONDITION(UValdorsoBagnatoComponent, FiatoInRete, COND_OwnerOnly);
 }
 
 void UValdorsoBagnatoComponent::Imposta(float Nuovo)
@@ -229,6 +238,35 @@ void UValdorsoBagnatoComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	if (FMath::Abs(LivelloEsatto - Livello) >= 0.005f || LivelloEsatto <= 0.f || LivelloEsatto >= 1.f)
 	{
 		Livello = LivelloEsatto;
+	}
+
+	// (10/11, v0.1.4) il fiato: con la bocca sott'acqua si trattiene, fuori si riprende; finito, si annega
+	{
+		const bool bApnea = Movimento && Movimento->IsSwimming() && Movimento->AcquaSopraLaTesta() >= ValdorsoBagnato::AcquaPerApnea;
+		FiatoEsatto = ValdorsoBagnato::PassoFiato(FiatoEsatto, Trascorso, bApnea);
+		if (FMath::Abs(FiatoEsatto - FiatoInRete) >= 0.01f || FiatoEsatto <= 0.f || FiatoEsatto >= 1.f)
+		{
+			FiatoInRete = FiatoEsatto;
+		}
+		UValdorsoPericoliComponent* Annega = UValdorsoPericoliComponent::Di(Corpo);
+		if (bApnea && FiatoEsatto <= 0.f && Annega && !Annega->Caduto())
+		{
+			Annega->Ferisci(ValdorsoBagnato::AnnegaAlSecondo * Trascorso);
+		}
+		// un avviso quando il fiato sta per finire (una volta per immersione)
+		const APawn* Nuotatore = Cast<APawn>(Corpo);
+		if (bApnea && FiatoEsatto < 0.3f && !bAvvisatoFiato)
+		{
+			bAvvisatoFiato = true;
+			if (AValdorsoPlayerController* Suo = Nuotatore ? Cast<AValdorsoPlayerController>(Nuotatore->GetController()) : nullptr)
+			{
+				Suo->ClientAvviso(NSLOCTEXT("ValdorsoBagnato", "Fiato", "Ti manca il fiato: torna su! (Spazio)"), 3.f, 0.f);
+			}
+		}
+		else if (!bApnea && FiatoEsatto > 0.6f)
+		{
+			bAvvisatoFiato = false;
+		}
 	}
 
 	// (09/11) la temperatura: l'aria (stagione, ora, quota, tempo) e quella che sente lui (ValdorsoClima.h)

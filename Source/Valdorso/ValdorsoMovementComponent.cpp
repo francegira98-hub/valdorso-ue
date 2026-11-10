@@ -126,6 +126,25 @@ float UValdorsoMovementComponent::ImmersioneNellaValle() const
 	return ValdorsoAcqua::Immersione(Pelo, static_cast<float>(Dove.Z), Mezza);
 }
 
+float UValdorsoMovementComponent::AcquaSopraLaTesta() const
+{
+	const UWorld* Mondo = GetWorld();
+	if (!Mondo || !UpdatedComponent || ImmersioneNellaValle() <= 0.f || !Acque.IsValid())
+	{
+		return -10000.f;
+	}
+	const FVector Dove = UpdatedComponent->GetComponentLocation();
+	float Pelo = 0.f;
+	if (!Acque->PeloQui(FVector2D(Dove), Pelo))
+	{
+		return -10000.f;
+	}
+	const float Mezza = CharacterOwner && CharacterOwner->GetCapsuleComponent()
+		? CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.f;
+	// la bocca: poco sotto la cima della capsula
+	return Pelo - static_cast<float>(Dove.Z + Mezza * 0.75f);
+}
+
 bool UValdorsoMovementComponent::IsInWater() const
 {
 	if (Super::IsInWater())
@@ -202,6 +221,20 @@ FNetworkPredictionData_Client* UValdorsoMovementComponent::GetPredictionData_Cli
 void UValdorsoMovementComponent::PhysSwimming(float deltaTime, int32 Iterations)
 {
 	Super::PhysSwimming(deltaTime, Iterations);
+	// (10/11, v0.1.4) la corrente dei fiumi porta chi nuota (uguale sul server e sul PC: dipende solo da dove si e')
+	if (MovementMode == MOVE_Swimming && Acque.IsValid() && UpdatedComponent && deltaTime > 0.f)
+	{
+		const FVector2D Corrente = Acque->CorrenteQui(FVector2D(UpdatedComponent->GetComponentLocation()));
+		if (!Corrente.IsNearlyZero())
+		{
+			FHitResult Urto;
+			SafeMoveUpdatedComponent(FVector(Corrente * deltaTime, 0.0), UpdatedComponent->GetComponentQuat(), true, Urto);
+			if (Urto.IsValidBlockingHit())
+			{
+				SlideAlongSurface(FVector(Corrente * deltaTime, 0.0), 1.f - Urto.Time, Urto.Normal, Urto, false);
+			}
+		}
+	}
 	// Il motore, alla fine del passo a nuoto, mette "cadere" se il Physics Volume non è d'acqua (e qui non lo è mai:
 	// l'acqua la dice AValdorsoAcque). Se il corpo è ancora abbastanza sott'acqua, si continua a nuotare: così ogni
 	// passo finisce a nuoto per le animazioni, la rete e la soglia per uscire.

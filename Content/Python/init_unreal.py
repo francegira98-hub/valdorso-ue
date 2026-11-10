@@ -103,6 +103,24 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_botteghe.py")
     valdorso.add_menu_entry("Villaggio", voce)
 
+    # (10/11) la valle si vede anche da lontano (terreno, acqua e cose grandi sempre caricati): sistema_lontananza.py
+    voce = unreal.ToolMenuEntry(name="Lontananza", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Valle: si vede anche da lontano (terreno, acqua, cose grandi)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "sistema_lontananza.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (10/11) i materiali del fumo dei camini e delle lucciole (AValdorsoVitaValle): crea_vita_valle.py
+    voce = unreal.ToolMenuEntry(name="VitaValle", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Valle: fumo dei camini e lucciole (materiali)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_vita_valle.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (10/11) la Gilda: la bacheca degli incarichi dentro la Gilda, Lucia al bancone, la bacheca del Balivo: crea_gilda.py
+    voce = unreal.ToolMenuEntry(name="Gilda", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Gilda: bacheca degli incarichi, Lucia, Mastro Ettore e bacheca del Balivo")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_gilda.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
     # (09/11) i pericoli: i pezzi del lupo, le armi e i suoni dei colpi (crea_pericoli.py)
     voce = unreal.ToolMenuEntry(name="Pericoli", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Pericoli: importa animali, armi e suoni")

@@ -19,6 +19,7 @@ namespace ValdorsoZaino
 			}
 			Posto.Quantita = FMath::Clamp(Posto.Quantita, 1, Tipo->Pila);
 			Posto.Cariche = FMath::Clamp(Posto.Cariche, 0, Tipo->Cariche);
+			Posto.Numero = Tipo->Pila == 1 ? FMath::Max(0, Posto.Numero) : 0;
 		}
 		Zaino.Monete = FMath::Clamp(Zaino.Monete, 0, MassimoMonete);
 		Zaino.Azioni.SetNum(NumeroAzioni);
@@ -117,10 +118,46 @@ namespace ValdorsoZaino
 				Posto.Id = Id;
 				Posto.Quantita = Entrano;
 				Posto.Cariche = CaricheNuove;
+				Posto.Numero = 0;
 				Restano -= Entrano;
 			}
 		}
 		return Quantita - Restano;
+	}
+
+	int32 AggiungiNumerato(FValdorsoZaino& Zaino, FName Id, int32 Numero)
+	{
+		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
+		if (!Tipo)
+		{
+			return INDEX_NONE;
+		}
+		if (Zaino.Posti.Num() != NumeroPosti)
+		{
+			Zaino.Posti.SetNum(NumeroPosti);
+		}
+		for (int32 i = 0; i < Zaino.Posti.Num(); ++i)
+		{
+			FValdorsoPostoZaino& Posto = Zaino.Posti[i];
+			if (Posto.Vuoto())
+			{
+				Posto = FValdorsoPostoZaino();
+				Posto.Id = Id;
+				Posto.Quantita = 1;
+				Posto.Cariche = Tipo->Cariche;
+				Posto.Numero = Numero;
+				return i;
+			}
+		}
+		return INDEX_NONE;
+	}
+
+	int32 PostoNumerato(const FValdorsoZaino& Zaino, FName Id, int32 Numero)
+	{
+		return Zaino.Posti.IndexOfByPredicate([Id, Numero](const FValdorsoPostoZaino& Posto)
+		{
+			return !Posto.Vuoto() && Posto.Id == Id && Posto.Numero == Numero;
+		});
 	}
 
 	bool Togli(FValdorsoZaino& Zaino, int32 Posto, int32 Quantita)

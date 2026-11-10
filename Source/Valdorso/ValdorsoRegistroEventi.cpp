@@ -49,8 +49,50 @@ namespace
 	}
 }
 
+namespace
+{
+	/** (10/11) Gli ultimi eventi, in giro (il piu' vecchio si sovrascrive). */
+	constexpr int32 RegistroQuantiRicordati = 500;
+	TArray<FString>& RegistroRicordati()
+	{
+		static TArray<FString> Righe;
+		return Righe;
+	}
+	int32 RegistroProssimo = 0;
+}
+
 namespace ValdorsoRegistroEventi
 {
+	void Ricorda(const FString& Riga)
+	{
+		TArray<FString>& Righe = RegistroRicordati();
+		if (Righe.Num() < RegistroQuantiRicordati)
+		{
+			Righe.Add(Riga);
+			return;
+		}
+		Righe[RegistroProssimo] = Riga;
+		RegistroProssimo = (RegistroProssimo + 1) % RegistroQuantiRicordati;
+	}
+
+	TArray<FString> Ultimi(int32 Quanti, const FString& Filtro)
+	{
+		const TArray<FString>& Righe = RegistroRicordati();
+		TArray<FString> Fuori;
+		const int32 N = Righe.Num();
+		// dal piu' nuovo: quello prima di RegistroProssimo (quando il giro e' pieno), o l'ultimo aggiunto
+		const int32 Ultimo = N < RegistroQuantiRicordati ? N - 1 : (RegistroProssimo + N - 1) % N;
+		for (int32 k = 0; k < N && Fuori.Num() < Quanti; ++k)
+		{
+			const FString& Riga = Righe[(Ultimo - k + N) % N];
+			if (Filtro.IsEmpty() || Riga.Contains(Filtro))
+			{
+				Fuori.Add(Riga);
+			}
+		}
+		return Fuori;
+	}
+
 	void Annota(const FString& Tipo, const AActor* Chi, const AActor* Bersaglio, const FVector& Dove, const FString& Dettagli)
 	{
 		// Solo il server annota: il PC di un giocatore non decide cosa è successo nel mondo.
@@ -74,6 +116,10 @@ namespace ValdorsoRegistroEventi
 			*Territorio,
 			Quando,
 			*Dettagli);
+
+		// (10/11) tra gli ultimi, per la finestra dello staff (ora locale del server)
+		Ricorda(FString::Printf(TEXT("%s · %s · %s%s%s"), *FDateTime::Now().ToString(TEXT("%d/%m %H:%M")), *Tipo, *NomeChi,
+			Bersaglio ? *FString::Printf(TEXT(" -> %s"), *NomeBersaglio) : TEXT(""), Dettagli.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" · %s"), *Dettagli)));
 
 		// Su disco solo un server vero o la prova nell'editor; mai nei test automatici (nessun mondo di gioco).
 		if (Mondo == nullptr || !(Mondo->IsGameWorld()))

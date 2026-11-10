@@ -43,6 +43,18 @@ namespace ValdorsoBagnato
 
 	/** Vero se con questo bagnato la stamina torna più piano. */
 	VALDORSO_API bool Infreddolito(float Bagnato);
+
+	// --- (10/11, v0.1.4) Il fiato sott'acqua -----------------------------------------------------------------------
+	/** Quanti secondi si resta con la testa sott'acqua, e in quanti si riprende fiato fuori. */
+	inline constexpr float SecondiFiato = 30.f;
+	inline constexpr float SecondiRespiro = 4.f;
+	/** Senza fiato: quanta salute si perde al secondo (si annega: si cade come per le altre ferite). */
+	inline constexpr float AnnegaAlSecondo = 8.f;
+	/** Quanti cm d'acqua sopra la bocca per trattenere il fiato (UValdorsoMovementComponent::AcquaSopraLaTesta). */
+	inline constexpr float AcquaPerApnea = 5.f;
+
+	/** Un passo del fiato (0 niente, 1 pieno) dopo Delta secondi, con la testa sott'acqua o fuori. */
+	VALDORSO_API float PassoFiato(float Fiato, float Delta, bool bSottAcqua);
 }
 
 UCLASS(ClassGroup = (Valdorso))
@@ -61,6 +73,9 @@ public:
 
 	/** Per le prove (console) e per chi lo decide sul server: quanto è bagnato. */
 	void Imposta(float Nuovo);
+
+	/** (10/11) Il fiato (0..1; 1 = pieno, anche fuori dall'acqua): arriva solo al suo PC, a centesimi. */
+	float Fiato() const { return FiatoInRete; }
 
 	/** (09/11) La temperatura che sente il colono (gradi, a mezzi gradi) e quella dell'aria dove sta. */
 	float Temperatura() const { return Percepita; }
@@ -91,6 +106,12 @@ private:
 	double ProssimoTetto = 0.0;
 	/** La stamina di prima (per frenarne il ritorno). */
 	float StaminaPrima = -1.f;
+
+	/** (10/11) Il fiato: quello esatto (server) e quello che arriva al PC del colono. Il primo avviso "manca il fiato". */
+	float FiatoEsatto = 1.f;
+	UPROPERTY(Replicated)
+	float FiatoInRete = 1.f;
+	bool bAvvisatoFiato = false;
 
 	/** (09/11) La temperatura che sente (arriva a tutti, a mezzi gradi) e, solo sul server, quella dell'aria. */
 	UPROPERTY(Replicated)

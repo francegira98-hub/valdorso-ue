@@ -60,6 +60,9 @@ private:
 	/** (08/11) Quanto è bagnato il colono (ValdorsoBagnato.h) e quanto si vede la goccia a sinistra delle barre. */
 	float Bagnato = 0.f;
 	float PresenzaGoccia = 0.f;
+	/** (10/11) Il fiato sott'acqua (0..1) e quanto si vedono le bolle sopra le barre (solo quando manca un poco). */
+	float Fiato = 1.f;
+	float PresenzaFiato = 0.f;
 };
 
 class VALDORSO_API SValdorsoBarraAzioni : public SLeafWidget

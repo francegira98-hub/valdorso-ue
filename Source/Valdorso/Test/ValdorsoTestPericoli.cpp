@@ -2,11 +2,16 @@
 // Scritto da Claude il 08/11/2026. Si avviano come gli altri (Tools\Test Valdorso.cmd, filtro "Valdorso.Pericoli").
 
 #include "Misc/AutomationTest.h"
+#include "Algo/Reverse.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "ValdorsoCombattimento.h"
 #include "ValdorsoBotteghe.h"
+#include "ValdorsoAcque.h"
+#include "ValdorsoBagnato.h"
+#include "ValdorsoDialoghi.h"
+#include "ValdorsoVitaValle.h"
 #include "ValdorsoLupi.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoZainoDati.h"
@@ -473,6 +478,81 @@ bool FValdorsoTestBotteghe::RunTest(const FString& Parameters)
 		TestFalse(TEXT("zaino pieno: non si compra"), ValdorsoBotteghe::Fai(Pieno, *Compra));
 		TestEqual(TEXT("e non si paga"), Pieno.Monete, 100);
 	}
+	return true;
+}
+
+// (10/11) Sott'acqua: il fiato dura mezzo minuto e torna in quattro secondi; la corrente dei fiumi va dove l'acqua scende.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestFiato, "Valdorso.Pericoli.Fiato", ValdorsoTestPericoli::Bandiere)
+bool FValdorsoTestFiato::RunTest(const FString& Parameters)
+{
+	TestEqual(TEXT("fuori dall'acqua resta pieno"), ValdorsoBagnato::PassoFiato(1.f, 10.f, false), 1.f);
+	TestEqual(TEXT("a meta' dopo quindici secondi"), ValdorsoBagnato::PassoFiato(1.f, ValdorsoBagnato::SecondiFiato * 0.5f, true), 0.5f, 0.001f);
+	TestEqual(TEXT("finito dopo mezzo minuto"), ValdorsoBagnato::PassoFiato(1.f, ValdorsoBagnato::SecondiFiato + 1.f, true), 0.f);
+	TestEqual(TEXT("si riprende in pochi secondi"), ValdorsoBagnato::PassoFiato(0.f, ValdorsoBagnato::SecondiRespiro, false), 1.f);
+	TestTrue(TEXT("si trattiene piu' a lungo di quanto si riprende"), ValdorsoBagnato::SecondiFiato > 3.f * ValdorsoBagnato::SecondiRespiro);
+
+	// un fiume dritto lungo X che scende verso +X, largo 10 m
+	FValdorsoCorsoAcqua Fiume;
+	Fiume.Punti = { FVector(0.f, 0.f, 500.f), FVector(1000.f, 0.f, 480.f), FVector(2000.f, 0.f, 460.f) };
+	Fiume.Larghezze = { 1000.f, 1000.f, 1000.f };
+	FVector2D Verso;
+	TestTrue(TEXT("in mezzo al fiume c'e' corrente"), ValdorsoAcqua::CorrenteSulCorso(Fiume, FVector2D(500.f, 100.f), 0.f, Verso));
+	TestTrue(TEXT("va dove l'acqua scende"), Verso.X > 0.99f);
+	TestFalse(TEXT("fuori dal fiume no"), ValdorsoAcqua::CorrenteSulCorso(Fiume, FVector2D(500.f, 900.f), 0.f, Verso));
+	// lo stesso fiume scritto al contrario: la corrente va sempre verso valle
+	FValdorsoCorsoAcqua Rovescio = Fiume;
+	Algo::Reverse(Rovescio.Punti);
+	TestTrue(TEXT("al contrario c'e' corrente"), ValdorsoAcqua::CorrenteSulCorso(Rovescio, FVector2D(1500.f, 0.f), 0.f, Verso));
+	TestTrue(TEXT("e va ancora verso valle"), Verso.X > 0.99f);
+	return true;
+}
+
+// (10/11) Il cielo e i boschi che vivono: le ore di stormi, rondini e pipistrelli, le foglie d'autunno, le celle degli
+// alberi; e i saluti dei PNG a chi passa (ognuno ne ha per il giorno, la sera e la notte, corti per la chat).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestVitaValle, "Valdorso.Pericoli.VitaValle", ValdorsoTestPericoli::Bandiere)
+bool FValdorsoTestVitaValle::RunTest(const FString& Parameters)
+{
+	TestTrue(TEXT("a mezzogiorno gli stormi"), ValdorsoVitaValle::OraDegliStormi(12.f));
+	TestFalse(TEXT("di notte no"), ValdorsoVitaValle::OraDegliStormi(23.f));
+	TestTrue(TEXT("al tramonto le rondini"), ValdorsoVitaValle::OraDelleRondini(18.5f));
+	TestFalse(TEXT("a mezzogiorno no"), ValdorsoVitaValle::OraDelleRondini(12.f));
+	TestTrue(TEXT("di notte i pipistrelli"), ValdorsoVitaValle::OraDeiPipistrelli(23.f, 0.05f));
+	TestFalse(TEXT("di giorno no"), ValdorsoVitaValle::OraDeiPipistrelli(12.f, 1.f));
+	TestTrue(TEXT("d'autunno le foglie"), ValdorsoVitaValle::StagioneDelleFoglie(TEXT("autunno")));
+	TestFalse(TEXT("d'estate no"), ValdorsoVitaValle::StagioneDelleFoglie(TEXT("estate")));
+	TestTrue(TEXT("le celle di 10 m"), ValdorsoVitaValle::Cella(FVector(1500.f, -1.f, 0.f)) == FIntPoint(1, -1));
+	TestTrue(TEXT("in primavera i petali"), ValdorsoVitaValle::StagioneDeiPetali(TEXT("primavera")));
+	TestFalse(TEXT("d'autunno niente petali"), ValdorsoVitaValle::StagioneDeiPetali(TEXT("autunno")));
+	TestTrue(TEXT("d'estate a mezzogiorno le farfalle"), ValdorsoVitaValle::OraDelleFarfalle(12.f, TEXT("estate")));
+	TestFalse(TEXT("d'inverno niente farfalle"), ValdorsoVitaValle::OraDelleFarfalle(12.f, TEXT("inverno")));
+	TestTrue(TEXT("d'estate di notte le lucciole"), ValdorsoVitaValle::OraDelleLucciole(23.f, 0.05f, TEXT("estate")));
+	TestFalse(TEXT("d'autunno niente lucciole"), ValdorsoVitaValle::OraDelleLucciole(23.f, 0.05f, TEXT("autunno")));
+	TestTrue(TEXT("la sera i camini fumano tanto"), ValdorsoVitaValle::QuantoFumo(19.f, TEXT("estate")) >= 0.99f);
+	TestTrue(TEXT("d'inverno fumano piu' che d'estate"), ValdorsoVitaValle::QuantoFumo(14.f, TEXT("inverno")) > ValdorsoVitaValle::QuantoFumo(14.f, TEXT("estate")));
+	int32 NottiDelDrago = 0;
+	for (int32 g = 0; g < 60; ++g)
+	{
+		NottiDelDrago += ValdorsoVitaValle::NotteDelDrago(FDateTime(2026, 11, 1) + FTimespan::FromDays(g)) ? 1 : 0;
+	}
+	TestTrue(TEXT("il drago passa ogni tanto (non mai, non sempre)"), NottiDelDrago >= 5 && NottiDelDrago <= 30);
+	TestTrue(TEXT("il drago al calare della sera"), ValdorsoVitaValle::OraDelDrago(20.2f));
+	TestFalse(TEXT("non a mezzogiorno"), ValdorsoVitaValle::OraDelDrago(12.f));
+	const FString StagioneVera = ValdorsoVitaValle::StagioneAdesso();
+	TestTrue(TEXT("la stagione e' una delle quattro"), StagioneVera == TEXT("primavera") || StagioneVera == TEXT("estate") || StagioneVera == TEXT("autunno") || StagioneVera == TEXT("inverno"));
+
+	for (const FValdorsoDialogo& Dialogo : ValdorsoDialoghi::Tutti())
+	{
+		const FString Nome = Dialogo.Id.ToString();
+		for (const float Ora : { 10.f, 19.f, 2.f })
+		{
+			TestFalse(FString::Printf(TEXT("%s saluta alle %.0f"), *Nome, Ora), ValdorsoDialoghi::Saluto(Dialogo.Id, Ora, 7).IsEmpty());
+		}
+		for (const FString& Riga : ValdorsoDialoghi::TuttiISaluti(Dialogo.Id))
+		{
+			TestTrue(FString::Printf(TEXT("%s: il saluto sta nella chat"), *Nome), Riga.Len() > 5 && Riga.Len() <= 200);
+		}
+	}
+	TestTrue(TEXT("chi non c'e' non saluta"), ValdorsoDialoghi::Saluto(TEXT("NessunoQui"), 10.f, 1).IsEmpty());
 	return true;
 }
 

@@ -4,6 +4,9 @@
 #include "Valdorso.h"
 #include "AudioDevice.h"
 #include "Engine/Engine.h"
+#include "Engine/World.h"
+#include "Scalability.h"
+#include "WorldPartition/WorldPartition.h"
 #include "Engine/UserInterfaceSettings.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/GameUserSettings.h"
@@ -35,6 +38,7 @@ namespace
 		FValdorsoImpostazioni& I = Attuali;
 		GConfig->GetInt(Sezione, TEXT("Qualita"), I.Qualita, GGameUserSettingsIni);
 		GConfig->GetInt(Sezione, TEXT("Finestra"), I.Finestra, GGameUserSettingsIni);
+		GConfig->GetInt(Sezione, TEXT("Distanza"), I.Distanza, GGameUserSettingsIni);
 		GConfig->GetFloat(Sezione, TEXT("VolumeGenerale"), I.VolumeGenerale, GGameUserSettingsIni);
 		GConfig->GetFloat(Sezione, TEXT("VolumeMusica"), I.VolumeMusica, GGameUserSettingsIni);
 		GConfig->GetFloat(Sezione, TEXT("VolumeEffetti"), I.VolumeEffetti, GGameUserSettingsIni);
@@ -47,6 +51,7 @@ namespace
 		// Un file scritto a mano non deve rompere niente.
 		I.Qualita = FMath::Clamp(I.Qualita, -1, 3);
 		I.Finestra = FMath::Clamp(I.Finestra, 0, 2);
+		I.Distanza = FMath::Clamp(I.Distanza, 0, 3);
 		I.VolumeGenerale = FMath::Clamp(I.VolumeGenerale, 0.f, 1.f);
 		I.VolumeMusica = FMath::Clamp(I.VolumeMusica, 0.f, 1.f);
 		I.VolumeEffetti = FMath::Clamp(I.VolumeEffetti, 0.f, 1.f);
@@ -64,6 +69,7 @@ namespace
 		const FValdorsoImpostazioni& I = Attuali;
 		GConfig->SetInt(Sezione, TEXT("Qualita"), I.Qualita, GGameUserSettingsIni);
 		GConfig->SetInt(Sezione, TEXT("Finestra"), I.Finestra, GGameUserSettingsIni);
+		GConfig->SetInt(Sezione, TEXT("Distanza"), I.Distanza, GGameUserSettingsIni);
 		GConfig->SetFloat(Sezione, TEXT("VolumeGenerale"), I.VolumeGenerale, GGameUserSettingsIni);
 		GConfig->SetFloat(Sezione, TEXT("VolumeMusica"), I.VolumeMusica, GGameUserSettingsIni);
 		GConfig->SetFloat(Sezione, TEXT("VolumeEffetti"), I.VolumeEffetti, GGameUserSettingsIni);
@@ -81,6 +87,38 @@ namespace
 		{
 			Variabile->Set(Valore, ECVF_SetByGameSetting);
 		}
+	}
+
+	void ImpostaVariabileF(const TCHAR* Nome, float Valore)
+	{
+		if (IConsoleVariable* Variabile = IConsoleManager::Get().FindConsoleVariable(Nome))
+		{
+			Variabile->Set(Valore, ECVF_SetByGameSetting);
+		}
+	}
+
+	/** (10/11) La distanza visiva: quanto lontano si disegna e con quanto dettaglio (vale sopra la qualita' scelta). */
+	void ApplicaVariabiliDistanza(const FValdorsoImpostazioni& I)
+	{
+		struct FLivello { float Vista; float Fogliame; float Modelli; float Terreno; };
+		static const FLivello Livelli[4] = {
+			{ 0.8f, 1.f, 1.25f, 1.f },     // vicino: per i PC deboli
+			{ 1.f, 1.f, 1.f, 1.f },        // normale: come Unreal di serie
+			{ 1.5f, 1.6f, 0.85f, 1.35f },  // lontano
+			{ 2.2f, 2.5f, 0.7f, 1.8f },    // lontanissimo
+		};
+		const FLivello& L = Livelli[FMath::Clamp(I.Distanza, 0, 3)];
+		// quanto lontano si disegnano le cose: la distanza della qualita' scelta (Unreal: 0,4 bassa, 0,6 media, 0,8 alta,
+		// 1 epica) moltiplicata per quella voluta, cosi' un PC con la qualita' bassa resta leggero
+		static const float VistaDellaQualita[5] = { 0.4f, 0.6f, 0.8f, 1.f, 1.f };
+		const int32 Livello = FMath::Clamp(Scalability::GetQualityLevels().ViewDistanceQuality, 0, 4);
+		ImpostaVariabileF(TEXT("r.ViewDistanceScale"), VistaDellaQualita[Livello] * L.Vista);
+		ImpostaVariabileF(TEXT("foliage.LODDistanceScale"), L.Fogliame);
+		// i modelli piu' dettagliati restano fino a piu' lontano (meno di 1 = piu' dettaglio)
+		ImpostaVariabileF(TEXT("r.StaticMeshLODDistanceScale"), L.Modelli);
+		// il terreno: i pezzi vicini dettagliati fino a piu' lontano
+		ImpostaVariabileF(TEXT("r.LandscapeLOD0DistributionScale"), L.Terreno);
+		ImpostaVariabileF(TEXT("r.LandscapeLODDistributionScale"), L.Terreno);
 	}
 
 	void ApplicaGrafica(const FValdorsoImpostazioni& I, const FValdorsoImpostazioni* Prima)
@@ -144,6 +182,13 @@ namespace
 			Interfaccia->ApplicationScale = I.GrandezzaTesto;
 		}
 
+		// (10/11) La distanza visiva (dopo la qualita': vale sopra le sue scelte).
+		ApplicaVariabiliDistanza(I);
+		if (!Prima || Prima->Distanza != I.Distanza)
+		{
+			ValdorsoImpostazioni::ApplicaDistanza();
+		}
+
 		// Meno movimenti: niente sfocatura di movimento.
 		ImpostaVariabile(TEXT("r.MotionBlurQuality"), I.bMenoMovimenti ? 0 : 4);
 
@@ -182,6 +227,36 @@ namespace ValdorsoImpostazioni
 	{
 		ApplicaTutto(Correnti(), nullptr);
 		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Impostazioni applicate (qualità %d, testo %.2f)."), Attuali.Qualita, Attuali.GrandezzaTesto);
+	}
+
+	void ApplicaDistanza()
+	{
+		if (!ConSchermo())
+		{
+			return;
+		}
+		const FValdorsoImpostazioni& I = Correnti();
+		ApplicaVariabiliDistanza(I);
+		// il caricamento dei pezzi della valle (World Partition): fino a dove si caricano intorno al colono. Il comando
+		// c'e' con la griglia di serie; se il livello ne usa un'altra Unreal dice solo che non lo conosce.
+		// (solo per "lontanissimo": per "lontano" basta quello del livello, sistema_lontananza.py lo porta a 512 m; tornando
+		// indietro vale di nuovo quello del livello alla prossima apertura della valle)
+		static const int32 Raggi[4] = { 0, 0, 0, 102400 };
+		const int32 Raggio = Raggi[FMath::Clamp(I.Distanza, 0, 3)];
+		if (Raggio <= 0)
+		{
+			return;  // vicino e normale: il caricamento resta quello del livello
+		}
+		for (const FWorldContext& Contesto : GEngine->GetWorldContexts())
+		{
+			UWorld* Mondo = Contesto.World();
+			if (Mondo && (Contesto.WorldType == EWorldType::Game || Contesto.WorldType == EWorldType::PIE) && Mondo->GetWorldPartition())
+			{
+				// (il comando vale per tutti i mondi: basta una volta)
+				GEngine->Exec(Mondo, *FString::Printf(TEXT("wp.Runtime.OverrideRuntimeSpatialHashLoadingRange -grid=0 -range=%d"), Raggio));
+				break;
+			}
+		}
 	}
 
 	float VolumeSuono(bool bMusica)

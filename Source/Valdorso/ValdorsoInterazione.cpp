@@ -8,6 +8,7 @@
 #include "ValdorsoLetto.h"
 #include "ValdorsoScala.h"
 #include "ValdorsoTaccuino.h"
+#include "ValdorsoGilda.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
@@ -318,6 +319,22 @@ AValdorsoBacheca::AValdorsoBacheca()
 	Tavola = Pezzo(TEXT("Tavola"), FVector(0.06f, 1.4f, 0.9f), FVector(0.f, 0.f, 145.f));
 	PaloSinistro = Pezzo(TEXT("PaloSinistro"), FVector(0.1f, 0.1f, 2.f), FVector(-6.f, -75.f, 100.f));
 	PaloDestro = Pezzo(TEXT("PaloDestro"), FVector(0.1f, 0.1f, 2.f), FVector(-6.f, 75.f, 100.f));
+	// (10/11) la tettoia della bacheca del Balivo: un tetto di assi sopra la tavola, un poco inclinato in avanti
+	Tettoia = Pezzo(TEXT("Tettoia"), FVector(0.55f, 1.8f, 0.05f), FVector(10.f, 0.f, 205.f));
+	Tettoia->SetRelativeRotation(FRotator(-12.f, 0.f, 0.f));
+	Tettoia->SetVisibility(false);
+	Tettoia->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void AValdorsoBacheca::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	const bool bTetto = Tipo == EValdorsoTipoBacheca::Balivo;
+	if (Tettoia)
+	{
+		Tettoia->SetVisibility(bTetto);
+		Tettoia->SetCollisionEnabled(bTetto ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+	}
 }
 
 void AValdorsoBacheca::BeginPlay()
@@ -337,6 +354,7 @@ void AValdorsoBacheca::BeginPlay()
 	Colora(Tavola, FLinearColor(0.42f, 0.29f, 0.16f));
 	Colora(PaloSinistro, FLinearColor(0.2f, 0.12f, 0.06f));
 	Colora(PaloDestro, FLinearColor(0.2f, 0.12f, 0.06f));
+	Colora(Tettoia, FLinearColor(0.25f, 0.15f, 0.08f));
 }
 
 namespace
@@ -351,7 +369,16 @@ namespace
 FText AValdorsoBacheca::TestoInterazione(const APawn* Chi) const
 {
 	// Da dietro si vedono solo le assi: i fogli si leggono stando davanti.
-	return DavantiAllaBacheca(this, Chi) ? LOCTEXT("Leggi", "Leggi la bacheca") : FText::GetEmpty();
+	if (!DavantiAllaBacheca(this, Chi))
+	{
+		return FText::GetEmpty();
+	}
+	switch (Tipo)
+	{
+	case EValdorsoTipoBacheca::Gilda: return LOCTEXT("LeggiGilda", "Guarda gli incarichi della Gilda");
+	case EValdorsoTipoBacheca::Balivo: return LOCTEXT("LeggiBalivo", "Leggi i proclami del Balivo");
+	default: return LOCTEXT("Leggi", "Leggi la bacheca");
+	}
 }
 
 FVector AValdorsoBacheca::PuntoInterazione() const
@@ -365,9 +392,33 @@ void AValdorsoBacheca::Interagisci(APawn* Chi)
 	{
 		return;
 	}
+	// (10/11) la bacheca della Gilda apre i fogli degli incarichi (ValdorsoGilda.h)
+	if (Tipo == EValdorsoTipoBacheca::Gilda)
+	{
+		if (UValdorsoGildaComponent* Gilda = UValdorsoGildaComponent::Di(Cast<APlayerController>(Chi->GetController())))
+		{
+			Gilda->ApriBacheca();
+			ValdorsoRegistroEventi::Annota(TEXT("Bacheca"), Chi, this, GetActorLocation(), TEXT("la bacheca della Gilda"));
+		}
+		return;
+	}
 	// Solo i primi 20 avvisi, tagliati a 300 lettere: un messaggio in rete non deve diventare enorme.
+	// (10/11) Sulla bacheca del Balivo prima i proclami dello staff (il piu' nuovo in cima), poi gli avvisi.
+	TArray<FString> Tutti;
+	if (Tipo == EValdorsoTipoBacheca::Balivo)
+	{
+		if (UValdorsoBacheche* Bacheche = UValdorsoBacheche::Di(this))
+		{
+			Tutti = ValdorsoGilda::RigheProclami(Bacheche->Dati(), UValdorsoBacheche::Adesso());
+		}
+		if (Tutti.IsEmpty())
+		{
+			Tutti.Add(TEXT("Per ordine del Balivo: su questa bacheca si appendono i proclami. Per ora non ce n'e' di nuovi."));
+		}
+	}
+	Tutti.Append(Avvisi);
 	TArray<FString> DaMandare;
-	for (const FString& Avviso : Avvisi)
+	for (const FString& Avviso : Tutti)
 	{
 		if (DaMandare.Num() >= 20)
 		{

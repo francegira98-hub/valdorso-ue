@@ -2,6 +2,11 @@
 // Unity build: le cose del namespace anonimo cominciano con Png, così non si scontrano con gli altri file.
 
 #include "ValdorsoPNG.h"
+#include "ValdorsoGilda.h"
+#include "ValdorsoChat.h"
+#include "ValdorsoCielo.h"
+#include "ValdorsoDialoghi.h"
+#include "EngineUtils.h"
 #include "Valdorso.h"
 #include "ValdorsoAspetto.h"
 #include "ValdorsoAspettoComponent.h"
@@ -222,6 +227,8 @@ void AValdorsoPNG::BeginPlay()
 			UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] PNG %s: il dialogo \"%s\" non esiste (ValdorsoDialoghiTesti.inl)."),
 				*GetName(), *Dialogo.ToString());
 		}
+		// (10/11) i saluti a chi passa (ognuno con il suo ritmo, non tutti insieme)
+		GetWorldTimerManager().SetTimer(TimerSaluti, this, &AValdorsoPNG::Saluta, 2.f, true, FMath::FRandRange(1.f, 3.f));
 	}
 	else if (bSguardoValido)
 	{
@@ -234,6 +241,7 @@ void AValdorsoPNG::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (UWorld* Mondo = GetWorld())
 	{
 		Mondo->GetTimerManager().ClearTimer(TimerRitorno);
+		Mondo->GetTimerManager().ClearTimer(TimerSaluti);
 	}
 	Conversazioni.Reset();
 	Super::EndPlay(EndPlayReason);
@@ -362,15 +370,33 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 		FString::Printf(TEXT("%s: %s -> %s (%s)"), *Dati->NomeBreve, *Prima.ToString(),
 			Prossimo.IsNone() ? TEXT("fine") : *Prossimo.ToString(), *Detta.Left(80)));
 
+	// (10/11) Lucia: "Ho un foglio della Gilda" apre il bancone (ValdorsoGilda.h), dopo che il dialogo si e' chiuso
+	UValdorsoGildaComponent* Bancone = Evento == ValdorsoGilda::EventoBancone ? UValdorsoGildaComponent::Di(Chi) : nullptr;
+	// (10/11) Mastro Ettore: "A che punto sono?" (il server dice i punti veri)
+	if (Evento == ValdorsoGilda::EventoGrado)
+	{
+		if (UValdorsoGildaComponent* Suo = UValdorsoGildaComponent::Di(Chi))
+		{
+			Suo->DimmiGrado();
+		}
+	}
 	if (Prossimo.IsNone())
 	{
 		Chiudi(Chi, true, FString());
+		if (Bancone)
+		{
+			Bancone->ApriBancone(this);
+		}
 		return;
 	}
 	Aperta->Nodo = Prossimo;
 	Aperta->Passo = ProssimoPasso++;
 	GuardaVerso(Colono);
 	Manda(Chi, ValdorsoDialoghi::Battuta(*Dati, Aperta->Nodo, Aperta->Passo, Memoria));
+	if (Bancone)
+	{
+		Bancone->ApriBancone(this);
+	}
 }
 
 void AValdorsoPNG::Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta)
@@ -478,6 +504,64 @@ void AValdorsoPNG::Tick(float DeltaSeconds)
 		return;
 	}
 	SetActorRotation(FRotator(0.f, Adesso + FMath::Sign(Manca) * Passo, 0.f));
+}
+
+// --- (10/11) I saluti a chi passa ----------------------------------------------------------------------------------
+
+void AValdorsoPNG::Saluta()
+{
+	UWorld* Mondo = GetWorld();
+	const FValdorsoDialogo* Dati = DatiDialogo();
+	if (!HasAuthority() || !Mondo || !Dati)
+	{
+		return;
+	}
+	const double Adesso = Mondo->GetTimeSeconds();
+	float Ora = 12.f;
+	for (TActorIterator<AValdorsoCielo> It(Mondo); It; ++It)
+	{
+		Ora = It->Ora();
+		break;
+	}
+	for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* Giocatore = It->Get();
+		APawn* Colono = Giocatore ? Giocatore->GetPawn() : nullptr;
+		if (!Colono || Conversazioni.Contains(TWeakObjectPtr<APlayerController>(Giocatore))
+			|| FVector::Dist(Colono->GetActorLocation(), GetActorLocation()) > ValdorsoDialoghi::RaggioSaluto)
+		{
+			continue;
+		}
+		const double* Ultimo = Salutati.Find(TWeakObjectPtr<APlayerController>(Giocatore));
+		if (Ultimo && Adesso - *Ultimo < ValdorsoDialoghi::SecondiTraSaluti)
+		{
+			continue;
+		}
+		const FString Frase = ValdorsoDialoghi::Saluto(Dati->Id, Ora, FMath::Rand());
+		Salutati.Add(TWeakObjectPtr<APlayerController>(Giocatore), Adesso);
+		if (Frase.IsEmpty())
+		{
+			continue;
+		}
+		if (UValdorsoChatComponent* Chat = UValdorsoChatComponent::Di(Giocatore))
+		{
+			Chat->ClientSenti(Dati->NomeBreve, Frase, false);
+		}
+		// si gira un momento verso chi passa, poi torna al suo posto (non se sta parlando con un altro)
+		if (Conversazioni.Num() == 0)
+		{
+			GuardaVerso(Colono);
+			ForseTornaAlPosto();
+		}
+	}
+	// i saluti di chi se n'e' andato dal gioco
+	for (auto It = Salutati.CreateIterator(); It; ++It)
+	{
+		if (!It->Key.IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

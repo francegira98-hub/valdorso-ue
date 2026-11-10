@@ -161,7 +161,7 @@ namespace
 		C.Add(OggCibo(TEXT("Cozze"), TEXT("Cozze di lago"),
 			TEXT("Raccolte sul fondo del lago, nere e chiuse. Si mangiano anche crude, se hai coraggio."), 0.2f, 10, 8.f, 10.f));
 		C.Add(OggSemplice(TEXT("Perla"), TEXT("Perla di lago"),
-			TEXT("Piccola, grigia, quasi tonda. In una cozza su cento. Al mercato vale qualche Aureus."), 0.01f, 20));
+			TEXT("Piccola, grigia, quasi tonda. Ogni tanto ce n'è una tra le cozze del fondo. Bruno la compra bene."), 0.01f, 20));
 
 		// --- (10/11, v0.1.4) L'armeria provvisoria: armi della valle, della Corona e dell'Impero, e gli scudi ------
 		C.Add(OggSemplice(TEXT("Accetta"), TEXT("Accetta"),
@@ -239,6 +239,16 @@ namespace
 				TEXT("Guanti di cuoio foderati di pelo di lepre. Le dita ringraziano."), 0.3f);
 			Guanti.Calore = 1.f;
 			C.Add(Guanti);
+		}
+
+		// (10/11) il foglio di un incarico staccato dalla bacheca della Gilda (il numero dell'incarico sta nel posto
+		// dello zaino, FValdorsoPostoZaino::Numero). Non si getta: si rinuncia da Lucia (ValdorsoGildaDati.h).
+		{
+			FValdorsoTipoOggetto Foglio = OggRicordo(TEXT("Foglio_Incarico"), TEXT("Foglio della Gilda"),
+				TEXT("Un incarico staccato dalla bacheca della Gilda, con il sigillo di ceralacca. Si porta a Lucia, al bancone."), 0.01f);
+			Foglio.Uso = EValdorsoUso::Leggi;
+			Foglio.Lettura = TEXT("Un incarico della Gilda: portalo a Lucia, al bancone.");
+			C.Add(Foglio);
 		}
 
 		// le armi: chi si impugna e come colpisce (il pugno: 10 di danno, 30 di equilibrio, 10 di stamina, 90 cm)
@@ -785,6 +795,17 @@ namespace
 			L.Add(OggArco(0.f, -0.1f, 0.6f, 0.7f, 0.f, 180.f, 14));
 			L.Add(OggLinea({ { -0.6f, -0.1f }, { -0.6f, -0.5f }, { 0.6f, -0.5f }, { 0.6f, -0.1f } }));
 			L.Add(OggLinea({ { 0.6f, -0.3f }, { 0.85f, -0.6f }, { 0.75f, -0.9f } }));
+		}
+		else if (N == TEXT("Foglio_Incarico"))
+		{
+			// un foglio con le righe, l'angolo strappato in alto (dove era appeso) e il sigillo in basso
+			L.Add(OggLinea({ { -0.55f, -0.85f }, { 0.55f, -0.85f }, { 0.55f, 0.6f }, { 0.35f, 0.85f }, { -0.55f, 0.85f }, { -0.55f, -0.85f } }));
+			L.Add(OggLinea({ { 0.35f, 0.85f }, { 0.4f, 0.65f }, { 0.55f, 0.6f } }));
+			L.Add(OggLinea({ { -0.35f, 0.5f }, { 0.25f, 0.5f } }));
+			L.Add(OggLinea({ { -0.35f, 0.25f }, { 0.35f, 0.25f } }));
+			L.Add(OggLinea({ { -0.35f, 0.f }, { 0.35f, 0.f } }));
+			L.Add(OggLinea({ { -0.35f, -0.25f }, { 0.1f, -0.25f } }));
+			L.Add(OggCerchio(0.2f, -0.55f, 0.18f, 12));
 		}
 		else if (N == TEXT("Guanti_Lepre"))
 		{

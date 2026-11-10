@@ -233,6 +233,17 @@ namespace ValdorsoDialoghi
 	/** Il dialogo con questo Id (nullptr se non c'è). */
 	VALDORSO_API const FValdorsoDialogo* Trova(FName Id);
 
+	/** (10/11) I saluti a chi passa: da quanto vicino (cm), ogni quanto allo stesso colono (s). */
+	inline constexpr float RaggioSaluto = 550.f;
+	inline constexpr double SecondiTraSaluti = 420.0;
+
+	/** (10/11) Una riga di saluto del PNG Id per quest'ora della valle (0..24); Seme sceglie fra le righe. Vuota se il
+	 *  PNG non saluta (per esempio di notte chi dorme). */
+	VALDORSO_API FString Saluto(FName Id, float Ora, int32 Seme);
+
+	/** (10/11) Tutte le righe di saluto di un PNG (per i test). */
+	VALDORSO_API TArray<FString> TuttiISaluti(FName Id);
+
 	/** Tutti i dialoghi scritti (per i test). */
 	VALDORSO_API const TArray<FValdorsoDialogo>& Tutti();
 

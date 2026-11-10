@@ -54,6 +54,37 @@ namespace ValdorsoDialoghi
 		return Tutti().FindByPredicate([Id](const FValdorsoDialogo& Dialogo) { return Dialogo.Id == Id; });
 	}
 
+	FString Saluto(FName Id, float Ora, int32 Seme)
+	{
+		const int32 Momento = (Ora >= 6.f && Ora < 17.f) ? 0 : ((Ora >= 17.f && Ora < 21.f) ? 1 : 2);
+		TArray<const TCHAR*> Adatti;
+		for (const FSalutoScritto& S : SalutiScritti)
+		{
+			if (Id == FName(S.Id) && S.Momento == Momento)
+			{
+				Adatti.Add(S.Testo);
+			}
+		}
+		if (Adatti.IsEmpty())
+		{
+			return FString();
+		}
+		return Adatti[FMath::Abs(Seme) % Adatti.Num()];
+	}
+
+	TArray<FString> TuttiISaluti(FName Id)
+	{
+		TArray<FString> Fuori;
+		for (const FSalutoScritto& S : SalutiScritti)
+		{
+			if (Id == FName(S.Id))
+			{
+				Fuori.Add(S.Testo);
+			}
+		}
+		return Fuori;
+	}
+
 	FName NodoIniziale(const FValdorsoDialogo& Dialogo, bool bGiaParlato)
 	{
 		if (bGiaParlato && !Dialogo.Ritorno.IsNone() && Dialogo.Trova(Dialogo.Ritorno))

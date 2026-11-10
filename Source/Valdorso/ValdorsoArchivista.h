@@ -27,6 +27,9 @@
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoZainoDati.h"
 #include "ValdorsoTessera.h"
+#include "ValdorsoGildaDati.h"
+#include "ValdorsoAbilitaDati.h"
+#include "ValdorsoPermessi.h"
 #include "ValdorsoArchivista.generated.h"
 
 UENUM(BlueprintType)
@@ -105,6 +108,10 @@ struct FValdorsoAccount
 
 	UPROPERTY()
 	EValdorsoRuolo Ruolo = EValdorsoRuolo::Giocatore;
+
+	/** (10/11) I permessi dello Staff (ValdorsoPermessi.h); l'Amministratore li ha tutti, il Giocatore nessuno. */
+	UPROPERTY()
+	int32 Permessi = ValdorsoPermessi::DiSerieStaff;
 
 	UPROPERTY()
 	EValdorsoStatoAccount Stato = EValdorsoStatoAccount::Attivo;
@@ -251,6 +258,15 @@ struct FValdorsoPersonaggio
 	 *  rilascia al primo ingresso. */
 	UPROPERTY()
 	FValdorsoTessera Tessera;
+
+	/** (10/11) La Gilda: i punti, gli incarichi presi (ValdorsoGildaDati.h). Nei file di prima manca: si comincia da zero. */
+	UPROPERTY()
+	FValdorsoGildaColono Gilda;
+
+	/** (10/11, scheletro della v0.1.5) Le abilita' che salgono usandole (ValdorsoAbilitaDati.h). Nei file di prima manca:
+	 *  si comincia da zero, con i vantaggi del Registro. */
+	UPROPERTY()
+	FValdorsoAbilitaColono Abilita;
 };
 
 /** Quello che il giocatore vede nella scelta del personaggio (viaggia dal server al client). */
@@ -477,6 +493,16 @@ public:
 	FString ElencoAccount() const;
 	FString InfoAccount(const FString& Nome) const;
 	FString ImpostaRuolo(const FString& Nome, const FString& Ruolo, const FString& Autore);
+
+	/** (10/11) I permessi veri dell'account con quel nome (ValdorsoPermessi.h): tutti all'Amministratore, nessuno al
+	 *  Giocatore (e a chi non c'e'). */
+	int32 PermessiDi(const FString& Nome) const;
+
+	/** (10/11) Cambia i permessi di uno Staff (Lista: "gilda,bacheche", "tutti", "nessuno"). */
+	FString ImpostaPermessi(const FString& Nome, const FString& Lista, const FString& Autore);
+
+	/** (10/11) Il ruolo dell'account con quel nome (Giocatore se non c'e'). */
+	EValdorsoRuolo RuoloDi(const FString& Nome) const;
 	FString ReimpostaPassword(const FString& Nome, const FString& Autore);
 	FString Sospendi(const FString& Nome, int32 Ore, const FString& Motivo, const FString& Autore);
 	FString Banna(const FString& Nome, const FString& Motivo, const FString& Autore);

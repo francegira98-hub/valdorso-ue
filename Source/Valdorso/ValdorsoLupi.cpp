@@ -2,12 +2,14 @@
 // Vedi ValdorsoLupi.h.
 
 #include "ValdorsoLupi.h"
+#include "ValdorsoCrescita.h"
 #include "Valdorso.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoBosco.h"
 #include "ValdorsoCielo.h"
 #include "ValdorsoCombattimento.h"
 #include "ValdorsoFalo.h"
+#include "ValdorsoGilda.h"
 #include "ValdorsoPericoli.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
@@ -937,6 +939,8 @@ void AValdorsoAnimale::Muori()
 	const FValdorsoSpecie* S = GetSpecie();
 	ValdorsoRegistroEventi::Annota(TEXT("Animale"), UltimoAggressore.Get(), this, GetActorLocation(),
 		FString::Printf(TEXT("%s ucciso"), S ? S->Id : TEXT("animale")));
+	// (10/11) le cacce della Gilda: conta la preda a chi l'ha colpita per ultimo (ValdorsoGilda.h)
+	UValdorsoGildaComponent::Preda(UltimoAggressore.Get(), Specie);
 }
 
 FText AValdorsoAnimale::TestoInterazione(const APawn* Chi) const
@@ -988,6 +992,8 @@ void AValdorsoAnimale::Interagisci(APawn* Chi)
 	}
 	bScuoiato = true;
 	ValdorsoRegistroEventi::Annota(TEXT("Scuoia"), Chi, this, GetActorLocation(), FString::Printf(TEXT("%s scuoiato"), S->Id));
+	// (10/11, scheletro della v0.1.5) scuoiare fa crescere la Caccia
+	UValdorsoCrescitaComponent::UsaDa(Chi, FName(TEXT("Caccia")), 1.f, this);
 	OnRep_Scuoiato();
 	// quello che resta sparisce presto
 	SetLifeSpan(8.f);

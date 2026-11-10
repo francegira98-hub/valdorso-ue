@@ -52,6 +52,10 @@ public:
 	/** (06/11) Quanto è sott'acqua il corpo adesso secondo le acque della valle (0..1). */
 	float ImmersioneNellaValle() const;
 
+	/** (10/11, v0.1.4) Quanti cm d'acqua ci sono sopra la testa (negativo: la testa e' fuori; molto negativo fuori
+	 *  dall'acqua). Sott'acqua si trattiene il fiato (ValdorsoBagnato.h). */
+	float AcquaSopraLaTesta() const;
+
 	virtual bool IsInWater() const override;
 	virtual float ImmersionDepth() const override;
 	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;

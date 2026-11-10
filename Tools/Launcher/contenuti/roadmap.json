@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-08",
+ "aggiornato": "2026-11-10",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
  "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0. Ogni tappa è una versione che si può giocare.",
  "tappe": [
@@ -95,6 +95,7 @@
    "sommario": "Quello che fai ti cambia.",
    "voci": [
     "Abilità che salgono e si evolvono (soglie 25, 50, 75, 100; tetto 700)",
+    "La forza a colpo d'occhio: agganciando qualcuno si capisce quanto è forte (abitanti, bestie)",
     "Le guardie della scherma italiana",
     "Il Vigore",
     "La scheda del personaggio",
@@ -117,7 +118,32 @@
     "Le voci vere della locanda",
     "Il primo sogno",
     "Il gatto della locanda",
-    "La musica"
+    "La musica",
+    "Ali sulle montagne: un'ombra enorme passa davanti alla luna"
+   ]
+  },
+  {
+   "versione": "0.1.7",
+   "nome": "La grotta del nord",
+   "stato": "futura",
+   "sommario": "Quelli che non tornarono.",
+   "voci": [
+    "La frana si apre: la seconda grotta, oltre la collina dell'Orso",
+    "Gallerie, sale e scheletri: il primo dungeon",
+    "La storia segreta di Lucia",
+    "Il bottino delle profondità"
+   ]
+  },
+  {
+   "versione": "0.1.9",
+   "nome": "La grande prova",
+   "stato": "futura",
+   "sommario": "Tutto insieme, prima dell'economia.",
+   "voci": [
+    "Si provano insieme tutte le cose della v0.1: account, valle, pericoli, abilità, Gilda, staff, grotte",
+    "Il server ufficiale e quello di prova, con più coloni insieme",
+    "Si correggono i problemi trovati",
+    "Si chiude la v0.1 e si apre la strada della v0.2"
    ]
   },
   {

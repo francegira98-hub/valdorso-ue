@@ -1,6 +1,7 @@
 // Valdorso - Lo zaino, con il peso e le monete (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoZaino.h"
+#include "ValdorsoGilda.h"
 #include "SValdorsoZaino.h"
 #include "SValdorsoBottega.h"
 #include "ValdorsoBotteghe.h"
@@ -509,6 +510,17 @@ bool UValdorsoZainoComponent::TroppeRichieste()
 	return ++RichiesteFatte > ZainoRichiesteAlSecondo;
 }
 
+bool UValdorsoZainoComponent::Cambia(TFunctionRef<bool(FValdorsoZaino&)> Cosa)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || !Cosa(Zaino))
+	{
+		return false;
+	}
+	ValdorsoZaino::Sistema(Zaino);
+	Cambiato();
+	return true;
+}
+
 void UValdorsoZainoComponent::Avvisa(const FText& Testo, float Secondi)
 {
 	if (AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(GetOwner()))
@@ -651,6 +663,13 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 	{
 		Avvisa(Tipo->Uso == EValdorsoUso::Cura ? LOCTEXT("NonFerito", "Non hai ferite da medicare.")
 			: LOCTEXT("NonServe", "Adesso non ne hai bisogno: tienilo per dopo."), 2.f);
+		return;
+	}
+	// (10/11) il foglio di un incarico: si legge quello che c'e' scritto (lo sa la Gilda del colono)
+	if (Dove.Id == ValdorsoGilda::IdFoglio)
+	{
+		const UValdorsoGildaComponent* Gilda = UValdorsoGildaComponent::Di(Controllore);
+		Avvisa(Gilda ? Gilda->LetturaFoglio(Dove.Numero) : FText::FromString(Tipo->Lettura), 8.f);
 		return;
 	}
 	switch (Tipo->Uso)

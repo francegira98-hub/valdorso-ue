@@ -1,6 +1,7 @@
 // Valdorso - Lo zaino: quello che si vede (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "SValdorsoZaino.h"
+#include "ValdorsoGilda.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoTemaUI.h"
@@ -14,6 +15,7 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
+#include "GameFramework/PlayerController.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoZaino"
 
@@ -616,7 +618,17 @@ FText SValdorsoZaino::DettagliMostrati() const
 	{
 		Righe.Add(Uso);
 	}
-	if (Tipo->bRicordo)
+	if (Dove.Id == ValdorsoGilda::IdFoglio)
+	{
+		// (10/11) il foglio di un incarico: cosa c'e' scritto (lo sa la Gilda del colono)
+		const UValdorsoGildaComponent* Gilda = UValdorsoGildaComponent::Di(Cast<APlayerController>(Il->GetOwner()));
+		if (Gilda)
+		{
+			Righe.Add(Gilda->LetturaFoglio(Dove.Numero).ToString());
+		}
+		Righe.Add(TEXT("Non si getta: per lasciarlo si rinuncia, da Lucia."));
+	}
+	else if (Tipo->bRicordo)
 	{
 		Righe.Add(TEXT("Un ricordo: non si getta e non si perde morendo."));
 	}

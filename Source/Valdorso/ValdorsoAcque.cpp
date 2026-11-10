@@ -50,6 +50,37 @@ namespace ValdorsoAcqua
 		return bTrovato;
 	}
 
+	bool CorrenteSulCorso(const FValdorsoCorsoAcqua& Corso, const FVector2D& Punto, float Margine, FVector2D& OutVerso)
+	{
+		bool bTrovato = false;
+		double Migliore = TNumericLimits<double>::Max();
+		for (int32 i = 0; i + 1 < Corso.Punti.Num(); ++i)
+		{
+			const FVector2D A(Corso.Punti[i]);
+			const FVector2D B(Corso.Punti[i + 1]);
+			const FVector2D D = B - A;
+			const double Lungo = D.SizeSquared();
+			if (Lungo <= UE_SMALL_NUMBER)
+			{
+				continue;
+			}
+			const double T = FMath::Clamp(FVector2D::DotProduct(Punto - A, D) / Lungo, 0.0, 1.0);
+			const double Distanza = FVector2D::Distance(Punto, A + D * T);
+			const float LargA = Corso.Larghezze.IsValidIndex(i) ? Corso.Larghezze[i] : 1000.f;
+			const float LargB = Corso.Larghezze.IsValidIndex(i + 1) ? Corso.Larghezze[i + 1] : LargA;
+			const double MezzaLarghezza = FMath::Lerp(LargA, LargB, static_cast<float>(T)) * 0.5 + Margine;
+			if (Distanza <= MezzaLarghezza && Distanza < Migliore)
+			{
+				Migliore = Distanza;
+				// l'acqua scende: verso il punto con il pelo piu' basso
+				const bool bAlContrario = Corso.Punti[i + 1].Z > Corso.Punti[i].Z + 0.5;
+				OutVerso = (bAlContrario ? -D : D).GetSafeNormal();
+				bTrovato = true;
+			}
+		}
+		return bTrovato;
+	}
+
 	float Immersione(float Pelo, float ZCentro, float MezzaAltezza)
 	{
 		const float Fondo = ZCentro - MezzaAltezza;
@@ -146,6 +177,35 @@ bool AValdorsoAcque::PeloQui(const FVector2D& Punto, float& OutPelo) const
 		OutPelo = Pelo;
 	}
 	return bTrovato;
+}
+
+FVector2D AValdorsoAcque::CorrenteQui(const FVector2D& Punto) const
+{
+	if (VelocitaCorrente <= 0.f)
+	{
+		return FVector2D::ZeroVector;
+	}
+	if (!bScatolePronte || ScatoleSpecchi.Num() != Specchi.Num() || ScatoleCorsi.Num() != Corsi.Num())
+	{
+		PreparaScatole();
+	}
+	// nel lago (e nella pozza) l'acqua e' ferma, anche dove ci arriva un fiume
+	for (int32 i = 0; i < Specchi.Num(); ++i)
+	{
+		if (ScatoleSpecchi[i].IsInsideOrOn(Punto) && ValdorsoAcqua::DentroRiva(Specchi[i].Riva, Punto))
+		{
+			return FVector2D::ZeroVector;
+		}
+	}
+	for (int32 i = 0; i < Corsi.Num(); ++i)
+	{
+		FVector2D Verso;
+		if (ScatoleCorsi[i].IsInsideOrOn(Punto) && ValdorsoAcqua::CorrenteSulCorso(Corsi[i], Punto, 0.f, Verso))
+		{
+			return Verso * VelocitaCorrente;
+		}
+	}
+	return FVector2D::ZeroVector;
 }
 
 AValdorsoAcque* AValdorsoAcque::Di(const UWorld* Mondo)

@@ -29,11 +29,15 @@ struct FValdorsoPostoZaino
 	UPROPERTY()
 	int32 Cariche = 0;
 
+	/** (10/11) Il numero scritto sull'oggetto: per il foglio di un incarico della Gilda, il numero dell'incarico. */
+	UPROPERTY()
+	int32 Numero = 0;
+
 	bool Vuoto() const { return Id.IsNone() || Quantita <= 0; }
 
 	bool operator==(const FValdorsoPostoZaino& Altro) const
 	{
-		return Id == Altro.Id && Quantita == Altro.Quantita && Cariche == Altro.Cariche;
+		return Id == Altro.Id && Quantita == Altro.Quantita && Cariche == Altro.Cariche && Numero == Altro.Numero;
 	}
 };
 
@@ -88,6 +92,13 @@ namespace ValdorsoZaino
 	/** Aggiunge Quantita oggetti (prima sulle pile che ci sono, poi nei posti liberi). Cariche < 0 = piene.
 	 *  Restituisce quanti ne sono entrati (meno di Quantita se lo zaino è pieno; 0 se l'oggetto non esiste). */
 	VALDORSO_API int32 Aggiungi(FValdorsoZaino& Zaino, FName Id, int32 Quantita, int32 Cariche = -1);
+
+	/** (10/11) Mette un oggetto con un numero (il foglio di un incarico) nel primo posto libero: il posto, o INDEX_NONE
+	 *  se lo zaino e' pieno (o l'oggetto non esiste). Non si impila mai. */
+	VALDORSO_API int32 AggiungiNumerato(FValdorsoZaino& Zaino, FName Id, int32 Numero);
+
+	/** (10/11) Il posto dell'oggetto con quell'Id e quel numero (INDEX_NONE se non c'e'). */
+	VALDORSO_API int32 PostoNumerato(const FValdorsoZaino& Zaino, FName Id, int32 Numero);
 
 	/** Toglie Quantita oggetti da un posto (falso se non ce ne sono abbastanza). */
 	VALDORSO_API bool Togli(FValdorsoZaino& Zaino, int32 Posto, int32 Quantita = 1);

@@ -65,6 +65,10 @@ public:
 	/** Dà oggetti al colono (con l'avviso "Ricevi: ..."); restituisce quanti ne sono entrati. */
 	int32 Dai(FName Id, int32 Quantita, bool bAvvisa = true);
 
+	/** (10/11) Cambia lo zaino da fuori (la Gilda: il foglio, la paga, la consegna). Cosa restituisce vero se ha cambiato
+	 *  qualcosa: allora lo zaino arriva al PC e si salva. */
+	bool Cambia(TFunctionRef<bool(FValdorsoZaino&)> Cosa);
+
 	/** Per le prove (console): cambia gli Aureus, svuota lo zaino. */
 	void ImpostaMonete(int32 Monete);
 	void Svuota();

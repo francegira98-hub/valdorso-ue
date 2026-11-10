@@ -1,6 +1,8 @@
 // Valdorso - Il combattimento (vedi il .h). Scritto da Claude il 09/11/2026.
 
 #include "ValdorsoCombattimento.h"
+#include "ValdorsoAbilitaDati.h"
+#include "ValdorsoCrescita.h"
 #include "Valdorso.h"
 #include "ValdorsoArmi.h"
 #include "ValdorsoAttributeSet.h"
@@ -27,6 +29,9 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Rendering/DrawElements.h"
+#include "Rendering/SlateRenderer.h"
+#include "Fonts/FontMeasure.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Components/AudioComponent.h"
 #include "GameFramework/WorldSettings.h"
 #include "Sound/SoundAttenuation.h"
@@ -301,6 +306,35 @@ namespace ValdorsoCombattimento
 		{
 			return false;
 		}
+		// (10/11, scheletro della v0.1.5) crescere: chi colpisce, con l'arma che ha in mano (contro un manichino rende
+		// poco); chi e' colpito, la tempra (e lo scudo, se ha parato). Non tra coloni nella pace del battito: li' nessuno si
+		// fa male, e non si cresce.
+		const bool bSiCresce = !(CombattimentoGiocatore(Da) && CombattimentoGiocatore(A) && InPace(Mondo, A->GetActorLocation()));
+		if (UValdorsoCrescitaComponent* CrescitaDa = bSiCresce ? UValdorsoCrescitaComponent::DelCorpo(Da) : nullptr)
+		{
+			const UValdorsoArmiComponent* ArmiDa = UValdorsoArmiComponent::Di(Da);
+			const FValdorsoTipoOggetto* InMano = ArmiDa ? ArmiDa->Arma() : nullptr;
+			const bool bManichino = Cast<ICombatDamageable>(A) != nullptr;
+			// (10/11) contro chi e' piu' forte si cresce di piu', e se puo' ucciderti e' un momento critico
+			float ForzaMia = 0.f;
+			float ForzaSua = 0.f;
+			const bool bConfronto = !bManichino && UValdorsoCrescitaComponent::ForzaDi(Da, ForzaMia) && UValdorsoCrescitaComponent::ForzaDi(A, ForzaSua);
+			CrescitaDa->Usa(ValdorsoCrescere::AbilitaDellArma(InMano ? InMano->Id : NAME_None),
+				bManichino ? 0.25f : (bConfronto ? ValdorsoCrescere::DifficoltaContro(ForzaMia, ForzaSua) : 1.f), A,
+				bConfronto && ValdorsoCrescere::PericoloVero(ForzaMia, ForzaSua));
+		}
+		if (UValdorsoCrescitaComponent* CrescitaA = bSiCresce ? UValdorsoCrescitaComponent::DelCorpo(A) : nullptr)
+		{
+			float ForzaColpito = 0.f;
+			float ForzaAggressore = 0.f;
+			const bool bContro = UValdorsoCrescitaComponent::ForzaDi(A, ForzaColpito) && UValdorsoCrescitaComponent::ForzaDi(Da, ForzaAggressore);
+			const bool bPericolo = bContro && ValdorsoCrescere::PericoloVero(ForzaColpito, ForzaAggressore);
+			CrescitaA->Usa(FName(TEXT("Tempra")), bContro ? 0.8f * ValdorsoCrescere::DifficoltaContro(ForzaColpito, ForzaAggressore) : 0.8f, Da, bPericolo);
+			if (bParato)
+			{
+				CrescitaA->Usa(FName(TEXT("Scudo")), bContro ? ValdorsoCrescere::DifficoltaContro(ForzaColpito, ForzaAggressore) : 1.f, Da, bPericolo);
+			}
+		}
 		// (09/11) un lupo colpito si gira verso chi l'ha colpito (e sa a chi dare la pelle)
 		if (AValdorsoAnimale* Lupo = Cast<AValdorsoAnimale>(A))
 		{
@@ -473,6 +507,20 @@ int32 SValdorsoBersaglio::OnPaint(const FPaintArgs& Args, const FGeometry& Allot
 			TArray<FVector2f> Rombo = { P + FVector2f(0.f, -R), P + FVector2f(R * 0.7f, 0.f), P + FVector2f(0.f, R), P + FVector2f(-R * 0.7f, 0.f), P + FVector2f(0.f, -R) };
 			FSlateDrawElement::MakeLines(OutDrawElements, LayerId, AllottedGeometry.ToPaintGeometry(), Rombo, ESlateDrawEffect::None,
 				ValdorsoTema::Oro(), true, 2.5f);
+			// (10/11) quanto e' forte: in questo mondo si capisce a occhio (sotto il rombo, colorato)
+			float ForzaSua = 0.f;
+			float ForzaMia = 0.f;
+			if (FSlateApplication::IsInitialized() && UValdorsoCrescitaComponent::ForzaDi(Agganciato, ForzaSua)
+				&& UValdorsoCrescitaComponent::ForzaDi(Chi->GetPawn(), ForzaMia))
+			{
+				FLinearColor Colore = FLinearColor::White;
+				const FText Frase = ValdorsoCrescere::Confronto(ForzaMia, ForzaSua, Colore);
+				const FSlateFontInfo Carattere = FCoreStyle::GetDefaultFontStyle("Bold", 11);
+				const FVector2D Misura = FSlateApplication::Get().GetRenderer()->GetFontMeasureService()->Measure(Frase, Carattere);
+				const FVector2f Dove = P + FVector2f(-static_cast<float>(Misura.X) * 0.5f, 14.f);
+				FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(Misura,
+					FSlateLayoutTransform(1.f, FVector2D(Dove))), Frase, Carattere, ESlateDrawEffect::None, Colore);
+			}
 		}
 	}
 	// la barra di chi hai colpito: senza numeri, solo quanto gli resta

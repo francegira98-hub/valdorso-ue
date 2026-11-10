@@ -2,6 +2,13 @@
 
 
 #include "ValdorsoPlayerController.h"
+#include "SValdorsoGilda.h"
+#include "SValdorsoScheda.h"
+#include "ValdorsoCrescita.h"
+#include "ValdorsoGilda.h"
+#include "ValdorsoStaff.h"
+#include "GameFramework/Character.h"
+#include "ValdorsoMovementComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
@@ -17,6 +24,7 @@
 #include "SValdorsoRegistro.h"
 #include "SValdorsoPausa.h"
 #include "SValdorsoImpostazioni.h"
+#include "ValdorsoImpostazioni.h"
 #include "ValdorsoPalcoRegistro.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoRegistroEventi.h"
@@ -41,6 +49,8 @@
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoCharacter.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "ValdorsoAspettoComponent.h"
 #include "ValdorsoSeduta.h"
 #include "ValdorsoLetto.h"
@@ -86,6 +96,12 @@ AValdorsoPlayerController::AValdorsoPlayerController()
 	Chat = CreateDefaultSubobject<UValdorsoChatComponent>(TEXT("Chat"));
 	// (09/11, v0.1.4 passo 4.4) l'aggancio del bersaglio (ValdorsoCombattimento.h)
 	Aggancio = CreateDefaultSubobject<UValdorsoAggancioComponent>(TEXT("Aggancio"));
+	// (10/11, v0.1.4) la Gilda: punti e incarichi (ValdorsoGilda.h)
+	Gilda = CreateDefaultSubobject<UValdorsoGildaComponent>(TEXT("Gilda"));
+	// (10/11) la finestra dello staff, F9 (ValdorsoStaff.h)
+	Staff = CreateDefaultSubobject<UValdorsoStaffComponent>(TEXT("Staff"));
+	// (10/11, scheletro della v0.1.5) le abilita' e la scheda del personaggio, K (ValdorsoCrescita.h)
+	Crescita = CreateDefaultSubobject<UValdorsoCrescitaComponent>(TEXT("Crescita"));
 }
 
 void AValdorsoPlayerController::BeginPlay()
@@ -109,6 +125,12 @@ void AValdorsoPlayerController::BeginPlay()
 
 		}
 
+	}
+
+	// (10/11) la distanza visiva scelta nelle impostazioni (anche il caricamento della valle: serve il mondo)
+	if (IsLocalPlayerController())
+	{
+		ValdorsoImpostazioni::ApplicaDistanza();
 	}
 
 	// Valdorso, anticamera: appena arrivato sul server, il client manda la sua richiesta (solo su connessione cifrata).
@@ -185,6 +207,12 @@ void AValdorsoPlayerController::SetupInputComponent()
 		InputComponent->BindKey(EKeys::Gamepad_RightThumbstick, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
 		// (09/11) Z: riponi o riprendi le armi
 		InputComponent->BindKey(EKeys::Z, IE_Pressed, this, &AValdorsoPlayerController::TastoRiponi);
+		// (10/11) F9: la finestra dello staff (e del capo gilda)
+		InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AValdorsoPlayerController::TastoStaff);
+		// (nell'editor F9 puo' essere la foto dello schermo: anche F7)
+		InputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AValdorsoPlayerController::TastoStaff);
+		// (10/11) K: la scheda del personaggio
+		InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AValdorsoPlayerController::TastoScheda);
 	}
 
 	// only add IMCs for local player controllers
@@ -360,6 +388,82 @@ void AValdorsoPlayerController::PlayerTick(float DeltaTime)
 	if (IsLocalController())
 	{
 		AggiornaSuggerimento();
+		Immersione();
+		Telecamera(DeltaTime);
+	}
+}
+
+void AValdorsoPlayerController::Telecamera(float DeltaTime)
+{
+	// (10/11) la telecamera che segue morbida (un poco in ritardo sul colono) e si allarga appena di corsa;
+	// nella modalita' foto la telecamera e' sua
+	AValdorsoCharacter* Corpo = Cast<AValdorsoCharacter>(GetPawn());
+	UCameraComponent* Occhio = Corpo ? Corpo->GetFollowCamera() : nullptr;
+	USpringArmComponent* Braccio = Corpo ? Corpo->GetCameraBoom() : nullptr;
+	if (!Occhio || !Braccio || ValdorsoFoto::Aperta(this))
+	{
+		return;
+	}
+	// (ogni corpo nuovo: anche dopo la rinascita al tempio)
+	if (CorpoTelecamera.Get() != Corpo)
+	{
+		CorpoTelecamera = Corpo;
+		CampoBase = Occhio->FieldOfView;
+		if (!Braccio->bEnableCameraLag)
+		{
+			Braccio->bEnableCameraLag = true;
+			Braccio->CameraLagSpeed = 12.f;
+			Braccio->CameraLagMaxDistance = 120.f;
+		}
+	}
+	const float Veloce = Corpo->GetVelocity().Size2D();
+	const float Voluto = CampoBase + (Veloce > 450.f ? 5.f : 0.f);
+	Occhio->SetFieldOfView(FMath::FInterpTo(Occhio->FieldOfView, Voluto, DeltaTime, 3.f));
+}
+
+void AValdorsoPlayerController::TastoStaff()
+{
+	// aperta si chiude da se' (F9 dentro la finestra); qui si apre solo in gioco, senza altre schermate
+	if (!GetPawn() || (SchermataAperta() && !ValdorsoStaffSchermo::Aperta(this)))
+	{
+		return;
+	}
+	ValdorsoStaffSchermo::Alterna(this);
+}
+
+void AValdorsoPlayerController::TastoScheda()
+{
+	// aperta si chiude da se' (K dentro la scheda); qui si apre solo in gioco, senza altre schermate
+	if (!GetPawn() || (SchermataAperta() && !ValdorsoSchedaSchermo::Aperta(this)))
+	{
+		return;
+	}
+	ValdorsoSchedaSchermo::Alterna(this);
+}
+
+void AValdorsoPlayerController::Immersione()
+{
+	// (10/11, v0.1.4) Sott'acqua: Ctrl tenuto (o il dorsale sinistro) scende, Spazio tenuto (o A) risale. Va con il
+	// movimento di ogni passo, che il server riceve e controlla come il resto (il nuoto si prevede come il camminare).
+	ACharacter* Corpo = Cast<ACharacter>(GetPawn());
+	const UValdorsoMovementComponent* Movimento = Corpo ? Cast<UValdorsoMovementComponent>(Corpo->GetCharacterMovement()) : nullptr;
+	if (!Movimento || !Movimento->IsSwimming() || SchermataAperta())
+	{
+		return;
+	}
+	float Su = 0.f;
+	// a galla Spazio non spinge piu' in su (si resterebbe a saltellare sul pelo dell'acqua)
+	if ((IsInputKeyDown(EKeys::SpaceBar) || IsInputKeyDown(EKeys::Gamepad_FaceButton_Bottom)) && Movimento->AcquaSopraLaTesta() > -15.f)
+	{
+		Su += 1.f;
+	}
+	if (IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder))
+	{
+		Su -= 1.f;
+	}
+	if (Su != 0.f)
+	{
+		Corpo->AddMovementInput(FVector::UpVector, Su);
 	}
 }
 
@@ -500,6 +604,8 @@ void AValdorsoPlayerController::ClientMostraBacheca_Implementation(const FString
 	ValdorsoTaccuino::Chiudi(this);
 	ValdorsoZainoSchermo::Chiudi(this);
 	ValdorsoTesseraSchermo::Chiudi(this);
+	ValdorsoGildaSchermo::Chiudi(this);
+	ValdorsoSchedaSchermo::Chiudi(this);
 	UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
 	if (!Viewport || Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid())
 	{
@@ -609,7 +715,7 @@ bool AValdorsoPlayerController::SchermataAperta() const
 	return Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
 		|| SchermataImpostazioni.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoFoto::Aperta(this)
-		|| ValdorsoBottegaSchermo::Aperta(this) || (Chat && Chat->RigaAperta());
+		|| ValdorsoBottegaSchermo::Aperta(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || (Chat && Chat->RigaAperta());
 }
 
 void AValdorsoPlayerController::TastoAggancio()
@@ -802,7 +908,7 @@ void AValdorsoPlayerController::ChiudiMappa()
 
 void AValdorsoPlayerController::TastoInteragisci()
 {
-	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoBottegaSchermo::Aperta(this) || !GetPawn())
+	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoBottegaSchermo::Aperta(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || !GetPawn())
 	{
 		return;
 	}
@@ -1511,6 +1617,18 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 		ValdorsoTessera::Sistema(Dati->Tessera, Dati->Id);
 		Zaino->ImpostaTessera(ValdorsoTessera::Vista(Dati->Nome, &Dati->Registro, Dati->Tessera));
 	}
+	// (10/11) la Gilda (dopo lo zaino: i fogli degli incarichi stanno nello zaino)
+	if (Gilda)
+	{
+		Gilda->Carica(Dati->Gilda);
+		Dati->Zaino = Zaino ? Zaino->Dati() : Dati->Zaino;
+	}
+	// (10/11, scheletro della v0.1.5) le abilita' (la prima volta con i vantaggi del Registro)
+	if (Crescita)
+	{
+		Crescita->Carica(Dati->Abilita, &Dati->Registro);
+		Dati->Abilita = Crescita->Dati();
+	}
 	UltimoSalvataggio = FPlatformTime::Seconds();
 	Dati->UltimoGioco = FDateTime::UtcNow().ToUnixTimestamp();
 	Archivista->SalvaPersonaggio(*Dati);
@@ -1624,11 +1742,26 @@ void AValdorsoPlayerController::SalvaPersonaggio()
 	{
 		Dati->Zaino = Zaino->Dati();
 	}
+	// (10/11) e la Gilda
+	if (Gilda)
+	{
+		Dati->Gilda = Gilda->Dati();
+	}
+	// (10/11) e le abilita'
+	if (Crescita)
+	{
+		Dati->Abilita = Crescita->Dati();
+	}
 	Archivista->SalvaPersonaggio(*Dati);
 }
 
 void AValdorsoPlayerController::PawnLeavingGame()
 {
+	// (10/11) i fogli della Gilda solo prenotati tornano sulla bacheca
+	if (Gilda)
+	{
+		Gilda->Esce();
+	}
 	SalvaPersonaggio();
 	Super::PawnLeavingGame();
 }

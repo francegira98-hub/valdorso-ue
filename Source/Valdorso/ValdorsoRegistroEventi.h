@@ -18,4 +18,12 @@ namespace ValdorsoRegistroEventi
 	 * Dove: il punto nel mondo; Dettagli: una riga in più (per esempio il danno).
 	 */
 	VALDORSO_API void Annota(const FString& Tipo, const AActor* Chi, const AActor* Bersaglio, const FVector& Dove, const FString& Dettagli = FString());
+
+	/** (10/11) Gli ultimi eventi annotati da quando il server e' acceso (al massimo 500), il piu' nuovo per primo, come
+	 *  righe "12/11 21:40 · Gilda · Fra · dettagli". Filtro (vuoto = tutti): solo le righe che lo contengono. Per la
+	 *  finestra dello staff (ValdorsoStaff.h); quelli vecchi stanno nei file del giorno. */
+	VALDORSO_API TArray<FString> Ultimi(int32 Quanti, const FString& Filtro = FString());
+
+	/** (10/11) Mette una riga tra gli ultimi (lo fa Annota; i test la usano senza mondo). */
+	VALDORSO_API void Ricorda(const FString& Riga);
 }

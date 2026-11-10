@@ -110,6 +110,9 @@ EActiveTimerReturnType SValdorsoBarre::Anima(double Tempo, float Delta)
 	const UValdorsoBagnatoComponent* Acqua = UValdorsoBagnatoComponent::Di(Colono);
 	Bagnato = Acqua ? Acqua->Bagnato() : 0.f;
 	PresenzaGoccia = FMath::FInterpConstantTo(PresenzaGoccia, Bagnato > 0.02f ? 1.f : 0.f, Delta, 2.f);
+	// (10/11) le bolle del fiato: si vedono mentre lo si trattiene (o lo si riprende)
+	Fiato = Acqua ? Acqua->Fiato() : 1.f;
+	PresenzaFiato = FMath::FInterpConstantTo(PresenzaFiato, Fiato < 0.995f ? 1.f : 0.f, Delta, 3.f);
 
 	const UAbilitySystemComponent* Abilita = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Colono);
 	if (!Abilita)
@@ -171,6 +174,35 @@ int32 SValdorsoBarre::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedG
 			FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
 				AllottedGeometry.ToPaintGeometry(FVector2f(Raggio * 1.3f, Alto), FSlateLayoutTransform(Fondo + FVector2f(-Raggio * 0.65f, Raggio - Alto))),
 				&Riempimento, ESlateDrawEffect::None, ValdorsoTema::BluArcano().CopyWithNewOpacity((ValdorsoBagnato::Infreddolito(Bagnato) ? 0.85f : 0.5f) * AlfaGoccia));
+		}
+	}
+	// (10/11) il fiato: dieci bolle sotto le barre, piene finche' c'e' fiato (rosse quando sta per finire)
+	const float AlfaFiato = PresenzaFiato * PresenzaSchermo * Tinta;
+	if (AlfaFiato > 0.01f)
+	{
+		const int32 Bolle = 10;
+		const int32 Piene = FMath::CeilToInt(FMath::Clamp(Fiato, 0.f, 1.f) * Bolle);
+		const FLinearColor Colore = Fiato < 0.3f ? FMath::Lerp(ValdorsoTema::RossoSangue(), ValdorsoTema::Pergamena(), 0.2f)
+			: FMath::Lerp(ValdorsoTema::BluArcano(), ValdorsoTema::Pergamena(), 0.35f);
+		for (int32 b = 0; b < Bolle; ++b)
+		{
+			const FVector2f Centro(Margine + 6.f + b * 14.f, Quante * Passo + 5.f);
+			const float Raggio = 5.f;
+			TArray<FVector2f> Giro;
+			for (int32 k = 0; k <= 12; ++k)
+			{
+				const float R = 2.f * PI * k / 12.f;
+				Giro.Add(Centro + FVector2f(Raggio * FMath::Cos(R), Raggio * FMath::Sin(R)));
+			}
+			const bool bPiena = b < Piene;
+			FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(), Giro,
+				ESlateDrawEffect::None, Colore.CopyWithNewOpacity((bPiena ? 0.95f : 0.35f) * AlfaFiato), true, 1.5f);
+			if (bPiena)
+			{
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1,
+					AllottedGeometry.ToPaintGeometry(FVector2f(Raggio * 1.2f, Raggio * 1.2f), FSlateLayoutTransform(Centro - FVector2f(Raggio * 0.6f, Raggio * 0.6f))),
+					&Riempimento, ESlateDrawEffect::None, Colore.CopyWithNewOpacity(0.45f * AlfaFiato));
+			}
 		}
 	}
 	const FSlateFontInfo FontNumeri = Caratteri->Titolo(9.f, TEXT("Regular"));

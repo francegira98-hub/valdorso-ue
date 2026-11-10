@@ -147,6 +147,16 @@ protected:
 	virtual FText TestoAChiave() const override;
 };
 
+/** (10/11) Che bacheca e': gli avvisi scritti nei Dettagli, quella della Gilda (gli incarichi, ValdorsoGilda.h) o
+ *  quella del Balivo (i proclami dello staff, sopra gli avvisi; con la tettoia). */
+UENUM(BlueprintType)
+enum class EValdorsoTipoBacheca : uint8
+{
+	Avvisi,
+	Gilda,
+	Balivo,
+};
+
 /**
  * (03/11) La bacheca del villaggio: si legge con E. Gli avvisi si scrivono nei Dettagli (Avvisi) e il server li manda a
  * chi la legge. Più avanti ci appenderanno gli incarichi la Gilda, il Balivo e i giocatori.
@@ -167,6 +177,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Bacheca", meta = (MultiLine = "true"))
 	TArray<FString> Avvisi;
 
+	/** (10/11) Che bacheca e' (lo mette metti_png.py: la Gilda e il Balivo). */
+	UPROPERTY(EditAnywhere, Category = "Bacheca")
+	EValdorsoTipoBacheca Tipo = EValdorsoTipoBacheca::Avvisi;
+
 	// IValdorsoInterattivo
 	virtual FText TestoInterazione(const APawn* Chi) const override;
 	virtual void Interagisci(APawn* Chi) override;
@@ -183,4 +197,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Bacheca")
 	TObjectPtr<UStaticMeshComponent> PaloDestro;
+
+	/** (10/11) La tettoia (solo la bacheca del Balivo). */
+	UPROPERTY(VisibleAnywhere, Category = "Bacheca")
+	TObjectPtr<UStaticMeshComponent> Tettoia;
+
+	virtual void OnConstruction(const FTransform& Transform) override;
 };

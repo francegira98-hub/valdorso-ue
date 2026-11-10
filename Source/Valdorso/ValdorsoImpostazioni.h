@@ -15,6 +15,9 @@ struct VALDORSO_API FValdorsoImpostazioni
 	int32 Qualita = -1;
 	/** 0 = schermo intero, 1 = finestra senza bordi, 2 = in finestra (nell'editor non si cambia). */
 	int32 Finestra = 1;
+	/** (10/11) Quanto lontano si vede bene: 0 vicino, 1 normale, 2 lontano (di serie), 3 lontanissimo. Alberi, rocce,
+	 *  case e terreno restano dettagliati piu' lontano, e si caricano piu' lontano i pezzi della valle (costa un po'). */
+	int32 Distanza = 2;
 
 	// --- Audio (0..1) ---
 	float VolumeGenerale = 1.f;
@@ -45,6 +48,10 @@ namespace ValdorsoImpostazioni
 
 	/** Applica le impostazioni di adesso (all'avvio, o dopo che il motore le ha toccate). */
 	VALDORSO_API void Applica();
+
+	/** (10/11) La distanza visiva nei mondi di gioco aperti (anche il caricamento dei pezzi della valle): la chiama il
+	 *  PlayerController all'inizio e la rifanno le impostazioni quando cambia. */
+	VALDORSO_API void ApplicaDistanza();
 
 	/** Il volume di un suono dell'interfaccia: musica (motivi delle fedi, bordone) o effetti. */
 	VALDORSO_API float VolumeSuono(bool bMusica);

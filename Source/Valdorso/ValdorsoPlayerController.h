@@ -91,6 +91,18 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Pericoli")
 	TObjectPtr<UValdorsoZainoComponent> Zaino;
 
+	/** (10/11, v0.1.4) La Gilda del colono: i punti e gli incarichi presi (ValdorsoGilda.h). */
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso")
+	TObjectPtr<class UValdorsoGildaComponent> Gilda;
+
+	/** (10/11, v0.1.4) La finestra dello staff (F9) e i suoi permessi (ValdorsoStaff.h). */
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso")
+	TObjectPtr<class UValdorsoStaffComponent> Staff;
+
+	/** (10/11, scheletro della v0.1.5) Le abilita' che salgono usandole e la scheda del personaggio, K (ValdorsoCrescita.h). */
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso")
+	TObjectPtr<class UValdorsoCrescitaComponent> Crescita;
+
 	/**
 	 * (28/10) Solo per le prove nell'editor (console): apre il Registro di Val d'Orso su un colono di prova, con il
 	 * palco e la pagina del volto, senza account. Le risposte non si salvano (il server non conosce quel colono).
@@ -239,6 +251,8 @@ public:
 	bool EAutenticato() const { return bAutenticato; }
 	const FString& GetAccountId() const { return AccountId; }
 	EValdorsoRuolo GetRuolo() const { return Ruolo; }
+	/** (10/11) Il nome dell'account (per i permessi dello staff: ValdorsoStaff.h). */
+	const FString& GetNomeAccount() const { return NomeAccount; }
 
 	/** Il personaggio nasce solo dopo l'accesso (e la scelta del personaggio). */
 	virtual bool CanRestartPlayer() override;
@@ -339,6 +353,16 @@ private:
 	void TastoAggancio();
 	/** (09/11) Il tasto Z: ripone le armi (spada al fianco, scudo sulla schiena) o le riprende in mano. */
 	void TastoRiponi();
+	/** (10/11, v0.1.4) Sott'acqua: Ctrl scende, Spazio risale (ogni fotogramma, solo su questo PC). */
+	void Immersione();
+	/** (10/11) F9: la finestra dello staff. */
+	void TastoStaff();
+	/** (10/11) K: la scheda del personaggio (le abilita'). */
+	void TastoScheda();
+	/** (10/11) La telecamera che segue morbida e si allarga appena di corsa (solo su questo PC). */
+	void Telecamera(float DeltaTime);
+	TWeakObjectPtr<APawn> CorpoTelecamera;
+	float CampoBase = 90.f;
 	/** (08/11) I tasti 1-8 della barra delle azioni (Indice da 0 a 7) e Invio per la chat: solo in gioco, senza schermate aperte. */
 	void TastoAzione(int32 Indice);
 	void TastoChat();

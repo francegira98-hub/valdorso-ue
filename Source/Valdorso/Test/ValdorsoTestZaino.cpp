@@ -347,13 +347,20 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestZainoRaccolta, "Valdorso.Zaino.Rac
 bool FValdorsoTestZainoRaccolta::RunTest(const FString& Parameters)
 {
 	const TArray<FValdorsoPuntoRaccolta>& Punti = ValdorsoRaccolta::Punti();
-	TestTrue(TEXT("una quarantina di posti"), Punti.Num() >= 30 && Punti.Num() <= 60);
+	// (10/11) con le cozze del lago una settantina
+	TestTrue(TEXT("una settantina di posti"), Punti.Num() >= 50 && Punti.Num() <= 90);
 	TestEqual(TEXT("sempre gli stessi"), ValdorsoRaccolta::Punti().Num(), Punti.Num());
 	int32 Rami = 0;
 	int32 Erbe = 0;
+	int32 Cozze = 0;
 	for (int32 i = 0; i < Punti.Num(); ++i)
 	{
 		const FValdorsoPuntoRaccolta& Punto = Punti[i];
+		if (Punto.Oggetto == FName(TEXT("Cozze")))
+		{
+			++Cozze;
+			TestTrue(FString::Printf(TEXT("posto %d: le cozze stanno sul fondale"), i), Punto.bFondale);
+		}
 		TestNotNull(FString::Printf(TEXT("posto %d: un oggetto vero"), i), ValdorsoOggetti::Trova(Punto.Oggetto));
 		TestTrue(FString::Printf(TEXT("posto %d: se ne prende almeno uno"), i), Punto.Quantita >= 1);
 		TestTrue(FString::Printf(TEXT("posto %d: ricresce"), i), Punto.Ricrescita >= 60.f);
@@ -376,6 +383,7 @@ bool FValdorsoTestZainoRaccolta::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("ci sono rami per i falò"), Rami >= 10);
 	TestTrue(TEXT("ci sono le erbe della palude"), Erbe >= 5);
+	TestTrue(TEXT("ci sono le cozze del lago"), Cozze >= 15);
 	return true;
 }
 

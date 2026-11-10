@@ -87,6 +87,19 @@ void SValdorsoImpostazioni::Construct(const FArguments& InArgs)
 			}
 		},
 		[this](int32 Verso) { Bozza.Finestra = FMath::Clamp(Bozza.Finestra + Verso, 0, 2); Applica(); });
+	// (10/11) quanto lontano si vede bene (ValdorsoImpostazioni.h)
+	AggiungiVoce(Voci, LOCTEXT("Distanza", "Distanza visiva"),
+		[this]()
+		{
+			switch (Bozza.Distanza)
+			{
+			case 0: return LOCTEXT("DistanzaVicina", "Vicina");
+			case 1: return LOCTEXT("DistanzaNormale", "Normale");
+			case 3: return LOCTEXT("DistanzaLontanissima", "Lontanissima");
+			default: return LOCTEXT("DistanzaLontana", "Lontana");
+			}
+		},
+		[this](int32 Verso) { Bozza.Distanza = FMath::Clamp(Bozza.Distanza + Verso, 0, 3); Applica(); });
 
 	AggiungiTitolo(Voci, LOCTEXT("Audio", "Audio"));
 	AggiungiVoce(Voci, LOCTEXT("VolumeGenerale", "Volume generale"),

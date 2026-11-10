@@ -1,6 +1,7 @@
 // Valdorso - La valle che reagisce (vedi il .h). Scritto da Claude il 06/11/2026.
 
 #include "ValdorsoValleViva.h"
+#include "ValdorsoVitaValle.h"
 #include "Valdorso.h"
 #include "ValdorsoAcque.h"
 #include "ValdorsoAmbiente.h"
@@ -115,6 +116,13 @@ void AValdorsoValleViva::BeginPlay()
 	{
 		SetActorTickEnabled(false);
 		return;
+	}
+	// (10/11) il cielo e i boschi che vivono (ValdorsoVitaValle.h): uno per PC, solo qui
+	if (UWorld* Mondo = GetWorld(); Mondo && !TActorIterator<AValdorsoVitaValle>(Mondo))
+	{
+		FActorSpawnParameters Parametri;
+		Parametri.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Mondo->SpawnActor<AValdorsoVitaValle>(AValdorsoVitaValle::StaticClass(), FTransform::Identity, Parametri);
 	}
 	UStaticMesh* MeshUccello = CaricaViva<UStaticMesh>(TEXT("SM_Uccello"));
 	UStaticMesh* MeshPesce = CaricaViva<UStaticMesh>(TEXT("SM_Pesce"));

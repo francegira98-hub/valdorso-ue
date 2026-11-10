@@ -1031,6 +1031,149 @@ namespace
 		return D;
 	}
 
+	/** (10/11) Lucia, della Gilda: tiene il registro e il bancone. Assegna i fogli della bacheca, li timbra, e le monete
+	 *  non le tocca mai (paga la cassa). Ha la vecchia mappa delle gallerie. "Ho un foglio della Gilda" apre il bancone
+	 *  (l'evento BanconeGilda, ValdorsoGilda.h). */
+	FValdorsoDialogo DialoghiLucia()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Lucia");
+		D.NomeBreve = TEXT("Lucia");
+		D.Titolo = TEXT("Lucia, della Gilda");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+		const FName Bancone(TEXT("BanconeGilda"));
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Una donna magra, i capelli raccolti con una matita, scrive in un registro grande come una porta. Non alza gli occhi.)"),
+			TEXT("Nome, mestiere e cosa sai fare. No, aspetta: prima dimmi se hai un foglio della bacheca. Se non ce l'hai, la bacheca e' quella, sulla parete."),
+			TEXT("Sono Lucia. Tengo il registro della Gilda di Valdorso, il bancone e la pazienza. Delle tre, la pazienza finisce per prima."),
+			})
+			.Scelta(TEXT("Ho un foglio della Gilda."), NAME_None, Bancone)
+			.Scelta(TEXT("Che cos'e' la Gilda?"), TEXT("gilda"))
+			.Scelta(TEXT("Come si lavora per la Gilda?"), TEXT("come"))
+			.Scelta(TEXT("Niente, grazie. Torno un'altra volta."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Lucia intinge la penna, la scuote due volte e finalmente ti guarda.)"),
+			TEXT("Ah, sei tu. Hai un foglio, o sei venuto a farmi perdere il segno?"),
+			})
+			.Scelta(TEXT("Ho un foglio della Gilda."), NAME_None, Bancone)
+			.Scelta(TEXT("Ricordami come funziona."), TEXT("come"))
+			.Scelta(TEXT("Dicono che tu abbia una mappa delle gallerie."), TEXT("mappa"))
+			.Scelta(TEXT("Passavo a salutare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("gilda"), {
+			TEXT("La Gilda e' la valle che si da' una mano, con un registro in mezzo perche' nessuno se lo dimentichi."),
+			TEXT("Bruno vuole la legna, Teodoro vuole i cinghiali fuori dal grano, Gaspare vuole i lupi lontani dalle stalle. Scrivono a me, io appendo il foglio, qualcuno lo stacca. La cassa del villaggio paga. Io scrivo."),
+			TEXT("Anche la Corona, ogni tanto, appende qualcosa. Quelli li riconosci: il sigillo e' piu' grosso e la paga piu' piccola."),
+			})
+			.Scelta(TEXT("E come si lavora?"), TEXT("come"))
+			.Scelta(TEXT("E i gradi?"), TEXT("gradi"))
+			.Scelta(TEXT("Ho gia' un foglio, in effetti."), NAME_None, Bancone)
+			.Scelta(TEXT("Ho capito. Grazie, Lucia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("come"), {
+			TEXT("Guardi la bacheca. Scegli un foglio. Lo stacchi: da quel momento e' tuo per mezz'ora, e nessun altro lo puo' prendere."),
+			TEXT("Me lo porti. Io guardo il tuo grado e, se va bene, lo timbro: l'incarico e' assegnato, e da li' conta quello che fai. Una bestia uccisa prima del timbro, per la Gilda, e' solo una bestia morta."),
+			TEXT("Fatto il lavoro torni qui: la legna sul bancone, o il racconto se ti avevo mandato da qualche parte. Timbro \"compiuto\", e la cassa ti paga. Le monete io non le tocco: sporcano il registro."),
+			})
+			.Scelta(TEXT("E i gradi?"), TEXT("gradi"))
+			.Scelta(TEXT("Ho un foglio da farti timbrare."), NAME_None, Bancone)
+			.Scelta(TEXT("Chiaro. Vado alla bacheca."), TEXT("congedo"));
+
+		D.Nodo(TEXT("gradi"), {
+			TEXT("Ogni foglio ha un sigillo di ceralacca. Rosso: Comune, li puo' fare chiunque abbia due mani. Bronzo, Argento, Oro: serve il grado, e il grado non si compra."),
+			TEXT("I punti della Gilda si fanno lavorando: dieci per essere pronti al Bronzo, quaranta per l'Argento, centoventi per l'Oro. Ma il grado lo da' Mastro Ettore, il capo della filiale, quando ti ha visto lavorare. Lui, o il capo gilda, se la valle ne ha uno."),
+			TEXT("Per l'Argento e per l'Oro tengo una cauzione, un decimo della paga: te la ridò alla fine. Se rinunci, resta alla Gilda."),
+			TEXT("E rinunciare a un incarico che ti ho assegnato costa due punti. Non per cattiveria: per il registro. Il registro non dimentica."),
+			})
+			.Scelta(TEXT("E come si lavora, di preciso?"), TEXT("come"))
+			.Scelta(TEXT("Ho un foglio da farti timbrare."), NAME_None, Bancone)
+			.Scelta(TEXT("Va bene. Torno con un foglio."), TEXT("congedo"));
+
+		D.Nodo(TEXT("mappa"), {
+			TEXT("(La penna si ferma a meta' di una parola.)"),
+			TEXT("Chi te l'ha detto? Bruno. E' sempre Bruno."),
+			TEXT("Si', la Gilda ha una mappa delle gallerie sotto la grotta a est. Vecchia, disegnata da gente che non e' tornata a correggerla. Da qualche anno, di notte, da laggiu' si sentono dei martelli. Nessuno della valle scava, la' sotto."),
+			})
+			.Scelta(TEXT("Me la mostreresti?"), TEXT("mappa2"))
+			.Scelta(TEXT("Parliamo d'altro: ho un foglio."), NAME_None, Bancone)
+			.Scelta(TEXT("Lasciamo stare. A presto, Lucia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("mappa2"), {
+			TEXT("A te? Con il sigillo rosso ancora fresco sulle dita? No."),
+			TEXT("Fatti un nome alla Gilda. Quando qualcuno mi dira' che cosa c'e' davvero nella grotta a est, e tornera' per raccontarlo, allora ne riparliamo. C'e' un foglio, ogni tanto, sulla bacheca."),
+			})
+			.Scelta(TEXT("Ho capito. Ho un foglio, intanto."), NAME_None, Bancone)
+			.Scelta(TEXT("Me ne ricordero'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Lucia e' gia' tornata al registro.) Chiudi la porta, che le carte volano."),
+			}).Fine();
+
+		return D;
+	}
+
+	/** (10/11) Mastro Ettore, capo della filiale della Gilda: i gradi li da' lui (cioe' lo staff, a suo nome). "A che punto
+	 *  sono?" ha l'evento GradoGilda: il server risponde con i punti veri (UValdorsoGildaComponent::DimmiGrado). */
+	FValdorsoDialogo DialoghiCapoGilda()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("CapoGilda");
+		D.NomeBreve = TEXT("Mastro Ettore");
+		D.Titolo = TEXT("Mastro Ettore, capo della filiale");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+		const FName Grado(TEXT("GradoGilda"));
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Un uomo largo di spalle, la barba grigia tagliata corta, legge un foglio tenendolo lontano dagli occhi. Ha le mani di chi ha lavorato prima di comandare.)"),
+			TEXT("Mastro Ettore Bracci, capo della filiale di Valdorso. Lucia tiene il registro, io tengo la Gilda. Se cerchi lavoro, la bacheca e' quella. Se cerchi me, e' per i gradi."),
+			})
+			.Scelta(TEXT("Come si sale di grado?"), TEXT("gradi"))
+			.Scelta(TEXT("A che punto sono con la Gilda?"), TEXT("punto"), Grado)
+			.Scelta(TEXT("Chi e' il capo gilda dei coloni?"), TEXT("capo"))
+			.Scelta(TEXT("Niente, Mastro. Vi lascio al vostro foglio."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Mastro Ettore abbassa il foglio di un dito.)"),
+			TEXT("Ancora tu. Bene: chi torna di solito ha lavorato. Dimmi."),
+			})
+			.Scelta(TEXT("A che punto sono con la Gilda?"), TEXT("punto"), Grado)
+			.Scelta(TEXT("Ricordatemi come si sale di grado."), TEXT("gradi"))
+			.Scelta(TEXT("Chi e' il capo gilda dei coloni?"), TEXT("capo"))
+			.Scelta(TEXT("Passavo soltanto."), TEXT("congedo"));
+
+		D.Nodo(TEXT("gradi"), {
+			TEXT("Con il lavoro fai i punti: ogni foglio timbrato da Lucia ne vale qualcuno. Dieci e sei pronto per il Bronzo, quaranta per l'Argento, centoventi per l'Oro."),
+			TEXT("Pronto non vuol dire promosso. Il grado lo do io, quando ho visto come lavori, e se hai rinunciato a meta' strada me ne ricordo. Il registro me lo ricorda, se mi dimentico."),
+			})
+			.Scelta(TEXT("E io, a che punto sono?"), TEXT("punto"), Grado)
+			.Scelta(TEXT("Chi altro puo' dare i gradi?"), TEXT("capo"))
+			.Scelta(TEXT("Ho capito. Torno al lavoro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("punto"), {
+			TEXT("(Fa scorrere il dito sul registro di Lucia, riga per riga, finche' non trova il tuo nome.)"),
+			TEXT("Ecco qui. Il resto te lo dico in faccia, che sui fogli le cose si leggono male."),
+			})
+			.Scelta(TEXT("Come si sale, di preciso?"), TEXT("gradi"))
+			.Scelta(TEXT("Grazie, Mastro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("capo"), {
+			TEXT("Quando la valle avra' qualcuno di fidato tra i coloni, lo faro' capo gilda. Potra' dare i gradi a chi li merita, fino all'Argento. L'Oro resta mio."),
+			TEXT("E non pensare che il capo gilda faccia quello che vuole: ogni grado che da' finisce nel registro, e il registro lo leggo io."),
+			})
+			.Scelta(TEXT("E a che punto sono io?"), TEXT("punto"), Grado)
+			.Scelta(TEXT("Capito. Vi lascio lavorare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Mastro Ettore torna al suo foglio.) Vai, e fai in modo che Lucia abbia da scrivere."),
+			}).Fine();
+
+		return D;
+	}
+
 	TArray<FValdorsoDialogo> DialoghiScritti()
 	{
 		TArray<FValdorsoDialogo> Tutti;
@@ -1041,6 +1184,48 @@ namespace
 		Tutti.Add(DialoghiEdda());
 		Tutti.Add(DialoghiBruno());
 		Tutti.Add(DialoghiAnselmo());
+		// (10/11)
+		Tutti.Add(DialoghiLucia());
+		Tutti.Add(DialoghiCapoGilda());
 		return Tutti;
 	}
+
+	// --- (10/11) I saluti a chi passa vicino (una riga nella chat, ogni tanto): di giorno, la sera, di notte ---------
+	struct FSalutoScritto
+	{
+		const TCHAR* Id;
+		/** 0 giorno (6-17), 1 sera (17-21), 2 notte (21-6). */
+		int32 Momento;
+		const TCHAR* Testo;
+	};
+
+	const FSalutoScritto SalutiScritti[] = {
+		{ TEXT("Gaspare"), 0, TEXT("Cammina piano, che il bosco ti sente da un miglio.") },
+		{ TEXT("Gaspare"), 0, TEXT("Tracce fresche, verso est. Cinghiali. Lasciali stare, se non hai fame.") },
+		{ TEXT("Gaspare"), 1, TEXT("Al tramonto i lupi scendono. Torna al villaggio, colono.") },
+		{ TEXT("Gaspare"), 2, TEXT("Tu, a quest'ora, nel bosco? O sei matto o sei come me.") },
+		{ TEXT("GuardiaCorrado"), 0, TEXT("Circolare. Il passo e' chiuso, come ieri e come domani.") },
+		{ TEXT("GuardiaCorrado"), 1, TEXT("Fra poco si chiude la porta. Chi e' dentro e' dentro.") },
+		{ TEXT("GuardiaCorrado"), 2, TEXT("Alla larga dal sigillo, di notte. Ordini della Corona.") },
+		{ TEXT("GuardiaOttone"), 0, TEXT("Buongiorno! Cioe'... in nome della Corona, buongiorno.") },
+		{ TEXT("GuardiaOttone"), 1, TEXT("Hai visto anche tu il velo tremare? No? Meglio cosi'.") },
+		{ TEXT("GuardiaOttone"), 2, TEXT("(sbadiglia) Chi va la'? Ah, un colono. Vai, vai.") },
+		{ TEXT("NonnaEdda"), 0, TEXT("Le erbe si colgono col sole alto, e si ringraziano.") },
+		{ TEXT("NonnaEdda"), 1, TEXT("L'acqua del lago e' scura, stasera. Non farci il bagno.") },
+		{ TEXT("NonnaEdda"), 2, TEXT("Nir... Ren... Ka... (canticchia piano, senza guardarti)") },
+		{ TEXT("Bruno"), 0, TEXT("Ehi, colono! La zuppa e' calda e le chiacchiere sono gratis.") },
+		{ TEXT("Bruno"), 0, TEXT("Hai una faccia da stufato, oggi. Entra, entra.") },
+		{ TEXT("Bruno"), 1, TEXT("Sera! I boccali sono puliti, piu' o meno.") },
+		{ TEXT("Bruno"), 2, TEXT("A quest'ora la locanda e' piena di storie. Vere, alcune.") },
+		{ TEXT("PadreAnselmo"), 0, TEXT("Che il Cuore batta per te, figliolo.") },
+		{ TEXT("PadreAnselmo"), 1, TEXT("Al vespro la pietra si sente meglio. Ascolta.") },
+		{ TEXT("PadreAnselmo"), 2, TEXT("Due colpi e una pausa. Ancora. Sia lodato.") },
+		{ TEXT("Lucia"), 0, TEXT("Ci sono fogli nuovi sulla bacheca. Non stanno li' per bellezza.") },
+		{ TEXT("Lucia"), 1, TEXT("Chiudo il registro fra poco. Se hai un foglio, adesso.") },
+		{ TEXT("Lucia"), 2, TEXT("(scrive ancora, a lume di candela) Torna domattina.") },
+		{ TEXT("CapoGilda"), 0, TEXT("Lavora bene e Lucia avra' da scrivere. E io da firmare.") },
+		{ TEXT("CapoGilda"), 1, TEXT("Una giornata onesta? Bene. Domani un'altra.") },
+		{ TEXT("CapoGilda"), 2, TEXT("Anche la Gilda dorme, colono. Quasi.") },
+	};
+
 }

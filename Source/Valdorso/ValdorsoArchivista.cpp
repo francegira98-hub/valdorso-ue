@@ -90,7 +90,7 @@ namespace
 	const TCHAR* const AlfabetoCodici = TEXT("23456789ABCDEFGHJKMNPQRSTUVWXYZ");
 	const TCHAR* const AlfabetoPassword = TEXT("23456789abcdefghjkmnpqrstuvwxyz");
 
-	int64 Adesso()
+	int64 ArchivistaAdesso()
 	{
 		return FDateTime::UtcNow().ToUnixTimestamp();
 	}
@@ -224,7 +224,7 @@ void UValdorsoArchivista::Initialize(FSubsystemCollectionBase& Collection)
 	CaricaTutto();
 
 	int32 InvitiAttivi = 0;
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	for (const FValdorsoInvito& Invito : Inviti.Inviti)
 	{
 		if (Invito.UsatoDa.IsEmpty() && !Invito.bRevocato && Invito.ScadeIl > Ora)
@@ -307,7 +307,7 @@ FString UValdorsoArchivista::ApriArchivioSolo(FString& OutNome)
 	FValdorsoAccount* Solo = TrovaAccount(NomeAccountSolo);
 	if (!Solo)
 	{
-		FValdorsoAccount Nuovo = NuovoAccountSolo(Adesso());
+		FValdorsoAccount Nuovo = NuovoAccountSolo(ArchivistaAdesso());
 		Solo = &Account.Add(Nuovo.NomeChiave, MoveTemp(Nuovo));
 		SalvaAccount(*Solo);
 		Annota(TEXT("ACCOUNT_SOLO_CREATO"));
@@ -611,7 +611,7 @@ FString UValdorsoArchivista::IdDi(const FString& Nome) const
 void UValdorsoArchivista::Accedi(const FString& Nome, const FString& Password, const FString& Indirizzo, FRisposta Risposta)
 {
 	check(IsInGameThread());
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	int64 Rimasti = 0;
 	if (IndirizzoBloccato(Indirizzo, Ora, Rimasti))
 	{
@@ -669,7 +669,7 @@ void UValdorsoArchivista::Accedi(const FString& Nome, const FString& Password, c
 void UValdorsoArchivista::ConcludiAccesso(const FString& NomeChiave, const FString& Indirizzo, bool bGiusta,
 	const FString& NuovoSale, const FString& NuovaImpronta, int32 NuoveIterazioni, FRisposta Risposta)
 {
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	FValdorsoAccount* Dati = Account.Find(NomeChiave);
 
 	if (!bGiusta || !Dati)
@@ -755,7 +755,7 @@ void UValdorsoArchivista::ConcludiAccesso(const FString& NomeChiave, const FStri
 void UValdorsoArchivista::CreaAccount(const FString& CodiceInvito, const FString& Nome, const FString& Password, const FString& Indirizzo, FRisposta Risposta)
 {
 	check(IsInGameThread());
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	int64 Rimasti = 0;
 	if (IndirizzoBloccato(Indirizzo, Ora, Rimasti))
 	{
@@ -820,7 +820,7 @@ void UValdorsoArchivista::ConcludiCreazione(const FString& Nome, const FString& 
 	NomiInCreazione.Remove(NomeChiave);
 	InvitiInUso.Remove(ImprontaCodice);
 
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	if (!bCalcoloOk)
 	{
 		Risposta(ErroreInterno());
@@ -887,7 +887,7 @@ void UValdorsoArchivista::ConcludiCreazione(const FString& Nome, const FString& 
 void UValdorsoArchivista::CambiaPassword(const FString& Nome, const FString& Attuale, const FString& Nuova, const FString& Indirizzo, FRisposta Risposta)
 {
 	check(IsInGameThread());
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	int64 Rimasti = 0;
 	if (IndirizzoBloccato(Indirizzo, Ora, Rimasti))
 	{
@@ -958,7 +958,7 @@ void UValdorsoArchivista::CambiaPassword(const FString& Nome, const FString& Att
 void UValdorsoArchivista::ConcludiCambio(const FString& NomeChiave, const FString& Indirizzo, bool bGiusta,
 	const FString& Sale, const FString& Impronta, int32 Iterazioni, FRisposta Risposta)
 {
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	FValdorsoAccount* Dati = Account.Find(NomeChiave);
 	if (!Dati)
 	{
@@ -1012,7 +1012,7 @@ void UValdorsoArchivista::SegnaScollegato(const FString& AccountId)
 	Collegati.Remove(AccountId);
 
 	// Da adesso il biglietto del rientro ha 15 minuti di vita.
-	const int64 Scadenza = Adesso() + ValdorsoRegole::DurataRientroSecondi;
+	const int64 Scadenza = ArchivistaAdesso() + ValdorsoRegole::DurataRientroSecondi;
 	for (TPair<FString, FBiglietto>& Coppia : Biglietti)
 	{
 		if (Coppia.Value.AccountId == AccountId && Coppia.Value.ScadeIl == 0)
@@ -1036,7 +1036,7 @@ FString UValdorsoArchivista::CreaBiglietto(const FString& AccountId)
 	AnnullaBiglietto(AccountId);
 
 	// Pulizia: via i biglietti scaduti.
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	for (auto It = Biglietti.CreateIterator(); It; ++It)
 	{
 		if (It->Value.ScadeIl != 0 && It->Value.ScadeIl <= Ora)
@@ -1074,7 +1074,7 @@ void UValdorsoArchivista::AnnullaBiglietto(const FString& AccountId)
 void UValdorsoArchivista::RientraConBiglietto(const FString& Biglietto, const FString& Indirizzo, FRisposta Risposta)
 {
 	check(IsInGameThread());
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	int64 Rimasti = 0;
 	if (IndirizzoBloccato(Indirizzo, Ora, Rimasti))
 	{
@@ -1157,7 +1157,7 @@ void UValdorsoArchivista::RientraConBiglietto(const FString& Biglietto, const FS
 
 FString UValdorsoArchivista::CreaInvito(int32 Giorni, const FString& Autore, const FString& Nota, FString& OutCodice)
 {
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	Giorni = Giorni <= 0 ? GiorniInvitoPredefiniti : FMath::Min(Giorni, 365);
 
 	const FString Grezzo = ValdorsoSicurezza::TestoCasuale(AlfabetoCodici, LunghezzaCodice);
@@ -1184,7 +1184,7 @@ FString UValdorsoArchivista::CreaInvito(int32 Giorni, const FString& Autore, con
 
 FString UValdorsoArchivista::ElencoInviti() const
 {
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	FString Testo = FString::Printf(TEXT("Inviti: %d\n"), Inviti.Inviti.Num());
 	for (const FValdorsoInvito& Invito : Inviti.Inviti)
 	{
@@ -1213,7 +1213,7 @@ FString UValdorsoArchivista::ElencoInviti() const
 
 FString UValdorsoArchivista::RevocaInvito(const FString& Indizio, const FString& Autore)
 {
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	FString Cercato = Indizio.TrimStartAndEnd().ToUpper();
 	if (!Cercato.StartsWith(TEXT("VALD-")))
 	{
@@ -1267,7 +1267,7 @@ FString UValdorsoArchivista::InfoAccount(const FString& Nome) const
 	{
 		return FString::Printf(TEXT("Nessun account di nome %s."), *Nome);
 	}
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	FString Testo = FString::Printf(TEXT("%s (Id %s)\n"), *Dati->Nome, *Dati->Id);
 	Testo += FString::Printf(TEXT("  Ruolo: %s | Stato: %s%s%s\n"), NomeRuolo(Dati->Ruolo), NomeStato(Dati->Stato),
 		Dati->MotivoStato.IsEmpty() ? TEXT("") : TEXT(" | motivo: "), *Dati->MotivoStato);
@@ -1321,6 +1321,48 @@ FString UValdorsoArchivista::ImpostaRuolo(const FString& Nome, const FString& Ru
 	SalvaAccount(*Dati);
 	Annota(FString::Printf(TEXT("RUOLO | %s | da %s a %s | da %s"), *Dati->Nome, NomeRuolo(Vecchio), NomeRuolo(Nuovo), *Autore));
 	return FString::Printf(TEXT("%s ora è %s."), *Dati->Nome, NomeRuolo(Nuovo));
+}
+
+int32 UValdorsoArchivista::PermessiDi(const FString& Nome) const
+{
+	const FValdorsoAccount* Dati = TrovaAccount(Nome);
+	if (!Dati)
+	{
+		return 0;
+	}
+	switch (Dati->Ruolo)
+	{
+	case EValdorsoRuolo::Amministratore: return ValdorsoPermessi::Tutti;
+	// lo Staff non puo' avere i permessi sui permessi: quelli sono dell'Amministratore
+	case EValdorsoRuolo::Staff: return Dati->Permessi & ValdorsoPermessi::Tutti & ~ValdorsoPermessi::Permessi;
+	default: return 0;
+	}
+}
+
+EValdorsoRuolo UValdorsoArchivista::RuoloDi(const FString& Nome) const
+{
+	const FValdorsoAccount* Dati = TrovaAccount(Nome);
+	return Dati ? Dati->Ruolo : EValdorsoRuolo::Giocatore;
+}
+
+FString UValdorsoArchivista::ImpostaPermessi(const FString& Nome, const FString& Lista, const FString& Autore)
+{
+	FValdorsoAccount* Dati = TrovaAccount(Nome);
+	if (!Dati)
+	{
+		return FString::Printf(TEXT("Nessun account di nome %s."), *Nome);
+	}
+	int32 Nuovi = 0;
+	if (!ValdorsoPermessi::DaTesto(Lista, Nuovi))
+	{
+		return TEXT("Permessi sconosciuti: scrivi gilda, bacheche, registro, prove, mondo, giocatori (separati da virgole), tutti o nessuno.");
+	}
+	const int32 Vecchi = Dati->Permessi;
+	Dati->Permessi = Nuovi & ~ValdorsoPermessi::Permessi;
+	SalvaAccount(*Dati);
+	Annota(FString::Printf(TEXT("PERMESSI | %s | da %s a %s | da %s"), *Dati->Nome, *ValdorsoPermessi::Testo(Vecchi),
+		*ValdorsoPermessi::Testo(Dati->Permessi), *Autore));
+	return FString::Printf(TEXT("%s (%s) ora ha i permessi: %s."), *Dati->Nome, NomeRuolo(Dati->Ruolo), *ValdorsoPermessi::Testo(Dati->Permessi));
 }
 
 FString UValdorsoArchivista::ReimpostaPassword(const FString& Nome, const FString& Autore)
@@ -1383,7 +1425,7 @@ FString UValdorsoArchivista::Sospendi(const FString& Nome, int32 Ore, const FStr
 	}
 	Dati->Stato = EValdorsoStatoAccount::Sospeso;
 	AnnullaBiglietto(Dati->Id);
-	Dati->SospesoFino = Adesso() + static_cast<int64>(Ore) * 60 * 60;
+	Dati->SospesoFino = ArchivistaAdesso() + static_cast<int64>(Ore) * 60 * 60;
 	Dati->MotivoStato = Motivo.IsEmpty() ? TEXT("non indicato") : Motivo;
 	SalvaAccount(*Dati);
 	Annota(FString::Printf(TEXT("SOSPESO | %s | %d ore | %s | da %s"), *Dati->Nome, Ore, *Dati->MotivoStato, *Autore));
@@ -1451,7 +1493,7 @@ FString UValdorsoArchivista::AggiungiNota(const FString& Nome, const FString& No
 	{
 		return TEXT("Scrivi il testo della nota.");
 	}
-	Dati->NoteStaff.Add(FString::Printf(TEXT("%s, %s: %s"), *Data(Adesso()), *Autore, *Nota.TrimStartAndEnd()));
+	Dati->NoteStaff.Add(FString::Printf(TEXT("%s, %s: %s"), *Data(ArchivistaAdesso()), *Autore, *Nota.TrimStartAndEnd()));
 	SalvaAccount(*Dati);
 	Annota(FString::Printf(TEXT("NOTA | %s | da %s"), *Dati->Nome, *Autore));
 	return FString::Printf(TEXT("Nota aggiunta a %s."), *Dati->Nome);
@@ -1525,7 +1567,7 @@ FString UValdorsoArchivista::CancellaAccount(const FString& Nome, const FString&
 		NomiPersonaggi.Remove(Scheletro);
 		FValdorsoNomeRiservato Riservato;
 		Riservato.Scheletro = Scheletro;
-		Riservato.Fino = Adesso() + static_cast<int64>(ValdorsoRegole::GiorniNomeRiservato) * 24 * 60 * 60;
+		Riservato.Fino = ArchivistaAdesso() + static_cast<int64>(ValdorsoRegole::GiorniNomeRiservato) * 24 * 60 * 60;
 		NomiRiservati.Nomi.Add(Riservato);
 		if (Scrittore.IsValid())
 		{
@@ -1658,7 +1700,7 @@ void UValdorsoArchivista::ConfermaCodiciRecupero(const FString& AccountId)
 		{
 			Coppia.Value.SaleRecupero = DaConfermare.Sale;
 			Coppia.Value.CodiciRecupero = MoveTemp(DaConfermare.Impronte);
-			Coppia.Value.CodiciCreatiIl = Adesso();
+			Coppia.Value.CodiciCreatiIl = ArchivistaAdesso();
 			SalvaAccount(Coppia.Value);
 			Annota(FString::Printf(TEXT("CODICI_RECUPERO_CREATI | %s"), *Coppia.Value.Nome));
 			return;
@@ -1669,7 +1711,7 @@ void UValdorsoArchivista::ConfermaCodiciRecupero(const FString& AccountId)
 void UValdorsoArchivista::RecuperaConCodice(const FString& Nome, const FString& Codice, const FString& Nuova, const FString& Indirizzo, FRisposta Risposta)
 {
 	check(IsInGameThread());
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	int64 Rimasti = 0;
 	if (IndirizzoBloccato(Indirizzo, Ora, Rimasti))
 	{
@@ -1755,7 +1797,7 @@ void UValdorsoArchivista::RecuperaConCodice(const FString& Nome, const FString& 
 				Risposta(ErroreInterno());
 				return;
 			}
-			const int64 Adesso_ = Adesso();
+			const int64 Adesso_ = ArchivistaAdesso();
 			Aggiornato->Algoritmo = ValdorsoSicurezza::Algoritmo;
 			Aggiornato->Sale = NuovaImpronta.Sale;
 			Aggiornato->Impronta = NuovaImpronta.Impronta;
@@ -1899,7 +1941,7 @@ FString UValdorsoArchivista::CreaPersonaggio(const FString& AccountId, const FSt
 	{
 		return TEXT("Nella valle c'è già qualcuno con questo nome (o uno che gli somiglia troppo): scegline un altro.");
 	}
-	const int64 Ora = Adesso();
+	const int64 Ora = ArchivistaAdesso();
 	bool bRiservatiCambiati = false;
 	for (int32 i = NomiRiservati.Nomi.Num() - 1; i >= 0; --i)
 	{
@@ -1966,7 +2008,7 @@ FString UValdorsoArchivista::CancellaPersonaggio(const FString& AccountId, const
 
 	FValdorsoNomeRiservato Riservato;
 	Riservato.Scheletro = Scheletro;
-	Riservato.Fino = Adesso() + static_cast<int64>(ValdorsoRegole::GiorniNomeRiservato) * 24 * 60 * 60;
+	Riservato.Fino = ArchivistaAdesso() + static_cast<int64>(ValdorsoRegole::GiorniNomeRiservato) * 24 * 60 * 60;
 	NomiRiservati.Nomi.Add(Riservato);
 	SalvaNomiRiservati();
 
@@ -2071,7 +2113,7 @@ FString UValdorsoArchivista::SalvaRegistro(const FString& AccountId, const FStri
 	if (bFirma)
 	{
 		Nuovo.bFirmato = true;
-		Nuovo.FirmatoIl = Adesso();
+		Nuovo.FirmatoIl = ArchivistaAdesso();
 	}
 	Dati->Registro = Nuovo;
 	SalvaPersonaggio(*Dati, false);

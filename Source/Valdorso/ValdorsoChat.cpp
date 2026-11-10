@@ -1,6 +1,7 @@
 // Valdorso - La chat di prossimità (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoChat.h"
+#include "ValdorsoGilda.h"
 #include "SValdorsoChat.h"
 #include "ValdorsoBarre.h"
 #include "ValdorsoModoFoto.h"
@@ -344,6 +345,18 @@ void UValdorsoChatComponent::ServerDici_Implementation(const FString& Testo)
 		return;
 	}
 	FString Pulito = ValdorsoChat::Pulisci(Testo);
+	// (10/11) le righe dello staff per le bacheche (/proclama, /incarico...): le legge solo il server (ValdorsoGilda.h)
+	if (Pulito.StartsWith(TEXT("/")))
+	{
+		FString Risposta;
+		UValdorsoBacheche* Bacheche = UValdorsoBacheche::Di(this);
+		if (Bacheche && Bacheche->ComandoStaff(Controllore, Pulito, Risposta))
+		{
+			UltimaAccettata = Adesso;
+			ClientSenti(FString(), Risposta, false);
+			return;
+		}
+	}
 	const bool bGrida = ValdorsoChat::TogliGrido(Pulito);
 	if (Pulito.IsEmpty())
 	{
