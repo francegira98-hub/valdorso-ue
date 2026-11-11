@@ -1901,6 +1901,73 @@ namespace
 		return D;
 	}
 
+	/** (12/11, v0.2.0) Sibilla, la venditrice ambulante: guida la carovana che passa il sigillo con il lasciapassare della
+	 *  Corona, un giorno ogni tre (ValdorsoCarovana.h). Allegra, porta merci rare e notizie dal mondo fuori. Il suo segreto
+	 *  (le lettere con la cera nera senza stemma) NON si dice: si vede solo. La capitana Livia non si fida di lei. */
+	FValdorsoDialogo DialoghiSibilla()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Sibilla");
+		D.NomeBreve = TEXT("Sibilla");
+		D.Titolo = TEXT("Sibilla, la venditrice ambulante");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+		const FName Merci(TEXT("Carovana"));
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Una donna con un mantello color ruggine e una treccia di capelli chiari sta sigillando una lettera. La cera e' nera, e sul sigillo non c'e' nessuno stemma. Quando ti vede, la lettera sparisce nella manica come se non ci fosse mai stata.)"),
+			TEXT("Un viso nuovo! Che bellezza, in una valle dove le facce si contano sulle dita. Sibilla, per servirti: sale, spezie, stoffe, e le notizie di fuori, che quelle le regalo."),
+			})
+			.Scelta(TEXT("Fammi vedere le merci."), NAME_None, Merci)
+			.Scelta(TEXT("Come fai a passare il sigillo?"), TEXT("lasciapassare"))
+			.Scelta(TEXT("Che notizie porti?"), TEXT("notizie"))
+			.Scelta(TEXT("Un'altra volta, grazie."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Sibilla batte le mani.) Il mio cliente preferito! Lo dico a tutti, ma a te lo dico sul serio."),
+			})
+			.Scelta(TEXT("Fammi vedere le merci."), NAME_None, Merci)
+			.Scelta(TEXT("Che notizie porti, stavolta?"), TEXT("notizie"))
+			.Scelta(TEXT("Cos'era quella lettera?"), TEXT("lettera"))
+			.Scelta(TEXT("Passavo a salutare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("lasciapassare"), {
+			TEXT("Con questo. (Ti mostra un foglio con il sigillo della Corona, grosso come una mano.) Il lasciapassare: una carovana ogni tre giorni, merci si', lettere no, persone no. Al passo la capitana mi fa svuotare ogni cassa, e conta i chiodi."),
+			TEXT("Lo rinnovo ogni volta. Come? (Sorride.) Sono simpatica, e alla capitale hanno fame di quello che porto via da qui. Tutti hanno fame di qualcosa."),
+			})
+			.Scelta(TEXT("E cosa porti via, da qui?"), TEXT("portavia"))
+			.Scelta(TEXT("Fammi vedere le merci."), NAME_None, Merci)
+			.Scelta(TEXT("Capisco."), TEXT("congedo"));
+
+		D.Nodo(TEXT("portavia"), {
+			TEXT("Ferro della valle, perle del lago, e storie. Le storie si vendono meglio di tutto, sai? Una valle chiusa da un sigillo, un frammento del Cuore che salta un battito: alla capitale pagano per sentirle raccontare."),
+			})
+			.Scelta(TEXT("Che notizie porti?"), TEXT("notizie"))
+			.Scelta(TEXT("Ci vediamo, Sibilla."), TEXT("congedo"));
+
+		D.Nodo(TEXT("notizie"), {
+			TEXT("Dalla capitale: il re tossisce, e quando il re tossisce i consiglieri si guardano. Dal confine: l'Impero dell'Aquila ha spostato una legione verso nord, \"per gli esercizi\". Dalla strada: due villaggi della piana hanno visto luci sui tumuli, di notte."),
+			TEXT("{se:atto1}E da quando il vostro frammento ha saltato un battito, alla capitale dicono che anche la Pietra Cuore di Aurelia sia... nervosa. Non chiedermi come si fa a dire che una pietra e' nervosa: io riporto."),
+			TEXT("Tutto questo gratis. Le merci, invece, no."),
+			})
+			.Scelta(TEXT("Fammi vedere le merci, allora."), NAME_None, Merci)
+			.Scelta(TEXT("Cos'era quella lettera, prima?"), TEXT("lettera"))
+			.Scelta(TEXT("Grazie, Sibilla."), TEXT("congedo"));
+
+		D.Nodo(TEXT("lettera"), {
+			TEXT("Lettera? Quale lettera? (Ti mostra le mani, tutte e due, aperte. Sono vuote.)"),
+			TEXT("Le lettere non passano il sigillo, lo sanno tutti. Ordine della Corona. Io rispetto gli ordini della Corona: e' cosi' che ho il lasciapassare."),
+			TEXT("(Per un attimo smette di sorridere, e ti guarda come si guarda una cosa da pesare. Poi il sorriso torna, piu' largo di prima.)"),
+			}).Segno(TEXT("CeraNera"))
+			.Scelta(TEXT("Come vuoi tu."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Sibilla fa un inchino da teatro.) Tra tre giorni, stesso piazzale, stesse spezie. Se il sigillo vuole."),
+			}).Fine();
+
+		return D;
+	}
+
 	TArray<FValdorsoDialogo> DialoghiScritti()
 	{
 		TArray<FValdorsoDialogo> Tutti;
@@ -1921,6 +1988,8 @@ namespace
 		Tutti.Add(DialoghiTeodoro());
 		Tutti.Add(DialoghiAgnese());
 		Tutti.Add(DialoghiElric());
+		// (12/11, v0.2.0) la carovana
+		Tutti.Add(DialoghiSibilla());
 		return Tutti;
 	}
 
@@ -1978,6 +2047,9 @@ namespace
 		{ TEXT("Elric"), 0, TEXT("Non adesso. Sto contando.") },
 		{ TEXT("Elric"), 1, TEXT("La luce cala. Le rune si leggono meglio al tramonto, sai? No, non lo sai.") },
 		{ TEXT("Elric"), 2, TEXT("Hai visto una luce sulle pietre, stanotte? No? Allora non disturbarmi.") },
+		{ TEXT("Sibilla"), 0, TEXT("Sale, spezie, stoffe! E le notizie di fuori, gratis!") },
+		{ TEXT("Sibilla"), 1, TEXT("Si chiude bottega al tramonto: domani la strada, se il sigillo vuole.") },
+		{ TEXT("Sibilla"), 2, TEXT("(scrive alla luce di una candela, e copre il foglio con la mano)") },
 	};
 
 }

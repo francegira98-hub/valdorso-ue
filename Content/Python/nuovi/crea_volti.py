@@ -23,7 +23,7 @@
 # entra: ogni colono ci incide il suo segno una volta (etichetta "ValdorsoVolti" anche lei).
 # (11/11, v0.1.8) E il sasso dell'Orso sulla collina, quello del sogno di Tobia (ValdorsoStorie.h).
 # (11/11, v0.2) E il pozzo che si usa con E (AValdorsoPozzo: il secchio si riempie d'acqua chiara).
-# (11/11, v0.2.0) E il magazzino del villaggio accanto alla bacheca della Gilda (le scorte: ValdorsoScorte.h).
+# (12/11, v0.2.0) E Sibilla, la carovana (un giorno ogni tre: ValdorsoCarovana.h). E il magazzino del villaggio accanto alla bacheca della Gilda (le scorte: ValdorsoScorte.h).
 
 import math
 
@@ -238,7 +238,7 @@ def vuoto(v):
     return abs(v.x) + abs(v.y) + abs(v.z) < 1.0
 
 
-def metti(classe, dialogo, nome, donna, giornata, scala=1.0, atto_minimo=0):
+def metti(classe, dialogo, nome, donna, giornata, scala=1.0, atto_minimo=0, ogni_giorni=0):
     buone = [t for t in giornata if t.get_editor_property("assente") or not vuoto(t.get_editor_property("dove"))]
     if not buone:
         avviso("%s: nessuna tappa trovata, non lo metto" % nome)
@@ -260,7 +260,8 @@ def metti(classe, dialogo, nome, donna, giornata, scala=1.0, atto_minimo=0):
     a.set_editor_property("tags", [unreal.Name(ETICHETTA), unreal.Name("ValdorsoPNG_Volti")])
     if scala != 1.0:
         a.set_actor_scale3d(unreal.Vector(scala, scala, scala))
-    for chiave, valore in (("donna", bool(donna)), ("testa", TESTA_DADI), ("giornata", buone), ("atto_minimo", int(atto_minimo))):
+    for chiave, valore in (("donna", bool(donna)), ("testa", TESTA_DADI), ("giornata", buone), ("atto_minimo", int(atto_minimo)),
+                          ("ogni_giorni", int(ogni_giorni))):
         try:
             a.set_editor_property(chiave, valore)
         except Exception as e:  # noqa: BLE001
@@ -493,6 +494,11 @@ def principale():
     for dialogo, nome, donna, scala, atto, giornata in giornate:
         if metti(classe, dialogo, nome, donna, giornata, scala, atto):
             messi += 1
+    # (12/11, v0.2.0) Sibilla e la carovana: al piazzale delle carovane un giorno ogni tre (veri), dalle 9 alle 20
+    piazzale = P.intorno("Piazzale delle carovane", 400.0, 180.0)
+    if metti(classe, "Sibilla", "Sibilla, la venditrice ambulante", True,
+             [tappa(9.0, piazzale), tappa(20.0, None, assente=True)], 1.0, 0, 3):
+        messi += 1
     scrivi("messi %d volti nella cartella %s" % (messi, CARTELLA))
     try:
         unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)

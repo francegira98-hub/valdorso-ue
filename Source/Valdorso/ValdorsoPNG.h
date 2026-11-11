@@ -108,6 +108,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "PNG|Giornata", meta = (ClampMin = "0"))
 	int32 AttoMinimo = 0;
 
+	/** (12/11, v0.2.0) Viene solo un giorno ogni tanti (giorni veri; 0 = sempre): la carovana di Sibilla, ogni 3. */
+	UPROPERTY(EditAnywhere, Category = "PNG|Giornata", meta = (ClampMin = "0"))
+	int32 OgniGiorni = 0;
+
+	/** (12/11) Vero se adesso non c'e' (a casa, o non e' il suo giorno). */
+	bool Via() const { return bVia; }
+
 	// IValdorsoInterattivo
 	virtual FText TestoInterazione(const APawn* Chi) const override;
 	virtual void Interagisci(APawn* Chi) override;

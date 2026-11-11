@@ -1,6 +1,7 @@
 // Valdorso - Le botteghe (v0.1.4, 10/11/2026). Scritto da Claude. Vedi ValdorsoBotteghe.h.
 
 #include "ValdorsoBotteghe.h"
+#include "ValdorsoPNG.h"
 #include "Valdorso.h"
 #include "ValdorsoFalo.h"
 #include "ValdorsoOggetti.h"
@@ -109,6 +110,13 @@ namespace
 		T.Add(BottegaVendi(TEXT("Vendi_Cuore_di_Pietra"), B::Fucina, TEXT("Cuore_di_Pietra"), 45));
 		// --- il falegname: legno
 		T.Add(BottegaCompra(TEXT("Compra_Clava"), B::Falegname, TEXT("Clava"), 6));
+		// (12/11, v0.2.0) la carovana di Sibilla: sale, spezie, stoffa e una lanterna; compra perle, ferro e pelli fini
+		T.Add(BottegaCompra(TEXT("Carovana_Sale"), B::Carovana, TEXT("Sale"), 3));
+		T.Add(BottegaCompra(TEXT("Carovana_Spezie"), B::Carovana, TEXT("Spezie"), 14));
+		T.Add(BottegaCompra(TEXT("Carovana_Stoffa"), B::Carovana, TEXT("Stoffa_Fine"), 20));
+		T.Add(BottegaVendi(TEXT("Carovana_Vendi_Perla"), B::Carovana, TEXT("Perla"), 28));
+		T.Add(BottegaVendi(TEXT("Carovana_Vendi_Lingotto"), B::Carovana, TEXT("Lingotto_Ferro"), 11));
+		T.Add(BottegaVendi(TEXT("Carovana_Vendi_Chiodi"), B::Carovana, TEXT("Chiodi"), 1));
 		// (11/11, v0.1.9 "Mani e materiali") lavorare i materiali: assi, ferro, chiodi, attrezzi, pietra
 		T.Add(BottegaServe(BottegaRicetta(TEXT("Sega_Assi"), B::Falegname, TEXT("Sega"), TEXT("Asse"), 2), TEXT("Legna"), 1));
 		T.Add(BottegaServe(BottegaRicetta(TEXT("Fai_Secchio"), B::Falegname, TEXT("Fai"), TEXT("Secchio")), TEXT("Asse"), 2, TEXT("Chiodi"), 3));
@@ -253,6 +261,7 @@ namespace ValdorsoBotteghe
 		case EValdorsoTipoBanco::Conceria: return LOCTEXT("TitoloConceria", "La conceria");
 		case EValdorsoTipoBanco::Fucina: return LOCTEXT("TitoloFucina", "La fucina di Marta");
 		case EValdorsoTipoBanco::Falegname: return LOCTEXT("TitoloFalegname", "Il falegname");
+		case EValdorsoTipoBanco::Carovana: return LOCTEXT("TitoloCarovana", "La carovana di Sibilla");
 		default: return LOCTEXT("TitoloLocanda", "La locanda di Bruno");
 		}
 	}
@@ -265,6 +274,7 @@ namespace ValdorsoBotteghe
 		case EValdorsoTipoBanco::Conceria: return LOCTEXT("InvitoConceria", "Lavora alla conceria");
 		case EValdorsoTipoBanco::Fucina: return LOCTEXT("InvitoFucina", "Compra da Marta");
 		case EValdorsoTipoBanco::Falegname: return LOCTEXT("InvitoFalegname", "Compra dal falegname");
+		case EValdorsoTipoBanco::Carovana: return LOCTEXT("InvitoCarovana", "Guarda le merci di Sibilla");
 		default: return LOCTEXT("InvitoLocanda", "Ordina da Bruno");
 		}
 	}
@@ -313,6 +323,18 @@ namespace ValdorsoBotteghe
 		if (Banco == EValdorsoTipoBanco::Fuoco && AValdorsoFalo::CaldoVicino(Mondo, Chi->GetActorLocation()))
 		{
 			return true;
+		}
+		// (12/11) la carovana: Sibilla, se c'e'
+		if (Banco == EValdorsoTipoBanco::Carovana)
+		{
+			for (TActorIterator<AValdorsoPNG> It(Mondo); It; ++It)
+			{
+				if (It->Dialogo == FName(TEXT("Sibilla")) && !It->Via() && FVector::Dist(It->GetActorLocation(), Chi->GetActorLocation()) <= Raggio * 3.f)
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 		for (TActorIterator<AValdorsoBanco> It(Mondo); It; ++It)
 		{

@@ -269,6 +269,13 @@ namespace
 			TEXT("Il martello del guardiano della forgia: una testa di ferro nero grande come un pane, il manico fasciato d'ottone. Pesa, e si sente."), 4.5f));
 		C.Add(OggSemplice(TEXT("Cuore_di_Pietra"), TEXT("Cuore di pietra"),
 			TEXT("Una pietra grande come un pugno, liscia, tiepida. Dentro, se la tieni all'orecchio, qualcosa batte piano. Marta la vuole vedere."), 0.5f, 10));
+		// (12/11, v0.2.0) le merci della carovana di Sibilla
+		C.Add(OggSemplice(TEXT("Sale"), TEXT("Sale"),
+			TEXT("Sale grosso delle saline del sud, in un sacchetto di tela. Con il sigillo chiuso vale quasi quanto l'argento: senza sale la carne non si tiene."), 0.5f, 20));
+		C.Add(OggSemplice(TEXT("Spezie"), TEXT("Spezie"),
+			TEXT("Pepe, cannella e qualcosa di giallo che Sibilla non vuole nominare. Vengono da piu' lontano dell'Impero, dice lei."), 0.1f, 20));
+		C.Add(OggSemplice(TEXT("Stoffa_Fine"), TEXT("Stoffa fine"),
+			TEXT("Una pezza di lana tinta di blu, morbida come quella della capitale. In valle nessuno la sa tessere cosi'."), 0.6f, 10));
 		// (11/11, v0.1.9 "Mani e materiali") i materiali: si prendono con l'attrezzo giusto (ValdorsoRaccolta.h) e si
 		// lavorano ai banchi (ValdorsoBotteghe.cpp)
 		C.Add(OggSemplice(TEXT("Legna"), TEXT("Legna"),
@@ -944,6 +951,18 @@ namespace
 			L.Add(OggLinea({ { -0.6f, 0.6f }, { 0.4f, 0.6f } }));
 			L.Add(OggLinea({ { -0.2f, -0.6f }, { 0.f, -0.6f } }));
 			L.Add(OggLinea({ { -0.2f, -0.45f }, { 0.f, -0.45f } }));
+		}
+		else if (N == TEXT("Sale") || N == TEXT("Spezie"))
+		{
+			// un sacchetto legato in cima
+			L.Add(OggLinea({ { -0.45f, -0.35f }, { -0.6f, 0.6f }, { 0.6f, 0.6f }, { 0.45f, -0.35f } }));
+			L.Add(OggLinea({ { -0.45f, -0.35f }, { -0.2f, -0.55f }, { 0.2f, -0.55f }, { 0.45f, -0.35f } }));
+			L.Add(OggLinea({ { -0.15f, -0.65f }, { 0.f, -0.85f }, { 0.15f, -0.65f } }));
+		}
+		else if (N == TEXT("Stoffa_Fine"))
+		{
+			L.Add(OggRett(-0.8f, -0.3f, 0.6f, 0.4f));
+			L.Add(OggLinea({ { 0.6f, -0.3f }, { 0.85f, -0.15f }, { 0.85f, 0.55f }, { 0.6f, 0.4f } }));
 		}
 		else if (N == TEXT("Legna"))
 		{

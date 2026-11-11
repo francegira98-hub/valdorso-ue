@@ -7,6 +7,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "ValdorsoAcque.h"
+#include "ValdorsoCarovana.h"
 #include "ValdorsoDialoghi.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoZainoDati.h"
@@ -277,6 +278,16 @@ bool FValdorsoTestRitiMateriali::RunTest(const FString& Parameters)
 	float Vale = 0.f;
 	TestTrue(TEXT("la squadrata vale tre pietre"), ValdorsoScorte::Scorta(S, TEXT("Pietra_Squadrata"), Vale) == &S.Pietra && Vale == 3.f);
 	TestEqual(TEXT("quattro righe al magazzino"), ValdorsoScorte::Righe(S).Num(), 4);
+
+	// la carovana: un giorno ogni tre, sempre lo stesso per tutti
+	int32 Giorni = 0;
+	for (int64 g = 0; g < 30; ++g)
+	{
+		Giorni += ValdorsoCarovana::Giorno(g * 86400 + 3600, 3) ? 1 : 0;
+	}
+	TestEqual(TEXT("in trenta giorni, dieci carovane"), Giorni, 10);
+	TestTrue(TEXT("ogni giorno, se OgniGiorni e' 1"), ValdorsoCarovana::Giorno(123456789, 1));
+	TestNotNull(TEXT("c'e' il dialogo di Sibilla"), ValdorsoDialoghi::Trova(TEXT("Sibilla")));
 	return true;
 }
 

@@ -439,7 +439,7 @@ bool FValdorsoTestBotteghe::RunTest(const FString& Parameters)
 			}
 		}
 	}
-	for (uint8 b = 0; b <= static_cast<uint8>(EValdorsoTipoBanco::Locanda); ++b)
+	for (uint8 b = 0; b <= static_cast<uint8>(EValdorsoTipoBanco::Carovana); ++b)
 	{
 		TestTrue(TEXT("ogni banco ha le sue ricette"), ValdorsoBotteghe::Del(static_cast<EValdorsoTipoBanco>(b)).Num() > 0);
 	}

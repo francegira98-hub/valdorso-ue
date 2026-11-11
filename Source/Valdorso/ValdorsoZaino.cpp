@@ -435,7 +435,7 @@ void UValdorsoZainoComponent::TesseraDiProva()
 void UValdorsoZainoComponent::ClientApriBottega_Implementation(uint8 Banco)
 {
 	ValdorsoBottegaSchermo::Apri(Cast<APlayerController>(GetOwner()),
-		static_cast<EValdorsoTipoBanco>(FMath::Min<uint8>(Banco, static_cast<uint8>(EValdorsoTipoBanco::Locanda))));
+		static_cast<EValdorsoTipoBanco>(FMath::Min<uint8>(Banco, static_cast<uint8>(EValdorsoTipoBanco::Carovana))));
 }
 
 void UValdorsoZainoComponent::ServerRicetta_Implementation(FName Ricetta)

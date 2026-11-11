@@ -4,6 +4,8 @@
 #include "ValdorsoPNG.h"
 #include "ValdorsoGrottaNord.h"
 #include "ValdorsoRiti.h"
+#include "ValdorsoCarovana.h"
+#include "ValdorsoBotteghe.h"
 #include "ValdorsoStorie.h"
 #include "ValdorsoVoci.h"
 #include "ValdorsoGilda.h"
@@ -236,7 +238,7 @@ void AValdorsoPNG::BeginPlay()
 		// (10/11) i saluti a chi passa (ognuno con il suo ritmo, non tutti insieme)
 		GetWorldTimerManager().SetTimer(TimerSaluti, this, &AValdorsoPNG::Saluta, 2.f, true, FMath::FRandRange(1.f, 3.f));
 		// (11/11) la giornata (e chi arriva solo con un atto della storia)
-		if (Giornata.Num() > 0 || AttoMinimo > 0)
+		if (Giornata.Num() > 0 || AttoMinimo > 0 || OgniGiorni > 0)
 		{
 			GetWorldTimerManager().SetTimer(TimerGiornata, this, &AValdorsoPNG::GiroGiornata, 10.f, true, 0.5f);
 		}
@@ -408,6 +410,8 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 
 	// (10/11) Lucia: "Ho un foglio della Gilda" apre il bancone (ValdorsoGilda.h), dopo che il dialogo si e' chiuso
 	UValdorsoGildaComponent* Bancone = Evento == ValdorsoGilda::EventoBancone ? UValdorsoGildaComponent::Di(Chi) : nullptr;
+	// (12/11, v0.2.0) Sibilla: "Fammi vedere le merci" apre il banco della carovana, a dialogo chiuso (ValdorsoCarovana.h)
+	UValdorsoZainoComponent* Merci = Evento == FName(TEXT("Carovana")) ? UValdorsoZainoComponent::Di(Chi) : nullptr;
 	// (10/11) Mastro Ettore: "A che punto sono?" (il server dice i punti veri)
 	if (Evento == ValdorsoGilda::EventoGrado)
 	{
@@ -422,6 +426,10 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 		if (Bancone)
 		{
 			Bancone->ApriBancone(this);
+		}
+		if (Merci)
+		{
+			Merci->ClientApriBottega(static_cast<uint8>(EValdorsoTipoBanco::Carovana));
 		}
 		return;
 	}
@@ -648,7 +656,10 @@ void AValdorsoPNG::GiroGiornata()
 		break;
 	}
 	const int32 Voluta = ValdorsoGiornata::TappaPer(Giornata, OraValle);
-	const bool bVuoleVia = ValdorsoVoci::Atto(this) < AttoMinimo || (Giornata.IsValidIndex(Voluta) && Giornata[Voluta].bAssente);
+	// (12/11) chi viene solo certi giorni (la carovana di Sibilla, ValdorsoCarovana.h)
+	const bool bNonOggi = OgniGiorni > 0 && !ValdorsoCarovana::Forzata()
+		&& !ValdorsoCarovana::Giorno(FDateTime::UtcNow().ToUnixTimestamp(), OgniGiorni);
+	const bool bVuoleVia = bNonOggi || ValdorsoVoci::Atto(this) < AttoMinimo || (Giornata.IsValidIndex(Voluta) && Giornata[Voluta].bAssente);
 	if (Voluta == Tappa && bVuoleVia == bVia)
 	{
 		VuoleCambiareDa = -1.0;
@@ -674,10 +685,16 @@ void AValdorsoPNG::GiroGiornata()
 	{
 		return;
 	}
+	// (12/11) la carovana arriva: le scorte e l'avviso (non la prima volta che si mette a posto, all'avvio)
+	const bool bArriva = bGiornataPartita && bVia && !bVuoleVia && OgniGiorni > 0;
 	VuoleCambiareDa = -1.0;
 	bGiornataPartita = true;
 	Tappa = Voluta;
 	bVia = bVuoleVia;
+	if (bArriva)
+	{
+		ValdorsoCarovana::Arriva(this);
+	}
 	ForceNetUpdate();
 	OnRep_Tappa();
 }

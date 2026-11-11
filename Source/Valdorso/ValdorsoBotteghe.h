@@ -33,6 +33,8 @@ enum class EValdorsoTipoBanco : uint8
 	Fucina,
 	Falegname,
 	Locanda,
+	/** (12/11, v0.2.0) La carovana di Sibilla: il banco e' lei, quando c'e' (ValdorsoCarovana.h). */
+	Carovana,
 };
 
 /** Un ingrediente: quale oggetto e quanti. */
