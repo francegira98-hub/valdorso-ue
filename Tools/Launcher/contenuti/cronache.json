@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-08",
+ "aggiornato": "2026-11-12",
  "_come": "Le Cronache: capitoli (titolo, testo; i paragrafi si separano con una riga vuota, cioè \\n\\n), rune (intro e parole), volti (nome, ruolo, testo). La forma delle rune la aggiunge prepara_aggiornamento.py per il sito.",
  "capitoli": [
   {
@@ -194,6 +194,21 @@
    "nome": "Le guardie del passo",
    "ruolo": "le guardie della Corona",
    "testo": "Un veterano e un giovane venuto dalla capitale tengono la sbarra al passo. Poche parole, leali alla Corona: non si comprano."
+  },
+  {
+   "nome": "Tobia",
+   "ruolo": "l'orfano del tempio",
+   "testo": "Dieci anni, sempre tra i piedi di tutti. Spazza il tempio la mattina e sogna l'Orso ogni notte."
+  },
+  {
+   "nome": "Teodoro e Agnese",
+   "ruolo": "i mugnai",
+   "testo": "Sposati da ventidue anni, sanno tutto di tutti: lui alla locanda, lei al pozzo."
+  },
+  {
+   "nome": "Sibilla",
+   "ruolo": "la venditrice ambulante",
+   "testo": "Guida la carovana che passa il sigillo con il lasciapassare della Corona. Porta sale, spezie e notizie. Le sue lettere hanno la cera nera."
   }
  ]
 }

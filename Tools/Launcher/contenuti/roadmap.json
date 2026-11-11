@@ -1,8 +1,8 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-10",
+ "aggiornato": "2026-11-12",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
- "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0. Ogni tappa è una versione che si può giocare.",
+ "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0: sei alpha, quattro beta e il regno. Ogni tappa è una versione che si può giocare.",
  "tappe": [
   {
    "versione": "0.1.0",
@@ -72,88 +72,180 @@
   {
    "versione": "0.1.4",
    "nome": "Pericoli",
-   "stato": "in_corso",
-   "sommario": "La valle smette di essere tranquilla.",
+   "stato": "fatta",
+   "data": "2026-11-10",
+   "sommario": "Alpha 1 «La valle». La valle morde: lupi, cinghiali e orsi, le armi e lo scudo, cadere e rinascere al Tempio del Cuore.",
    "voci": [
-    "Lupi, banditi e scheletri",
-    "Le barre di salute, stamina, mana ed equilibrio",
-    "La barra delle azioni",
-    "L'inventario a griglia, con il peso e le monete",
-    "L'equipaggiamento che si vede addosso",
-    "L'aggancio del bersaglio",
-    "La morte e la rinascita",
-    "Il nuoto sott'acqua",
-    "La chat di prossimità",
-    "Falò e bivacchi",
-    "Bagnati e asciutti"
+    "Lupi, cinghiali, orsi, cervi, lepri e volpi",
+    "Le armi e lo scudo, impugnati",
+    "Morire e rinascere al tempio, con la pace del battito",
+    "Scuoiare, cucinare al fuoco, il falò",
+    "Lo zaino, le botteghe e la Gilda con la bacheca degli incarichi",
+    "La finestra dello staff con i permessi"
    ]
   },
   {
    "versione": "0.1.5",
    "nome": "Crescere",
-   "stato": "prossima",
-   "sommario": "Quello che fai ti cambia.",
+   "stato": "fatta",
+   "data": "2026-11-11",
+   "sommario": "Alpha 2 «Le storie». Le abilità salgono usandole, la scherma con le tre guardie e il Vigore.",
    "voci": [
-    "Abilità che salgono e si evolvono (soglie 25, 50, 75, 100; tetto 700)",
-    "La forza a colpo d'occhio: agganciando qualcuno si capisce quanto è forte (abitanti, bestie)",
-    "Le guardie della scherma italiana",
-    "Il Vigore",
-    "La scheda del personaggio",
-    "L'accessibilità completa"
+    "Le abilità (K) che salgono usandole, con le evoluzioni",
+    "La scherma: tre guardie, le tecniche nella barra, il Vigore",
+    "L'accessibilità: tasti da cambiare, sottotitoli dei suoni"
    ]
   },
   {
    "versione": "0.1.6",
-   "nome": "Vita nella valle",
-   "stato": "futura",
-   "sommario": "La valle si riempie.",
+   "nome": "La valle che vive",
+   "stato": "fatta",
+   "data": "2026-11-11",
+   "sommario": "Alpha 2 «Le storie». La valle si muove da sola: stormi, foglie, il drago di passaggio, le voci della locanda e i sogni.",
    "voci": [
-    "Gli abitanti e i volti della valle",
-    "Il Battito",
-    "La chat e i gesti",
-    "La Gilda e gli incarichi",
-    "Il diario",
-    "Il server ufficiale e quello di prova",
-    "La pagina su itch.io e il bot di Discord",
-    "Le voci vere della locanda",
-    "Il primo sogno",
-    "Il gatto della locanda",
-    "La musica",
-    "Ali sulle montagne: un'ombra enorme passa davanti alla luna"
+    "Stormi, rondini, pipistrelli, lucciole e il fumo dei camini",
+    "Il drago che passa alto sopra i monti, e il suo ruggito",
+    "Le voci della locanda e i sogni",
+    "Il gatto di Bruno, che sa le cose",
+    "L'Atto I: il battito che salta"
    ]
   },
   {
    "versione": "0.1.7",
    "nome": "La grotta del nord",
-   "stato": "futura",
-   "sommario": "Quelli che non tornarono.",
+   "stato": "fatta",
+   "data": "2026-11-11",
+   "sommario": "Alpha 2 «Le storie». Le gallerie dei nani dietro la frana: scheletri, trappole mortali e stanze segrete.",
    "voci": [
-    "La frana si apre: la seconda grotta, oltre la collina dell'Orso",
-    "Gallerie, sale e scheletri: il primo dungeon",
-    "La storia segreta di Lucia",
-    "Il bottino delle profondità"
+    "La frana che si scava in due",
+    "Gli scheletri, il capitano e il guardiano della forgia",
+    "Le trappole: lance, botole, pendoli",
+    "La porta segreta e la stanza del tesoro che chiama le ossa",
+    "Le miniere allagate e le cantine segrete",
+    "La storia di Lucia: quelli che non tornarono"
+   ]
+  },
+  {
+   "versione": "0.1.8",
+   "nome": "Le storie della valle",
+   "stato": "fatta",
+   "data": "2026-11-11",
+   "sommario": "Alpha 2 «Le storie». Volti nuovi con le loro giornate, i riti della valle, i gesti e le storie segrete.",
+   "voci": [
+    "Marta, la capitana Livia, Tobia, Teodoro e Agnese, Maestro Elric",
+    "Le giornate: ognuno ha il suo posto a ogni ora",
+    "La stella di nascita, la cerimonia dell'anno e un giorno, la pietra dei segni",
+    "La ruota dei gesti (B) e la musica",
+    "Quattro storie segrete: la lettera, il sogno, l'incudine, la veglia",
+    "F8 per segnalare un problema"
    ]
   },
   {
    "versione": "0.1.9",
-   "nome": "La grande prova",
-   "stato": "futura",
-   "sommario": "Tutto insieme, prima dell'economia.",
+   "nome": "Mani e materiali, prima parte",
+   "stato": "fatta",
+   "data": "2026-11-12",
+   "sommario": "Alpha 3 «Mani e materiali». L'acqua e i materiali della valle, e i banchi per lavorarli.",
    "voci": [
-    "Si provano insieme tutte le cose della v0.1: account, valle, pericoli, abilità, Gilda, staff, grotte",
-    "Il server ufficiale e quello di prova, con più coloni insieme",
-    "Si correggono i problemi trovati",
-    "Si chiude la v0.1 e si apre la strada della v0.2"
+    "Il secchio: l'acqua pura della cascata, la chiara del lago, la torbida delle miniere; il pozzo e la pioggia",
+    "Tagliare la legna, spaccare la pietra, cavare il ferro",
+    "Assi, chiodi, lingotti, attrezzi e pietra squadrata ai banchi"
    ]
   },
   {
-   "versione": "0.2",
-   "nome": "L'economia",
-   "stato": "futura",
+   "versione": "0.2.0",
+   "nome": "Mani e materiali",
+   "stato": "in_corso",
+   "sommario": "Alpha 3 «Mani e materiali». Le scorte del villaggio e la carovana; poi la grande prova, anche in due.",
    "voci": [
-    "I materiali",
-    "Gli Aureus",
-    "I cantieri: il villaggio cresce di fase"
+    "Le scorte del villaggio e il magazzino",
+    "Il grano nascosto, quando la valle ha fame",
+    "La carovana di Sibilla, con il lasciapassare della Corona",
+    "Il baule del colono",
+    "La grande prova: tutto, anche con un amico"
+   ]
+  },
+  {
+   "versione": "0.3",
+   "nome": "Arcano",
+   "stato": "prossima",
+   "sommario": "Alpha 4: il test chiuso con 5-10 amici.",
+   "voci": [
+    "La magia e le rune",
+    "La forgia runica",
+    "La lettera dell'accademia"
+   ]
+  },
+  {
+   "versione": "0.4",
+   "nome": "Legge e ombra",
+   "stato": "futura",
+   "sommario": "Alpha 5: l'alfa chiusa.",
+   "voci": [
+    "Leggi, crimini e giustizia",
+    "L'Inquisizione",
+    "Il Sussurro"
+   ]
+  },
+  {
+   "versione": "0.5",
+   "nome": "Gilde, fedi e vita sociale",
+   "stato": "futura",
+   "sommario": "Alpha 6.",
+   "voci": [
+    "Le gilde dei giocatori",
+    "Le fedi",
+    "Feste e matrimoni"
+   ]
+  },
+  {
+   "versione": "0.6",
+   "nome": "Poteri nascosti",
+   "stato": "futura",
+   "sommario": "Beta 1: la beta chiusa, 20-30 persone.",
+   "voci": [
+    "Le razze segrete",
+    "La Corruzione"
+   ]
+  },
+  {
+   "versione": "0.7",
+   "nome": "Segreti e leggende",
+   "stato": "futura",
+   "sommario": "Beta 2.",
+   "voci": [
+    "Creature magiche",
+    "Il drago",
+    "Le leggende"
+   ]
+  },
+  {
+   "versione": "0.8",
+   "nome": "Terre e vassalli",
+   "stato": "futura",
+   "sommario": "Beta 3: la beta aperta.",
+   "voci": [
+    "Feudi, terre e vassalli",
+    "La mappa del regno"
+   ]
+  },
+  {
+   "versione": "0.9",
+   "nome": "La corona",
+   "stato": "futura",
+   "sommario": "Beta 4.",
+   "voci": [
+    "La corona",
+    "Gli assedi"
+   ]
+  },
+  {
+   "versione": "1.0",
+   "nome": "Il regno",
+   "stato": "futura",
+   "sommario": "Il server pubblico, su Steam.",
+   "voci": [
+    "Il regno, per tutti"
    ]
   }
  ],

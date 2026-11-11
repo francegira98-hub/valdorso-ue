@@ -1,8 +1,16 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-08",
+ "aggiornato": "2026-11-12",
  "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
  "notizie": [
+  {
+   "data": "2026-11-12",
+   "etichetta": "Patch",
+   "titolo": "Mani e materiali: v0.2.0",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Il secchio e l'acqua della valle, la legna, la pietra e il ferro, i banchi per lavorarli. Le scorte del villaggio e il magazzino. Volti nuovi con le loro giornate, i riti, le storie segrete, la grotta del nord con le sue trappole. E ogni tre giorni, al piazzale, la carovana di Sibilla."
+  },
   {
    "data": "2026-11-08",
    "etichetta": "Patch",
@@ -45,6 +53,10 @@
   "Al posto di guardia del passo non lasciano uscire nessuno. Nemmeno le lettere.",
   "Bruno, alla locanda, dice che il frammento del tempio ha saltato un battito.",
   "Gaspare il cacciatore parla di un'ombra d'orso tra gli alberi, nelle notti di nebbia.",
-  "Qualcuno ha sentito la campana del tempio suonare da sola, dopo mezzanotte."
+  "Qualcuno ha sentito la campana del tempio suonare da sola, dopo mezzanotte.",
+  "Sibilla dice che alla capitale il re tossisce.",
+  "Teodoro giura che il grano basta. Agnese non dice niente.",
+  "Al piazzale delle carovane, ogni tre giorni, suonano i campanelli dei muli.",
+  "Marta dice che sono graffi. Ma la sua incudine, di notte, sembra più chiara."
  ]
 }

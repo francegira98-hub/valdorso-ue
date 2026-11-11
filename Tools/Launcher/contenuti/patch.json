@@ -1,8 +1,150 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-08",
+ "aggiornato": "2026-11-12",
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
+  {
+   "versione": "0.2.0",
+   "nome": "Mani e materiali",
+   "data": "",
+   "sommario": "Si lavora: l'acqua, la legna, la pietra e il ferro, i banchi per farne qualcosa, e il villaggio che ha bisogno di tutto. E, ogni tre giorni, la carovana di Sibilla.",
+   "gruppi": [
+    {
+     "titolo": "Novità: l'acqua",
+     "voci": [
+      "Il secchio, dal falegname: si riempie dentro l'acqua. La cascata dà l'acqua pura, il lago e il fiume la chiara, le miniere allagate la torbida.",
+      "Il pozzo della piazza: E e il secchio si riempie (e la borraccia).",
+      "Sotto la pioggia, senza un tetto, un fondo d'acqua piovana.",
+      "Bruno compra l'acqua pura; Nonna Edda vuole quella torbida, e paga in erbe."
+     ]
+    },
+    {
+     "titolo": "Novità: i materiali",
+     "voci": [
+      "Gli alberi secchi si tagliano con l'accetta, i massi e i filoni di ferro si spaccano con il piccone.",
+      "Dal falegname: le assi e il secchio. Alla fucina: il ferro fuso, i chiodi, l'accetta, il piccone, la pietra squadrata."
+     ]
+    },
+    {
+     "titolo": "Novità: il villaggio",
+     "voci": [
+      "Le scorte di grano, legna e pietra, che calano con il tempo (la legna il doppio d'inverno).",
+      "Il magazzino, accanto alla Gilda: porta legna e pietra, la cassa del villaggio paga e la Gilda se ne ricorda.",
+      "Quando la valle ha fame, al mulino qualcuno sa qualcosa.",
+      "La carovana di Sibilla, un giorno ogni tre, con il lasciapassare della Corona: sale, spezie, stoffe e le notizie di fuori."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.8",
+   "nome": "Le storie della valle",
+   "data": "",
+   "sommario": "La valle si riempie di volti, di riti e di storie: ognuno con la sua giornata, e quattro segreti da scoprire.",
+   "gruppi": [
+    {
+     "titolo": "Novità: i volti",
+     "voci": [
+      "Marta la fabbra, la capitana Livia Serra, Tobia l'orfano, Teodoro e Agnese i mugnai, e Maestro Elric, che arriva dopo l'Atto I.",
+      "Ognuno ha la sua giornata: la mattina al lavoro, la sera alla locanda, la notte a casa."
+     ]
+    },
+    {
+     "titolo": "Novità: i riti e i gesti",
+     "voci": [
+      "La prima ora nella valle e la stella di nascita.",
+      "Dopo un anno e un giorno, la cerimonia al Tempio del Cuore.",
+      "La pietra dei segni davanti al tempio.",
+      "La ruota dei gesti: tieni premuto B.",
+      "La musica, che cambia con il giorno, la notte, il tempio e il combattimento."
+     ]
+    },
+    {
+     "titolo": "Novità: le storie segrete",
+     "voci": [
+      "Una lettera per casa.",
+      "Il sogno di Tobia.",
+      "L'incudine che canta.",
+      "La veglia del frammento."
+     ]
+    },
+    {
+     "titolo": "Sistemazioni",
+     "voci": [
+      "F8: una foto e una scheda per segnalare un problema.",
+      "Un gioco di versione diversa non entra nel server: si aggiorna dal launcher."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.7",
+   "nome": "La grotta del nord",
+   "data": "",
+   "sommario": "Dietro la frana, le gallerie dei nani: e i nani non volevano visite.",
+   "gruppi": [
+    {
+     "titolo": "Novità",
+     "voci": [
+      "La frana che trema e si scava in due.",
+      "Gli scheletri che si svegliano, il capitano e il guardiano della forgia.",
+      "Le trappole mortali: lance, botole, pendoli. Si rinasce al tempio.",
+      "Una porta segreta, la stanza del tesoro che chiama le ossa, le miniere allagate, due cantine segrete nella valle.",
+      "La storia di Lucia e della compagnia del 309."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.6",
+   "nome": "La valle che vive",
+   "data": "",
+   "sommario": "La valle si muove anche quando nessuno guarda.",
+   "gruppi": [
+    {
+     "titolo": "Novità",
+     "voci": [
+      "Stormi, rapaci, rondini, pipistrelli, foglie e petali, farfalle e lucciole.",
+      "Il drago, alto sopra i monti, ogni tanto.",
+      "Le voci della locanda, i sogni, il gatto di Bruno.",
+      "L'Atto I: il battito che salta."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.5",
+   "nome": "Crescere",
+   "data": "",
+   "sommario": "Si diventa bravi facendo.",
+   "gruppi": [
+    {
+     "titolo": "Novità",
+     "voci": [
+      "Le abilità (K) che salgono usandole.",
+      "La scherma: tre guardie e le tecniche.",
+      "Il Vigore: correre, nuotare, schivare."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.1.4",
+   "nome": "Pericoli",
+   "data": "",
+   "sommario": "La valle morde.",
+   "gruppi": [
+    {
+     "titolo": "Novità",
+     "voci": [
+      "Lupi, cinghiali e orsi.",
+      "Le armi e lo scudo.",
+      "Morire e rinascere al tempio.",
+      "Lo zaino, le botteghe, la Gilda e la bacheca degli incarichi."
+     ]
+    }
+   ]
+  },
   {
    "versione": "0.1.3",
    "nome": "La valle",
