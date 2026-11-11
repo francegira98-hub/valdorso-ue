@@ -109,6 +109,18 @@ namespace
 		T.Add(BottegaVendi(TEXT("Vendi_Cuore_di_Pietra"), B::Fucina, TEXT("Cuore_di_Pietra"), 45));
 		// --- il falegname: legno
 		T.Add(BottegaCompra(TEXT("Compra_Clava"), B::Falegname, TEXT("Clava"), 6));
+		// (11/11, v0.1.9 "Mani e materiali") lavorare i materiali: assi, ferro, chiodi, attrezzi, pietra
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Sega_Assi"), B::Falegname, TEXT("Sega"), TEXT("Asse"), 2), TEXT("Legna"), 1));
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Fai_Secchio"), B::Falegname, TEXT("Fai"), TEXT("Secchio")), TEXT("Asse"), 2, TEXT("Chiodi"), 3));
+		T.Add(BottegaVendi(TEXT("Vendi_Legna"), B::Falegname, TEXT("Legna"), 2));
+		T.Add(BottegaVendi(TEXT("Vendi_Asse"), B::Falegname, TEXT("Asse"), 2));
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Fondi_Ferro"), B::Fucina, TEXT("Fondi"), TEXT("Lingotto_Ferro")), TEXT("Ferro_Grezzo"), 2, TEXT("Legna"), 1));
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Batti_Chiodi"), B::Fucina, TEXT("Batti"), TEXT("Chiodi"), 12), TEXT("Lingotto_Ferro"), 1));
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Forgia_Accetta"), B::Fucina, TEXT("Forgia"), TEXT("Accetta")), TEXT("Lingotto_Ferro"), 1, TEXT("Asse"), 1));
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Forgia_Piccone"), B::Fucina, TEXT("Forgia"), TEXT("Piccone")), TEXT("Lingotto_Ferro"), 2, TEXT("Asse"), 1));
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Squadra_Pietra"), B::Fucina, TEXT("Squadra"), TEXT("Pietra_Squadrata")), TEXT("Pietra_Grezza"), 2));
+		T.Add(BottegaVendi(TEXT("Vendi_Ferro_Grezzo"), B::Fucina, TEXT("Ferro_Grezzo"), 3));
+		T.Add(BottegaVendi(TEXT("Vendi_Lingotto"), B::Fucina, TEXT("Lingotto_Ferro"), 9));
 		// (11/11, v0.2 "L'acqua della valle") il secchio, e Bruno compra l'acqua della cascata (per la birra)
 		T.Add(BottegaCompra(TEXT("Compra_Secchio"), B::Falegname, TEXT("Secchio"), 5));
 		{

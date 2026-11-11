@@ -49,6 +49,10 @@ namespace ValdorsoRaccolta
 
 	/** Tutti i posti della valle, sempre gli stessi. */
 	VALDORSO_API const TArray<FValdorsoPuntoRaccolta>& Punti();
+
+	/** (11/11, v0.1.9) L'attrezzo che serve nello zaino per prenderlo (la legna: l'accetta; pietra e ferro: il
+	 *  piccone); niente per il resto. */
+	VALDORSO_API FName Attrezzo(FName Oggetto);
 }
 
 UCLASS()

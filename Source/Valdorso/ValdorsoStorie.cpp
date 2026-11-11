@@ -5,6 +5,7 @@
 #include "ValdorsoCielo.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoScorte.h"
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoZainoDati.h"
@@ -178,6 +179,25 @@ namespace ValdorsoStorie
 				return true;
 			});
 			StorieAnnota(Chi, Png, TEXT("un secchio d'acqua torbida a Nonna Edda"));
+			return true;
+		}
+		if (Evento == FName(EventoGrano))
+		{
+			FValdorsoScorteValle& Scorte = ValdorsoScorte::Adesso(Chi);
+			if (Scorte.Grano >= ValdorsoScorte::SogliaFame)
+			{
+				InOutProssimo = TEXT("grano_ok");
+				return true;
+			}
+			if (Scorte.bGranoNascostoUsato)
+			{
+				InOutProssimo = TEXT("grano_gia");
+				return true;
+			}
+			Scorte.Grano = FMath::Min(ValdorsoScorte::Massimo, Scorte.Grano + GranoNascosto);
+			Scorte.bGranoNascostoUsato = true;
+			ValdorsoScorte::Salva(Chi);
+			StorieAnnota(Chi, Png, TEXT("il grano nascosto dei mugnai, nella fame: il granaio respira"));
 			return true;
 		}
 		if (Evento == FName(EventoVeglia))

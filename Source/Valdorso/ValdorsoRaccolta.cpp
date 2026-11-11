@@ -8,6 +8,9 @@
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoTempo.h"
 #include "ValdorsoZaino.h"
+#include "ValdorsoZainoDati.h"
+#include "ValdorsoCrescita.h"
+#include "ValdorsoPlayerController.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -54,6 +57,14 @@ namespace
 		{ TEXT("Collina dell'Orso"), TEXT("Rami_Secchi"), 2, 8, 0.6f, 360.f },
 		{ TEXT("Collina dell'Orso"), TEXT("Funghi"), 2, 6, 0.6f, 600.f },
 		{ TEXT("Palude"), TEXT("Erbe_Palude"), 1, 10, 0.7f, 600.f },
+		// (11/11, v0.1.9 "Mani e materiali") gli alberi secchi (con l'accetta), i massi (con il piccone), il ferro
+		{ TEXT("Boschetto"), TEXT("Legna"), 2, 10, 0.9f, 900.f },
+		{ TEXT("Collina dell'Orso"), TEXT("Legna"), 2, 6, 0.7f, 900.f },
+		{ TEXT("Rovine degli Antichi"), TEXT("Pietra_Grezza"), 2, 6, 0.9f, 900.f },
+		{ TEXT("Grotta est"), TEXT("Pietra_Grezza"), 2, 6, 0.7f, 900.f },
+		{ TEXT("Collina dell'Orso"), TEXT("Pietra_Grezza"), 2, 4, 0.5f, 900.f },
+		{ TEXT("Grotta est"), TEXT("Ferro_Grezzo"), 1, 5, 0.6f, 1200.f },
+		{ TEXT("Grotta nord"), TEXT("Ferro_Grezzo"), 1, 6, 0.6f, 1200.f },
 		// (10/11) le cozze sul fondo del lago (molti posti: quelli troppo bassi o sulla riva si saltano)
 		{ TEXT("Lago"), TEXT("Cozze"), 3, 30, 0.7f, 600.f, true },
 	};
@@ -242,6 +253,22 @@ void AValdorsoRaccolta::Sistema()
 				FVector(0.15f * G, 0.15f * G, 0.07f * G), FLinearColor(0.36f, 0.19f, 0.07f) });
 		}
 	}
+	else if (Nome == TEXT("Legna"))
+	{
+		// (11/11) un albero secco: il tronco storto e due rami spogli
+		Forme.Add({ FormaCilindro, FVector(0.f, 0.f, Giu + 110.f), FRotator(4.f, 0.f, 3.f), FVector(0.22f, 0.22f, 2.2f), FLinearColor(0.2f, 0.15f, 0.1f) });
+		Forme.Add({ FormaCilindro, FVector(20.f, 0.f, Giu + 170.f), FRotator(0.f, 0.f, 40.f), FVector(0.06f, 0.06f, 0.8f), FLinearColor(0.18f, 0.13f, 0.09f) });
+		Forme.Add({ FormaCilindro, FVector(-18.f, 6.f, Giu + 150.f), FRotator(0.f, 0.f, -35.f), FVector(0.05f, 0.05f, 0.7f), FLinearColor(0.18f, 0.13f, 0.09f) });
+	}
+	else if (Nome == TEXT("Pietra_Grezza") || Nome == TEXT("Ferro_Grezzo"))
+	{
+		// (11/11) un masso (il ferro: piu' scuro, con le vene rosse)
+		const bool bFerro = Nome == TEXT("Ferro_Grezzo");
+		Forme.Add({ FormaSfera, FVector(0.f, 0.f, Giu + 30.f), FRotator(0.f, 20.f, 6.f), FVector(1.1f, 0.85f, 0.7f),
+			bFerro ? FLinearColor(0.22f, 0.14f, 0.11f) : FLinearColor(0.42f, 0.4f, 0.37f) });
+		Forme.Add({ FormaSfera, FVector(35.f, 20.f, Giu + 15.f), FRotator(0.f, -30.f, 0.f), FVector(0.5f, 0.45f, 0.35f),
+			bFerro ? FLinearColor(0.45f, 0.18f, 0.08f) : FLinearColor(0.36f, 0.35f, 0.33f) });
+	}
 	else if (Nome == TEXT("Cozze"))
 	{
 		// (10/11) un mucchietto di cozze sul fondo: gusci scuri, schiacciati e allungati
@@ -309,6 +336,16 @@ FText AValdorsoRaccolta::TestoInterazione(const APawn* Chi) const
 	{
 		return FText::GetEmpty();
 	}
+	// (11/11, v0.1.9) con l'attrezzo: taglia, spacca
+	const FName Attrezzo = ValdorsoRaccolta::Attrezzo(Oggetto);
+	if (Attrezzo == FName(TEXT("Accetta")))
+	{
+		return FText::Format(LOCTEXT("Taglia", "Taglia con l'accetta: {0}"), FText::FromString(Tipo->Nome));
+	}
+	if (Attrezzo == FName(TEXT("Piccone")))
+	{
+		return FText::Format(LOCTEXT("Spacca", "Spacca con il piccone: {0}"), FText::FromString(Tipo->Nome));
+	}
 	return FText::Format(LOCTEXT("Raccogli", "Raccogli: {0}"), FText::FromString(Tipo->Nome));
 }
 
@@ -324,7 +361,24 @@ void AValdorsoRaccolta::Interagisci(APawn* Chi)
 		return;
 	}
 	UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::Di(Cast<APlayerController>(Chi->GetController()));
+	// (11/11, v0.1.9) l'albero secco vuole l'accetta, il masso il piccone (nello zaino; in mano non serve)
+	const FName Attrezzo = ValdorsoRaccolta::Attrezzo(Oggetto);
+	if (Zaino && !Attrezzo.IsNone() && ValdorsoZaino::Conta(Zaino->Contenuto(), Attrezzo) < 1)
+	{
+		if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(Chi->GetController()))
+		{
+			Giocatore->ClientAvviso(Attrezzo == FName(TEXT("Accetta"))
+				? LOCTEXT("SenzaAccetta", "Ci vuole un'accetta: la vende Marta, alla fucina (o la batte, se le porti il ferro).")
+				: LOCTEXT("SenzaPiccone", "Ci vuole un piccone: lo vende Marta, alla fucina."), 3.5f, 0.f);
+		}
+		return;
+	}
 	const int32 Entrati = Zaino ? Zaino->Dai(Oggetto, Quantita) : 0;
+	if (Entrati > 0 && !Attrezzo.IsNone())
+	{
+		// lavorare con l'attrezzo fa crescere l'abilita' dell'attrezzo (l'accetta: Asce, il piccone: Mazze)
+		UValdorsoCrescitaComponent::UsaDa(Chi, Attrezzo == FName(TEXT("Accetta")) ? FName(TEXT("Asce")) : FName(TEXT("Mazze")), 0.4f, this);
+	}
 	if (Entrati <= 0)
 	{
 		return;
@@ -515,6 +569,19 @@ void UValdorsoRaccolteSubsystem::RicresciTutto()
 			Viva->Ricresci();
 		}
 	}
+}
+
+FName ValdorsoRaccolta::Attrezzo(FName Oggetto)
+{
+	if (Oggetto == FName(TEXT("Legna")))
+	{
+		return TEXT("Accetta");
+	}
+	if (Oggetto == FName(TEXT("Pietra_Grezza")) || Oggetto == FName(TEXT("Ferro_Grezzo")))
+	{
+		return TEXT("Piccone");
+	}
+	return NAME_None;
 }
 
 #undef LOCTEXT_NAMESPACE

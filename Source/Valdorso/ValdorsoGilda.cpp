@@ -700,6 +700,21 @@ void UValdorsoGildaComponent::ImpostaPunti(int32 Punti)
 		ValdorsoGilda::NomeGrado(Gilda.Grado), ValdorsoGilda::Pronto(Gilda) ? LOCTEXT("PuntiPronto", ", pronto a salire") : FText::GetEmpty()), 3.f);
 }
 
+void UValdorsoGildaComponent::AggiungiPunti(int32 Quanti)
+{
+	if (Quanti <= 0)
+	{
+		return;
+	}
+	Gilda.Punti = FMath::Max(0, Gilda.Punti + Quanti);
+	const bool bPronto = ValdorsoGilda::DaAvvisarePronto(Gilda);
+	Cambiato();
+	if (bPronto)
+	{
+		AvvisaChiNomina();
+	}
+}
+
 void UValdorsoGildaComponent::AvvisaChiNomina() const
 {
 	// (10/11) a chi da' i gradi (lo staff con il permesso della Gilda e il capo gilda), nella chat: c'e' uno pronto

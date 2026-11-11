@@ -129,6 +129,9 @@ public:
 
 	/** Per le prove (console): i punti, e gli incarichi assegnati fatti. */
 	void ImpostaPunti(int32 Punti);
+
+	/** (11/11, v0.2.0) Punti guadagnati lavorando per il villaggio (il magazzino): senza l'avviso delle prove. */
+	void AggiungiPunti(int32 Quanti);
 	void FaiTutto();
 
 	// --- Dal PC del giocatore (il server controlla) ------------------------------------------------------

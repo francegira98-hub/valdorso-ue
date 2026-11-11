@@ -347,8 +347,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestZainoRaccolta, "Valdorso.Zaino.Rac
 bool FValdorsoTestZainoRaccolta::RunTest(const FString& Parameters)
 {
 	const TArray<FValdorsoPuntoRaccolta>& Punti = ValdorsoRaccolta::Punti();
-	// (10/11) con le cozze del lago una settantina
-	TestTrue(TEXT("una settantina di posti"), Punti.Num() >= 50 && Punti.Num() <= 90);
+	// (10/11) con le cozze del lago una settantina; (11/11, v0.1.9) con alberi secchi, massi e ferro un centinaio
+	TestTrue(TEXT("un centinaio di posti"), Punti.Num() >= 90 && Punti.Num() <= 130);
 	TestEqual(TEXT("sempre gli stessi"), ValdorsoRaccolta::Punti().Num(), Punti.Num());
 	int32 Rami = 0;
 	int32 Erbe = 0;

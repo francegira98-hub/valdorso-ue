@@ -269,6 +269,22 @@ namespace
 			TEXT("Il martello del guardiano della forgia: una testa di ferro nero grande come un pane, il manico fasciato d'ottone. Pesa, e si sente."), 4.5f));
 		C.Add(OggSemplice(TEXT("Cuore_di_Pietra"), TEXT("Cuore di pietra"),
 			TEXT("Una pietra grande come un pugno, liscia, tiepida. Dentro, se la tieni all'orecchio, qualcosa batte piano. Marta la vuole vedere."), 0.5f, 10));
+		// (11/11, v0.1.9 "Mani e materiali") i materiali: si prendono con l'attrezzo giusto (ValdorsoRaccolta.h) e si
+		// lavorano ai banchi (ValdorsoBotteghe.cpp)
+		C.Add(OggSemplice(TEXT("Legna"), TEXT("Legna"),
+			TEXT("Ciocchi di faggio e di quercia, tagliati da un albero secco. Servono al falegname, alla fucina, e d'inverno a tutti."), 2.5f, 20));
+		C.Add(OggSemplice(TEXT("Pietra_Grezza"), TEXT("Pietra grezza"),
+			TEXT("Pietra della valle, staccata a colpi di piccone. Pesa, ma dura: le case di Valdorso sono fatte di questa."), 3.f, 20));
+		C.Add(OggSemplice(TEXT("Ferro_Grezzo"), TEXT("Minerale di ferro"),
+			TEXT("Sassi rossicci e pesanti, venati di scuro. Marta, alla fucina, ne tira fuori il ferro."), 2.f, 20));
+		C.Add(OggSemplice(TEXT("Asse"), TEXT("Asse"),
+			TEXT("Un'asse piallata, dritta. Con le assi si fanno secchi, casse, porte e mobili."), 1.f, 20));
+		C.Add(OggSemplice(TEXT("Lingotto_Ferro"), TEXT("Lingotto di ferro"),
+			TEXT("Ferro della valle, fuso e battuto in una barra. Il primo passo di ogni lama, di ogni chiodo, di ogni cerchione."), 1.5f, 20));
+		C.Add(OggSemplice(TEXT("Chiodi"), TEXT("Chiodi"),
+			TEXT("Una manciata di chiodi battuti a mano. Ne servono sempre piu' di quanti se ne hanno."), 0.05f, 99));
+		C.Add(OggSemplice(TEXT("Pietra_Squadrata"), TEXT("Pietra squadrata"),
+			TEXT("Un blocco di pietra con gli spigoli dritti, pronto per un muro."), 4.f, 10));
 		// (11/11, v0.2 "L'acqua della valle") il secchio e l'acqua: quale acqua, lo decide dove la prendi
 		{
 			FValdorsoTipoOggetto Secchio = OggSemplice(TEXT("Secchio"), TEXT("Secchio"),
@@ -928,6 +944,45 @@ namespace
 			L.Add(OggLinea({ { -0.6f, 0.6f }, { 0.4f, 0.6f } }));
 			L.Add(OggLinea({ { -0.2f, -0.6f }, { 0.f, -0.6f } }));
 			L.Add(OggLinea({ { -0.2f, -0.45f }, { 0.f, -0.45f } }));
+		}
+		else if (N == TEXT("Legna"))
+		{
+			L.Add(OggCerchio(-0.35f, 0.35f, 0.3f, 12));
+			L.Add(OggCerchio(0.35f, 0.35f, 0.3f, 12));
+			L.Add(OggCerchio(0.f, -0.2f, 0.3f, 12));
+			L.Add(OggCerchio(0.f, -0.2f, 0.1f, 6));
+		}
+		else if (N == TEXT("Pietra_Grezza") || N == TEXT("Ferro_Grezzo"))
+		{
+			L.Add(OggLinea({ { -0.7f, 0.4f }, { -0.5f, -0.3f }, { 0.f, -0.6f }, { 0.6f, -0.35f }, { 0.75f, 0.3f }, { 0.2f, 0.6f }, { -0.7f, 0.4f } }));
+			if (N == TEXT("Ferro_Grezzo"))
+			{
+				L.Add(OggLinea({ { -0.3f, 0.1f }, { 0.f, -0.1f }, { 0.35f, 0.15f } }));
+			}
+		}
+		else if (N == TEXT("Asse"))
+		{
+			L.Add(OggRett(-0.9f, -0.15f, 0.9f, 0.15f));
+			L.Add(OggLinea({ { -0.5f, 0.f }, { 0.4f, 0.f } }));
+		}
+		else if (N == TEXT("Lingotto_Ferro"))
+		{
+			L.Add(OggLinea({ { -0.7f, 0.3f }, { -0.5f, -0.25f }, { 0.5f, -0.25f }, { 0.7f, 0.3f }, { -0.7f, 0.3f } }));
+		}
+		else if (N == TEXT("Chiodi"))
+		{
+			for (int32 i = 0; i < 3; ++i)
+			{
+				const float X = -0.4f + 0.4f * i;
+				L.Add(OggLinea({ { X - 0.12f, -0.6f }, { X + 0.12f, -0.6f } }));
+				L.Add(OggLinea({ { X, -0.6f }, { X, 0.6f } }));
+			}
+		}
+		else if (N == TEXT("Pietra_Squadrata"))
+		{
+			L.Add(OggRett(-0.7f, -0.45f, 0.7f, 0.45f));
+			L.Add(OggLinea({ { -0.7f, 0.f }, { 0.7f, 0.f } }));
+			L.Add(OggLinea({ { 0.f, -0.45f }, { 0.f, 0.f } }));
 		}
 		else if (N == TEXT("Secchio") || N.StartsWith(TEXT("Secchio_Acqua_")))
 		{

@@ -13,6 +13,8 @@
 #include "ValdorsoGesti.h"
 #include "ValdorsoMusica.h"
 #include "ValdorsoPermessi.h"
+#include "ValdorsoRaccolta.h"
+#include "ValdorsoScorte.h"
 #include "ValdorsoRiti.h"
 #include "ValdorsoSegnala.h"
 #include "ValdorsoStorie.h"
@@ -183,6 +185,7 @@ bool FValdorsoTestRitiStorie::RunTest(const FString& Parameters)
 		{ TEXT("Marta"), TEXT("canta") }, { TEXT("Marta"), TEXT("senza_cuore") },
 		{ TEXT("PadreAnselmo"), TEXT("veglia_inizio") }, { TEXT("PadreAnselmo"), TEXT("di_giorno") },
 		{ TEXT("NonnaEdda"), TEXT("acqua_torbida") }, { TEXT("NonnaEdda"), TEXT("acqua_niente") },
+		{ TEXT("Teodoro"), TEXT("grano_nascosto") }, { TEXT("Teodoro"), TEXT("grano_ok") }, { TEXT("Teodoro"), TEXT("grano_gia") },
 	};
 	for (const FAttesa& A : Nodi)
 	{
@@ -225,6 +228,55 @@ bool FValdorsoTestRitiAcqua::RunTest(const FString& Parameters)
 	Zaino.Posti[1].Cariche = 0;
 	TestTrue(TEXT("la borraccia si riempie"), ValdorsoZaino::RiempiBorracce(Zaino));
 	TestEqual(TEXT("il secchio resta com'era"), Zaino.Posti[0].Cariche, 2);
+	return true;
+}
+
+// (v0.1.9 - v0.2.0) Mani e materiali: gli attrezzi per raccogliere, i nuovi materiali, le scorte del villaggio.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestRitiMateriali, "Valdorso.Riti.Materiali", ValdorsoTestRiti::Bandiere)
+bool FValdorsoTestRitiMateriali::RunTest(const FString& Parameters)
+{
+	TestTrue(TEXT("la legna con l'accetta"), ValdorsoRaccolta::Attrezzo(TEXT("Legna")) == FName(TEXT("Accetta")));
+	TestTrue(TEXT("la pietra con il piccone"), ValdorsoRaccolta::Attrezzo(TEXT("Pietra_Grezza")) == FName(TEXT("Piccone")));
+	TestTrue(TEXT("il ferro con il piccone"), ValdorsoRaccolta::Attrezzo(TEXT("Ferro_Grezzo")) == FName(TEXT("Piccone")));
+	TestTrue(TEXT("i funghi a mani nude"), ValdorsoRaccolta::Attrezzo(TEXT("Funghi")).IsNone());
+	for (const TCHAR* Id : { TEXT("Legna"), TEXT("Pietra_Grezza"), TEXT("Ferro_Grezzo"), TEXT("Asse"), TEXT("Lingotto_Ferro"), TEXT("Chiodi"), TEXT("Pietra_Squadrata") })
+	{
+		TestNotNull(FString::Printf(TEXT("c'e' %s"), Id), ValdorsoOggetti::Trova(FName(Id)));
+	}
+	// in valle si trovano: almeno un albero secco, un masso, un filone
+	int32 Legna = 0;
+	int32 Pietra = 0;
+	int32 Ferro = 0;
+	for (const FValdorsoPuntoRaccolta& P : ValdorsoRaccolta::Punti())
+	{
+		Legna += P.Oggetto == FName(TEXT("Legna")) ? 1 : 0;
+		Pietra += P.Oggetto == FName(TEXT("Pietra_Grezza")) ? 1 : 0;
+		Ferro += P.Oggetto == FName(TEXT("Ferro_Grezzo")) ? 1 : 0;
+	}
+	TestTrue(TEXT("alberi secchi in valle"), Legna > 0);
+	TestTrue(TEXT("massi in valle"), Pietra > 0);
+	TestTrue(TEXT("filoni di ferro in valle"), Ferro > 0);
+
+	// le scorte: dieci minuti = un po' di grano e di legna; d'inverno la legna il doppio; mai sotto zero
+	FValdorsoScorteValle S;
+	S.Grano = 100.f;
+	S.Legna = 100.f;
+	S.UltimoConsumo = 1000000;
+	ValdorsoScorte::Consuma(S, 1000000 + 600 * 6, false);
+	TestEqual(TEXT("un'ora: 6 di grano"), S.Grano, 94.f);
+	TestEqual(TEXT("un'ora: 6 di legna"), S.Legna, 94.f);
+	ValdorsoScorte::Consuma(S, 1000000 + 600 * 12, true);
+	TestEqual(TEXT("d'inverno la legna il doppio"), S.Legna, 82.f);
+	ValdorsoScorte::Consuma(S, 1000000 + 600 * 12 + 599, true);
+	TestEqual(TEXT("meno di dieci minuti: niente"), S.Grano, 88.f);
+	S.Grano = 0.5f;
+	ValdorsoScorte::Consuma(S, S.UltimoConsumo + 6000, false);
+	TestEqual(TEXT("mai sotto zero"), S.Grano, 0.f);
+	TestTrue(TEXT("la legna si paga"), ValdorsoScorte::Prezzo(TEXT("Legna")) > 0);
+	TestEqual(TEXT("i funghi no"), ValdorsoScorte::Prezzo(TEXT("Funghi")), 0);
+	float Vale = 0.f;
+	TestTrue(TEXT("la squadrata vale tre pietre"), ValdorsoScorte::Scorta(S, TEXT("Pietra_Squadrata"), Vale) == &S.Pietra && Vale == 3.f);
+	TestEqual(TEXT("quattro righe al magazzino"), ValdorsoScorte::Righe(S).Num(), 4);
 	return true;
 }
 

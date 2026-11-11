@@ -31,6 +31,10 @@ namespace ValdorsoStorie
 	/** (11/11, v0.2) Nonna Edda prende un secchio d'acqua torbida (per i suoi intrugli) e da' erbe della palude; il
 	 *  secchio torna vuoto. Senza l'acqua si va a "acqua_niente". */
 	inline const TCHAR* EventoAcquaEdda = TEXT("StoriaAcquaEdda");
+	/** (11/11, v0.2.0) Il grano nascosto dei mugnai (ValdorsoScorte.h): solo quando la valle ha fame, una volta per
+	 *  carestia ("grano_nascosto"; senza fame "grano_ok", gia' uscito "grano_gia"). */
+	inline const TCHAR* EventoGrano = TEXT("StoriaGrano");
+	inline constexpr float GranoNascosto = 40.f;
 
 	/** Il titolo dell'iscrizione sulla collina (crea_volti.py la mette li'). */
 	inline const TCHAR* TitoloSasso = TEXT("Il sasso dell'Orso");

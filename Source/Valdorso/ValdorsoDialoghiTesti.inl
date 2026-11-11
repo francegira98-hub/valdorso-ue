@@ -1722,7 +1722,29 @@ namespace
 			TEXT("Basta, basta. Quest'anno basta. E' il prossimo che... be', chi lo sa il prossimo. Con il passo chiuso non sale niente da Aurelia."),
 			TEXT("Ma non pensarci tu, che sei nuovo. Ci pensa Agnese. Agnese pensa a tutto."),
 			})
+			// (11/11, v0.2.0) il grano nascosto (ValdorsoStorie.h, ValdorsoScorte.h): il server guarda il granaio
+			.Scelta(TEXT("Il granaio e' quasi vuoto, Teodoro. Lo so che sai qualcosa."), TEXT("grano_nascosto"), FName(ValdorsoStorie::EventoGrano))
+			.Scelta(TEXT("E se il grano finisse davvero?"), TEXT("grano_ok"))
 			.Scelta(TEXT("Va bene. Ciao, Teodoro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("grano_nascosto"), {
+			TEXT("(Teodoro si guarda intorno. Per una volta, non parla. Poi ti prende per un braccio e ti porta dietro il mulino, dove c'e' una botola sotto la paglia.)"),
+			TEXT("Quaranta sacchi. Li abbiamo messi via due inverni fa, quando la Corona ha chiuso il passo e Agnese ha detto: verra' il giorno. E' venuto."),
+			TEXT("Non e' rubare, eh. E' tenere da parte. Li porto al granaio stanotte, cosi' nessuno fa domande. Tu non l'hai visto, e io non te l'ho detto. E Agnese... Agnese lo sapra' comunque."),
+			}).Segno(TEXT("GranoNascosto"))
+			.Scelta(TEXT("Hai fatto bene, Teodoro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("grano_ok"), {
+			TEXT("Finire? Il grano? (Ride, ma guarda verso il magazzino.) Il granaio e' pieno abbastanza, per ora. Quando sara' mezzo vuoto, ne riparliamo."),
+			TEXT("Intanto porta legna al magazzino, che d'inverno la valle ne brucia il doppio."),
+			})
+			.Scelta(TEXT("E tu, non hai niente da parte?"), TEXT("grano_gia"))
+			.Scelta(TEXT("Va bene."), TEXT("congedo"));
+
+		D.Nodo(TEXT("grano_gia"), {
+			TEXT("(Teodoro allarga le braccia.) Da parte? Quello che c'era sotto il mulino, se c'era, e' gia' andato al granaio quando serviva, o ci andra' quando servira'. Non ce n'e' altro. Adesso tocca alla valle: legna, carovane, raccolti."),
+			})
+			.Scelta(TEXT("Capisco."), TEXT("congedo"));
 
 		D.Nodo(TEXT("congedo"), {
 			TEXT("(Teodoro ti da' una pacca sulla spalla, e la tua spalla diventa bianca.) Torna! Domani ne so altre."),

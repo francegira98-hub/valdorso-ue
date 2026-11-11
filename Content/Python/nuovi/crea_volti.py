@@ -23,6 +23,7 @@
 # entra: ogni colono ci incide il suo segno una volta (etichetta "ValdorsoVolti" anche lei).
 # (11/11, v0.1.8) E il sasso dell'Orso sulla collina, quello del sogno di Tobia (ValdorsoStorie.h).
 # (11/11, v0.2) E il pozzo che si usa con E (AValdorsoPozzo: il secchio si riempie d'acqua chiara).
+# (11/11, v0.2.0) E il magazzino del villaggio accanto alla bacheca della Gilda (le scorte: ValdorsoScorte.h).
 
 import math
 
@@ -342,6 +343,46 @@ def metti_pozzo(P):
     scrivi("il pozzo si usa con E, in (%.0f, %.0f, %.0f)" % (q.x, q.y, q.z))
 
 
+def materiale(nome):
+    for dati in unreal.AssetRegistryHelpers.get_asset_registry().get_assets_by_class(unreal.TopLevelAssetPath("/Script/Engine", "MaterialInstanceConstant")):
+        if str(dati.asset_name) == nome:
+            return dati.get_asset()
+    return None
+
+
+def metti_magazzino(P):
+    """(11/11, v0.2.0) Il magazzino del villaggio (AValdorsoMagazzino, ValdorsoScorte.h): accanto alla bacheca della
+    Gilda, con due casse e una catasta per farsi vedere."""
+    classe = getattr(unreal, "ValdorsoMagazzino", None)
+    if classe is None:
+        avviso("manca la classe C++ ValdorsoMagazzino (compila): niente magazzino")
+        return
+    posto = P.intorno("Bacheca della Gilda", 320.0, 90.0)
+    if posto is None:
+        return
+    x, y, z, g = posto
+    a = attori.spawn_actor_from_class(classe, unreal.Vector(x, y, z + 60.0), unreal.Rotator(roll=0.0, pitch=0.0, yaw=g))
+    if a is None:
+        avviso("non riesco a mettere il magazzino")
+        return
+    a.set_actor_label("Il magazzino del villaggio")
+    a.set_folder_path(CARTELLA)
+    a.set_editor_property("tags", [unreal.Name(ETICHETTA)])
+    cubo = unreal.load_asset("/Engine/BasicShapes/Cube")
+    legno = materiale("MI_Villaggio_Assi") or materiale("MI_Villaggio_Trave")
+    for k, (dx, dy, sx, sy, sz) in enumerate(((0.0, 0.0, 0.9, 0.7, 0.7), (95.0, 10.0, 0.7, 0.7, 0.6), (-90.0, 0.0, 0.8, 1.4, 0.45))):
+        c = attori.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(x + dx, y + dy, z + sz * 50.0), unreal.Rotator(roll=0.0, pitch=0.0, yaw=g))
+        if c and cubo:
+            c.static_mesh_component.set_static_mesh(cubo)
+            c.set_actor_scale3d(unreal.Vector(sx, sy, sz))
+            if legno:
+                c.static_mesh_component.set_material(0, legno)
+            c.set_actor_label("Il magazzino del villaggio (cassa %d)" % (k + 1))
+            c.set_folder_path(CARTELLA)
+            c.set_editor_property("tags", [unreal.Name(ETICHETTA)])
+    scrivi("il magazzino del villaggio, in (%.0f, %.0f, %.0f)" % (x, y, z))
+
+
 def metti_pietra(P):
     """(11/11) La pietra dei segni: davanti all'ingresso del tempio (-Y), a destra di chi entra, sul paesaggio."""
     classe = getattr(unreal, "ValdorsoPietraSegni", None)
@@ -446,6 +487,7 @@ def principale():
     metti_pietra(P)
     metti_sasso()
     metti_pozzo(P)
+    metti_magazzino(P)
 
     messi = 0
     for dialogo, nome, donna, scala, atto, giornata in giornate:
