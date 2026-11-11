@@ -134,7 +134,7 @@ namespace ValdorsoZaino
 	VALDORSO_API void DaiPartenza(FValdorsoZaino& Zaino, const FValdorsoRegistro* Registro);
 
 	/** Quante volte è cambiata la partenza dopo la v0.1.4 (vedi FValdorsoZaino::Aggiornamenti). */
-	inline constexpr int32 UltimoAggiornamento = 1;
+	inline constexpr int32 UltimoAggiornamento = 2;
 
 	/** (08/11) A chi era già arrivato dà le cose aggiunte poi alla partenza (la mappa della valle). Vero se ha dato
 	 *  qualcosa. DaiPartenza segna già tutto come dato. */

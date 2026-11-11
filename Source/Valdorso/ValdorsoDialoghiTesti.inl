@@ -764,6 +764,7 @@ namespace
 			TEXT("L'altra notte Padre Anselmo è uscito dal tempio bianco come un lenzuolo. Tobia, il ragazzino del prete, giura che il frammento del tempio ha saltato un battito. Due colpi e una pausa, da sempre. E quella notte un colpo solo, e poi niente, per il tempo di un respiro. Come la Pietra Cuore di Aurelia, nel 309: e quella volta lo seppe tutto il regno."),
 			})
 			.Scelta(TEXT("Un'altra voce?"), TEXT("sigillo"))
+			.Scelta(TEXT("E di questi giorni, che si dice?"), TEXT("fresche"))
 			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
 			.Scelta(TEXT("Me ne vado, Bruno."), TEXT("congedo"));
 
@@ -788,8 +789,20 @@ namespace
 			TEXT("Chi sia, non lo so. E se lo sapessi, lo saprei soltanto io."),
 			})
 			.Scelta(TEXT("Ricominciamo: cosa si dice del tempio?"), TEXT("voci"))
+			.Scelta(TEXT("E di questi giorni, che si dice?"), TEXT("fresche"))
 			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
 			.Scelta(TEXT("Basta voci per oggi."), TEXT("congedo"));
+
+		// (11/11, v0.1.6) Le voci vere: quello che e' successo davvero nella valle, dal registro eventi del server
+		// (ValdorsoVoci.h: la riga "{voci}" diventa da una a tre voci di adesso)
+		D.Nodo(TEXT("fresche"), {
+			TEXT("(Bruno si guarda intorno, posa lo straccio e si china sul bancone.)"),
+			TEXT("{voci}"),
+			TEXT("Questo è quello che gira adesso. Domani chissà: le voci sono come il pane, buone finché sono fresche."),
+			})
+			.Scelta(TEXT("E le voci di sempre?"), TEXT("voci"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
+			.Scelta(TEXT("Grazie, Bruno."), TEXT("congedo"));
 
 		// --- Livia e la guerra ------------------------------------------------------------------------------------
 		D.Nodo(TEXT("livia"), {
@@ -876,8 +889,11 @@ namespace
 			.Scelta(TEXT("Grazie, padre. Me ne vado."), TEXT("congedo"));
 
 		D.Nodo(TEXT("ritorno"), {
-			TEXT("(Padre Anselmo alza gli occhi dal libro dei canti e sorride.)"),
-			TEXT("Ecco una faccia che conosco. Il Cuore ti ha riportato qui: è un buon segno."),
+			TEXT("{senza:atto1}(Padre Anselmo alza gli occhi dal libro dei canti e sorride.)"),
+			TEXT("{se:atto1}(Padre Anselmo alza gli occhi dal libro dei canti.)"),
+			TEXT("{senza:atto1}Ecco una faccia che conosco. Il Cuore ti ha riportato qui: è un buon segno."),
+			// (11/11, v0.1.6) l'Atto I "Il battito cambiato" (ValdorsoVoci.h): dopo, Anselmo non sorride piu'
+			TEXT("{se:atto1}(Ha gli occhi cerchiati di chi non dorme, e non sorride.) Ecco una faccia che conosco. L'hai sentito anche tu, vero? Il battito. Si è fermato, per un respiro. E da allora, ogni tanto, si ferma ancora."),
 			TEXT("Cosa ti porta al tempio? Una domanda, una preghiera o soltanto la voglia di stare al fresco? Vanno bene tutte e tre."),
 			})
 			.Scelta(TEXT("Raccontami ancora del Cuore."), TEXT("cuore"))
@@ -1092,21 +1108,89 @@ namespace
 			.Scelta(TEXT("Ho un foglio da farti timbrare."), NAME_None, Bancone)
 			.Scelta(TEXT("Va bene. Torno con un foglio."), TEXT("congedo"));
 
+		// (11/11, v0.1.7) la storia "Quelli che non tornarono" (ValdorsoGrottaNord.h; Proposta nella Lore, da confermare):
+		// la mappa delle gallerie del nord, la compagnia del 309, le tre cose da riportare
+		const FName Mappa(ValdorsoGrottaNord::SegnoMappa);
+		const FName Finite(ValdorsoGrottaNord::SegnoFinite);
 		D.Nodo(TEXT("mappa"), {
 			TEXT("(La penna si ferma a meta' di una parola.)"),
 			TEXT("Chi te l'ha detto? Bruno. E' sempre Bruno."),
-			TEXT("Si', la Gilda ha una mappa delle gallerie sotto la grotta a est. Vecchia, disegnata da gente che non e' tornata a correggerla. Da qualche anno, di notte, da laggiu' si sentono dei martelli. Nessuno della valle scava, la' sotto."),
+			TEXT("Si', la Gilda ha una mappa delle gallerie dei nani, quelle sotto la montagna del nord, dietro la frana. Vecchia, disegnata da gente che non e' tornata a correggerla. Da qualche anno, di notte, da laggiu' si sentono dei colpi. Nessuno della valle scava, la' sotto."),
 			})
-			.Scelta(TEXT("Me la mostreresti?"), TEXT("mappa2"))
+			.Scelta(TEXT("Me la mostreresti?"), TEXT("mappa2")).SceltaNascostaSe(Mappa)
+			.Scelta(TEXT("Delle gallerie: ho qualcosa da dirti."), TEXT("gallerie_tue")).SceltaVisibileSe(Mappa).SceltaNascostaSe(Finite)
 			.Scelta(TEXT("Parliamo d'altro: ho un foglio."), NAME_None, Bancone)
 			.Scelta(TEXT("Lasciamo stare. A presto, Lucia."), TEXT("congedo"));
 
 		D.Nodo(TEXT("mappa2"), {
 			TEXT("A te? Con il sigillo rosso ancora fresco sulle dita? No."),
-			TEXT("Fatti un nome alla Gilda. Quando qualcuno mi dira' che cosa c'e' davvero nella grotta a est, e tornera' per raccontarlo, allora ne riparliamo. C'e' un foglio, ogni tanto, sulla bacheca."),
+			TEXT("Fatti un nome alla Gilda. O dimostrami che sai guardare: quando qualcuno mi dira' che cosa c'e' davvero in fondo alla grotta a est, e tornera' per raccontarlo, allora ne riparliamo."),
 			})
+			.Scelta(TEXT("Sono stato in fondo alla grotta a est. Ho visto la porta."), TEXT("provalo"))
 			.Scelta(TEXT("Ho capito. Ho un foglio, intanto."), NAME_None, Bancone)
 			.Scelta(TEXT("Me ne ricordero'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("provalo"), {
+			TEXT("(Lucia alza gli occhi dal registro, e questa volta li tiene su di te.)"),
+			TEXT("Allora dimmi: che cosa c'e' inciso, sulla porta?"),
+			})
+			.Scelta(TEXT("Un sole con sette raggi."), TEXT("bugia"))
+			.Scelta(TEXT("Cinque posti in cerchio. E una mano aperta, nel mezzo."), TEXT("storia"), FName(ValdorsoGrottaNord::EventoMappa))
+			.Scelta(TEXT("Non ricordo bene. Era buio."), TEXT("bugia"));
+
+		D.Nodo(TEXT("bugia"), {
+			TEXT("Allora non ci sei stato. O non hai guardato. Laggiu' le due cose sono la stessa."),
+			TEXT("Torna quando l'avrai vista davvero."),
+			})
+			.Scelta(TEXT("Tornero'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("storia"), {
+			TEXT("(Lucia posa la penna. Apre un cassetto che ha la serratura, e ne tira fuori due fogli piegati in quattro.)"),
+			TEXT("Autunno del 309. Da sotto la montagna del nord cominciarono i colpi, di notte. La filiale mando' quattro dei suoi: Ranieri, il capo della compagnia. Gisella, che disegnava le mappe. Cecco, minatore della valle, che leggeva i segni dei nani. E io, con la corda."),
+			TEXT("Allargammo la fessura sopra la frana. Loro entrarono, io restai fuori. Il primo giorno la corda tiro' tre volte: tutto bene. Il secondo Gisella ci lego' queste due pagine. La terza notte la frana scese ancora, e la fessura si chiuse. Da allora ci passa solo l'aria."),
+			TEXT("Prendile. Se un giorno la frana si apre, e tu scendi, riportami quello che resta di loro. Non per la Gilda."),
+			}).Segno(Mappa)
+			.Scelta(TEXT("Li cerchero'."), TEXT("promessa"))
+			.Scelta(TEXT("Perche' non sei tornata a scavare?"), TEXT("perche"));
+
+		D.Nodo(TEXT("perche"), {
+			TEXT("Ci ho provato. Un inverno intero, con le mani e poi con il piccone di Marta. La frana e' roccia: si sposta solo quando la terra decide di muoversi."),
+			TEXT("Dicono che una notte lo fara'. Quella notte, se senti tremare la montagna, vieni a dirmelo."),
+			})
+			.Scelta(TEXT("Li cerchero'."), TEXT("promessa"));
+
+		D.Nodo(TEXT("promessa"), {
+			TEXT("Il taccuino di Gisella. La lanterna di Cecco. L'anello di Ranieri: d'argento, con la lanterna della Gilda e una R."),
+			TEXT("(Riprende la penna.) E adesso vai. Ho un registro da tenere, e non mi va che tu mi veda scrivere storto."),
+			}).Fine();
+
+		D.Nodo(TEXT("gallerie_tue"), {
+			TEXT("(Lucia posa la penna e non dice niente. Aspetta.)"),
+			})
+			.Scelta(TEXT("Ho trovato le loro cose."), TEXT("consegna"), FName(ValdorsoGrottaNord::EventoConsegna))
+			.Scelta(TEXT("Ne ho trovato solo una parte."), TEXT("mancano"))
+			.Scelta(TEXT("Non ancora. Torno laggiu'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("mancano"), {
+			TEXT("Allora non e' finita. Il taccuino, la lanterna, l'anello: tutte e tre, o niente."),
+			TEXT("Le gallerie sono lunghe. Guarda dove i nani hanno messo le loro sale."),
+			})
+			.Scelta(TEXT("Tornero' con tutte e tre."), TEXT("congedo"));
+
+		D.Nodo(TEXT("consegna"), {
+			TEXT("(Lucia apre il taccuino di Gisella e lo chiude subito. Gira la lanterna di Cecco tra le mani. Poi prende l'anello, e lo tiene stretto.)"),
+			TEXT("Ranieri non c'era, vero? Tra le ossa. Solo l'anello."),
+			TEXT("(Chiude il registro, cosa che non fa mai.) Allora c'e' un'altra uscita, e lui l'ha trovata. Oltre la porta che i nani hanno chiuso. Un giorno qualcuno la aprira'."),
+			TEXT("La cassa ti paga, il registro ti ricorda. E io ti devo qualcosa che non si scrive."),
+			}).Segno(Finite)
+			.Scelta(TEXT("Com'erano?"), TEXT("ricordo"))
+			.Scelta(TEXT("Lo troveremo."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ricordo"), {
+			TEXT("Gisella disegnava anche le cose che non c'erano: diceva che una mappa senza draghi ai bordi e' una bugia. Cecco cantava male e scavava bene. Ranieri..."),
+			TEXT("Ranieri faceva sembrare facili le cose difficili. E' cosi' che si finisce sotto una montagna."),
+			})
+			.Scelta(TEXT("Grazie, Lucia."), TEXT("congedo"));
 
 		D.Nodo(TEXT("congedo"), {
 			TEXT("(Lucia e' gia' tornata al registro.) Chiudi la porta, che le carte volano."),

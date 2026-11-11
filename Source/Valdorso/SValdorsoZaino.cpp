@@ -4,6 +4,7 @@
 #include "ValdorsoGilda.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoScherma.h"
 #include "ValdorsoTemaUI.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -397,6 +398,15 @@ int32 SValdorsoGrigliaZaino::OnPaint(const FPaintArgs& Args, const FGeometry& Al
 		const FName Id = Contenuto.Azioni.IsValidIndex(k) ? Contenuto.Azioni[k] : NAME_None;
 		if (Id.IsNone())
 		{
+			continue;
+		}
+		if (ValdorsoScherma::DaBarra(Id))
+		{
+			// (11/11) una tecnica nella barra: la sua sigla, non un oggetto (e nessun "0")
+			const FString TestoSigla = ValdorsoScherma::Sigla(Id);
+			const FVector2f MisuraSigla = ZainoMisura(TestoSigla, FontTasto);
+			ZainoScrivi(OutDrawElements, LayerId + 2, AllottedGeometry, TestoSigla, FontTasto,
+				A + FVector2f((LatoTasto - MisuraSigla.X) * 0.5f, (LatoTasto - MisuraSigla.Y) * 0.55f), Inchiostro);
 			continue;
 		}
 		const int32 Quanti = ValdorsoZaino::Conta(Contenuto, Id);

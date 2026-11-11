@@ -19,4 +19,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Valdorso|Editor")
 	static void CostruisciSubito(UObject* Asset);
+
+	/**
+	 * (11/11/2026) La distanza di caricamento (Loading Range, cm) delle griglie di World Partition del mondo, almeno Minimo.
+	 * Va con tutte e due le maniere di 5.8: la griglia (Spatial Hash: Grids) e le partizioni (Runtime Hash Set: Runtime
+	 * Partitions -> Main Partition), cercando le proprieta' per nome (da Python RuntimeHash non si vede). Cambia solo la
+	 * prima griglia (la principale). Restituisce cosa ha fatto, in una riga per griglia; vuoto se non ha trovato niente.
+	 * Da Python: unreal.ValdorsoStrumenti.distanza_caricamento(mondo, 51200).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Valdorso|Editor", meta = (WorldContext = "Mondo"))
+	static TArray<FString> DistanzaCaricamento(UObject* Mondo, int32 Minimo);
 };

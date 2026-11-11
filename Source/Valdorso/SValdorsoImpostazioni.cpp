@@ -3,6 +3,8 @@
 #include "SValdorsoImpostazioni.h"
 #include "SValdorsoAccesso.h"
 #include "ValdorsoTemaUI.h"
+#include "ValdorsoTasti.h"
+#include "Framework/Application/SlateApplication.h"
 #include "HAL/PlatformTime.h"
 #include "Input/Events.h"
 #include "InputCoreTypes.h"
@@ -120,6 +122,33 @@ void SValdorsoImpostazioni::Construct(const FArguments& InArgs)
 		[this]() { return SiNo(Bozza.bInvertiY); },
 		[this](int32) { Bozza.bInvertiY = !Bozza.bInvertiY; Applica(); });
 
+	// (11/11, v0.1.5) la corsa "premi una volta" e i tasti da cambiare (ValdorsoTasti.h)
+	AggiungiVoce(Voci, LOCTEXT("CorsaAlterna", "Corsa: premi una volta (non tenere premuto)"),
+		[this]() { return SiNo(Bozza.bCorsaAlterna); },
+		[this](int32) { Bozza.bCorsaAlterna = !Bozza.bCorsaAlterna; Applica(); });
+
+	AggiungiTitolo(Voci, LOCTEXT("TitoloTasti", "Tasti (clic sulla freccia, poi premi il tasto nuovo)"));
+	for (int32 k = 0; k < static_cast<int32>(EValdorsoTasto::Numero); ++k)
+	{
+		const EValdorsoTasto Azione = static_cast<EValdorsoTasto>(k);
+		AggiungiVoce(Voci, ValdorsoTasti::Nome(Azione),
+			[this, k, Azione]()
+			{
+				return TastoInAttesa == k ? LOCTEXT("PremiTasto", "Premi un tasto... (Esc: lascia)") : ValdorsoTasti::NomeTasto(ValdorsoTasti::Tasto(Azione));
+			},
+			[this, k](int32)
+			{
+				TastoInAttesa = k;
+				if (FSlateApplication::IsInitialized())
+				{
+					FSlateApplication::Get().SetKeyboardFocus(SharedThis(this), EFocusCause::SetDirectly);
+				}
+			});
+	}
+	AggiungiVoce(Voci, LOCTEXT("TastiDiSerie", "Tutti i tasti come di serie"),
+		[]() { return ValdorsoTasti::CorpoCambiato() ? LOCTEXT("Rimetti", "rimetti") : LOCTEXT("GiaDiSerie", "-"); },
+		[this](int32) { TastoInAttesa = -1; ValdorsoTasti::RimettiDiSerie(); });
+
 	AggiungiTitolo(Voci, LOCTEXT("Accessibilita", "Accessibilità"));
 	AggiungiVoce(Voci, LOCTEXT("GrandezzaTesto", "Grandezza delle scritte"),
 		[this]()
@@ -151,6 +180,46 @@ void SValdorsoImpostazioni::Construct(const FArguments& InArgs)
 			}
 		},
 		[this](int32 Verso) { Bozza.Daltonismo = (Bozza.Daltonismo + Verso + 4) % 4; Applica(); });
+	// (11/11, v0.1.5) le scosse della telecamera e i sottotitoli dei suoni
+	AggiungiVoce(Voci, LOCTEXT("Scosse", "Quanto trema la telecamera ai colpi"),
+		[this]() { return Percento(Bozza.Scosse); },
+		[this](int32 Verso) { Bozza.Scosse = FMath::Clamp(FMath::RoundToFloat((Bozza.Scosse + 0.25f * Verso) * 4.f) / 4.f, 0.f, 1.f); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("Sottotitoli", "Scritte dei suoni importanti"),
+		[this]() { return SiNo(Bozza.bSottotitoli); },
+		[this](int32) { Bozza.bSottotitoli = !Bozza.bSottotitoli; Applica(); });
+
+	// (11/11, v0.1.5) l'interfaccia su misura: dove stanno le barre, la bussola e la chat (ValdorsoInterfaccia.h)
+	AggiungiTitolo(Voci, LOCTEXT("Interfaccia", "Interfaccia (barre, bussola, chat)"));
+	const auto Pixel = [](int32 Valore) { return FText::Format(LOCTEXT("Pixel", "{0} px"), FText::AsNumber(Valore)); };
+	AggiungiVoce(Voci, LOCTEXT("BarreX", "Barre: a sinistra / a destra"),
+		[this, Pixel]() { return Pixel(Bozza.BarreX); },
+		[this](int32 Verso) { Bozza.BarreX = FMath::Clamp(Bozza.BarreX + 40 * Verso, -1200, 1200); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("BarreY", "Barre: piu' su / piu' giu'"),
+		[this, Pixel]() { return Pixel(Bozza.BarreY); },
+		[this](int32 Verso) { Bozza.BarreY = FMath::Clamp(Bozza.BarreY + 40 * Verso, -900, 0); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("BussolaX", "Bussola: a sinistra / a destra"),
+		[this, Pixel]() { return Pixel(Bozza.BussolaX); },
+		[this](int32 Verso) { Bozza.BussolaX = FMath::Clamp(Bozza.BussolaX + 40 * Verso, -1200, 1200); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("BussolaY", "Bussola: piu' su / piu' giu'"),
+		[this, Pixel]() { return Pixel(Bozza.BussolaY); },
+		[this](int32 Verso) { Bozza.BussolaY = FMath::Clamp(Bozza.BussolaY + 40 * Verso, 0, 900); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("ChatX", "Chat: a sinistra / a destra"),
+		[this, Pixel]() { return Pixel(Bozza.ChatX); },
+		[this](int32 Verso) { Bozza.ChatX = FMath::Clamp(Bozza.ChatX + 40 * Verso, 0, 1600); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("ChatY", "Chat: piu' su / piu' giu'"),
+		[this, Pixel]() { return Pixel(Bozza.ChatY); },
+		[this](int32 Verso) { Bozza.ChatY = FMath::Clamp(Bozza.ChatY + 40 * Verso, -900, 300); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("GrandezzaHud", "Grandezza di barre, bussola e chat"),
+		[this]() { return Percento(Bozza.GrandezzaHud); },
+		[this](int32 Verso) { Bozza.GrandezzaHud = FMath::Clamp(FMath::RoundToFloat((Bozza.GrandezzaHud + 0.1f * Verso) * 10.f) / 10.f, 0.8f, 1.4f); Applica(); });
+	AggiungiVoce(Voci, LOCTEXT("HudDiSerie", "Interfaccia come di serie"),
+		[]() { return LOCTEXT("Rimetti2", "rimetti"); },
+		[this](int32)
+		{
+			Bozza.BarreX = Bozza.BarreY = Bozza.BussolaX = Bozza.BussolaY = Bozza.ChatX = Bozza.ChatY = 0;
+			Bozza.GrandezzaHud = 1.f;
+			Applica();
+		});
 
 	TSharedRef<SButton> Fatto = Stile->Pulsante(LOCTEXT("Fatto", "Fatto"),
 		FSimpleDelegate::CreateLambda([this]() { OnChiudi.ExecuteIfBound(); }), 20.f);
@@ -283,9 +352,34 @@ void SValdorsoImpostazioni::Applica()
 	ValdorsoImpostazioni::Cambia(Bozza);
 }
 
+FReply SValdorsoImpostazioni::Cattura(const FKey& Tasto)
+{
+	if (TastoInAttesa < 0)
+	{
+		return FReply::Unhandled();
+	}
+	if (Tasto == EKeys::Escape || Tasto == EKeys::Gamepad_FaceButton_Right)
+	{
+		// (con il controller: il tasto B/cerchio annulla, i tasti del controller non si cambiano da qui)
+		TastoInAttesa = -1;
+		return FReply::Handled();
+	}
+	// un tasto riservato (la pausa, la barra 1-8...) non si prende: si aspetta un altro tasto
+	if (ValdorsoTasti::Imposta(static_cast<EValdorsoTasto>(TastoInAttesa), Tasto))
+	{
+		TastoInAttesa = -1;
+	}
+	return FReply::Handled();
+}
+
 FReply SValdorsoImpostazioni::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey Tasto = InKeyEvent.GetKey();
+	// (11/11, v0.1.5) si sta aspettando il tasto nuovo di un'azione
+	if (TastoInAttesa >= 0)
+	{
+		return Cattura(Tasto);
+	}
 	if (Tasto == EKeys::Escape || Tasto == EKeys::F10 || Tasto == EKeys::Gamepad_Special_Right || Tasto == EKeys::Gamepad_FaceButton_Right)
 	{
 		OnChiudi.ExecuteIfBound();
@@ -296,6 +390,10 @@ FReply SValdorsoImpostazioni::OnKeyDown(const FGeometry& MyGeometry, const FKeyE
 
 FReply SValdorsoImpostazioni::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	if (TastoInAttesa >= 0)
+	{
+		return Cattura(MouseEvent.GetEffectingButton());
+	}
 	return FReply::Handled().SetUserFocus(SharedThis(this), EFocusCause::Mouse);
 }
 

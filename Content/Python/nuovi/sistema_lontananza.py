@@ -11,7 +11,8 @@
 #   1. Il terreno (Landscape e i suoi pezzi, LandscapeStreamingProxy) sempre caricato: i monti si vedono da ogni punto.
 #   2. L'acqua (lago, fiumi, la zona dell'acqua) sempre caricata.
 #   3. Le cose grandi (piu' di 25 m: rocce, torri, il tempio, i muri) sempre caricate: si vedono da lontano.
-#   4. La distanza di caricamento della griglia principale portata ad almeno 512 m (se il livello la espone).
+#   4. La distanza di caricamento della griglia principale portata ad almeno 512 m. (11/11) In 5.8 sta in World Partition
+#      Setup -> Runtime Partitions -> Main Partition -> Loading Range: la cambia lo strumento C++ (ValdorsoStrumenti).
 # PRIMA: nella finestra World Partition carica tutta la valle (seleziona tutta la griglia, tasto destro -> Carica regione
 # dalla selezione): lo script cambia solo i pezzi caricati nell'editor.
 # Dopo, per il resto (le case piccole, gli oggetti): menu Build -> Build HLODs (una volta; ci mette un po').
@@ -58,7 +59,25 @@ def sempre_caricato(a):
 
 
 def griglia(mondo):
-    """La distanza di caricamento della griglia principale: almeno RAGGIO_MINIMO (se il livello la espone a Python)."""
+    """La distanza di caricamento della griglia principale: almeno RAGGIO_MINIMO.
+    (11/11) In 5.8 da Python non si legge 'runtime_hash' (provato da Fra il 10/11), e con il Runtime Hash Set la distanza
+    sta in Runtime Partitions -> Main Partition -> Loading Range. Prima si prova lo strumento C++
+    (unreal.ValdorsoStrumenti.distanza_caricamento, che cerca le proprieta' per nome e va con tutte e due le maniere),
+    poi le vie di Python (le versioni prima di 5.8)."""
+    strumenti = getattr(unreal, "ValdorsoStrumenti", None)
+    if strumenti is not None and hasattr(strumenti, "distanza_caricamento"):
+        try:
+            fatto = list(strumenti.distanza_caricamento(mondo, RAGGIO_MINIMO))
+        except Exception as e:  # noqa: BLE001
+            fatto = []
+            avviso("lo strumento C++ non ha funzionato (%s): provo da Python" % e)
+        if fatto:
+            for riga in fatto:
+                scrivi(str(riga))
+            return
+        avviso("lo strumento C++ non ha trovato la griglia: provo da Python")
+    else:
+        avviso("manca lo strumento C++ (compila Valdorso): provo da Python")
     try:
         impostazioni = mondo.get_world_settings()
         wp = impostazioni.get_editor_property("world_partition")
@@ -68,7 +87,7 @@ def griglia(mondo):
         hash_ = wp.get_editor_property("runtime_hash")
     except Exception as e:  # noqa: BLE001
         avviso("non riesco a leggere le impostazioni di World Partition (%s): cambia a mano in Impostazioni del mondo -> "
-               "World Partition -> Runtime Settings -> Loading Range della griglia principale (almeno %d)" % (e, RAGGIO_MINIMO))
+               "World Partition Setup -> Runtime Partitions -> Main Partition -> Loading Range (almeno %d)" % (e, RAGGIO_MINIMO))
         return
     if hash_ is None:
         avviso("World Partition senza runtime hash")
@@ -93,7 +112,14 @@ def griglia(mondo):
         elif "HashSet" in nome_classe:
             parti = list(hash_.get_editor_property("runtime_partitions"))
             for i, p in enumerate(parti):
-                strato = p.get_editor_property("main_layer")
+                # 5.8: "main_partition"; prima "main_layer"
+                strato = None
+                for nome in ("main_partition", "main_layer"):
+                    try:
+                        strato = p.get_editor_property(nome)
+                        break
+                    except Exception:  # noqa: BLE001
+                        continue
                 if strato is None:
                     continue
                 vecchio = strato.get_editor_property("loading_range")
@@ -107,8 +133,8 @@ def griglia(mondo):
         else:
             avviso("runtime hash %s che non conosco: cambia a mano la distanza di caricamento (almeno %d)" % (nome_classe, RAGGIO_MINIMO))
     except Exception as e:  # noqa: BLE001
-        avviso("non riesco a cambiare la griglia (%s, %s): cambia a mano in Impostazioni del mondo -> World Partition -> "
-               "Runtime Settings -> Loading Range (almeno %d)" % (nome_classe, e, RAGGIO_MINIMO))
+        avviso("non riesco a cambiare la griglia (%s, %s): cambia a mano in Impostazioni del mondo -> World Partition Setup -> "
+               "Runtime Partitions -> Main Partition -> Loading Range (almeno %d)" % (nome_classe, e, RAGGIO_MINIMO))
 
 
 def in_un_livello_istanza(a):

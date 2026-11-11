@@ -41,6 +41,11 @@ public:
 	float FattoreCarico = 1.f;
 	bool bCaricoPermetteCorsa = true;
 
+	/** (11/11, v0.1.5) Il Vigore (ValdorsoVigore.h): senza fiato non si corre; in acqua Maiusc e' il nuoto veloce (x). Li
+	 *  mette il Vigore, uguali sul server e sul PC di chi gioca. */
+	bool bFiatoPermetteCorsa = true;
+	float FattoreNuotoVeloce = 1.35f;
+
 	/** (06/11) Con quanta acqua addosso si comincia a nuotare (0..1 dell'altezza: 0,6 = al petto). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Valdorso|Nuoto", meta = (ClampMin = "0.1", ClampMax = "1"))
 	float AcquaPerNuotare = 0.6f;

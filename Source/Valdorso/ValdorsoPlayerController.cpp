@@ -49,6 +49,8 @@
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoCharacter.h"
+#include "ValdorsoScherma.h"
+#include "ValdorsoTasti.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "ValdorsoAspettoComponent.h"
@@ -170,6 +172,28 @@ void AValdorsoPlayerController::BeginPlay()
 void AValdorsoPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+	CollegaTasti();
+	// (11/11, v0.1.5) quando il giocatore cambia un tasto nelle Impostazioni, si ricollega tutto (ValdorsoTasti.h)
+	if (IsLocalPlayerController() && !ManigliaTasti.IsValid())
+	{
+		ManigliaTasti = ValdorsoTasti::Cambiati().AddUObject(this, &AValdorsoPlayerController::RifaiTasti);
+	}
+}
+
+void AValdorsoPlayerController::RifaiTasti()
+{
+	if (!IsLocalPlayerController() || !InputComponent)
+	{
+		return;
+	}
+	InputComponent->KeyBindings.Reset();
+	CollegaTasti();
+}
+
+void AValdorsoPlayerController::CollegaTasti()
+{
+	// (11/11, v0.1.5) i tasti del colono vengono da ValdorsoTasti (il giocatore li puo' cambiare); il controller resta fisso
+	const auto Tasto = [](EValdorsoTasto Azione) { return ValdorsoTasti::Tasto(Azione); };
 
 	// (02/11, passo 6) La pausa: Esc, F10 (nell'editor Esc ferma il Play) e Start sul controller.
 	if (IsLocalPlayerController() && InputComponent)
@@ -178,18 +202,18 @@ void AValdorsoPlayerController::SetupInputComponent()
 		InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
 		InputComponent->BindKey(EKeys::Gamepad_Special_Right, IE_Pressed, this, &AValdorsoPlayerController::TastoPausa);
 		// (03/11, v0.1.3) Le interazioni: E, e X (tasto a sinistra) sul controller.
-		InputComponent->BindKey(EKeys::E, IE_Pressed, this, &AValdorsoPlayerController::TastoInteragisci);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Interagisci), IE_Pressed, this, &AValdorsoPlayerController::TastoInteragisci);
 		InputComponent->BindKey(EKeys::Gamepad_FaceButton_Left, IE_Pressed, this, &AValdorsoPlayerController::TastoInteragisci);
 		// (06/11) la mappa di carta
-		InputComponent->BindKey(EKeys::M, IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Mappa), IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
 		InputComponent->BindKey(EKeys::Gamepad_Special_Left, IE_Pressed, this, &AValdorsoPlayerController::TastoMappa);
 		// (07/11) la modalità foto (dentro la foto i tasti li prende lo schermo della foto: P o Esc per uscire)
-		InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AValdorsoPlayerController::TastoFoto);
-		InputComponent->BindKey(EKeys::R, IE_Pressed, this, &AValdorsoPlayerController::TastoQuaderno);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Foto), IE_Pressed, this, &AValdorsoPlayerController::TastoFoto);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Quaderno), IE_Pressed, this, &AValdorsoPlayerController::TastoQuaderno);
 		// (07/11) il taccuino di viaggio
-		InputComponent->BindKey(EKeys::J, IE_Pressed, this, &AValdorsoPlayerController::TastoTaccuino);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Taccuino), IE_Pressed, this, &AValdorsoPlayerController::TastoTaccuino);
 		// (08/11, v0.1.4) lo zaino (dentro, I ed Esc lo chiudono da sé)
-		InputComponent->BindKey(EKeys::I, IE_Pressed, this, &AValdorsoPlayerController::TastoZaino);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Zaino), IE_Pressed, this, &AValdorsoPlayerController::TastoZaino);
 		// (08/11, v0.1.4) 1-8 la barra delle azioni, Invio la chat. Dentro il dialogo (1-4, Invio), il taccuino (1-3) e la
 		// modalità foto (1-5, Invio) i tasti li prendono quelle schermate (hanno la tastiera tutta per sé, qui non arrivano);
 		// in più TastoAzione e TastoChat non fanno niente se c'è una schermata aperta.
@@ -200,19 +224,22 @@ void AValdorsoPlayerController::SetupInputComponent()
 			Legame.KeyDelegate.GetDelegateForManualSet().BindUObject(this, &AValdorsoPlayerController::TastoAzione, Indice);
 			InputComponent->KeyBindings.Add(Legame);
 		}
-		InputComponent->BindKey(EKeys::Enter, IE_Pressed, this, &AValdorsoPlayerController::TastoChat);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Chat), IE_Pressed, this, &AValdorsoPlayerController::TastoChat);
 		// (09/11, v0.1.4 passo 4.4) l'aggancio del bersaglio
-		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Aggancio), IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
 		InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
 		InputComponent->BindKey(EKeys::Gamepad_RightThumbstick, IE_Pressed, this, &AValdorsoPlayerController::TastoAggancio);
 		// (09/11) Z: riponi o riprendi le armi
-		InputComponent->BindKey(EKeys::Z, IE_Pressed, this, &AValdorsoPlayerController::TastoRiponi);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Riponi), IE_Pressed, this, &AValdorsoPlayerController::TastoRiponi);
 		// (10/11) F9: la finestra dello staff (e del capo gilda)
 		InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AValdorsoPlayerController::TastoStaff);
 		// (nell'editor F9 puo' essere la foto dello schermo: anche F7)
 		InputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AValdorsoPlayerController::TastoStaff);
 		// (10/11) K: la scheda del personaggio
-		InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AValdorsoPlayerController::TastoScheda);
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Scheda), IE_Pressed, this, &AValdorsoPlayerController::TastoScheda);
+		// (11/11, v0.1.5) G: la guardia della scherma (e la croce in su del controller)
+		InputComponent->BindKey(Tasto(EValdorsoTasto::Guardia), IE_Pressed, this, &AValdorsoPlayerController::TastoGuardia);
+		InputComponent->BindKey(EKeys::Gamepad_DPad_Up, IE_Pressed, this, &AValdorsoPlayerController::TastoGuardia);
 	}
 
 	// only add IMCs for local player controllers
@@ -221,9 +248,23 @@ void AValdorsoPlayerController::SetupInputComponent()
 		// Add Input Mapping Contexts
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		{
+			// (11/11, v0.1.5) i tasti del corpo che il giocatore ha cambiato: una copia dei contesti con i tasti nuovi
+			for (UInputMappingContext* Messo : ContestiMessi)
+			{
+				if (Messo)
+				{
+					Subsystem->RemoveMappingContext(Messo);
+				}
+			}
+			ContestiMessi.Reset();
 			for (UInputMappingContext* CurrentContext : DefaultMappingContexts)
 			{
-				Subsystem->AddMappingContext(CurrentContext, 0);
+				UInputMappingContext* Usato = ValdorsoTasti::Rimappa(CurrentContext, this);
+				if (Usato)
+				{
+					Subsystem->AddMappingContext(Usato, 0);
+					ContestiMessi.Add(Usato);
+				}
 			}
 
 			// only add these IMCs if we're not using mobile touch input
@@ -231,10 +272,28 @@ void AValdorsoPlayerController::SetupInputComponent()
 			{
 				for (UInputMappingContext* CurrentContext : MobileExcludedMappingContexts)
 				{
-					Subsystem->AddMappingContext(CurrentContext, 0);
+					UInputMappingContext* Usato = ValdorsoTasti::Rimappa(CurrentContext, this);
+					if (Usato)
+					{
+						Subsystem->AddMappingContext(Usato, 0);
+						ContestiMessi.Add(Usato);
+					}
 				}
 			}
 		}
+	}
+}
+
+void AValdorsoPlayerController::TastoGuardia()
+{
+	// (11/11, v0.1.5) la guardia dopo: alta, lunga, bassa (ValdorsoScherma.h)
+	if (!GetPawn() || SchermataAperta())
+	{
+		return;
+	}
+	if (UValdorsoSchermaComponent* Scherma = UValdorsoSchermaComponent::Di(GetPawn()))
+	{
+		Scherma->GuardiaDopo();
 	}
 }
 
@@ -453,11 +512,12 @@ void AValdorsoPlayerController::Immersione()
 	}
 	float Su = 0.f;
 	// a galla Spazio non spinge piu' in su (si resterebbe a saltellare sul pelo dell'acqua)
-	if ((IsInputKeyDown(EKeys::SpaceBar) || IsInputKeyDown(EKeys::Gamepad_FaceButton_Bottom)) && Movimento->AcquaSopraLaTesta() > -15.f)
+	// (11/11, v0.1.5) i tasti scelti dal giocatore (ValdorsoTasti.h)
+	if ((IsInputKeyDown(ValdorsoTasti::Tasto(EValdorsoTasto::Salto)) || IsInputKeyDown(EKeys::Gamepad_FaceButton_Bottom)) && Movimento->AcquaSopraLaTesta() > -15.f)
 	{
 		Su += 1.f;
 	}
-	if (IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder))
+	if (IsInputKeyDown(ValdorsoTasti::Tasto(EValdorsoTasto::Immergiti)) || IsInputKeyDown(EKeys::RightControl) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder))
 	{
 		Su -= 1.f;
 	}

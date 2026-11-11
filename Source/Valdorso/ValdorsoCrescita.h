@@ -72,6 +72,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerVerso(FName Id, uint8 Verso);
 
+	/** (11/11, v0.1.5) La voce del Cuore quando un'abilita' si evolve: il battito sul PC del colono. */
+	UFUNCTION(Client, Reliable)
+	void ClientVoceDelCuore(const FText& Annuncio);
+
 	/** La scheda aperta (solo sul PC del giocatore, ValdorsoSchedaSchermo). */
 	TSharedPtr<SValdorsoScheda> Schermata;
 
@@ -81,6 +85,8 @@ public:
 private:
 	/** Server: e' cambiato qualcosa; si salva fra poco. */
 	void Cambiato();
+	/** Server: (11/11) la forza che vedono gli altri (ValdorsoStatoColono.h). */
+	void AggiornaForzaVista();
 	/** Server: la salute del colono e' bassa (o il comando delle prove)? */
 	bool MomentoCritico() const;
 	void Avvisa(const FText& Testo, float Secondi) const;

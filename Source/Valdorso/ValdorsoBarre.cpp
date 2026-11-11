@@ -5,6 +5,13 @@
 #include "ValdorsoModoFoto.h"
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoZaino.h"
+#include "ValdorsoArmi.h"
+#include "ValdorsoCombattimento.h"
+#include "ValdorsoInterfaccia.h"
+#include "ValdorsoOggetti.h"
+#include "ValdorsoScherma.h"
+#include "ValdorsoTemaUI.h"
+#include "Widgets/Text/STextBlock.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -145,6 +152,9 @@ void UValdorsoBarreComponent::MettiSchermo()
 	{
 		return;
 	}
+	// (11/11, v0.1.5) sopra la barra delle azioni: la guardia di adesso, quando si ha un'arma in mano o si e' agganciati
+	TWeakObjectPtr<APlayerController> DeboleControllore(Controllore);
+	static FValdorsoCaratteri* CaratteriGuardia = new FValdorsoCaratteri();
 	Hud = SNew(SBox)
 		.HAlign(HAlign_Center)
 		.VAlign(VAlign_Bottom)
@@ -152,6 +162,31 @@ void UValdorsoBarreComponent::MettiSchermo()
 		.Visibility(EVisibility::HitTestInvisible)
 		[
 			SNew(SVerticalBox)
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.HAlign(HAlign_Center)
+			.Padding(FMargin(0.f, 0.f, 0.f, 2.f))
+			[
+				SNew(STextBlock)
+				.Font(CaratteriGuardia->Titolo(13.f, TEXT("Bold")))
+				.ColorAndOpacity(ValdorsoTema::OroChiaro())
+				.ShadowOffset(FVector2D(1.f, 1.f))
+				.ShadowColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.7f))
+				.Text_Lambda([DeboleControllore]()
+				{
+					const APlayerController* Chi = DeboleControllore.Get();
+					const APawn* Corpo = Chi ? Chi->GetPawn() : nullptr;
+					const UValdorsoSchermaComponent* Scherma = UValdorsoSchermaComponent::Di(Corpo);
+					const UValdorsoArmiComponent* Armi = UValdorsoArmiComponent::Di(Corpo);
+					const UValdorsoAggancioComponent* Aggancio = UValdorsoAggancioComponent::Di(Chi);
+					const FValdorsoTipoOggetto* Arma = Armi ? Armi->Arma() : nullptr;
+					if (!Scherma || !ValdorsoBarre::SchermoLibero(Chi) || (!Arma && !(Aggancio && Aggancio->Agganciato())))
+					{
+						return FText::GetEmpty();
+					}
+					return ValdorsoScherma::NomeGuardia(ValdorsoScherma::FamigliaGuardie(Arma ? Arma->Id : NAME_None), Scherma->GetGuardia());
+				})
+			]
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.HAlign(HAlign_Center)
@@ -169,6 +204,9 @@ void UValdorsoBarreComponent::MettiSchermo()
 				.Controllore(Controllore)
 			]
 		];
+	// (11/11, v0.1.5) si spostano e si ingrandiscono dalle Impostazioni (ValdorsoInterfaccia.h)
+	Hud->SetRenderTransform(ValdorsoInterfaccia::Sposta(EValdorsoPezzoHud::Barre));
+	Hud->SetRenderTransformPivot(FVector2D(0.5f, 1.f));
 	// come la bussola (35): sotto il suggerimento (40), l'avviso (45) e tutte le schermate
 	Viewport->AddViewportWidgetContent(Hud.ToSharedRef(), 34);
 	// il velo della caduta: sopra le scritte del gioco, sotto la pausa (60)

@@ -91,6 +91,14 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoBagnatoComponent* Bagnato;
 
+	/** (11/11, v0.1.5) Le guardie della scherma e le tecniche alle soglie (vedi ValdorsoScherma.h). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UValdorsoSchermaComponent> Scherma;
+
+	/** (11/11, v0.1.5) Il Vigore: la corsa che stanca, la schivata, le cadute (vedi ValdorsoVigore.h). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UValdorsoVigoreComponent> Vigore;
+
 	/** Le statistiche: salute, stamina, mana */
 	UPROPERTY()
 	UValdorsoAttributeSet* Attributi;

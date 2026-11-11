@@ -102,6 +102,9 @@ namespace
 		T.Add(BottegaVendi(TEXT("Vendi_Zanne_Lupo"), B::Fucina, TEXT("Zanne_Lupo"), 3));
 		T.Add(BottegaVendi(TEXT("Vendi_Zanne_Cinghiale"), B::Fucina, TEXT("Zanne_Cinghiale"), 4));
 		T.Add(BottegaVendi(TEXT("Vendi_Artigli_Orso"), B::Fucina, TEXT("Artigli_Orso"), 15));
+		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana; le monete dei nani si vendono per il metallo
+		T.Add(BottegaCompra(TEXT("Compra_Piccone"), B::Fucina, TEXT("Piccone"), 14));
+		T.Add(BottegaVendi(TEXT("Vendi_Moneta_Nani"), B::Fucina, TEXT("Moneta_Nani"), 6));
 		// --- il falegname: legno
 		T.Add(BottegaCompra(TEXT("Compra_Clava"), B::Falegname, TEXT("Clava"), 6));
 		T.Add(BottegaCompra(TEXT("Compra_Bastone_Pastore"), B::Falegname, TEXT("Bastone_Pastore"), 6));

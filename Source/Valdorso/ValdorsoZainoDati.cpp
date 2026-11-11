@@ -3,6 +3,7 @@
 #include "ValdorsoZainoDati.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoRegistro.h"
+#include "ValdorsoScherma.h"
 
 namespace ValdorsoZaino
 {
@@ -287,6 +288,11 @@ namespace ValdorsoZaino
 
 	bool DaBarra(FName Id)
 	{
+		// (11/11, v0.1.5) anche le tecniche attive (ValdorsoScherma.h): nella barra si usano con il loro tasto
+		if (ValdorsoScherma::DaBarra(Id))
+		{
+			return true;
+		}
 		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
 		return Tipo && Tipo->Uso != EValdorsoUso::Niente;
 	}
@@ -353,6 +359,19 @@ namespace ValdorsoZaino
 				if (Aggiungi(Zaino, TEXT("Mappa_Valle"), 1) == 0)
 				{
 					return false;  // lo zaino è pieno: si riprova la prossima volta che il personaggio entra
+				}
+				bDato = true;
+			}
+		}
+		if (Zaino.Aggiornamenti < 2)
+		{
+			// (11/11, v0.1.5) 2: la tessera della carovana, il ricordo del viaggio (dalle Cronache)
+			if (Conta(Zaino, TEXT("Tessera_Carovana")) == 0)
+			{
+				if (Aggiungi(Zaino, TEXT("Tessera_Carovana"), 1) == 0)
+				{
+					Zaino.Aggiornamenti = 1;
+					return bDato;  // lo zaino è pieno: si riprova la prossima volta
 				}
 				bDato = true;
 			}

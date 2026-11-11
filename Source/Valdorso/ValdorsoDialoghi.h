@@ -45,6 +45,8 @@ struct FValdorsoSceltaDialogo
 
 	/** (08/11) Se non è vuoto: la risposta non si mostra a chi ha già questo segno ("(Offri una moneta)" una volta sola). */
 	FName NascostaSe;
+	/** (11/11) Se non è vuoto: la risposta si mostra solo a chi ha questo segno (la storia di Lucia, dopo le due pagine). */
+	FName VisibileSe;
 };
 
 /** Un nodo: cosa dice il PNG, e le risposte possibili. */
@@ -97,6 +99,16 @@ struct FValdorsoNodoDialogo
 		if (Scelte.Num() > 0)
 		{
 			Scelte.Last().NascostaSe = Nome;
+		}
+		return *this;
+	}
+
+	/** (11/11) Per scrivere i testi in fila: l'ultima risposta aggiunta si mostra solo a chi ha il segno. */
+	FValdorsoNodoDialogo& SceltaVisibileSe(FName Nome)
+	{
+		if (Scelte.Num() > 0)
+		{
+			Scelte.Last().VisibileSe = Nome;
 		}
 		return *this;
 	}

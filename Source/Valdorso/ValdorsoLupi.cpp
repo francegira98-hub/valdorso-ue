@@ -13,6 +13,7 @@
 #include "ValdorsoPericoli.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoScherma.h"
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoTempo.h"
 #include "ValdorsoZaino.h"
@@ -669,6 +670,16 @@ void AValdorsoAnimale::Ferito(AActor* Da)
 	}
 }
 
+void AValdorsoAnimale::Stordisci(float Secondi)
+{
+	if (!HasAuthority() || !Vivo() || Secondi <= 0.f)
+	{
+		return;
+	}
+	StorditoFino = FMath::Max(StorditoFino, GetWorld()->GetTimeSeconds() + Secondi);
+	GetCharacterMovement()->StopMovementImmediately();
+}
+
 APawn* AValdorsoAnimale::CercaPreda() const
 {
 	const FValdorsoSpecie* S = GetSpecie();
@@ -692,7 +703,15 @@ APawn* AValdorsoAnimale::CercaPreda() const
 		{
 			continue;
 		}
-		const float Distanza = FVector::Dist(Colono->GetActorLocation(), GetActorLocation());
+		// (11/11, v0.1.5) la Caccia: il signore del bosco (100) non lo cercano i predatori se non li ha colpiti
+		if (S && S->Indole == EValdorsoIndole::Predatore && Colono != UltimoAggressore.Get()
+			&& ValdorsoScherma::Talento(Colono, FName(TEXT("Caccia")), 4))
+		{
+			continue;
+		}
+		// (11/11, v0.1.5) il passo del cacciatore (75): lo si sente da piu' vicino (come se fosse piu' lontano)
+		const float Orecchio = ValdorsoScherma::Talento(Colono, FName(TEXT("Caccia")), 3) ? 1.f / 0.6f : 1.f;
+		const float Distanza = FVector::Dist(Colono->GetActorLocation(), GetActorLocation()) * Orecchio;
 		// si cambia preda solo per una molto piu' vicina
 		if (Distanza < (Migliore ? Vicino * 0.5f : Vicino))
 		{
@@ -709,7 +728,11 @@ void AValdorsoAnimale::Tick(float DeltaSeconds)
 	if (HasAuthority())
 	{
 		Pensa(DeltaSeconds);
-		Muoviti(DeltaSeconds);
+		// (11/11) stordito: pensa (e puo' morire) ma non si muove e non morde
+		if (GetWorld()->GetTimeSeconds() >= StorditoFino)
+		{
+			Muoviti(DeltaSeconds);
+		}
 	}
 	if (GetNetMode() != NM_DedicatedServer)
 	{
@@ -750,8 +773,8 @@ void AValdorsoAnimale::Pensa(float DeltaSeconds)
 	{
 		Cambia(Nuovo);
 	}
-	// il morso (o la carica): vicino abbastanza, e non troppo spesso
-	if (Stato == EValdorsoStatoLupo::Morde && Chi && S->Danno > 0.f && Distanza <= S->Portata && OraMondo >= ProssimoMorso)
+	// il morso (o la carica): vicino abbastanza, e non troppo spesso (e non da stordito)
+	if (Stato == EValdorsoStatoLupo::Morde && Chi && S->Danno > 0.f && Distanza <= S->Portata && OraMondo >= ProssimoMorso && OraMondo >= StorditoFino)
 	{
 		ProssimoMorso = OraMondo + S->SecondiMorso;
 		const FVector Punto = Chi->GetActorLocation() + (GetActorLocation() - Chi->GetActorLocation()).GetSafeNormal() * 30.f;
@@ -979,11 +1002,14 @@ void AValdorsoAnimale::Interagisci(APawn* Chi)
 		return;
 	}
 	bool bTutto = true;
+	// (11/11, v0.1.5) la Caccia: le pelli migliori (25), una in piu' della prima cosa (la pelle)
+	const int32 InPiu = ValdorsoScherma::Talento(Chi, FName(TEXT("Caccia")), 1) ? 1 : 0;
 	for (int32 i = 0; i < 3; ++i)
 	{
 		if (S->Bottino[i] && S->Quanti[i] > 0)
 		{
-			bTutto &= Zaino->Dai(S->Bottino[i], S->Quanti[i]) >= S->Quanti[i];
+			const int32 Quanti = S->Quanti[i] + (i == 0 ? InPiu : 0);
+			bTutto &= Zaino->Dai(S->Bottino[i], Quanti) >= Quanti;
 		}
 	}
 	if (!bTutto)

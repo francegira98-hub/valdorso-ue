@@ -127,6 +127,18 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_pericoli.py")
     valdorso.add_menu_entry("Pericoli", voce)
 
+    # (11/11, v0.1.6) il gatto della locanda, quello che sa le cose (crea_gatto.py)
+    voce = unreal.ToolMenuEntry(name="Gatto", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Gatto della locanda: importa e mettilo da Bruno")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_gatto.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (11/11, v0.1.7) la grotta del nord: le gallerie dei nani, gli scheletri, il forziere, la frana (crea_grotta_nord.py)
+    voce = unreal.ToolMenuEntry(name="GrottaNord", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Grotta del nord: gallerie, scheletri, forziere e frana")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_grotta_nord.py")
+    valdorso.add_menu_entry("Pericoli", voce)
+
     # (07/11 sera) i piedi in piazza, il materiale delle rocce, Nanite sui trasparenti
     voce = unreal.ToolMenuEntry(name="SistemaValle", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Valle: sistema (piedi, materiali, Nanite)")

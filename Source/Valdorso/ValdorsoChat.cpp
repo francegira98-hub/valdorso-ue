@@ -1,6 +1,7 @@
 // Valdorso - La chat di prossimità (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoChat.h"
+#include "ValdorsoInterfaccia.h"
 #include "ValdorsoGilda.h"
 #include "SValdorsoChat.h"
 #include "ValdorsoBarre.h"
@@ -217,6 +218,9 @@ bool UValdorsoChatComponent::ApriRiga()
 		[
 			Riga.ToSharedRef()
 		];
+	// (11/11, v0.1.5) la chat si sposta e si ingrandisce dalle Impostazioni (ValdorsoInterfaccia.h)
+	RigaContenitore->SetRenderTransform(ValdorsoInterfaccia::Sposta(EValdorsoPezzoHud::Chat));
+	RigaContenitore->SetRenderTransformPivot(FVector2D(0.f, 1.f));
 	// sopra le frasi e l'avviso, sotto le schermate vere
 	Viewport->AddViewportWidgetContent(RigaContenitore.ToSharedRef(), 46);
 
@@ -302,6 +306,9 @@ void UValdorsoChatComponent::MettiPannello()
 			.Controllore(Controllore)
 			.Chat(this)
 		];
+	// (11/11, v0.1.5) la chat si sposta e si ingrandisce dalle Impostazioni (ValdorsoInterfaccia.h)
+	Pannello->SetRenderTransform(ValdorsoInterfaccia::Sposta(EValdorsoPezzoHud::Chat));
+	Pannello->SetRenderTransformPivot(FVector2D(0.f, 1.f));
 	// come la bussola e le barre: sotto il suggerimento (40), l'avviso (45) e tutte le schermate
 	Viewport->AddViewportWidgetContent(Pannello.ToSharedRef(), 36);
 }

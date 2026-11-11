@@ -721,6 +721,10 @@ def principale():
             # (06/11) le rune delle rovine: di notte le accende AValdorsoRuneNotte (C++);
             # (06/11, sera) "sempre": quelle della porta in fondo alla grotta est battono giorno e notte
             etichette.append(unreal.Name("ValdorsoRuneSempre" if c.get("rune") == "sempre" else "ValdorsoRune"))
+        if c.get("etichetta"):
+            # (11/11, v0.1.7) un'etichetta in piu' dal generatore: "ValdorsoFrana" = la frana del nord, che AValdorsoFrana
+            # (C++) nasconde quando i coloni l'hanno liberata
+            etichette.append(unreal.Name(c["etichetta"]))
         cartella = "Valle/Villaggio/%s" % c["sezione"]
         if list(fase) != [1, 0]:
             # (06/11) la fase: "ValdorsoFase 2-0" = dalla fase 2 per sempre, "ValdorsoFase 1-1" = solo nella fase 1

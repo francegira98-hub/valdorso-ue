@@ -10,6 +10,11 @@
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistro.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoInterfaccia.h"
+#include "ValdorsoScherma.h"
+#include "ValdorsoScheletri.h"
+#include "ValdorsoStatoColono.h"
+#include "ValdorsoSuoni.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -18,6 +23,7 @@
 #include "GameFramework/PlayerState.h"
 #include "HAL/IConsoleManager.h"
 #include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoCrescita"
 
@@ -168,6 +174,30 @@ void UValdorsoCrescitaComponent::Carica(const FValdorsoAbilitaColono& Salvato, c
 	bPersonaggio = true;
 	bPrima = false;
 	++NumeroCambiamenti;
+	AggiornaForzaVista();
+}
+
+void UValdorsoCrescitaComponent::AggiornaForzaVista()
+{
+	// (11/11, v0.1.5) la forza che vedono gli altri coloni (ValdorsoStatoColono.h)
+	const APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	if (AValdorsoPlayerState* Stato = Controllore ? Controllore->GetPlayerState<AValdorsoPlayerState>() : nullptr)
+	{
+		Stato->ImpostaForza(ValdorsoCrescere::Forza(Abilita));
+	}
+}
+
+void UValdorsoCrescitaComponent::ClientVoceDelCuore_Implementation(const FText& Annuncio)
+{
+	// (11/11, v0.1.5) la voce del Cuore: un rintocco (il battito suona in giro, non si usa), e con i sottotitoli la scritta
+	ValdorsoSuoni::Suona(TEXT("S_Campana"), 0.6f);
+	if (const APlayerController* Controllore = Cast<APlayerController>(GetOwner()))
+	{
+		if (const APawn* Corpo = Controllore->GetPawn())
+		{
+			ValdorsoInterfaccia::Sottotitolo(GetWorld(), NSLOCTEXT("ValdorsoCrescita", "Battito", "Il Cuore batte"), Corpo->GetActorLocation(), true);
+		}
+	}
 }
 
 void UValdorsoCrescitaComponent::Avvisa(const FText& Testo, float Secondi) const
@@ -181,6 +211,7 @@ void UValdorsoCrescitaComponent::Avvisa(const FText& Testo, float Secondi) const
 void UValdorsoCrescitaComponent::Cambiato()
 {
 	++NumeroCambiamenti;
+	AggiornaForzaVista();
 	if (bPersonaggio && !bDaSalvare)
 	{
 		bDaSalvare = true;
@@ -225,7 +256,14 @@ bool UValdorsoCrescitaComponent::ForzaDi(const AActor* Chi, float& OutForza)
 		OutForza = ValdorsoCrescere::Forza(Mio->Abilita);
 		return true;
 	}
-	return false;
+	// (11/11, v0.1.5) gli scheletri della grotta del nord (ValdorsoScheletri.h)
+	if (const AValdorsoScheletro* Ossa = Cast<AValdorsoScheletro>(Chi))
+	{
+		OutForza = Ossa->Forza();
+		return true;
+	}
+	// (11/11, v0.1.5) gli altri coloni, visti dal PC: la forza che porta il loro PlayerState (ValdorsoStatoColono.h)
+	return AValdorsoPlayerState::ForzaDi(Chi, OutForza);
 }
 
 void UValdorsoCrescitaComponent::Usa(FName Id, float Difficolta, const UObject* Bersaglio, bool bPericolo)
@@ -272,6 +310,22 @@ void UValdorsoCrescitaComponent::Usa(FName Id, float Difficolta, const UObject* 
 	if (Risultato.bEvoluta)
 	{
 		Avvisa(ValdorsoCrescere::Annuncio(Id, Risultato.Evoluzione), 7.f);
+		// (11/11, v0.1.5) la voce del Cuore si sente; e si apre la tecnica (o il talento) della soglia (ValdorsoScherma.h)
+		ClientVoceDelCuore(ValdorsoCrescere::Annuncio(Id, Risultato.Evoluzione));
+		if (APlayerController* Suo = Cast<APlayerController>(GetOwner()))
+		{
+			FTimerHandle Dopo;
+			TWeakObjectPtr<APlayerController> Debole(Suo);
+			const FName Quale = Id;
+			const int32 Livello = Risultato.Evoluzione;
+			GetWorld()->GetTimerManager().SetTimer(Dopo, FTimerDelegate::CreateLambda([Debole, Quale, Livello]()
+			{
+				if (APlayerController* Ancora = Debole.Get())
+				{
+					ValdorsoScherma::DopoEvoluzione(Ancora, Quale, Livello);
+				}
+			}), 3.f, false);
+		}
 		const APlayerController* Controllore = Cast<APlayerController>(Proprietario);
 		const APawn* Corpo = Controllore ? Controllore->GetPawn() : nullptr;
 		ValdorsoRegistroEventi::Annota(TEXT("Crescere"), Corpo, nullptr, Corpo ? Corpo->GetActorLocation() : FVector::ZeroVector,

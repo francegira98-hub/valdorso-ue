@@ -251,6 +251,31 @@ namespace
 			C.Add(Foglio);
 		}
 
+		// (11/11, v0.1.5) la tessera della carovana: dalle Cronache (Capitolo V), la tessera di legno con il numero inciso e il
+		// segno della Corona bruciato a fuoco, quella del viaggio e del passo (il foglio di carta e' quella del villaggio)
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Tessera_Carovana"), TEXT("Tessera della carovana"),
+			TEXT("Una tavoletta di legno con il tuo numero inciso e il segno della Corona bruciato a fuoco. Mastro Ilario te l'ha data con il registro; al passo la capitana Livia l'ha confrontata con la lista."),
+			0.05f), TEXT("La tessera della carovana: il tuo numero, inciso nel legno, e la corona bruciata a fuoco. Il ricordo del viaggio.")));
+
+		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana, le monete e il pugnale dei nani, la storia di Lucia
+		C.Add(OggSemplice(TEXT("Piccone"), TEXT("Piccone"),
+			TEXT("Ferro di Marta su un manico di frassino. Per la roccia, per la frana del nord e, se serve, per chi ti viene addosso."), 3.f));
+		C.Add(OggSemplice(TEXT("Moneta_Nani"), TEXT("Moneta dei nani"),
+			TEXT("Squadrata, con un foro nel mezzo e segni che nessuno sa leggere. Marta, alla fucina, le compra per il metallo."), 0.02f, 50));
+		C.Add(OggSemplice(TEXT("Pugnale_Nani"), TEXT("Pugnale dei nani"),
+			TEXT("Corto, pesante, la lama scura che non ha preso ruggine in mille anni. Sul pomo, un segno squadrato."), 0.6f));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Mappa_Gallerie"), TEXT("Due pagine della mappa delle gallerie"),
+			TEXT("Le due pagine che Gisella lego' alla corda nell'autunno del 309: la galleria della frana, la sala delle colonne, una scala che scende. Poi il foglio finisce."),
+			0.02f), TEXT("La galleria della frana scende verso nord fino a una sala con sei colonne. A ovest, un campo. A nord, una scala che scende. Poi, il bordo strappato.")));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Taccuino_Gisella"), TEXT("Il taccuino di Gisella"),
+			TEXT("Un taccuino di pelle gonfio d'umidita', pieno di mappe disegnate a carboncino. Ai bordi, draghi."), 0.2f),
+			TEXT("\"Giorno quattro. Abbiamo sentito i martelli. Non sono martelli.\" Va riportato a Lucia, alla Gilda.")));
+		C.Add(OggRicordo(TEXT("Lanterna_Cecco"), TEXT("La lanterna di Cecco"),
+			TEXT("Una lanterna da minatore con il vetro rotto e il nome di Cecco inciso sul manico. Va riportata a Lucia, alla Gilda."), 0.8f));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Anello_Ranieri"), TEXT("L'anello di Ranieri"),
+			TEXT("D'argento, con la lanterna della Gilda incisa e una R. Lo portava al collo il capitano delle ossa."), 0.02f),
+			TEXT("Dentro l'anello, piccolissimo: \"a L., che tiene la corda\". Va riportato a Lucia, alla Gilda.")));
+
 		// le armi: chi si impugna e come colpisce (il pugno: 10 di danno, 30 di equilibrio, 10 di stamina, 90 cm)
 		struct FArmaDati
 		{
@@ -285,6 +310,9 @@ namespace
 			{ TEXT("Scudo_Rotondo"), EValdorsoPosto::ManoSinistra, 7.f, 50.f, 6.f, 90.f, 4, 0.65f },
 			{ TEXT("Scudo_Aquilone"), EValdorsoPosto::ManoSinistra, 7.f, 55.f, 7.f, 90.f, 4, 0.75f },
 			{ TEXT("Scudo_Legione"), EValdorsoPosto::ManoSinistra, 9.f, 65.f, 8.f, 90.f, 4, 0.85f },
+			// (11/11, v0.1.7) il piccone (una botta: conta come le mazze) e il pugnale dei nani
+			{ TEXT("Piccone"), EValdorsoPosto::ManoDestra, 15.f, 40.f, 7.f, 120.f, 2, 0.f },
+			{ TEXT("Pugnale_Nani"), EValdorsoPosto::ManoDestra, 19.f, 22.f, 3.f, 115.f, 1, 0.f },
 		};
 		for (const FArmaDati& A : Armi)
 		{
@@ -820,6 +848,68 @@ namespace
 			L.Add(OggLinea({ { 0.08f, -0.35f }, { 0.08f, 0.5f } }));
 			L.Add(OggLinea({ { -0.17f, 0.22f }, { 0.33f, 0.22f } }));
 		}
+		// (11/11) la tessera della carovana, il piccone, la grotta del nord
+		else if (N == TEXT("Tessera_Carovana"))
+		{
+			L.Add(OggRett(-0.75f, -0.45f, 0.75f, 0.45f));
+			L.Add(OggCerchio(-0.62f, 0.32f, 0.06f, 8));
+			// la corona bruciata a fuoco e il numero inciso
+			L.Add(OggLinea({ { -0.4f, -0.05f }, { -0.4f, 0.22f }, { -0.25f, 0.08f }, { -0.1f, 0.28f }, { 0.05f, 0.08f }, { 0.2f, 0.22f },
+				{ 0.2f, -0.05f }, { -0.4f, -0.05f } }));
+			L.Add(OggLinea({ { -0.45f, -0.25f }, { 0.55f, -0.25f } }));
+		}
+		else if (N == TEXT("Piccone"))
+		{
+			L.Add(OggLinea({ { -0.1f, -0.85f }, { 0.12f, 0.55f } }));
+			L.Add(OggLinea({ { -0.75f, 0.35f }, { -0.3f, 0.62f }, { 0.12f, 0.68f }, { 0.55f, 0.62f }, { 0.85f, 0.4f } }));
+			L.Add(OggLinea({ { -0.75f, 0.35f }, { -0.25f, 0.5f }, { 0.12f, 0.55f }, { 0.5f, 0.5f }, { 0.85f, 0.4f } }));
+		}
+		else if (N == TEXT("Moneta_Nani"))
+		{
+			L.Add(OggRett(-0.6f, -0.6f, 0.6f, 0.6f));
+			L.Add(OggRett(-0.15f, -0.15f, 0.15f, 0.15f));
+			L.Add(OggLinea({ { -0.45f, 0.4f }, { -0.3f, 0.4f }, { -0.3f, 0.28f } }));
+			L.Add(OggLinea({ { 0.3f, -0.28f }, { 0.3f, -0.4f }, { 0.45f, -0.4f } }));
+		}
+		else if (N == TEXT("Pugnale_Nani"))
+		{
+			L.Add(OggLinea({ { -0.85f, 0.f }, { -0.45f, 0.f } }));
+			L.Add(OggRett(-0.5f, -0.22f, -0.38f, 0.22f));
+			L.Add(OggLinea({ { -0.38f, -0.14f }, { 0.6f, -0.1f }, { 0.85f, 0.f }, { 0.6f, 0.1f }, { -0.38f, 0.14f } }));
+			L.Add(OggRett(-0.95f, -0.08f, -0.85f, 0.08f));
+		}
+		else if (N == TEXT("Mappa_Gallerie"))
+		{
+			L.Add(OggLinea({ { -0.8f, -0.7f }, { 0.75f, -0.7f }, { 0.8f, -0.2f }, { 0.65f, 0.05f }, { 0.8f, 0.35f }, { 0.7f, 0.7f },
+				{ -0.8f, 0.7f }, { -0.8f, -0.7f } }));
+			L.Add(OggLinea({ { -0.55f, -0.5f }, { -0.55f, 0.f }, { -0.1f, 0.f }, { -0.1f, 0.45f }, { 0.35f, 0.45f } }));
+			L.Add(OggRett(-0.3f, -0.15f, 0.1f, 0.15f));
+		}
+		else if (N == TEXT("Taccuino_Gisella"))
+		{
+			L.Add(OggRett(-0.55f, -0.75f, 0.55f, 0.75f));
+			L.Add(OggLinea({ { -0.4f, -0.75f }, { -0.4f, 0.75f } }));
+			L.Add(OggLinea({ { -0.2f, 0.35f }, { 0.35f, 0.35f } }));
+			L.Add(OggLinea({ { -0.2f, 0.1f }, { 0.3f, 0.1f } }));
+			L.Add(OggLinea({ { -0.2f, -0.15f }, { 0.35f, -0.15f } }));
+			L.Add(OggLinea({ { 0.55f, 0.1f }, { 0.75f, 0.1f }, { 0.75f, -0.05f }, { 0.55f, -0.05f } }));
+		}
+		else if (N == TEXT("Lanterna_Cecco"))
+		{
+			L.Add(OggArco(0.f, 0.72f, 0.22f, 0.15f, 0.f, 180.f, 10));
+			L.Add(OggRett(-0.38f, 0.5f, 0.38f, 0.62f));
+			L.Add(OggLinea({ { -0.3f, 0.5f }, { -0.35f, -0.55f }, { 0.35f, -0.55f }, { 0.3f, 0.5f } }));
+			L.Add(OggRett(-0.42f, -0.72f, 0.42f, -0.55f));
+			L.Add(OggLinea({ { -0.1f, 0.2f }, { 0.15f, -0.05f }, { -0.05f, -0.25f } }));
+		}
+		else if (N == TEXT("Anello_Ranieri"))
+		{
+			L.Add(OggCerchio(0.f, -0.15f, 0.55f, 22));
+			L.Add(OggCerchio(0.f, -0.15f, 0.38f, 20));
+			L.Add(OggRett(-0.18f, 0.38f, 0.18f, 0.62f));
+			L.Add(OggLinea({ { 0.f, 0.62f }, { -0.25f, 0.85f } }));
+			L.Add(OggLinea({ { 0.f, 0.62f }, { 0.25f, 0.85f } }));
+		}
 		return L;
 	}
 
@@ -921,6 +1011,8 @@ namespace ValdorsoOggetti
 	{
 		TArray<TPair<FName, int32>> Kit;
 		Kit.Emplace(TEXT("Tessera"), 1);
+		// (11/11, v0.1.5) e quella di legno della carovana, il ricordo del viaggio (dalle Cronache, Capitolo V)
+		Kit.Emplace(TEXT("Tessera_Carovana"), 1);
 		Kit.Emplace(TEXT("Pane_Nero"), 3);
 		Kit.Emplace(TEXT("Mela"), 2);
 		Kit.Emplace(TEXT("Borraccia"), 1);

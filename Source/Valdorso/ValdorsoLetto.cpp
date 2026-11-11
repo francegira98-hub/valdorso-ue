@@ -3,6 +3,7 @@
 #include "ValdorsoLetto.h"
 #include "Valdorso.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoSogni.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Brushes/SlateColorBrush.h"
@@ -164,6 +165,16 @@ void UValdorsoSonnoComponent::CambiaFase(uint8 Nuova)
 		Colono->ForceNetUpdate();
 	}
 	OnRep_Stato();
+	// (11/11, v0.1.6) appena addormentato: il server decide se sogna (ValdorsoSogni.h)
+	if (Nuova == 2 && Colono && Colono->HasAuthority())
+	{
+		ValdorsoSogni::Addormentato(Colono);
+	}
+}
+
+void UValdorsoSonnoComponent::ClientSogno_Implementation(FName Id)
+{
+	ValdorsoSogni::Mostra(GetWorld(), Id);
 }
 
 void UValdorsoSonnoComponent::OnRep_Stato()
@@ -172,6 +183,11 @@ void UValdorsoSonnoComponent::OnRep_Stato()
 	if (!Colono)
 	{
 		return;
+	}
+	// (11/11, v0.1.6) chi si sveglia interrompe il sogno
+	if ((Stato.Fase == 3 || Stato.Fase == 0) && Colono->IsLocallyControlled())
+	{
+		ValdorsoSogni::Chiudi();
 	}
 	// Un cambio vero: fase diversa, o stessa fase ricominciata (per esempio un altro letto, se la rete ha perso i passi in mezzo).
 	const uint8 Prima = FaseVista;

@@ -3,6 +3,7 @@
 
 #include "ValdorsoDialoghi.h"
 #include "ValdorsoRune.h"
+#include "ValdorsoGrottaNord.h"
 
 namespace
 {
@@ -130,6 +131,12 @@ namespace ValdorsoDialoghi
 			{
 				continue;
 			}
+			// (11/11) e quelle che si vedono solo con un segno
+			const FName Serve = Attuale->Scelte[i].VisibileSe;
+			if (!Serve.IsNone() && !Memoria.HaSegno(Dialogo.Id, Serve))
+			{
+				continue;
+			}
 			Fuori.Add(i);
 		}
 		return Fuori;
@@ -235,7 +242,7 @@ namespace ValdorsoDialoghi
 			int32 SempreVisibili = 0;
 			for (int32 i = 0; i < Nodo.Scelte.Num() && i < MassimoScelte; ++i)
 			{
-				SempreVisibili += Nodo.Scelte[i].NascostaSe.IsNone() ? 1 : 0;
+				SempreVisibili += (Nodo.Scelte[i].NascostaSe.IsNone() && Nodo.Scelte[i].VisibileSe.IsNone()) ? 1 : 0;
 			}
 			if (!Nodo.bFine && Nodo.Scelte.Num() > 0 && SempreVisibili == 0)
 			{
@@ -312,7 +319,7 @@ namespace ValdorsoDialoghi
 				bool bEsce = Nodo.bFine;
 				for (const FValdorsoSceltaDialogo& Risposta : Nodo.Scelte)
 				{
-					bEsce = bEsce || (Risposta.NascostaSe.IsNone() && (Risposta.Verso.IsNone() || Escono.Contains(Risposta.Verso)));
+					bEsce = bEsce || (Risposta.NascostaSe.IsNone() && Risposta.VisibileSe.IsNone() && (Risposta.Verso.IsNone() || Escono.Contains(Risposta.Verso)));
 				}
 				if (bEsce)
 				{

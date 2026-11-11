@@ -196,7 +196,13 @@ float UValdorsoMovementComponent::GetMaxSpeed() const
 	if ((MovementMode == MOVE_Walking || MovementMode == MOVE_NavWalking) && !IsCrouching())
 	{
 		// (08/11) con lo zaino troppo pesante non si corre, e oltre il sovraccarico si cammina piano
-		return (bVuoleCorrere && bCaricoPermetteCorsa ? VelocitaCorsa : VelocitaCamminata) * FattoreCarico;
+		// (11/11, v0.1.5) e senza fiato nemmeno (ValdorsoVigore.h)
+		return (bVuoleCorrere && bCaricoPermetteCorsa && bFiatoPermetteCorsa ? VelocitaCorsa : VelocitaCamminata) * FattoreCarico;
+	}
+	// (11/11, v0.1.5) in acqua Maiusc e' il nuoto veloce (costa fiato: ValdorsoVigore.h)
+	if (MovementMode == MOVE_Swimming && bVuoleCorrere && bFiatoPermetteCorsa && bCaricoPermetteCorsa)
+	{
+		return Super::GetMaxSpeed() * FattoreNuotoVeloce;
 	}
 	return Super::GetMaxSpeed();
 }

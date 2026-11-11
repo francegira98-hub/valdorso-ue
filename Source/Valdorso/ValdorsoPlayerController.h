@@ -359,6 +359,15 @@ private:
 	void TastoStaff();
 	/** (10/11) K: la scheda del personaggio (le abilita'). */
 	void TastoScheda();
+	/** (11/11, v0.1.5) G: la guardia dopo (ValdorsoScherma.h). */
+	void TastoGuardia();
+	/** (11/11, v0.1.5) I tasti del colono (da ValdorsoTasti.h): li collega SetupInputComponent, e li rifa' quando cambiano. */
+	void CollegaTasti();
+	void RifaiTasti();
+	FDelegateHandle ManigliaTasti;
+	/** I contesti dei tasti del corpo messi (quelli di serie, o le copie con i tasti cambiati). */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInputMappingContext>> ContestiMessi;
 	/** (10/11) La telecamera che segue morbida e si allarga appena di corsa (solo su questo PC). */
 	void Telecamera(float DeltaTime);
 	TWeakObjectPtr<APawn> CorpoTelecamera;

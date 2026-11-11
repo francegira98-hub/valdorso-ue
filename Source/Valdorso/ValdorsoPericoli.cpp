@@ -1,6 +1,7 @@
 // Valdorso - I pericoli della valle: equilibrio, morte e rinascita (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoPericoli.h"
+#include "ValdorsoScherma.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
@@ -256,13 +257,15 @@ void UValdorsoPericoliComponent::QuandoCambiaEquilibrio(const FOnAttributeChange
 		return;
 	}
 	bBarcolla = true;
+	// (11/11, v0.1.5) la Tempra: chi si rialza prima (75) barcolla la meta' (ValdorsoScherma.h)
+	const float Barcollo = ValdorsoScherma::Talento(Colono, FName(TEXT("Tempra")), 3) ? SecondiBarcollo * 0.5f : SecondiBarcollo;
 	// Lo stordimento che c'è già (ClientAvviso): il colono non si muove per un istante e lo legge in alto.
 	if (AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(Colono->GetController()))
 	{
-		Controllore->ClientAvviso(LOCTEXT("Barcolli", "Perdi l'equilibrio!"), SecondiBarcollo + 0.5f, SecondiBarcollo);
+		Controllore->ClientAvviso(LOCTEXT("Barcolli", "Perdi l'equilibrio!"), Barcollo + 0.5f, Barcollo);
 	}
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Pericoli: %s barcolla"), *Colono->GetName());
-	Mondo->GetTimerManager().SetTimer(TimerBarcollo, this, &UValdorsoPericoliComponent::FineBarcollo, SecondiBarcollo, false);
+	Mondo->GetTimerManager().SetTimer(TimerBarcollo, this, &UValdorsoPericoliComponent::FineBarcollo, Barcollo, false);
 }
 
 void UValdorsoPericoliComponent::FineBarcollo()

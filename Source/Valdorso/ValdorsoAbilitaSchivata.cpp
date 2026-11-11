@@ -8,6 +8,7 @@
 #include "ValdorsoCharacter.h"
 #include "ValdorsoEffetti.h"
 #include "ValdorsoEtichette.h"
+#include "ValdorsoVigore.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
@@ -29,6 +30,18 @@ UValdorsoAbilitaSchivata::UValdorsoAbilitaSchivata()
 	ActivationOwnedTags.AddTag(ValdorsoEtichette::Stato_Schivata);
 }
 
+bool UValdorsoAbilitaSchivata::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+	// (11/11, v0.1.5) il tempo fra due schivate (dopo una caduta la capriola parte subito)
+	const UValdorsoVigoreComponent* Vigore = ActorInfo ? UValdorsoVigoreComponent::Di(ActorInfo->AvatarActor.Get()) : nullptr;
+	return !Vigore || Vigore->SchivataPronta();
+}
+
 void UValdorsoAbilitaSchivata::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -44,6 +57,11 @@ void UValdorsoAbilitaSchivata::ActivateAbility(const FGameplayAbilitySpecHandle 
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
+	}
+	// (11/11, v0.1.5) mezzo secondo in cui i colpi non arrivano, e da qui conta il tempo per la prossima (ValdorsoVigore.h)
+	if (UValdorsoVigoreComponent* Vigore = UValdorsoVigoreComponent::Di(Personaggio))
+	{
+		Vigore->SchivataIniziata();
 	}
 
 	// La direzione: dove il giocatore si sta muovendo; se è fermo, in avanti.

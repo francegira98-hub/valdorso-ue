@@ -545,6 +545,13 @@ TSharedRef<SWidget> SValdorsoStaff::Mondo()
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Fase3", "fase 3"), TEXT("fase"), nullptr, Fisso(TEXT("3")))]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("SigilloApri", "Sigillo del passo: apri"), TEXT("sigillo"), nullptr, Fisso(TEXT("apri")))]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("SigilloChiudi", "chiudi"), TEXT("sigillo"), nullptr, Fisso(TEXT("chiudi")))]
+			// (11/11, v0.1.7) la frana della grotta del nord: la notte in cui trema, e (per le prove) aperta o chiusa
+			+ SWrapBox::Slot()[Pulsante(LOCTEXT("FranaTrema", "Frana del nord: trema"), TEXT("frana"), nullptr, Fisso(TEXT("trema")))]
+			+ SWrapBox::Slot()[Pulsante(LOCTEXT("FranaApri", "apri"), TEXT("frana"), nullptr, Fisso(TEXT("apri")))]
+			+ SWrapBox::Slot()[Pulsante(LOCTEXT("FranaChiudi", "richiudi"), TEXT("frana"), nullptr, Fisso(TEXT("chiudi")))]
+			// (11/11, v0.1.6) l'Atto I: il battito del frammento salta (e resta debole, anche dopo un riavvio)
+			+ SWrapBox::Slot()[Pulsante(LOCTEXT("AttoUno", "Atto I: il battito salta"), TEXT("atto"), nullptr, Fisso(TEXT("1")))]
+			+ SWrapBox::Slot()[Pulsante(LOCTEXT("AttoZero", "come prima (prove)"), TEXT("atto"), nullptr, Fisso(TEXT("0")))]
 		];
 }
 

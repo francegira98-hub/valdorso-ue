@@ -3,6 +3,10 @@
 #include "ValdorsoCombattimento.h"
 #include "ValdorsoAbilitaDati.h"
 #include "ValdorsoCrescita.h"
+#include "ValdorsoImpostazioni.h"
+#include "ValdorsoInterfaccia.h"
+#include "ValdorsoScherma.h"
+#include "ValdorsoScheletri.h"
 #include "Valdorso.h"
 #include "ValdorsoArmi.h"
 #include "ValdorsoAttributeSet.h"
@@ -208,6 +212,8 @@ namespace ValdorsoCombattimento
 		Audio->SetWorldLocation(Dove);
 		Audio->RegisterComponentWithWorld(Mondo);
 		Audio->Play();
+		// (11/11, v0.1.5) i sottotitoli dei suoni importanti (ValdorsoInterfaccia.h)
+		ValdorsoInterfaccia::SuonoSentito(Mondo, Suono, Dove, Lontano);
 	}
 
 	bool DaDavanti(const FVector& AvantiDelColpito, const FVector& VersoChiColpisce)
@@ -228,21 +234,82 @@ namespace ValdorsoCombattimento
 		{
 			return false;
 		}
+		if (const AValdorsoScheletro* Ossa = Cast<AValdorsoScheletro>(A); Ossa && !Ossa->Vivo())
+		{
+			return false;
+		}
 		UWorld* Mondo = A->GetWorld();
 		UAbilitySystemComponent* SuoContenitore = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(A);
 		const FVector DaDove = Da ? Da->GetActorLocation() : Punto;
 		const FVector Verso = (A->GetActorLocation() - DaDove).GetSafeNormal2D();
+		// (11/11, v0.1.5) la scherma: le guardie, i talenti, la parata perfetta, la schivata (ValdorsoScherma.h)
+		const bool bDavanti = DaDavanti(A->GetActorForwardVector(), DaDove - A->GetActorLocation());
+		const FValdorsoEsitoScherma Scherma = ValdorsoScherma::PrimaDelColpo(Da, A, Tipo, bDavanti, Danno, Equilibrio);
+		if (Scherma.bAnnullato)
+		{
+			// il colpo non arriva: solo il suono della lama (o del vuoto), gli avvisi, e chi colpisce puo' perdere l'equilibrio
+			if (!Scherma.AvvisoColpito.IsEmpty())
+			{
+				if (AValdorsoPlayerController* Colpito = CombattimentoGiocatore(A))
+				{
+					Colpito->ClientAvviso(Scherma.AvvisoColpito, 1.5f, 0.f);
+				}
+			}
+			if (!Scherma.AvvisoChiColpisce.IsEmpty())
+			{
+				if (AValdorsoPlayerController* Aggressore = CombattimentoGiocatore(Da))
+				{
+					Aggressore->ClientAvviso(Scherma.AvvisoChiColpisce, 2.f, 0.f);
+				}
+			}
+			if (Scherma.EquilibrioAChiColpisce > 0.f)
+			{
+				if (UAbilitySystemComponent* SuoDiChiColpisce = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Da);
+					SuoDiChiColpisce && SuoDiChiColpisce->GetSet<UValdorsoAttributeSet>())
+				{
+					const float Prima = SuoDiChiColpisce->GetNumericAttributeBase(UValdorsoAttributeSet::GetEquilibrioAttribute());
+					SuoDiChiColpisce->SetNumericAttributeBase(UValdorsoAttributeSet::GetEquilibrioAttribute(),
+						FMath::Max(0.f, Prima - Scherma.EquilibrioAChiColpisce));
+				}
+				if (UValdorsoReazioniComponent* SueReazioni = UValdorsoReazioniComponent::Di(A))
+				{
+					SueReazioni->MulticastColpito(Da, A, Punto, static_cast<uint8>(EValdorsoTipoColpo::Scudo));
+				}
+			}
+			if (!Scherma.CresceIlColpito.IsNone() && !(CombattimentoGiocatore(Da) && CombattimentoGiocatore(A) && InPace(Mondo, A->GetActorLocation())))
+			{
+				UValdorsoCrescitaComponent::UsaDa(A, Scherma.CresceIlColpito, 1.f, Da, false);
+			}
+			ValdorsoRegistroEventi::Annota(TEXT("Colpo"), Da, A, Punto, TEXT("schivato o parato del tutto"));
+			return true;
+		}
 		// (09/11) lo scudo nella sinistra: dei colpi che arrivano davanti passa solo una parte, e l'equilibrio regge meglio
 		bool bParato = false;
 		if (const UValdorsoArmiComponent* SueArmi = UValdorsoArmiComponent::Di(A))
 		{
 			const FValdorsoTipoOggetto* Scudo = SueArmi->Scudo();
-			if (Scudo && Scudo->Parata > 0.f && DaDavanti(A->GetActorForwardVector(), DaDove - A->GetActorLocation()))
+			// (11/11) il muro (Scudo 75) para anche di lato; contro le armature e lo spaccascudi lo scudo conta meno
+			const FVector AvantiScudo = A->GetActorForwardVector().GetSafeNormal2D();
+			const FVector VersoScudo = (DaDove - A->GetActorLocation()).GetSafeNormal2D();
+			const bool bNelloScudo = !AvantiScudo.IsNearlyZero() && !VersoScudo.IsNearlyZero()
+				&& FVector::DotProduct(AvantiScudo, VersoScudo) > Scherma.AngoloScudo;
+			if (Scudo && Scudo->Parata > 0.f && bNelloScudo && Scherma.ScudoConta > 0.f)
 			{
-				Danno *= 1.f - FMath::Clamp(Scudo->Parata, 0.f, 1.f);
+				Danno *= 1.f - FMath::Clamp(Scudo->Parata * Scherma.ScudoConta, 0.f, 1.f);
 				Equilibrio *= 0.5f;
 				Tipo = EValdorsoTipoColpo::Scudo;
 				bParato = true;
+				// (11/11) lo scudo che risponde (Scudo 50)
+				if (Scherma.EquilibrioSeParato > 0.f)
+				{
+					if (UAbilitySystemComponent* SuoDiChiColpisce = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Da);
+						SuoDiChiColpisce && SuoDiChiColpisce->GetSet<UValdorsoAttributeSet>())
+					{
+						const float Prima = SuoDiChiColpisce->GetNumericAttributeBase(UValdorsoAttributeSet::GetEquilibrioAttribute());
+						SuoDiChiColpisce->SetNumericAttributeBase(UValdorsoAttributeSet::GetEquilibrioAttribute(),
+							FMath::Max(0.f, Prima - Scherma.EquilibrioSeParato));
+					}
+				}
 			}
 		}
 		bool bColpito = false;
@@ -340,12 +407,29 @@ namespace ValdorsoCombattimento
 		{
 			Lupo->Ferito(Da);
 		}
+		// (11/11, v0.1.7) uno scheletro colpito si sveglia e insegue (ValdorsoScheletri.h)
+		else if (AValdorsoScheletro* Ossa = Cast<AValdorsoScheletro>(A))
+		{
+			Ossa->Ferito(Da);
+		}
 		// la spinta: il colpito arretra un poco (lo vedono tutti: e' il movimento del personaggio)
 		if (ACharacter* Colpito = Cast<ACharacter>(A))
 		{
-			// chi para con lo scudo arretra poco
-			const float QuantaSpinta = bParato ? 90.f : Spinta(Tipo);
-			Colpito->LaunchCharacter(Verso * QuantaSpinta + FVector(0.f, 0.f, 40.f), true, false);
+			// chi para con lo scudo arretra poco; (11/11) la guardia lunga e le tecniche spingono di piu', la rocca niente
+			const float QuantaSpinta = (bParato ? 90.f : Spinta(Tipo)) * Scherma.Spinta;
+			if (QuantaSpinta > 1.f)
+			{
+				Colpito->LaunchCharacter(Verso * QuantaSpinta + FVector(0.f, 0.f, 40.f), true, false);
+			}
+		}
+		// (11/11, v0.1.5) quello che porta la tecnica in corso (stordimento, sangue) e la risposta della guardia bassa
+		ValdorsoScherma::DopoIlColpo(Da, A, bDavanti, Danno);
+		if (!Scherma.AvvisoColpito.IsEmpty())
+		{
+			if (AValdorsoPlayerController* Colpito = CombattimentoGiocatore(A))
+			{
+				Colpito->ClientAvviso(Scherma.AvvisoColpito, 1.5f, 0.f);
+			}
 		}
 		ValdorsoRegistroEventi::Annota(TEXT("Colpo"), Da, A, Punto,
 			FString::Printf(TEXT("%s, danno %.0f"), NomeSuono(Tipo) + 8, Danno));
@@ -416,6 +500,13 @@ void UValdorsoReazioniComponent::MulticastColpito_Implementation(AActor* Da, AAc
 
 void UValdorsoReazioniComponent::Scossa(float Forza)
 {
+	// (11/11, v0.1.5) accessibilita': quanto trema la telecamera (e con "meno movimento" poco)
+	const FValdorsoImpostazioni& Impostazioni = ValdorsoImpostazioni::Correnti();
+	Forza *= Impostazioni.bMenoMovimenti ? FMath::Min(Impostazioni.Scosse, 0.3f) : Impostazioni.Scosse;
+	if (Forza <= 0.01f)
+	{
+		return;
+	}
 	ScossaForza = FMath::Max(ScossaForza * (ScossaRimasta > 0.f ? 1.f : 0.f), FMath::Clamp(Forza, 0.f, 1.f));
 	ScossaRimasta = 0.18f + 0.12f * ScossaForza;
 	SetComponentTickEnabled(true);
@@ -520,6 +611,20 @@ int32 SValdorsoBersaglio::OnPaint(const FPaintArgs& Args, const FGeometry& Allot
 				const FVector2f Dove = P + FVector2f(-static_cast<float>(Misura.X) * 0.5f, 14.f);
 				FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(Misura,
 					FSlateLayoutTransform(1.f, FVector2D(Dove))), Frase, Carattere, ESlateDrawEffect::None, Colore);
+			}
+			// (11/11, v0.1.5) la sua guardia: chi guarda bene sceglie quella giusta (ValdorsoScherma.h)
+			const UValdorsoSchermaComponent* SuaScherma = UValdorsoSchermaComponent::Di(Agganciato);
+			const UValdorsoArmiComponent* SueArmi = UValdorsoArmiComponent::Di(Agganciato);
+			if (SuaScherma && SueArmi && FSlateApplication::IsInitialized())
+			{
+				const FValdorsoTipoOggetto* SuaArma = SueArmi->Arma();
+				const FText Posta = ValdorsoScherma::NomeGuardia(ValdorsoScherma::FamigliaGuardie(SuaArma ? SuaArma->Id : NAME_None), SuaScherma->GetGuardia());
+				const FSlateFontInfo CarattereGuardia = FCoreStyle::GetDefaultFontStyle("Italic", 10);
+				const FVector2D MisuraGuardia = FSlateApplication::Get().GetRenderer()->GetFontMeasureService()->Measure(Posta, CarattereGuardia);
+				const FVector2f DoveGuardia = P + FVector2f(-static_cast<float>(MisuraGuardia.X) * 0.5f, 30.f);
+				FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(MisuraGuardia,
+					FSlateLayoutTransform(1.f, FVector2D(DoveGuardia))), Posta, CarattereGuardia, ESlateDrawEffect::None,
+					ValdorsoTema::OroChiaro());
 			}
 		}
 	}

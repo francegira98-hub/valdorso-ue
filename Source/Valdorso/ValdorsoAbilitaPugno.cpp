@@ -9,6 +9,7 @@
 #include "ValdorsoEtichette.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoScherma.h"
 #include "CombatDamageable.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
@@ -126,7 +127,15 @@ void UValdorsoAbilitaPugno::EseguiColpo()
 	// solo lo scudo (niente nella destra): si colpisce con lo scudo
 	const FValdorsoTipoOggetto* ConCosa = Arma ? Arma : Scudo;
 	const float DannoColpo = ConCosa ? ConCosa->DannoArma : Danno;
-	const float PortataColpo = ConCosa ? ConCosa->PortataArma : Portata;
+	// (11/11, v0.1.5) la guardia: la lunga arriva piu' lontano, l'alta stanca di piu' (ValdorsoScherma.h)
+	float PerGuardiaPortata = 1.f;
+	float PerGuardiaFatica = 1.f;
+	if (const UValdorsoSchermaComponent* Scherma = UValdorsoSchermaComponent::Di(Personaggio); Scherma && !Scherma->InCambio())
+	{
+		PerGuardiaPortata = ValdorsoScherma::PortataGuardia(Scherma->GetGuardia());
+		PerGuardiaFatica = ValdorsoScherma::StaminaGuardia(Scherma->GetGuardia());
+	}
+	const float PortataColpo = (ConCosa ? ConCosa->PortataArma : Portata) * PerGuardiaPortata;
 	const float EquilibrioColpo = ConCosa ? ConCosa->EquilibrioArma : ValdorsoPericoli::EquilibrioPerPugno;
 	const EValdorsoTipoColpo TipoColpo = ConCosa ? static_cast<EValdorsoTipoColpo>(ConCosa->TipoColpo) : EValdorsoTipoColpo::Pugno;
 	if (ConCosa && ConCosa->StaminaArma > 0.f)
@@ -134,7 +143,7 @@ void UValdorsoAbilitaPugno::EseguiColpo()
 		FGameplayEffectSpecHandle Fatica = MioContenitore->MakeOutgoingSpec(UValdorsoGE_Fatica::StaticClass(), 1.f, MioContenitore->MakeEffectContext());
 		if (Fatica.IsValid())
 		{
-			Fatica.Data->SetSetByCallerMagnitude(ValdorsoEtichette::Dato_Stamina, -ConCosa->StaminaArma);
+			Fatica.Data->SetSetByCallerMagnitude(ValdorsoEtichette::Dato_Stamina, -ConCosa->StaminaArma * PerGuardiaFatica);
 			MioContenitore->ApplyGameplayEffectSpecToSelf(*Fatica.Data.Get());
 		}
 	}

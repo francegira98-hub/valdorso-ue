@@ -11,12 +11,15 @@
 #include "ValdorsoLupi.h"
 #include "ValdorsoRovine.h"
 #include "ValdorsoStatoMondo.h"
+#include "ValdorsoStatoColono.h"
+#include "ValdorsoGrottaNord.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
 AValdorsoGameMode::AValdorsoGameMode()
 {
-	// stub
+	// (11/11, v0.1.5) il PlayerState di Valdorso: porta a tutti la forza del colono (ValdorsoStatoColono.h)
+	PlayerStateClass = AValdorsoPlayerState::StaticClass();
 }
 
 void AValdorsoGameMode::StartPlay()

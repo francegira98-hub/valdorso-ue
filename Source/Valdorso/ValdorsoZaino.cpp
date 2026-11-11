@@ -1,6 +1,7 @@
 // Valdorso - Lo zaino, con il peso e le monete (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoZaino.h"
+#include "ValdorsoScherma.h"
 #include "ValdorsoGilda.h"
 #include "SValdorsoZaino.h"
 #include "SValdorsoBottega.h"
@@ -544,6 +545,16 @@ void UValdorsoZainoComponent::ServerUsaAzione_Implementation(int32 Tasto)
 		return;
 	}
 	const FName Id = Zaino.Azioni[Tasto];
+	// (11/11, v0.1.5) una tecnica (ValdorsoScherma.h): la fa il colono, se puo'
+	if (ValdorsoScherma::DaBarra(Id))
+	{
+		const APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+		if (UValdorsoSchermaComponent* Scherma = UValdorsoSchermaComponent::Di(Controllore ? Controllore->GetPawn() : nullptr))
+		{
+			Scherma->UsaTecnica(Id);
+		}
+		return;
+	}
 	const int32 Posto = ValdorsoZaino::PostoDi(Zaino, Id);
 	if (Posto == INDEX_NONE)
 	{

@@ -36,6 +36,24 @@ struct VALDORSO_API FValdorsoImpostazioni
 	bool bMenoMovimenti = false;
 	/** Colori per chi vede i colori in modo diverso: 0 nessuno, 1 deuteranopia, 2 protanopia, 3 tritanopia. */
 	int32 Daltonismo = 0;
+
+	// --- (11/11, v0.1.5) Accessibilita', seconda parte (scelte da Fra il 10/11) ---
+	/** Quanto trema la telecamera quando arriva un colpo (0 niente, 1 normale). */
+	float Scosse = 1.f;
+	/** La corsa "premi una volta": Maiusc accende e spegne la corsa invece di tenerlo premuto. */
+	bool bCorsaAlterna = false;
+	/** Le scritte dei suoni importanti in basso ("[Un ululato, a nord]"): ValdorsoInterfaccia.h. */
+	bool bSottotitoli = true;
+	/** Dove stanno le scritte del gioco: spostamento in pixel (X a destra, Y in giu') delle barre con la barra 1-8, della
+	 *  bussola e della chat. */
+	int32 BarreX = 0;
+	int32 BarreY = 0;
+	int32 BussolaX = 0;
+	int32 BussolaY = 0;
+	int32 ChatX = 0;
+	int32 ChatY = 0;
+	/** Le scritte del gioco (barre, bussola, chat) un po' piu' grandi o piu' piccole (0,8..1,4). */
+	float GrandezzaHud = 1.f;
 };
 
 namespace ValdorsoImpostazioni

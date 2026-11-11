@@ -2,6 +2,8 @@
 // Unity build: le cose del namespace anonimo cominciano con Png, così non si scontrano con gli altri file.
 
 #include "ValdorsoPNG.h"
+#include "ValdorsoGrottaNord.h"
+#include "ValdorsoVoci.h"
 #include "ValdorsoGilda.h"
 #include "ValdorsoChat.h"
 #include "ValdorsoCielo.h"
@@ -356,6 +358,9 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	{
 		return;
 	}
+	// (11/11, v0.1.7) la storia di Lucia, "Quelli che non tornarono" (ValdorsoGrottaNord.h): le due pagine, e la consegna
+	// (senza tutte le cose si va a "mancano"); prima dei segni, cosi' il segno della fine lo prende solo chi ha finito
+	ValdorsoGrottaNord::EventoDialogo(Evento, Chi, Prossimo);
 	const FString Detta = Nodo->Scelte[Vera].Testo;
 	// (08/11) I segni: della risposta scelta (per esempio "MonetaOfferta": la moneta non si offre più) e del nodo dopo.
 	Memoria.MettiSegno(Dati->Id, Nodo->Scelte[Vera].Segna);
@@ -403,7 +408,10 @@ void AValdorsoPNG::Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta
 {
 	if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(Chi))
 	{
-		Giocatore->ClientMostraDialogo(this, Battuta);
+		// (11/11, v0.1.6) i segnaposto: le voci vere della locanda ({voci}) e le righe dell'Atto I (ValdorsoVoci.h)
+		FValdorsoBattuta Piena = Battuta;
+		ValdorsoVoci::Riempi(GetWorld(), Piena.Righe);
+		Giocatore->ClientMostraDialogo(this, Piena);
 	}
 	// L'ultima battuta: sul server la conversazione è finita (il PC la legge e si congeda da solo).
 	if (Battuta.bFine || Battuta.bChiudi)

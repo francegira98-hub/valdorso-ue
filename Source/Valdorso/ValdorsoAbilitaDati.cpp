@@ -47,50 +47,50 @@ namespace
 		C.Add(CrescereTipo(TEXT("Atletica"), F::Corpo,
 			{ TEXT("Atletica"), TEXT("Passo lungo"), TEXT("Gambe di lupo"), TEXT("Vento nelle gambe"), TEXT("Il passo dell'Orso") },
 			TEXT("Correre, saltare, resistere alla fatica. Sale correndo: di piu' quando sei stanco o inseguito."),
-			{ TEXT("La capriola d'atterraggio: cadendo rotoli e ti fai meno male"), TEXT("Lo scatto lungo: corri di piu' con meno fiato"),
-			  TEXT("Il secondo fiato: la stamina torna prima"), TEXT("La corsa senza fine") }));
+			{ TEXT("La capriola d'atterraggio: cadendo rotoli e ti fai meno male"), TEXT("Lo scatto lungo: correndo il fiato cala un quarto piu' piano"),
+			  TEXT("Il secondo fiato: la stamina torna un terzo piu' in fretta"), TEXT("La corsa senza fine: il fiato cala la meta'") }));
 		C.Add(CrescereTipo(TEXT("Nuoto"), F::Corpo,
 			{ TEXT("Nuoto"), TEXT("Bracciata sicura"), TEXT("Pesce di fiume"), TEXT("Figlio del lago"), TEXT("Il respiro dell'abisso") },
 			TEXT("Stare a galla e andare sotto. Sale nuotando, di piu' sott'acqua."),
-			{ TEXT("Si nuota con meno stamina"), TEXT("Il fiato dura di piu' sott'acqua"), TEXT("Il nuoto veloce"), TEXT("Nessuna paura dell'acqua profonda") }));
+			{ TEXT("La bracciata leggera: il nuoto veloce costa meno"), TEXT("Il fiato lungo: sott'acqua dura la meta' in piu'"), TEXT("Il nuoto veloce: piu' forte"), TEXT("Il respiro dell'abisso: il fiato dura il doppio") }));
 		C.Add(CrescereTipo(TEXT("Tempra"), F::Corpo,
 			{ TEXT("Tempra"), TEXT("Pelle dura"), TEXT("Ossa di quercia"), TEXT("Roccia"), TEXT("L'inamovibile") },
 			TEXT("Reggere i colpi. Sale prendendone (e restando in piedi)."),
-			{ TEXT("Si perde meno equilibrio"), TEXT("I morsi fanno meno male"), TEXT("Ti rialzi prima"), TEXT("Il colpo che non ti piega") }));
+			{ TEXT("I piedi piantati: si perde meno equilibrio"), TEXT("La pelle dura: i morsi fanno meno male"), TEXT("Ti rialzi prima"), TEXT("Il colpo che non ti piega") }));
 		// --- le armi (ognuna sale con le armi della sua famiglia: AbilitaDellArma)
 		C.Add(CrescereTipo(TEXT("Lotta"), F::Armi,
 			{ TEXT("Lotta"), TEXT("Pugno svelto"), TEXT("Rissaiolo"), TEXT("Pugile"), TEXT("Mani di ferro") },
 			TEXT("A mani nude. Sale colpendo con i pugni."),
-			{ TEXT("La spallata"), TEXT("La presa: tieni fermo chi colpisci"), TEXT("Il colpo che stordisce"), TEXT("Le mani di ferro: i pugni come una mazza") }));
+			{ TEXT("La spallata (tecnica)"), TEXT("La presa: tieni fermo chi colpisci (tecnica)"), TEXT("Il colpo che stordisce (tecnica)"), TEXT("Le mani di ferro: i pugni come una mazza") }));
 		C.Add(CrescereTipo(TEXT("Pugnali"), F::Armi,
 			{ TEXT("Pugnali"), TEXT("Lama svelta"), TEXT("Coltello nel buio"), TEXT("Lama d'ombra"), TEXT("Il morso del serpente") },
 			TEXT("Coltelli, pugnali, falcetti: corti e veloci."),
-			{ TEXT("Il colpo doppio"), TEXT("La lama alle spalle: di piu' colpendo da dietro"), TEXT("Il taglio che sanguina"), TEXT("Il morso del serpente") }));
+			{ TEXT("Il colpo doppio (tecnica)"), TEXT("La lama alle spalle: di piu' colpendo da dietro"), TEXT("Il taglio che sanguina (tecnica)"), TEXT("Il morso del serpente (tecnica)") }));
 		C.Add(CrescereTipo(TEXT("Spade"), F::Armi,
 			{ TEXT("Spade"), TEXT("Prima guardia"), TEXT("Spadaccino"), TEXT("Maestro di guardie"), TEXT("La lama della valle") },
-			TEXT("Spade corte e lunghe, il gladio. Le guardie della scherma italiana arrivano con la v0.1.5."),
-			{ TEXT("L'affondo"), TEXT("La parata perfetta"), TEXT("Le guardie della scherma italiana"), TEXT("La lama della valle") }));
+			TEXT("Spade corte e lunghe, il gladio. Le guardie della scherma italiana (G) contano di piu' con la spada."),
+			{ TEXT("L'affondo (tecnica)"), TEXT("La parata perfetta (tecnica)"), TEXT("Il maestro di guardie: le guardie contano una volta e mezzo"), TEXT("La lama della valle (tecnica)") }));
 		C.Add(CrescereTipo(TEXT("Asce"), F::Armi,
 			{ TEXT("Asce"), TEXT("Colpo pesante"), TEXT("Spaccalegna"), TEXT("Ascia di guerra"), TEXT("La scure del passo") },
 			TEXT("Accette e asce da guerra: lente, ma fanno male."),
-			{ TEXT("Il colpo che spacca gli scudi"), TEXT("Il giro: colpisce chi hai intorno"), TEXT("La furia"), TEXT("La scure del passo") }));
+			{ TEXT("Il colpo che spacca gli scudi (tecnica)"), TEXT("Il giro: colpisce chi hai intorno (tecnica)"), TEXT("La furia (tecnica)"), TEXT("La scure del passo (tecnica)") }));
 		C.Add(CrescereTipo(TEXT("Mazze"), F::Armi,
 			{ TEXT("Mazze"), TEXT("Botta sicura"), TEXT("Spezzaossa"), TEXT("Martello di guerra"), TEXT("Il tuono") },
 			TEXT("Martelli, mazze e clave: tolgono l'equilibrio."),
-			{ TEXT("Il colpo che butta a terra"), TEXT("Contro le armature"), TEXT("Lo stordimento"), TEXT("Il tuono") }));
+			{ TEXT("Il colpo che butta a terra (tecnica)"), TEXT("Contro le armature: gli scudi fermano la meta'"), TEXT("Lo stordimento (tecnica)"), TEXT("Il tuono (tecnica)") }));
 		C.Add(CrescereTipo(TEXT("Aste"), F::Armi,
 			{ TEXT("Armi in asta"), TEXT("Punta lontana"), TEXT("Muro di lance"), TEXT("Lancia del confine"), TEXT("La lunga ombra") },
 			TEXT("Lance, forconi, bastoni: tengono lontano chi attacca."),
-			{ TEXT("Il colpo lungo"), TEXT("Fermare la carica"), TEXT("Il giro del bastone"), TEXT("La lunga ombra") }));
+			{ TEXT("Il colpo lungo (tecnica)"), TEXT("Fermare la carica: di piu' a chi ti corre addosso"), TEXT("Il giro del bastone (tecnica)"), TEXT("La lunga ombra (tecnica)") }));
 		C.Add(CrescereTipo(TEXT("Scudo"), F::Armi,
 			{ TEXT("Scudo"), TEXT("Braccio fermo"), TEXT("Muro di legno"), TEXT("Scudo della legione"), TEXT("La rocca") },
 			TEXT("Parare con lo scudo. Sale fermando i colpi che arrivano davanti."),
-			{ TEXT("La spinta con lo scudo"), TEXT("La parata che toglie l'equilibrio"), TEXT("Il muro: si para anche di lato"), TEXT("La rocca") }));
+			{ TEXT("La spinta con lo scudo (tecnica)"), TEXT("La parata che toglie l'equilibrio"), TEXT("Il muro: si para anche di lato"), TEXT("La rocca (tecnica)") }));
 		// --- il mondo
 		C.Add(CrescereTipo(TEXT("Caccia"), F::Mondo,
 			{ TEXT("Caccia"), TEXT("Occhio del cacciatore"), TEXT("Sulla pista del lupo"), TEXT("Cacciatore della valle"), TEXT("Il signore del bosco") },
 			TEXT("Cacciare e scuoiare. Sale scuoiando le prede."),
-			{ TEXT("Pelli migliori"), TEXT("Le tracce degli animali"), TEXT("Avvicinarsi senza farsi sentire"), TEXT("Il signore del bosco") }));
+			{ TEXT("Le pelli migliori: una pelle in piu'"), TEXT("Le tracce degli animali (con la v0.2)"), TEXT("Il passo del cacciatore: gli animali ti sentono da piu' vicino"), TEXT("Il signore del bosco: i lupi non ti attaccano per primi") }));
 		C.Add(CrescereTipo(TEXT("Furtivita"), F::Mondo,
 			{ TEXT("Furtivita'"), TEXT("Passo leggero"), TEXT("Ombra tra le ombre"), TEXT("Nessuno ti vede"), TEXT("Il fantasma") },
 			TEXT("Muoversi senza farsi vedere. Arriva con la v0.1.5."),
@@ -165,6 +165,8 @@ namespace ValdorsoCrescere
 			{ TEXT("Martello"), TEXT("Mazze") }, { TEXT("Mazza"), TEXT("Mazze") }, { TEXT("Clava"), TEXT("Mazze") },
 			{ TEXT("Lancia"), TEXT("Aste") }, { TEXT("Forcone"), TEXT("Aste") }, { TEXT("Bastone_Pastore"), TEXT("Aste") },
 			{ TEXT("Bastone_Ferrato"), TEXT("Aste") },
+			// (11/11, v0.1.7) il piccone e il pugnale dei nani della grotta del nord
+			{ TEXT("Piccone"), TEXT("Mazze") }, { TEXT("Pugnale_Nani"), TEXT("Pugnali") },
 		};
 		if (!IdOggetto.IsNone())
 		{

@@ -2,6 +2,10 @@
 
 #include "SValdorsoScheda.h"
 #include "ValdorsoCrescita.h"
+#include "ValdorsoArmi.h"
+#include "ValdorsoOggetti.h"
+#include "ValdorsoScherma.h"
+#include "ValdorsoTasti.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoTemaUI.h"
 #include "Brushes/SlateColorBrush.h"
@@ -331,6 +335,103 @@ void SValdorsoScheda::Rifai()
 			}
 		}
 	}
+	// (11/11, v0.1.5) le tecniche e i talenti che il colono sa fare (ValdorsoScherma.h), e le guardie
+	const APlayerController* Chi = Controllore.Get();
+	APawn* Corpo = Chi ? Chi->GetPawn() : nullptr;
+	Elenco->AddSlot()
+	.Padding(FMargin(0.f, 14.f, 0.f, 2.f))
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("Tecniche", "Le tecniche e i talenti"))
+		.Font(Caratteri->Titolo(16.f, TEXT("Bold")))
+		.ColorAndOpacity(ValdorsoTema::Rubrica())
+	];
+	const TArray<const FValdorsoTecnica*> Sa = ValdorsoScherma::Conosciute(Corpo);
+	if (Sa.Num() == 0)
+	{
+		Elenco->AddSlot()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("NessunaTecnica", "Ancora nessuna. A 25, 50, 75 e 100, quando un'abilita' cresce, il Cuore te ne insegna una."))
+			.Font(Caratteri->Testo(15.f, TEXT("Italic")))
+			.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+			.AutoWrapText(true)
+		];
+	}
+	TWeakObjectPtr<UValdorsoSchermaComponent> DeboleScherma(UValdorsoSchermaComponent::Di(Corpo));
+	for (const FValdorsoTecnica* T : Sa)
+	{
+		const FName IdTecnica = T->Id;
+		Elenco->AddSlot()
+		.Padding(FMargin(0.f, 3.f))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(FText::Format(LOCTEXT("TecnicaRiga", "{0} ({1} {2}): {3}"), FText::FromString(T->Nome),
+					FText::FromString(ValdorsoCrescere::Nome(T->Abilita, 0)), FText::AsNumber(T->Livello * 25), FText::FromString(T->Descrizione)))
+				.Font(Caratteri->Testo(15.f, T->Attiva() ? TEXT("SemiBold") : TEXT("Regular")))
+				.ColorAndOpacity(ValdorsoTema::Inchiostro())
+				.AutoWrapText(true)
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(FMargin(10.f, 0.f, 0.f, 0.f))
+			[
+				SNew(SBox)
+				.WidthOverride(120.f)
+				.Visibility(T->Attiva() ? EVisibility::Visible : EVisibility::Collapsed)
+				[
+					SNew(SButton)
+					.HAlign(HAlign_Center)
+					.IsFocusable(false)
+					.ToolTipText(LOCTEXT("NellaBarraAiuto", "La mette nel primo tasto libero della barra 1-8 (per toglierla: lo zaino, I)."))
+					.OnClicked_Lambda([DeboleScherma, IdTecnica]()
+					{
+						if (UValdorsoSchermaComponent* Il = DeboleScherma.Get())
+						{
+							Il->ServerMettiInBarra(IdTecnica, -1);
+						}
+						return FReply::Handled();
+					})
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("NellaBarra", "Nella barra"))
+						.Font(Caratteri->Titolo(12.f, TEXT("Bold")))
+						.ColorAndOpacity(ValdorsoTema::OroScuro())
+					]
+				]
+			]
+		];
+	}
+	// le guardie della scherma, per chi non le conosce
+	const UValdorsoArmiComponent* Armi = UValdorsoArmiComponent::Di(Corpo);
+	const FValdorsoTipoOggetto* Arma = Armi ? Armi->Arma() : nullptr;
+	const FName Famiglia = ValdorsoScherma::FamigliaGuardie(Arma ? Arma->Id : NAME_None);
+	Elenco->AddSlot()
+	.Padding(FMargin(0.f, 14.f, 0.f, 2.f))
+	[
+		SNew(STextBlock)
+		.Text(FText::Format(LOCTEXT("Guardie", "Le guardie ({0}: cambia guardia)"), ValdorsoTasti::NomeTasto(ValdorsoTasti::Tasto(EValdorsoTasto::Guardia))))
+		.Font(Caratteri->Titolo(16.f, TEXT("Bold")))
+		.ColorAndOpacity(ValdorsoTema::Rubrica())
+	];
+	const EValdorsoGuardia Guardie[] = { EValdorsoGuardia::Alta, EValdorsoGuardia::Lunga, EValdorsoGuardia::Bassa };
+	for (const EValdorsoGuardia G : Guardie)
+	{
+		Elenco->AddSlot()
+		[
+			SNew(STextBlock)
+			.Text(FText::Format(LOCTEXT("GuardiaRiga", "{0}: {1}"), ValdorsoScherma::NomeGuardia(Famiglia, G), ValdorsoScherma::SpiegaGuardia(G)))
+			.Font(Caratteri->Testo(15.f))
+			.ColorAndOpacity(ValdorsoTema::Inchiostro())
+			.AutoWrapText(true)
+		];
+	}
 	Contenuto->SetContent(Elenco);
 }
 
@@ -341,7 +442,7 @@ FReply SValdorsoScheda::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& 
 		return FReply::Handled();
 	}
 	const FKey Tasto = InKeyEvent.GetKey();
-	if (Tasto == EKeys::Escape || Tasto == EKeys::K || Tasto == EKeys::Gamepad_FaceButton_Right)
+	if (Tasto == EKeys::Escape || Tasto == ValdorsoTasti::Tasto(EValdorsoTasto::Scheda) || Tasto == EKeys::Gamepad_FaceButton_Right)
 	{
 		OnChiudi.ExecuteIfBound();
 		return FReply::Handled();

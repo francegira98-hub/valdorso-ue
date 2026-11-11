@@ -1,6 +1,7 @@
 // Valdorso - Bussola e taccuino di viaggio (vedi il .h). Scritto da Claude il 07/11/2026.
 
 #include "ValdorsoTaccuino.h"
+#include "ValdorsoInterfaccia.h"
 #include "SValdorsoTaccuino.h"
 #include "Valdorso.h"
 #include "ValdorsoCielo.h"
@@ -507,6 +508,9 @@ void UValdorsoTaccuinoComponent::MettiBussola()
 			.Controllore(Controllore)
 			.Taccuino(this)
 		];
+	// (11/11, v0.1.5) la bussola si sposta e si ingrandisce dalle Impostazioni (ValdorsoInterfaccia.h)
+	Bussola->SetRenderTransform(ValdorsoInterfaccia::Sposta(EValdorsoPezzoHud::Bussola));
+	Bussola->SetRenderTransformPivot(FVector2D(0.5f, 0.f));
 	// sotto il suggerimento (40) e l'avviso (45), sotto tutte le schermate
 	Viewport->AddViewportWidgetContent(Bussola.ToSharedRef(), 35);
 }

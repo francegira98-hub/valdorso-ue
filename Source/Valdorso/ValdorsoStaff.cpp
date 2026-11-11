@@ -465,7 +465,8 @@ FString UValdorsoStaffComponent::Fai(const FString& Azione, const FString& Chi, 
 
 	// --- Mondo ----------------------------------------------------------------------------------------
 	if (Azione == TEXT("ora") || Azione == TEXT("tempo") || Azione == TEXT("giorno") || Azione == TEXT("animali") || Azione == TEXT("animalivia")
-		|| Azione == TEXT("ricresci") || Azione == TEXT("campane") || Azione == TEXT("fase") || Azione == TEXT("sigillo"))
+		|| Azione == TEXT("ricresci") || Azione == TEXT("campane") || Azione == TEXT("fase") || Azione == TEXT("sigillo")
+		|| Azione == TEXT("frana") || Azione == TEXT("atto"))
 	{
 		if (!Puo(ValdorsoPermessi::Mondo))
 		{
@@ -480,6 +481,15 @@ FString UValdorsoStaffComponent::Fai(const FString& Azione, const FString& Chi, 
 		else if (Azione == TEXT("campane")) { Comando = Valore == TEXT("1") ? TEXT("Valdorso.Campane.Allarme 1") : TEXT("Valdorso.Campane.Allarme 0"); }
 		else if (Azione == TEXT("fase") && bNumero && Numero >= 1 && Numero <= 3) { Comando = FString::Printf(TEXT("Valdorso.Villaggio.Fase %d"), Numero); }
 		else if (Azione == TEXT("sigillo")) { Comando = Valore == TEXT("apri") ? TEXT("Valdorso.Sigillo.Apri") : TEXT("Valdorso.Sigillo.Chiudi"); }
+		// (11/11, v0.1.7) la frana della grotta del nord (ValdorsoGrottaNord.h): trema, si apre, si richiude
+		else if (Azione == TEXT("frana"))
+		{
+			if (Valore == TEXT("trema")) { Comando = TEXT("Valdorso.Grotta.Trema"); }
+			else if (Valore == TEXT("apri")) { Comando = TEXT("Valdorso.Grotta.Apri"); }
+			else if (Valore == TEXT("chiudi")) { Comando = TEXT("Valdorso.Grotta.Chiudi"); }
+		}
+		// (11/11, v0.1.6) l'Atto I "Il battito cambiato" (ValdorsoVoci.h): il frammento del tempio salta un colpo
+		else if (Azione == TEXT("atto")) { Comando = Valore == TEXT("0") ? TEXT("Valdorso.Atto.Battito 0") : TEXT("Valdorso.Atto.Battito 1"); }
 		else if (Azione == TEXT("ricresci")) { Comando = TEXT("Valdorso.Raccolta.Ricresci"); }
 		else if (Azione == TEXT("animalivia")) { Comando = TEXT("Valdorso.Animali.Via"); }
 		else if (Azione == TEXT("tempo"))

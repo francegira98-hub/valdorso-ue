@@ -47,6 +47,17 @@ namespace
 		GConfig->GetFloat(Sezione, TEXT("GrandezzaTesto"), I.GrandezzaTesto, GGameUserSettingsIni);
 		GConfig->GetBool(Sezione, TEXT("MenoMovimenti"), I.bMenoMovimenti, GGameUserSettingsIni);
 		GConfig->GetInt(Sezione, TEXT("Daltonismo"), I.Daltonismo, GGameUserSettingsIni);
+		// (11/11, v0.1.5)
+		GConfig->GetFloat(Sezione, TEXT("Scosse"), I.Scosse, GGameUserSettingsIni);
+		GConfig->GetBool(Sezione, TEXT("CorsaAlterna"), I.bCorsaAlterna, GGameUserSettingsIni);
+		GConfig->GetBool(Sezione, TEXT("Sottotitoli"), I.bSottotitoli, GGameUserSettingsIni);
+		GConfig->GetInt(Sezione, TEXT("BarreX"), I.BarreX, GGameUserSettingsIni);
+		GConfig->GetInt(Sezione, TEXT("BarreY"), I.BarreY, GGameUserSettingsIni);
+		GConfig->GetInt(Sezione, TEXT("BussolaX"), I.BussolaX, GGameUserSettingsIni);
+		GConfig->GetInt(Sezione, TEXT("BussolaY"), I.BussolaY, GGameUserSettingsIni);
+		GConfig->GetInt(Sezione, TEXT("ChatX"), I.ChatX, GGameUserSettingsIni);
+		GConfig->GetInt(Sezione, TEXT("ChatY"), I.ChatY, GGameUserSettingsIni);
+		GConfig->GetFloat(Sezione, TEXT("GrandezzaHud"), I.GrandezzaHud, GGameUserSettingsIni);
 
 		// Un file scritto a mano non deve rompere niente.
 		I.Qualita = FMath::Clamp(I.Qualita, -1, 3);
@@ -58,6 +69,14 @@ namespace
 		I.Sensibilita = FMath::Clamp(I.Sensibilita, 0.25f, 3.f);
 		I.GrandezzaTesto = FMath::Clamp(I.GrandezzaTesto, 1.f, 1.3f);
 		I.Daltonismo = FMath::Clamp(I.Daltonismo, 0, 3);
+		I.Scosse = FMath::Clamp(I.Scosse, 0.f, 1.f);
+		I.BarreX = FMath::Clamp(I.BarreX, -1200, 1200);
+		I.BarreY = FMath::Clamp(I.BarreY, -900, 0);
+		I.BussolaX = FMath::Clamp(I.BussolaX, -1200, 1200);
+		I.BussolaY = FMath::Clamp(I.BussolaY, 0, 900);
+		I.ChatX = FMath::Clamp(I.ChatX, 0, 1600);
+		I.ChatY = FMath::Clamp(I.ChatY, -900, 300);
+		I.GrandezzaHud = FMath::Clamp(I.GrandezzaHud, 0.8f, 1.4f);
 	}
 
 	void ScriviImpostazioni()
@@ -78,6 +97,16 @@ namespace
 		GConfig->SetFloat(Sezione, TEXT("GrandezzaTesto"), I.GrandezzaTesto, GGameUserSettingsIni);
 		GConfig->SetBool(Sezione, TEXT("MenoMovimenti"), I.bMenoMovimenti, GGameUserSettingsIni);
 		GConfig->SetInt(Sezione, TEXT("Daltonismo"), I.Daltonismo, GGameUserSettingsIni);
+		GConfig->SetFloat(Sezione, TEXT("Scosse"), I.Scosse, GGameUserSettingsIni);
+		GConfig->SetBool(Sezione, TEXT("CorsaAlterna"), I.bCorsaAlterna, GGameUserSettingsIni);
+		GConfig->SetBool(Sezione, TEXT("Sottotitoli"), I.bSottotitoli, GGameUserSettingsIni);
+		GConfig->SetInt(Sezione, TEXT("BarreX"), I.BarreX, GGameUserSettingsIni);
+		GConfig->SetInt(Sezione, TEXT("BarreY"), I.BarreY, GGameUserSettingsIni);
+		GConfig->SetInt(Sezione, TEXT("BussolaX"), I.BussolaX, GGameUserSettingsIni);
+		GConfig->SetInt(Sezione, TEXT("BussolaY"), I.BussolaY, GGameUserSettingsIni);
+		GConfig->SetInt(Sezione, TEXT("ChatX"), I.ChatX, GGameUserSettingsIni);
+		GConfig->SetInt(Sezione, TEXT("ChatY"), I.ChatY, GGameUserSettingsIni);
+		GConfig->SetFloat(Sezione, TEXT("GrandezzaHud"), I.GrandezzaHud, GGameUserSettingsIni);
 		GConfig->Flush(false, GGameUserSettingsIni);
 	}
 

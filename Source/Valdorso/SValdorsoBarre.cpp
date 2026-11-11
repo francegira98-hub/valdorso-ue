@@ -2,6 +2,7 @@
 // il 08/11/2026.
 
 #include "SValdorsoBarre.h"
+#include "ValdorsoScherma.h"
 #include "ValdorsoBarre.h"
 #include "ValdorsoPericoli.h"
 #include "ValdorsoAttributeSet.h"
@@ -368,9 +369,20 @@ int32 SValdorsoBarraAzioni::OnPaint(const FPaintArgs& Args, const FGeometry& All
 		}
 		else if (!bVuoto)
 		{
-			// un'azione che non è un oggetto (le abilità, più avanti): le prime lettere del suo nome al centro
-			BarreScrivi(OutDrawElements, LayerId + 3, AllottedGeometry, Id.ToString().Left(2), FontAzione,
-				Centro, ValdorsoTema::Pergamena().CopyWithNewOpacity(Forza));
+			// (11/11, v0.1.5) una tecnica (ValdorsoScherma.h): la sua sigla, e la ricarica che scende come un velo scuro
+			const FString Sigla = ValdorsoScherma::Sigla(Id);
+			BarreScrivi(OutDrawElements, LayerId + 3, AllottedGeometry, Sigla.IsEmpty() ? Id.ToString().Left(2) : Sigla, FontAzione,
+				Centro, ValdorsoTema::OroChiaro().CopyWithNewOpacity(Forza));
+			const APlayerController* Chi = Controllore.Get();
+			const UValdorsoSchermaComponent* Scherma = UValdorsoSchermaComponent::Di(Chi ? Chi->GetPawn() : nullptr);
+			const float Manca = Scherma ? Scherma->Ricarica(Id) : 0.f;
+			if (Manca > 0.01f)
+			{
+				const float Alto = (Lato - 4.f) * Manca;
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 4,
+					AllottedGeometry.ToPaintGeometry(FVector2f(Lato - 4.f, Alto), FSlateLayoutTransform(Angolo + FVector2f(2.f, Lato - 2.f - Alto))),
+					&Pieno, ESlateDrawEffect::None, FLinearColor(0.f, 0.f, 0.f, 0.55f * Alfa));
+			}
 		}
 	}
 	// "Nessuna azione" sopra il posto premuto (senza uscire dai lati della barra)

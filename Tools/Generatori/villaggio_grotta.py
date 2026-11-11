@@ -624,11 +624,15 @@ def frana(pr, rng):
             a = c + np.array([r.uniform(-14, 14), 0, r.uniform(-22, 8)])
             b = a + (np.array([1.0, 0, 0]) if r.random() < 0.5 else np.array([0, 0, 1.0])) * r.choice([-16.0, 16.0])
             _tratto(segni, "Ferro", a, b, av, 3.0)
-    # la fessura buia in alto, tra la frana e l'architrave
-    m.quad("Ferro", [-220.0, yf - 95.0, hl - 140.0], [220.0, yf - 95.0, hl - 140.0], [220.0, yf - 95.0, hl],
+    # la fessura buia in alto, tra la frana e l'architrave; (11/11) il buio va giu' fino allo zoccolo: quando la frana si
+    # apre (AValdorsoFrana nasconde SM_Grotta_Nord_Frana) il vano resta nero, la galleria che entra nella montagna
+    m.quad("Ferro", [-220.0, yf - 95.0, top0], [220.0, yf - 95.0, top0], [220.0, yf - 95.0, hl],
            [-220.0, yf - 95.0, hl], normale=av)
 
-    # ---- la frana: un cumulo che riempie il vano fino a 70 cm dall'architrave ed esce sul pendio per 4-5 m
+    # ---- la frana: un cumulo che riempie il vano fino a 70 cm dall'architrave ed esce sul pendio per 4-5 m.
+    # (11/11, v0.1.7) in un pezzo suo (SM_Grotta_Nord_Frana, etichetta "ValdorsoFrana"): quando i coloni la liberano,
+    # AValdorsoFrana (C++) la nasconde e il portale si apre
+    fr = Mesh("SM_Grotta_Nord_Frana")
     xs = np.arange(-650.0, 651.0, 25.0)
     ys = np.arange(yf - 140.0, yf + 640.0, 25.0)
     F = np.zeros((len(ys), len(xs), 3))
@@ -655,7 +659,7 @@ def frana(pr, rng):
     dzy = np.gradient(F[..., 2], axis=0) / 25.0
     Nr[..., 0], Nr[..., 1], Nr[..., 2] = -dzx, -dzy, 1.0
     Nr /= np.linalg.norm(Nr, axis=2, keepdims=True)
-    _griglia_tri(m, "Roccia", F, Nr, TILE_ROCCIA)
+    _griglia_tri(fr, "Roccia", F, Nr, TILE_ROCCIA)
     # i massi sopra la frana
     sassi = 0
     for k in range(60):
@@ -663,11 +667,13 @@ def frana(pr, rng):
         if pieno[i, j] < 60.0 or (ys[i] <= yf and abs(xs[j]) > 230.0):
             continue
         r = rng.uniform(35.0, 120.0) * (0.6 if ys[i] <= yf else 1.0)
-        _sasso(m, F[i, j] + np.array([0, 0, -0.25 * r]), r, rng, 200 + k)
+        _sasso(fr, F[i, j] + np.array([0, 0, -0.25 * r]), r, rng, 200 + k)
         sassi += 1
 
     pr.al_suolo("Grotta nord", "Grotta nord", m, gx, gy, q0, collisione=True)
     pr.al_suolo("Grotta nord", "Segni dei nani della grotta nord", segni, gx, gy, q0, collisione=False)
+    pr.al_suolo("Grotta nord", "La frana del nord", fr, gx, gy, q0, collisione=True)
+    pr.cose[-1]["etichetta"] = "ValdorsoFrana"
     # l'iscrizione: davanti al pilastro di destra (lì c'è lo zoccolo e non la frana), verso sud, mai sotto il terreno
     zi = max(top0, zt(290.0, yf + 20.0))
     pr.aggiungi("Grotta nord", "Iscrizione della frana", "iscrizione", gx + 290.0, gy + yf + 20.0, q0 + zi, 90.0, suolo=True,

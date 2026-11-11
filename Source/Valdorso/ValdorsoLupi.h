@@ -196,6 +196,9 @@ public:
 	/** Solo sul server: qualcuno l'ha colpito (diventa la sua preda, o lo fa fuggire). */
 	void Ferito(AActor* Da);
 
+	/** (11/11, v0.1.5) Solo sul server: resta fermo per qualche secondo (una tecnica che stordisce, ValdorsoScherma.h). */
+	void Stordisci(float Secondi);
+
 	const FValdorsoSpecie* GetSpecie() const;
 	EValdorsoStatoLupo GetStato() const { return Stato; }
 	bool Vivo() const { return Stato != EValdorsoStatoLupo::Morto; }
@@ -281,6 +284,8 @@ private:
 	double Fermo = 0.0;
 	double ScansaFino = 0.0;
 	FVector Scansa = FVector::ZeroVector;
+	/** (11/11) Stordito fino a quando (non pensa e non si muove). */
+	double StorditoFino = 0.0;
 
 	// --- su ogni PC (l'aspetto)
 	float Passo = 0.f;

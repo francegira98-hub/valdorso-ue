@@ -86,6 +86,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerAlzati();
 
+	/** (11/11, v0.1.6) Dal server: un sogno da mostrare nel buio del sonno (ValdorsoSogni.h; solo l'Id, i testi stanno nel gioco). */
+	UFUNCTION(Client, Reliable)
+	void ClientSogno(FName Id);
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

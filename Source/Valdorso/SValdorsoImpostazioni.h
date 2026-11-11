@@ -32,9 +32,13 @@ private:
 	void AggiungiVoce(const TSharedRef<SVerticalBox>& Dove, const FText& Nome, TFunction<FText()> Valore, TFunction<void(int32)> Passo);
 	void AggiungiTitolo(const TSharedRef<SVerticalBox>& Dove, const FText& Titolo);
 	void Applica();
+	/** (11/11, v0.1.5) Il tasto nuovo per l'azione in attesa (ValdorsoTasti.h). */
+	FReply Cattura(const FKey& Tasto);
 
 	TSharedPtr<FValdorsoStileAccesso> Stile;
 	FSimpleDelegate OnChiudi;
 	TSharedPtr<SWidget> PrimoPulsante;
 	FValdorsoImpostazioni Bozza;
+	/** (11/11, v0.1.5) L'azione che aspetta il suo tasto nuovo (EValdorsoTasto), -1 nessuna. */
+	int32 TastoInAttesa = -1;
 };

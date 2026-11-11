@@ -17,6 +17,8 @@
 #include "ValdorsoMovenze.h"
 #include "ValdorsoPericoli.h"
 #include "ValdorsoBagnato.h"
+#include "ValdorsoScherma.h"
+#include "ValdorsoVigore.h"
 #include "AbilitySystemComponent.h"
 #include "ValdorsoArmi.h"
 #include "ValdorsoCombattimento.h"
@@ -101,6 +103,9 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	Pericoli = CreateDefaultSubobject<UValdorsoPericoliComponent>(TEXT("Pericoli"));
 	// (08/11, v0.1.4) Bagnati e asciutti.
 	Bagnato = CreateDefaultSubobject<UValdorsoBagnatoComponent>(TEXT("Bagnato"));
+	// (11/11, v0.1.5) Le guardie e le tecniche; il Vigore.
+	Scherma = CreateDefaultSubobject<UValdorsoSchermaComponent>(TEXT("Scherma"));
+	Vigore = CreateDefaultSubobject<UValdorsoVigoreComponent>(TEXT("Vigore"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -339,12 +344,17 @@ void AValdorsoCharacter::DoCorsaInizio()
 {
 	if (UValdorsoMovementComponent* Movimento = Cast<UValdorsoMovementComponent>(GetCharacterMovement()))
 	{
-		Movimento->ImpostaCorsa(true);
+		// (11/11, v0.1.5) accessibilita': "premi una volta" accende e spegne la corsa (fermandosi si spegne: ValdorsoVigore.h)
+		Movimento->ImpostaCorsa(ValdorsoImpostazioni::Correnti().bCorsaAlterna ? !Movimento->VuoleCorrere() : true);
 	}
 }
 
 void AValdorsoCharacter::DoCorsaFine()
 {
+	if (ValdorsoImpostazioni::Correnti().bCorsaAlterna)
+	{
+		return;
+	}
 	if (UValdorsoMovementComponent* Movimento = Cast<UValdorsoMovementComponent>(GetCharacterMovement()))
 	{
 		Movimento->ImpostaCorsa(false);

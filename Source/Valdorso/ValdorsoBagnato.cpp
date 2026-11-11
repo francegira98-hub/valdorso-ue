@@ -1,6 +1,7 @@
 // Valdorso - Bagnati e asciutti (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoBagnato.h"
+#include "ValdorsoVigore.h"
 #include "Valdorso.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoFalo.h"
@@ -243,7 +244,8 @@ void UValdorsoBagnatoComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	// (10/11, v0.1.4) il fiato: con la bocca sott'acqua si trattiene, fuori si riprende; finito, si annega
 	{
 		const bool bApnea = Movimento && Movimento->IsSwimming() && Movimento->AcquaSopraLaTesta() >= ValdorsoBagnato::AcquaPerApnea;
-		FiatoEsatto = ValdorsoBagnato::PassoFiato(FiatoEsatto, Trascorso, bApnea);
+		// (11/11, v0.1.5) il Nuoto: il fiato lungo (50) e l'abisso (100) fanno durare di piu' il fiato (ValdorsoVigore.h)
+		FiatoEsatto = ValdorsoBagnato::PassoFiato(FiatoEsatto, bApnea ? Trascorso / ValdorsoVigore::FattoreFiato(GetOwner()) : Trascorso, bApnea);
 		if (FMath::Abs(FiatoEsatto - FiatoInRete) >= 0.01f || FiatoEsatto <= 0.f || FiatoEsatto >= 1.f)
 		{
 			FiatoInRete = FiatoEsatto;

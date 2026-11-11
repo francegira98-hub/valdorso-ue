@@ -1,6 +1,7 @@
 // Valdorso - La valle come territorio e la pietra del villaggio nel tempio (vedi il .h).
 
 #include "ValdorsoTerritorio.h"
+#include "ValdorsoVoci.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
 #include "Valdorso.h"
@@ -284,6 +285,11 @@ void AValdorsoPietraVillaggio::OnConstruction(const FTransform& Transform)
 void AValdorsoPietraVillaggio::BeginPlay()
 {
 	Super::BeginPlay();
+	// (11/11, v0.1.6) l'Atto I "Il battito cambiato" e' cominciato (anche prima di un riavvio): la pietra resta debole
+	if (HasAuthority() && ValdorsoVoci::Atto(this) >= 1)
+	{
+		ImpostaForza(FMath::Min(Forza, ValdorsoVoci::ForzaAttoI));
+	}
 	if (GetNetMode() == NM_DedicatedServer)
 	{
 		// sul server dedicato non c'è niente da vedere

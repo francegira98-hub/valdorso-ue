@@ -324,12 +324,30 @@ def arma(nome):
             for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
                 _colorato(m, ORO, lambda t, sx=sx, sz=sz: t.trave("x", [sx * 8, -6.6, sz * 8], [sx * 24, -6.6 + 0.8, sz * 40], 1.6, 0.4, su=(0, 1, 0)))
         manico(m, -7, 7, 1.3, CUOIO)
+    elif nome == "Piccone":
+        # (11/11, v0.1.7) il piccone per liberare la frana del nord (dalla fucina): manico lungo, testa a due punte
+        manico(m, -30, 50, 1.8, LEGNO)
+        fasce(m, -29, -18, 1.8, 3)
+        _colorato(m, FERRO, lambda t: t.blocco("x", 44, 52, -2.4, 2.4, -3.5, 3.5))
+        _colorato(m, FERRO, lambda t: t.trave("x", [48, 0, 3], [46, 0, 22], 3.2, 2.4, su=(1, 0, 0)))
+        _colorato(m, FERRO, lambda t: t.trave("x", [48, 0, -3], [46, 0, -20], 3.2, 2.4, su=(1, 0, 0)))
+        _colorato(m, ACCIAIO, lambda t: t.cilindro("x", [46, 0, 22], 1.4, 3.5, lati=6, raggio_alto=0.2))
+        _colorato(m, ACCIAIO, lambda t: t.blocco("x", 44.5, 47.5, -2.0, 2.0, -23, -19))
+    elif nome == "Pugnale_Nani":
+        # (11/11, v0.1.7) il pugnale dei nani (dalle ossa della grotta del nord): largo, squadrato, con l'ottone
+        manico(m, -9, 1, 1.6, LEGNOSCURO)
+        fasce(m, -8, 0, 1.6, 3, OTTONE)
+        _colorato(m, OTTONE, lambda t: t.blocco("x", -11.5, -9, -2.2, 2.2, -2.2, 2.2))
+        _colorato(m, OTTONE, lambda t: t.blocco("x", 1, 3, -1.4, 1.4, -6, 6))
+        lama(m, 3, 24, 4.4, 0.6, punta=0.3)
     return m
 
 
 ARMI = ["Coltello", "Pugnale", "Falcetto", "Martello", "Bastone_Pastore", "Spada_Corta", "Scudo_Legno",
         "Accetta", "Ascia_Guerra", "Mazza", "Clava", "Lancia", "Forcone", "Bastone_Ferrato", "Spada_Lunga", "Gladio",
-        "Brocchiere", "Scudo_Rotondo", "Scudo_Aquilone", "Scudo_Legione"]
+        "Brocchiere", "Scudo_Rotondo", "Scudo_Aquilone", "Scudo_Legione",
+        # (11/11, v0.1.7) la grotta del nord
+        "Piccone", "Pugnale_Nani"]
 
 
 # ------------------------------------------------------------------------------------------------ suoni
