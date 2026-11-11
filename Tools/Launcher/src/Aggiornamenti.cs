@@ -8,6 +8,10 @@
 // Va bene anche il manifesto di prima, con lo zip intero: pacchetto (url, sha256, byte) diventa una parte sola.
 // Le parti sono pezzi uguali dello stesso zip (Valdorso_0.1.3.zip.001, .002...): non si riuniscono su disco (sarebbe
 // il doppio dello spazio), si leggono una dopo l'altra come un file solo (FlussoUnito).
+// (12/11) Le PATCH: se il manifesto ha una "patch" che parte dalla versione installata ("da"), il launcher scarica
+// solo quella (i file cambiati, in parti come il pacchetto) e la mette sopra il gioco: i file nuovi al posto dei
+// vecchi (che restano da parte finché non e' finito tutto), quelli da togliere ("togli") tolti. Se qualcosa va storto,
+// rimette tutto com'era e scarica il gioco intero. I launcher di prima ignorano la patch e scaricano tutto.
 // L'installazione non lascia mai il gioco a metà: si scompatta in "Gioco_nuovo", poi si scambiano le cartelle; le
 // impostazioni del giocatore (la cartella Saved del gioco) passano nella versione nuova.
 
@@ -38,6 +42,17 @@ namespace Valdorso.Launcher
         public long Byte;
     }
 
+    /// <summary>(12/11) Una patch: dalla versione "Da" a quella del manifesto, solo i file cambiati.</summary>
+    public class PatchDelGioco
+    {
+        public string Da = "";
+        public List<ParteDelPacchetto> Parti = new List<ParteDelPacchetto>();
+        public long Byte;
+        /// <summary>Quanto occupano i file della patch scompattati.</summary>
+        public long Installato;
+        public List<string> Togli = new List<string>();
+    }
+
     public class Manifesto
     {
         public string Versione = "";
@@ -57,6 +72,7 @@ namespace Valdorso.Launcher
         public bool Aperto = true;
         public List<Notizia> Notizie = new List<Notizia>();
         public List<FileDelGioco> File = new List<FileDelGioco>();
+        public List<PatchDelGioco> Patch = new List<PatchDelGioco>();
 
         public static Manifesto DaJson(string testo)
         {
@@ -134,6 +150,30 @@ namespace Valdorso.Launcher
             if (m.ByteInstallato == 0)
             {
                 m.ByteInstallato = somma;
+            }
+            // (12/11) le patch dalle versioni di prima
+            foreach (Dictionary<string, object> x in Json.Elenco(d, "patch"))
+            {
+                PatchDelGioco pa = new PatchDelGioco();
+                pa.Da = Json.Testo(x, "da", "").Trim();
+                foreach (Dictionary<string, object> y in Json.Elenco(x, "parti"))
+                {
+                    ParteDelPacchetto parte = new ParteDelPacchetto();
+                    parte.Url = Json.Testo(y, "url", "").Trim();
+                    parte.Sha256 = Json.Testo(y, "sha256", "").Trim().ToLowerInvariant();
+                    parte.Byte = (long)Json.Numero(y, "byte", 0);
+                    if (parte.Url.Length > 0)
+                    {
+                        pa.Parti.Add(parte);
+                        pa.Byte += parte.Byte;
+                    }
+                }
+                pa.Togli.AddRange(Json.Testi(x, "togli"));
+                pa.Installato = (long)Json.Numero(x, "installato", 0);
+                if (pa.Da.Length > 0 && pa.Parti.Count > 0)
+                {
+                    m.Patch.Add(pa);
+                }
             }
             return m;
         }
@@ -430,6 +470,32 @@ namespace Valdorso.Launcher
             return Path.Combine(Cartelle.Scaricati, "Valdorso_" + Pulito(m.Versione) + ".zip." + (indice + 1).ToString("000", CultureInfo.InvariantCulture));
         }
 
+        /// <summary>(12/11) Il nome di una parte della patch (comincia come quelle del pacchetto: PulisciScaricati la tiene).</summary>
+        string NomeParchePatch(Manifesto m, PatchDelGioco pa, int indice)
+        {
+            return Path.Combine(Cartelle.Scaricati, "Valdorso_" + Pulito(m.Versione) + ".zip.patch_" + Pulito(pa.Da) + "." +
+                (indice + 1).ToString("000", CultureInfo.InvariantCulture));
+        }
+
+        /// <summary>(12/11) La patch che va bene per il gioco installato (null se non c'e': si scarica tutto).</summary>
+        public PatchDelGioco PatchPer(Manifesto m)
+        {
+            string installata = VersioneInstallata();
+            if (m == null || installata.Length == 0 || installata == m.Versione || !Directory.Exists(config.PercorsoGioco)
+                || !File.Exists(Eseguibile(m)))
+            {
+                return null;
+            }
+            foreach (PatchDelGioco pa in m.Patch)
+            {
+                if (pa.Da == installata)
+                {
+                    return pa;
+                }
+            }
+            return null;
+        }
+
         static bool ParteFinita(ParteDelPacchetto p, string file)
         {
             try
@@ -448,10 +514,12 @@ namespace Valdorso.Launcher
         public long DaScaricare(Manifesto m)
         {
             long fuori = 0;
-            for (int i = 0; i < m.Parti.Count; i++)
+            PatchDelGioco pa = PatchPer(m);
+            List<ParteDelPacchetto> parti = pa != null ? pa.Parti : m.Parti;
+            for (int i = 0; i < parti.Count; i++)
             {
-                ParteDelPacchetto p = m.Parti[i];
-                string file = NomeParte(m, i);
+                ParteDelPacchetto p = parti[i];
+                string file = pa != null ? NomeParchePatch(m, pa, i) : NomeParte(m, i);
                 if (ParteFinita(p, file))
                 {
                     continue;
@@ -478,7 +546,8 @@ namespace Valdorso.Launcher
         {
             const long margine = 300L * 1024 * 1024;
             long scarico = DaScaricare(m);
-            long installo = m.ByteInstallato > 0 ? m.ByteInstallato : (long)(m.BytePacchetto * 1.2);
+            PatchDelGioco pa = PatchPer(m);
+            long installo = pa != null ? (pa.Installato > 0 ? pa.Installato + pa.Byte : pa.Byte * 3) : (m.ByteInstallato > 0 ? m.ByteInstallato : (long)(m.BytePacchetto * 1.2));
             string discoScarico = Disco(Cartelle.Scaricati);
             string discoGioco = Disco(config.PercorsoGioco);
             Dictionary<string, long> servono = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
@@ -529,12 +598,46 @@ namespace Valdorso.Launcher
         /// <summary>Scarica le parti (riprende da dove si era fermato), le controlla e installa il gioco.</summary>
         public void Installa(Manifesto m, Avanzamento avanza)
         {
+            // (12/11) prima la patch, se c'e' quella giusta; se non riesce, il gioco intero
+            PatchDelGioco pa = PatchPer(m);
+            if (pa != null)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Cartelle.Scaricati);
+                    PulisciScaricati(m);
+                    string spazioPatch = ControllaSpazio(m);
+                    if (spazioPatch.Length > 0)
+                    {
+                        throw new SpazioInsufficiente(spazioPatch);
+                    }
+                    InstallaPatch(m, pa, avanza);
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (SpazioInsufficiente)
+                {
+                    throw;
+                }
+                catch (PatchNonVa e)
+                {
+                    // il gioco installato non e' quello che la patch si aspetta: si scarica tutto (gli errori di rete
+                    // e i file aperti invece arrivano al giocatore com'erano, e la prossima volta si riprova la patch)
+                    Registro.Scrivi("la patch da " + pa.Da + " non va (" + e.Message + "): scarico il gioco intero");
+                    PulisciPatch(m, pa);
+                    m.Patch.Remove(pa);
+                }
+            }
             if (m.Parti.Count == 0)
             {
                 throw new InvalidDataException("il manifesto non dice da dove scaricare il gioco");
             }
             Directory.CreateDirectory(Cartelle.Scaricati);
             PulisciScaricati(m);
+            PulisciPatch(m, null);
             string spazio = ControllaSpazio(m);
             if (spazio.Length > 0)
             {
@@ -643,6 +746,211 @@ namespace Valdorso.Launcher
                 Cancella(f + ".ok");
             }
             Registro.Scrivi("installata la versione " + m.Versione);
+        }
+
+        /// <summary>(12/11) La patch non si puo' mettere (il gioco installato non e' quello giusto, uno zip rovinato...):
+        /// si scarica il gioco intero. Gli errori di rete invece non cambiano strada: si riprova la patch.</summary>
+        class PatchNonVa : Exception
+        {
+            public PatchNonVa(string messaggio, Exception dentro) : base(messaggio, dentro)
+            {
+            }
+        }
+
+        /// <summary>(12/11) Vero se l'errore e' un file aperto da un altro programma (il gioco acceso).</summary>
+        static bool FileInUso(Exception e)
+        {
+            IOException io = e as IOException;
+            int codice = io != null ? (io.HResult & 0xFFFF) : 0;
+            return codice == 32 || codice == 33;
+        }
+
+        /// <summary>(12/11) Via le cartelle e i pezzi di una patch (dopo, o se si passa al gioco intero).</summary>
+        void PulisciPatch(Manifesto m, PatchDelGioco pa)
+        {
+            string gioco = Path.GetFullPath(config.PercorsoGioco).TrimEnd('\\', '/');
+            foreach (string c in new string[] { gioco + "_patch", gioco + "_patch_vecchio" })
+            {
+                try
+                {
+                    if (Directory.Exists(c))
+                    {
+                        Directory.Delete(c, true);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Registro.Scrivi("pulizia della patch non finita: " + e.Message);
+                }
+            }
+            if (pa != null)
+            {
+                for (int i = 0; i < pa.Parti.Count; i++)
+                {
+                    Cancella(NomeParchePatch(m, pa, i));
+                    Cancella(NomeParchePatch(m, pa, i) + ".ok");
+                }
+            }
+        }
+
+        /// <summary>(12/11) La patch: scarica le sue parti, le scompatta accanto e mette i file sopra il gioco, tenendo da
+        /// parte i vecchi finche' non e' finito tutto. Poi controlla che ogni file del gioco abbia la misura giusta: se
+        /// qualcosa non torna, rimette tutto com'era e lancia PatchNonVa (allora si scarica il gioco intero).</summary>
+        void InstallaPatch(Manifesto m, PatchDelGioco pa, Avanzamento avanza)
+        {
+            long totale = 0;
+            foreach (ParteDelPacchetto p in pa.Parti)
+            {
+                totale += Math.Max(0, p.Byte);
+            }
+            List<string> file = new List<string>();
+            long primaDiQuesta = 0;
+            velocita = 0;
+            // lo scarico: se la rete cade l'errore arriva al giocatore com'e' (riprovando, si riprende la patch)
+            for (int i = 0; i < pa.Parti.Count; i++)
+            {
+                if (Annulla)
+                {
+                    throw new OperationCanceledException();
+                }
+                string nome = NomeParchePatch(m, pa, i);
+                ScaricaParte(pa.Parti[i], nome, i, pa.Parti.Count, primaDiQuesta, totale, avanza);
+                file.Add(nome);
+                primaDiQuesta += new FileInfo(nome).Length;
+            }
+            Registro.Scrivi("patch da " + pa.Da + " a " + m.Versione + " pronta: " + Misure.Byte(primaDiQuesta));
+
+            string gioco = Path.GetFullPath(config.PercorsoGioco).TrimEnd('\\', '/');
+            string sopra = gioco + "_patch";
+            string daParte = gioco + "_patch_vecchio";
+            PulisciPatch(m, null);
+            avanza(Fase.Installo, "Installo le novita'", 0, 1, 0);
+            try
+            {
+                Scompatta(file, sopra, avanza);
+            }
+            catch (OperationCanceledException)
+            {
+                PulisciPatch(m, null);
+                throw;
+            }
+            catch (Exception e)
+            {
+                PulisciPatch(m, null);
+                throw new PatchNonVa("la patch non si scompatta: " + e.Message, e);
+            }
+
+            List<string> aggiunti = new List<string>();
+            List<string> spostati = new List<string>();
+            HashSet<string> nuovi = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string baseSopra = sopra + Path.DirectorySeparatorChar;
+            string installata = VersioneInstallata();
+            Scambio = true;
+            try
+            {
+                // mentre si lavora il gioco non ha una versione: se il PC si spegne a meta', la prossima volta si
+                // scarica il gioco intero (invece di partire con meta' dei file vecchi e meta' nuovi)
+                Cancella(FileVersione);
+                foreach (string nuovo in Directory.GetFiles(sopra, "*", SearchOption.AllDirectories))
+                {
+                    string relativo = nuovo.Substring(baseSopra.Length);
+                    nuovi.Add(relativo.Replace('\\', '/'));
+                    string dove = Path.Combine(gioco, relativo);
+                    if (File.Exists(dove))
+                    {
+                        string vecchio = Path.Combine(daParte, relativo);
+                        Directory.CreateDirectory(Path.GetDirectoryName(vecchio));
+                        File.Move(dove, vecchio);
+                        spostati.Add(relativo);
+                    }
+                    else
+                    {
+                        aggiunti.Add(relativo);
+                    }
+                    Directory.CreateDirectory(Path.GetDirectoryName(dove));
+                    File.Move(nuovo, dove);
+                }
+                foreach (string togli in pa.Togli)
+                {
+                    // un file che ha solo cambiato maiuscole e' gia' arrivato nuovo: non si toglie
+                    if (nuovi.Contains(togli.Replace('\\', '/')))
+                    {
+                        continue;
+                    }
+                    string relativo = togli.Replace('/', Path.DirectorySeparatorChar);
+                    string dove = Path.GetFullPath(Path.Combine(gioco, relativo));
+                    if (!dove.StartsWith(gioco + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(dove))
+                    {
+                        continue;
+                    }
+                    string vecchio = Path.Combine(daParte, relativo);
+                    Directory.CreateDirectory(Path.GetDirectoryName(vecchio));
+                    File.Move(dove, vecchio);
+                    spostati.Add(relativo);
+                }
+                // il controllo: ogni file del gioco nuovo c'e', con la misura giusta
+                foreach (FileDelGioco f in m.File)
+                {
+                    string dove = Path.Combine(gioco, f.Percorso.Replace('/', Path.DirectorySeparatorChar));
+                    FileInfo info = new FileInfo(dove);
+                    if (!info.Exists || (f.Byte > 0 && info.Length != f.Byte))
+                    {
+                        throw new PatchNonVa("dopo la patch " + f.Percorso + (info.Exists ? " ha la misura sbagliata" : " manca") +
+                            ": il gioco installato non era la v" + pa.Da + " giusta", null);
+                    }
+                }
+                File.WriteAllText(FileVersione, m.Versione);
+            }
+            catch (Exception e)
+            {
+                // si rimette tutto com'era: via i file nuovi, tornano i vecchi
+                foreach (string relativo in aggiunti)
+                {
+                    Cancella(Path.Combine(gioco, relativo));
+                }
+                foreach (string relativo in spostati)
+                {
+                    try
+                    {
+                        string dove = Path.Combine(gioco, relativo);
+                        Cancella(dove);
+                        File.Move(Path.Combine(daParte, relativo), dove);
+                    }
+                    catch (Exception e2)
+                    {
+                        Registro.Scrivi("patch: non riesco a rimettere " + relativo + ": " + e2.Message);
+                    }
+                }
+                try
+                {
+                    if (installata.Length > 0)
+                    {
+                        File.WriteAllText(FileVersione, installata);
+                    }
+                }
+                catch (Exception e3)
+                {
+                    Registro.Scrivi("patch: non riesco a rimettere la versione: " + e3.Message);
+                }
+                Scambio = false;
+                PulisciPatch(m, null);
+                if (FileInUso(e))
+                {
+                    throw new IOException("un file del gioco e' aperto (il gioco e' acceso?): chiudi Valdorso e riprova", e);
+                }
+                if (e is PatchNonVa)
+                {
+                    throw;
+                }
+                throw new PatchNonVa("la patch non si mette: " + e.Message, e);
+            }
+            finally
+            {
+                Scambio = false;
+            }
+            PulisciPatch(m, pa);
+            Registro.Scrivi("installata la patch: dalla " + pa.Da + " alla " + m.Versione + " (" + aggiunti.Count + " file nuovi, " +
+                spostati.Count + " cambiati o tolti)");
         }
 
         /// <summary>Via dalla cartella Scaricati i pezzi delle versioni vecchie (lo zip intero del launcher 1.0 compreso).</summary>

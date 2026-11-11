@@ -17,6 +17,7 @@
 #include "Widgets/Input/SVirtualJoystick.h"
 #include "ValdorsoGameInstance.h"
 #include "SValdorsoBottega.h"
+#include "SValdorsoBaule.h"
 #include "ValdorsoArmi.h"
 #include "ValdorsoCombattimento.h"
 #include "SValdorsoAccesso.h"
@@ -830,7 +831,7 @@ bool AValdorsoPlayerController::SchermataAperta() const
 	return Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
 		|| SchermataImpostazioni.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoFoto::Aperta(this)
-		|| ValdorsoBottegaSchermo::Aperta(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || (Chat && Chat->RigaAperta());
+		|| ValdorsoBottegaSchermo::Aperta(this) || ValdorsoBauleSchermo::Aperto(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || (Chat && Chat->RigaAperta());
 }
 
 void AValdorsoPlayerController::TastoAggancio()
@@ -1023,7 +1024,7 @@ void AValdorsoPlayerController::ChiudiMappa()
 
 void AValdorsoPlayerController::TastoInteragisci()
 {
-	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoBottegaSchermo::Aperta(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || !GetPawn())
+	if (Pausa.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoBottegaSchermo::Aperta(this) || ValdorsoBauleSchermo::Aperto(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || !GetPawn())
 	{
 		return;
 	}

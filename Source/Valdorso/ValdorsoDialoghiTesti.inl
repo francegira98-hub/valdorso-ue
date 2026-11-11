@@ -785,7 +785,17 @@ namespace
 			TEXT("Le scale sono in fondo. Il terzo gradino scricchiola: saltalo, se torni tardi."),
 			})
 			.Scelta(TEXT("Vado su, allora. Buonanotte, Bruno."), TEXT("buonanotte"))
+			.Scelta(TEXT("E le mie cose? Non posso portarmi dietro tutto."), TEXT("baule"))
 			.Scelta(TEXT("Grazie. Prima però ho qualche domanda."), TEXT("ancora"));
+
+		// (12/11, v0.2.0) Il baule del colono (ValdorsoBaule.h): in un angolo della sala
+		D.Nodo(TEXT("baule"), {
+			TEXT("(Bruno indica col pollice l'angolo in fondo alla sala: un baule di legno scuro, con due bande di ferro.)"),
+			TEXT("Quello. Ogni colono che arriva ha il suo posto lì dentro: non chiedermi come ci stiate tutti, che è un segreto del mestiere. Il baule è tuo, la chiave ce l'ho io, e io non apro niente."),
+			TEXT("Lasciaci quello che pesa e non ti serve: la legna, le pietre, la roba buona per l'inverno. Dentro non si bagna, non si perde e non la ruba nessuno. La tessera no, quella tienila addosso: la Corona la vuole vedere quando le pare."),
+			})
+			.Scelta(TEXT("Grazie, Bruno. Ho altre domande."), TEXT("ancora"))
+			.Scelta(TEXT("Vado a sistemare le mie cose."), TEXT("congedo"));
 
 		D.Nodo(TEXT("buonanotte"), {
 			TEXT("Buonanotte. E se senti cantare per le scale, è Teodoro che torna a casa. Tu dormi lo stesso."),

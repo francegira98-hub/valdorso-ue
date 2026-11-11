@@ -787,7 +787,11 @@ namespace Valdorso.Launcher
             }
             else if (Versioni.Confronta(versioneInstallata, manifesto.Versione) < 0)
             {
-                Imposta(StatoLauncher.DaAggiornare, "C'è la versione nuova: v" + manifesto.Versione + Nome(manifesto) + " (hai la v" + versioneInstallata + "). Le note sono nella scheda Note delle patch.", -1, false);
+                // (12/11) quanto si scarica: con la patch solo le novita'
+                long resta = aggiornatore.DaScaricare(manifesto);
+                bool patch = aggiornatore.PatchPer(manifesto) != null;
+                string misura = resta > 0 ? " Da scaricare: " + Misure.Byte(resta) + (patch ? " (solo le novità)" : "") + "." : "";
+                Imposta(StatoLauncher.DaAggiornare, "C'è la versione nuova: v" + manifesto.Versione + Nome(manifesto) + " (hai la v" + versioneInstallata + ")." + misura + " Le note sono nella scheda Note delle patch.", -1, false);
             }
             else
             {

@@ -32,6 +32,7 @@ class APlayerController;
 class SValdorsoZaino;
 class SValdorsoTessera;
 class SValdorsoBottega;
+class SValdorsoBaule;
 struct FValdorsoRegistro;
 
 UCLASS(ClassGroup = (Valdorso))
@@ -110,6 +111,21 @@ public:
 	/** (10/11) Fa una ricetta di bottega (cuocere, conciare, comprare, vendere): il server controlla il banco e lo zaino. */
 	UFUNCTION(Server, Reliable)
 	void ServerRicetta(FName Ricetta);
+
+	/** (12/11) Il colono e' davanti al suo baule (ValdorsoBaule.h): si apre su questo PC. */
+	UFUNCTION(Client, Reliable)
+	void ClientApriBaule();
+
+	/** (12/11) Mette nel baule quello che c'e' in un posto dello zaino (il server controlla che il baule sia vicino). */
+	UFUNCTION(Server, Reliable)
+	void ServerDeposita(int32 Posto);
+
+	/** (12/11) Riprende nello zaino quello che c'e' in un posto del baule. */
+	UFUNCTION(Server, Reliable)
+	void ServerRitira(int32 PostoBaule);
+
+	/** (12/11) Il baule aperto (solo sul PC del giocatore). */
+	TSharedPtr<SValdorsoBaule> SchermataBaule;
 
 	/** (10/11) La bottega aperta (solo sul PC del giocatore). */
 	TSharedPtr<SValdorsoBottega> SchermataBottega;

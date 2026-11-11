@@ -23,6 +23,7 @@
 # entra: ogni colono ci incide il suo segno una volta (etichetta "ValdorsoVolti" anche lei).
 # (11/11, v0.1.8) E il sasso dell'Orso sulla collina, quello del sogno di Tobia (ValdorsoStorie.h).
 # (11/11, v0.2) E il pozzo che si usa con E (AValdorsoPozzo: il secchio si riempie d'acqua chiara).
+# (12/11, v0.2.0) E il baule del colono nella locanda di Bruno (AValdorsoBaule: le cose che non porti con te).
 # (12/11, v0.2.0) E Sibilla, la carovana (un giorno ogni tre: ValdorsoCarovana.h). E il magazzino del villaggio accanto alla bacheca della Gilda (le scorte: ValdorsoScorte.h).
 
 import math
@@ -384,6 +385,56 @@ def metti_magazzino(P):
     scrivi("il magazzino del villaggio, in (%.0f, %.0f, %.0f)" % (x, y, z))
 
 
+def metti_baule(P):
+    """(12/11, v0.2.0) Il baule del colono (AValdorsoBaule, ValdorsoBaule.h): da Bruno, in un angolo della locanda
+    lontano dalla porta, contro il muro. Uno solo, ma dentro ognuno trova le sue cose."""
+    classe = getattr(unreal, "ValdorsoBaule", None)
+    if classe is None:
+        avviso("manca la classe C++ ValdorsoBaule (compila): niente baule")
+        return
+    locanda = P.attore("Locanda_di_Bruno")
+    if locanda is None:
+        return
+    porta = P.per_nome.get("Locanda_di_Bruno porta")
+    q = locanda.get_actor_location()
+    g = locanda.get_actor_rotation().yaw
+    # due angoli liberi a est (il bancone e' a nord-ovest, Teodoro a sud-ovest): quello piu' lontano dalla porta
+    angoli = [(580.0, -380.0), (580.0, 380.0)]
+    if porta is not None:
+        pq = porta.get_actor_location()
+        angoli.sort(key=lambda a: -math.hypot(al_mondo(q.x, q.y, g, a[0], a[1])[0] - pq.x, al_mondo(q.x, q.y, g, a[0], a[1])[1] - pq.y))
+    lx, ly = angoli[0]
+    posto = P.dentro("Locanda_di_Bruno", lx, ly, 0.0, ly)
+    if posto is None:
+        return
+    x, y, z, gradi = posto
+    a = attori.spawn_actor_from_class(classe, unreal.Vector(x, y, z + 40.0), unreal.Rotator(roll=0.0, pitch=0.0, yaw=gradi))
+    if a is None:
+        avviso("non riesco a mettere il baule")
+        return
+    a.set_actor_label("Il baule del colono")
+    a.set_folder_path(CARTELLA)
+    a.set_editor_property("tags", [unreal.Name(ETICHETTA)])
+    cubo = unreal.load_asset("/Engine/BasicShapes/Cube")
+    legno = materiale("MI_Villaggio_Assi") or materiale("MI_Villaggio_Trave")
+    ferro = materiale("MI_Villaggio_Ferro") or legno
+    # la cassa, il coperchio un po' piu' largo e due bande di ferro (il baule guarda verso la stanza)
+    pezzi = ((0.0, 0.0, 25.0, 0.55, 1.0, 0.5, legno), (0.0, 0.0, 53.0, 0.6, 1.05, 0.08, legno),
+             (0.0, -30.0, 30.0, 0.57, 0.04, 0.5, ferro), (0.0, 30.0, 30.0, 0.57, 0.04, 0.5, ferro))
+    for k, (dx, dy, dz, sx, sy, sz, mat) in enumerate(pezzi):
+        px, py = al_mondo(x, y, gradi, dx, dy)
+        c = attori.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(px, py, z + dz), unreal.Rotator(roll=0.0, pitch=0.0, yaw=gradi))
+        if c and cubo:
+            c.static_mesh_component.set_static_mesh(cubo)
+            c.set_actor_scale3d(unreal.Vector(sx, sy, sz))
+            if mat:
+                c.static_mesh_component.set_material(0, mat)
+            c.set_actor_label("Il baule del colono (pezzo %d)" % (k + 1))
+            c.set_folder_path(CARTELLA)
+            c.set_editor_property("tags", [unreal.Name(ETICHETTA)])
+    scrivi("il baule del colono, nella locanda in (%.0f, %.0f, %.0f)" % (x, y, z))
+
+
 def metti_pietra(P):
     """(11/11) La pietra dei segni: davanti all'ingresso del tempio (-Y), a destra di chi entra, sul paesaggio."""
     classe = getattr(unreal, "ValdorsoPietraSegni", None)
@@ -489,6 +540,7 @@ def principale():
     metti_sasso()
     metti_pozzo(P)
     metti_magazzino(P)
+    metti_baule(P)
 
     messi = 0
     for dialogo, nome, donna, scala, atto, giornata in giornate:

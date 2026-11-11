@@ -5,6 +5,7 @@
 #include "ValdorsoGilda.h"
 #include "SValdorsoZaino.h"
 #include "SValdorsoBottega.h"
+#include "SValdorsoBaule.h"
 #include "ValdorsoBotteghe.h"
 #include "Valdorso.h"
 #include "ValdorsoAcque.h"
@@ -259,6 +260,15 @@ void UValdorsoZainoComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		}
 		Schermata.Reset();
 	}
+	if (SchermataBaule.IsValid())
+	{
+		UWorld* Mondo = GetWorld();
+		if (UGameViewportClient* Viewport = Mondo ? Mondo->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(SchermataBaule.ToSharedRef());
+		}
+		SchermataBaule.Reset();
+	}
 	if (SchermataBottega.IsValid())
 	{
 		UWorld* Mondo = GetWorld();
@@ -352,7 +362,10 @@ void UValdorsoZainoComponent::Svuota()
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
 		const bool bData = Zaino.bPartenzaData;
+		// (12/11) il baule resta: si svuota lo zaino, non quello che il colono ha lasciato da Bruno
+		const TArray<FValdorsoPostoZaino> NelBaule = Zaino.Baule;
 		Zaino = FValdorsoZaino();
+		Zaino.Baule = NelBaule;
 		ValdorsoZaino::Sistema(Zaino);
 		// svuotato apposta: la partenza non torna da sola
 		Zaino.bPartenzaData = bData || !bPersonaggio;
@@ -887,7 +900,8 @@ namespace ValdorsoZainoSchermo
 		UWorld* Mondo = Controllore ? Controllore->GetWorld() : nullptr;
 		UGameViewportClient* Viewport = Mondo ? Mondo->GetGameViewport() : nullptr;
 		if (!Zaino || !Viewport || !Controllore->IsLocalController() || !Controllore->GetPawn() || Zaino->Schermata.IsValid()
-			|| ValdorsoFoto::Aperta(Controllore) || ValdorsoTaccuino::Aperto(Controllore))
+			|| ValdorsoFoto::Aperta(Controllore) || ValdorsoTaccuino::Aperto(Controllore)
+			|| ValdorsoBauleSchermo::Aperto(Controllore))
 		{
 			return false;
 		}

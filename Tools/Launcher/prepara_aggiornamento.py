@@ -216,6 +216,64 @@ def fai_parti(cartella, cartella_uscita, versione, grandezza):
     return flusso.parti(), elenco, installato
 
 
+def fai_patch(cartella, cartella_uscita, versione, elenco, vecchio, grandezza):
+    """(12/11) La patch dalla versione di prima: uno zip (a parti) con solo i file nuovi o cambiati, piu' l'elenco di
+    quelli da togliere. Il launcher 1.3 la scarica al posto del gioco intero. None se non conviene (o non si puo')."""
+    da = str(vecchio.get("versione", "")).strip()
+    prima = {f.get("p"): f.get("s") for f in vecchio.get("file", []) if isinstance(f, dict) and f.get("p")}
+    if not da or da == versione or not prima:
+        return None
+    ora = {f["p"]: f for f in elenco}
+    cambiati = [f for f in elenco if prima.get(f["p"]) != f["s"]]
+    ora_minuscolo = {x.lower() for x in ora}
+    togli = sorted(x for x in prima if x not in ora and x.lower() not in ora_minuscolo)
+    grandi = sum(f["b"] for f in cambiati)
+    tutto = sum(f["b"] for f in elenco) or 1
+    if not cambiati and not togli:
+        return None
+    if grandi > tutto * 0.7:
+        print("  patch dalla %s: cambia quasi tutto (%s), non conviene" % (da, misura(grandi)))
+        return None
+    base = os.path.join(cartella_uscita, "Valdorso_%s.zip.patch_%s" % (versione, da))
+    flusso = FileAParti(base, grandezza)
+    with zipfile.ZipFile(flusso, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as z:
+        for f in cambiati:
+            completo = os.path.join(cartella, f["p"].replace("/", os.sep))
+            info = zipfile.ZipInfo.from_file(completo, f["p"])
+            if info.date_time[0] < 1980:
+                info.date_time = (1980, 1, 1, 0, 0, 0)
+            info.compress_type = zipfile.ZIP_STORED if os.path.splitext(completo)[1].lower() in GIA_COMPRESSI else zipfile.ZIP_DEFLATED
+            info.file_size = f["b"]
+            with open(completo, "rb") as dentro, z.open(info, "w") as fuori:
+                while True:
+                    pezzo = dentro.read(1 << 20)
+                    if not pezzo:
+                        break
+                    fuori.write(pezzo)
+    flusso.close()
+    parti = flusso.parti()
+    print("  patch dalla %s: %d file cambiati (%s), %d da togliere, %d parti" % (da, len(cambiati), misura(grandi), len(togli), len(parti)))
+    return da, parti, togli, grandi
+
+
+def ultima_prima_di(uscita, versione):
+    """(12/11) Il manifesto della versione preparata piu' alta, ma prima di questa (per la patch)."""
+    base = os.path.join(uscita, "Aggiornamento")
+    try:
+        questa = tuple(int(x) for x in versione.split("."))
+    except ValueError:
+        return None
+    migliore = None
+    if os.path.isdir(base):
+        for n in os.listdir(base):
+            p = os.path.join(base, n, "manifesto.json")
+            if os.path.isfile(p) and re.fullmatch(r"\d+(\.\d+)*", n):
+                chiave = tuple(int(x) for x in n.split("."))
+                if chiave < questa and (migliore is None or chiave > migliore[0]):
+                    migliore = (chiave, p)
+    return migliore[1] if migliore else None
+
+
 def leggi_json(percorso):
     with open(percorso, encoding="utf-8-sig") as f:
         return json.load(f)
@@ -427,6 +485,8 @@ def principale(argomenti=None):
     p.add_argument("--contenuti", default=os.path.join(QUI, "contenuti"))
     p.add_argument("--notizie", default=None)
     p.add_argument("--chiuso", action="store_true")
+    p.add_argument("--senza-patch", action="store_true", help="niente patch dalla versione di prima: solo il gioco intero")
+    p.add_argument("--patch-da", default=None, help="la versione da cui fare la patch (se no: l'ultima preparata prima di questa)")
     a = p.parse_args(argomenti)
     a.sito = a.sito.rstrip("/") + "/"
 
@@ -480,6 +540,29 @@ def principale(argomenti=None):
             except (OSError, ValueError):
                 vecchio = {}
         server_vecchio = vecchio.get("server", {}) if isinstance(vecchio.get("server"), dict) else {}
+        # (12/11) la patch dalla versione di prima: solo i file cambiati
+        patch_voci = []
+        parti_patch = []
+        base_patch = {}
+        da_qui = ultima_prima_di(a.uscita, versione)
+        if a.patch_da:
+            # la versione che hanno i giocatori, se non e' l'ultima preparata
+            da_qui = os.path.join(a.uscita, "Aggiornamento", a.patch_da, "manifesto.json")
+            if not os.path.isfile(da_qui):
+                print("ATTENZIONE: non trovo %s: niente patch" % da_qui)
+                da_qui = None
+        if da_qui and not a.senza_patch:
+            try:
+                base_patch = leggi_json(da_qui)
+            except (OSError, ValueError):
+                base_patch = {}
+        fatta = fai_patch(cartella, uscita_ver, versione, elenco, base_patch, grandezza) if base_patch else None
+        if fatta:
+            da, parti_patch, togli, grandi = fatta
+            pv = []
+            for percorso in parti_patch:
+                pv.append({"url": url + os.path.basename(percorso), "sha256": sha256(percorso), "byte": os.path.getsize(percorso)})
+            patch_voci.append({"da": da, "parti": pv, "byte": sum(x["byte"] for x in pv), "installato": grandi, "togli": togli})
         pacchetto = {"parti": voci, "byte": totale, "installato": installato}
         if len(voci) == 1:
             # il launcher 1.0 conosce solo lo zip intero
@@ -496,13 +579,14 @@ def principale(argomenti=None):
             "server": {"indirizzo": a.server if a.server is not None else server_vecchio.get("indirizzo", ""),
                        "stato": a.stato if a.stato is not None else server_vecchio.get("stato", "")},
             "file": elenco,
+            "patch": patch_voci,
         }
         scrivi_json(os.path.join(uscita_ver, "manifesto.json"), manifesto)
         contenuti_patch = os.path.join(a.contenuti, "patch.json")
         note = note_markdown(leggi_json(contenuti_patch) if os.path.isfile(contenuti_patch) else {}, versione)
         with open(os.path.join(uscita_ver, "note_github.md"), "w", encoding="utf-8", newline="\n") as f:
             f.write(note)
-        gh = carica_su_github_cmd(uscita_ver, url, versione, parti)
+        gh = carica_su_github_cmd(uscita_ver, url, versione, parti + parti_patch)
         if gh:
             print("  scritto %s" % gh[0])
         else:

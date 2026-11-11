@@ -11,6 +11,7 @@
 #include "ValdorsoBagnato.h"
 #include "ValdorsoClima.h"
 #include "ValdorsoFalo.h"
+#include "ValdorsoGildaDati.h"
 #include "ValdorsoRaccolta.h"
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoOggetti.h"
@@ -529,6 +530,92 @@ bool FValdorsoTestTessera::RunTest(const FString& Parameters)
 	TestTrue(TEXT("si legge"), FJsonObjectConverter::JsonObjectStringToUStruct(Testo, &Letto, 0, 0));
 	TestEqual(TEXT("il numero torna"), Letto.Tessera.Numero, Numero);
 	TestEqual(TEXT("i timbri tornano"), Letto.Tessera.Timbri.Num(), ValdorsoTessera::MassimoTimbri);
+	return true;
+}
+
+// (12/11, v0.2.0) Il baule del colono: mettere e prendere, le pile, il baule pieno, la tessera, il peso, il salvataggio.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestZainoBaule, "Valdorso.Zaino.Baule", ValdorsoTestZaino::Bandiere)
+bool FValdorsoTestZainoBaule::RunTest(const FString& Parameters)
+{
+	const FName Mela(TEXT("Mela"));
+	const FName Borraccia(TEXT("Borraccia"));
+	const FName Tessera(TEXT("Tessera"));
+	FValdorsoZaino Z;
+	ValdorsoZaino::Sistema(Z);
+	TestEqual(TEXT("il baule ha i suoi posti"), Z.Baule.Num(), ValdorsoZaino::PostiBaule);
+	TestEqual(TEXT("tre mele"), ValdorsoZaino::Aggiungi(Z, Mela, 3), 3);
+	ValdorsoZaino::Aggiungi(Z, Borraccia, 1, 2);
+	ValdorsoZaino::Aggiungi(Z, Tessera, 1);
+	const float PesoPrima = ValdorsoZaino::Peso(Z);
+	const int32 PostoMele = ValdorsoZaino::PostoDi(Z, Mela);
+	TestTrue(TEXT("le mele vanno nel baule"), ValdorsoZaino::Deposita(Z, PostoMele));
+	TestEqual(TEXT("nello zaino non ci sono piu'"), ValdorsoZaino::Conta(Z, Mela), 0);
+	TestTrue(TEXT("nel baule non pesano"), ValdorsoZaino::Peso(Z) < PesoPrima);
+	TestEqual(TEXT("sono nel baule"), Z.Baule[0].Id, Mela);
+	TestEqual(TEXT("tutte e tre"), Z.Baule[0].Quantita, 3);
+	// altre due mele si impilano con quelle del baule
+	ValdorsoZaino::Aggiungi(Z, Mela, 2);
+	TestTrue(TEXT("altre mele"), ValdorsoZaino::Deposita(Z, ValdorsoZaino::PostoDi(Z, Mela)));
+	TestEqual(TEXT("sulla stessa pila"), Z.Baule[0].Quantita, 5);
+	TestTrue(TEXT("il secondo posto del baule e' libero"), Z.Baule[1].Vuoto());
+	// la borraccia tiene i suoi sorsi
+	TestTrue(TEXT("la borraccia nel baule"), ValdorsoZaino::Deposita(Z, ValdorsoZaino::PostoDi(Z, Borraccia)));
+	TestEqual(TEXT("con i suoi sorsi"), Z.Baule[1].Cariche, 2);
+	// la tessera no
+	const int32 PostoTessera = ValdorsoZaino::PostoDi(Z, Tessera);
+	TestFalse(TEXT("la tessera non si mette"), ValdorsoZaino::SiPuoDepositare(Z, PostoTessera));
+	TestFalse(TEXT("la tessera non va nel baule"), ValdorsoZaino::Deposita(Z, PostoTessera));
+	TestEqual(TEXT("la tessera resta"), ValdorsoZaino::Conta(Z, Tessera), 1);
+	// nemmeno il foglio di un incarico della Gilda (la Gilda lo cerca nello zaino)
+	const int32 PostoFoglio = ValdorsoZaino::AggiungiNumerato(Z, ValdorsoGilda::IdFoglio, 7);
+	TestTrue(TEXT("c'e' il foglio"), PostoFoglio != INDEX_NONE);
+	TestFalse(TEXT("il foglio non va nel baule"), ValdorsoZaino::Deposita(Z, PostoFoglio));
+	// riprendere
+	TestTrue(TEXT("si riprendono le mele"), ValdorsoZaino::Ritira(Z, 0));
+	TestEqual(TEXT("cinque mele nello zaino"), ValdorsoZaino::Conta(Z, Mela), 5);
+	TestTrue(TEXT("il posto del baule si libera"), Z.Baule[0].Vuoto());
+	TestFalse(TEXT("un posto vuoto non si riprende"), ValdorsoZaino::Ritira(Z, 0));
+	TestFalse(TEXT("un posto che non c'e'"), ValdorsoZaino::Ritira(Z, 999));
+	TestFalse(TEXT("un posto dello zaino che non c'e'"), ValdorsoZaino::Deposita(Z, -1));
+	// il baule pieno: niente si perde
+	FValdorsoZaino P;
+	ValdorsoZaino::Sistema(P);
+	for (FValdorsoPostoZaino& Posto : P.Baule)
+	{
+		Posto.Id = Borraccia;
+		Posto.Quantita = 1;
+		Posto.Cariche = 1;
+	}
+	ValdorsoZaino::Aggiungi(P, Borraccia, 1);
+	const int32 PostoB = ValdorsoZaino::PostoDi(P, Borraccia);
+	TestFalse(TEXT("nel baule pieno non entra"), ValdorsoZaino::Deposita(P, PostoB));
+	TestEqual(TEXT("e resta nello zaino"), ValdorsoZaino::Conta(P, Borraccia), 1);
+	// lo zaino pieno: dal baule non si riprende
+	FValdorsoZaino Q;
+	ValdorsoZaino::Sistema(Q);
+	for (FValdorsoPostoZaino& Posto : Q.Posti)
+	{
+		Posto.Id = Borraccia;
+		Posto.Quantita = 1;
+	}
+	Q.Baule[3].Id = Mela;
+	Q.Baule[3].Quantita = 2;
+	TestFalse(TEXT("nello zaino pieno non entra"), ValdorsoZaino::Ritira(Q, 3));
+	TestEqual(TEXT("e resta nel baule"), Q.Baule[3].Quantita, 2);
+	// si salva e si rilegge
+	FValdorsoPersonaggio Personaggio;
+	Personaggio.Zaino = Z;
+	FString Testo;
+	TestTrue(TEXT("si scrive"), FJsonObjectConverter::UStructToJsonObjectString(Personaggio, Testo));
+	FValdorsoPersonaggio Riletto;
+	TestTrue(TEXT("si rilegge"), FJsonObjectConverter::JsonObjectStringToUStruct(Testo, &Riletto, 0, 0));
+	ValdorsoZaino::Sistema(Riletto.Zaino);
+	TestEqual(TEXT("la borraccia e' ancora nel baule"), Riletto.Zaino.Baule[1].Id, Borraccia);
+	// un oggetto che non esiste piu' sparisce dal baule
+	Riletto.Zaino.Baule[5].Id = FName(TEXT("NonEsiste"));
+	Riletto.Zaino.Baule[5].Quantita = 1;
+	ValdorsoZaino::Sistema(Riletto.Zaino);
+	TestTrue(TEXT("via quello che non esiste"), Riletto.Zaino.Baule[5].Vuoto());
 	return true;
 }
 

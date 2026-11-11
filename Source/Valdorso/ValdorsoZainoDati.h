@@ -75,6 +75,11 @@ struct FValdorsoZaino
 
 	UPROPERTY()
 	FName Sinistra;
+
+	/** (12/11, v0.2.0) Il baule del colono, da Bruno alla locanda (ValdorsoBaule.h): altri posti, che non pesano e non
+	 *  si portano dietro. Nei file di prima manca: si legge vuoto (Sistema lo mette della misura giusta). */
+	UPROPERTY()
+	TArray<FValdorsoPostoZaino> Baule;
 };
 
 namespace ValdorsoZaino
@@ -84,6 +89,8 @@ namespace ValdorsoZaino
 	inline constexpr int32 NumeroPosti = Colonne * Righe;
 	inline constexpr int32 NumeroAzioni = 8;
 	inline constexpr int32 MassimoMonete = 1000000;
+	/** (12/11) I posti del baule (6 x 5). */
+	inline constexpr int32 PostiBaule = 30;
 
 	/** Mette in ordine uno zaino letto da un file: le misure giuste, via gli oggetti che non esistono, quantità e
 	 *  cariche nei limiti, via dalla barra le azioni che non sono oggetti. */
@@ -146,6 +153,17 @@ namespace ValdorsoZaino
 	/** (09/11, v0.1.4) Impugna un oggetto nella sua mano, o lo rimette via se e' gia' in mano. Vero se adesso e' in mano.
 	 *  Falso anche se non si impugna o non c'e' nello zaino. */
 	VALDORSO_API bool Impugna(FValdorsoZaino& Zaino, FName Id);
+
+	/** (12/11) Vero se l'oggetto di quel posto dello zaino si puo' mettere nel baule (la tessera no: va sempre con te; e nemmeno il foglio
+	 *  di un incarico della Gilda). */
+	VALDORSO_API bool SiPuoDepositare(const FValdorsoZaino& Zaino, int32 Posto);
+
+	/** (12/11) Mette nel baule tutto quello che c'e' in un posto dello zaino (sulle pile uguali, poi nei posti liberi). Se
+	 *  il baule e' pieno ne mette quanto ci sta: il resto rimane nello zaino. Falso se non e' entrato niente. */
+	VALDORSO_API bool Deposita(FValdorsoZaino& Zaino, int32 Posto);
+
+	/** (12/11) Riprende nello zaino quello che c'e' in un posto del baule (fin dove ci sta). Falso se niente. */
+	VALDORSO_API bool Ritira(FValdorsoZaino& Zaino, int32 PostoBaule);
 
 	/** (09/11) Toglie dalle mani quello che non c'e' piu' nello zaino (o non si impugna in quella mano). Vero se cambia. */
 	VALDORSO_API bool SistemaMani(FValdorsoZaino& Zaino);

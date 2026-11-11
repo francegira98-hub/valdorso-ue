@@ -4,9 +4,128 @@
 #include "ValdorsoOggetti.h"
 #include "ValdorsoRegistro.h"
 #include "ValdorsoScherma.h"
+#include "ValdorsoGildaDati.h"
+
+namespace
+{
+	/** (12/11) Un posto in mezzo a dei posti (lo zaino o il baule): prima sulle pile uguali (solo oggetti senza cariche e
+	 *  senza numero), poi nei posti liberi. Restituisce quanti ne sono entrati. */
+	int32 BauleMettiIn(TArray<FValdorsoPostoZaino>& Posti, const FValdorsoPostoZaino& Cosa)
+	{
+		const FValdorsoTipoOggetto* Tipo = Cosa.Vuoto() ? nullptr : ValdorsoOggetti::Trova(Cosa.Id);
+		if (!Tipo)
+		{
+			return 0;
+		}
+		int32 Restano = Cosa.Quantita;
+		if (Tipo->Pila > 1 && Tipo->Cariche == 0 && Cosa.Numero == 0)
+		{
+			for (FValdorsoPostoZaino& Posto : Posti)
+			{
+				if (Restano <= 0)
+				{
+					break;
+				}
+				if (Posto.Id == Cosa.Id && Posto.Quantita > 0 && Posto.Quantita < Tipo->Pila && Posto.Numero == 0)
+				{
+					const int32 Entrano = FMath::Min(Restano, Tipo->Pila - Posto.Quantita);
+					Posto.Quantita += Entrano;
+					Restano -= Entrano;
+				}
+			}
+		}
+		for (FValdorsoPostoZaino& Posto : Posti)
+		{
+			if (Restano <= 0)
+			{
+				break;
+			}
+			if (Posto.Vuoto())
+			{
+				const int32 Entrano = FMath::Min(Restano, FMath::Max(1, Tipo->Pila));
+				Posto = Cosa;
+				Posto.Quantita = Entrano;
+				Restano -= Entrano;
+			}
+		}
+		return Cosa.Quantita - Restano;
+	}
+
+	/** (12/11) Mette in ordine i posti del baule letti da un file (come quelli dello zaino). */
+	void BauleSistema(TArray<FValdorsoPostoZaino>& Posti)
+	{
+		Posti.SetNum(ValdorsoZaino::PostiBaule);
+		for (FValdorsoPostoZaino& Posto : Posti)
+		{
+			const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Posto.Id);
+			if (!Tipo || Posto.Quantita <= 0)
+			{
+				Posto = FValdorsoPostoZaino();
+				continue;
+			}
+			Posto.Quantita = FMath::Clamp(Posto.Quantita, 1, Tipo->Pila);
+			Posto.Cariche = FMath::Clamp(Posto.Cariche, 0, Tipo->Cariche);
+			Posto.Numero = Tipo->Pila == 1 ? FMath::Max(0, Posto.Numero) : 0;
+		}
+	}
+}
 
 namespace ValdorsoZaino
 {
+	bool SiPuoDepositare(const FValdorsoZaino& Zaino, int32 Posto)
+	{
+		// la tessera va sempre con te; il foglio di un incarico della Gilda anche (la Gilda lo cerca nello zaino)
+		return Zaino.Posti.IsValidIndex(Posto) && !Zaino.Posti[Posto].Vuoto() && ValdorsoOggetti::Trova(Zaino.Posti[Posto].Id)
+			&& Zaino.Posti[Posto].Id != FName(TEXT("Tessera")) && Zaino.Posti[Posto].Id != ValdorsoGilda::IdFoglio
+			&& Zaino.Posti[Posto].Numero == 0;
+	}
+
+	bool Deposita(FValdorsoZaino& Zaino, int32 Posto)
+	{
+		if (!SiPuoDepositare(Zaino, Posto))
+		{
+			return false;
+		}
+		BauleSistema(Zaino.Baule);
+		FValdorsoPostoZaino& Da = Zaino.Posti[Posto];
+		const int32 Entrati = BauleMettiIn(Zaino.Baule, Da);
+		if (Entrati <= 0)
+		{
+			return false;
+		}
+		Da.Quantita -= Entrati;
+		if (Da.Quantita <= 0)
+		{
+			Da = FValdorsoPostoZaino();
+		}
+		SistemaMani(Zaino);
+		return true;
+	}
+
+	bool Ritira(FValdorsoZaino& Zaino, int32 PostoBaule)
+	{
+		if (!Zaino.Baule.IsValidIndex(PostoBaule) || Zaino.Baule[PostoBaule].Vuoto())
+		{
+			return false;
+		}
+		if (Zaino.Posti.Num() != NumeroPosti)
+		{
+			Zaino.Posti.SetNum(NumeroPosti);
+		}
+		FValdorsoPostoZaino& Da = Zaino.Baule[PostoBaule];
+		const int32 Entrati = BauleMettiIn(Zaino.Posti, Da);
+		if (Entrati <= 0)
+		{
+			return false;
+		}
+		Da.Quantita -= Entrati;
+		if (Da.Quantita <= 0)
+		{
+			Da = FValdorsoPostoZaino();
+		}
+		return true;
+	}
+
 	void Sistema(FValdorsoZaino& Zaino)
 	{
 		Zaino.Posti.SetNum(NumeroPosti);
@@ -35,6 +154,7 @@ namespace ValdorsoZaino
 			}
 			GiaInBarra.Add(Azione);
 		}
+		BauleSistema(Zaino.Baule);
 		SistemaMani(Zaino);
 	}
 
