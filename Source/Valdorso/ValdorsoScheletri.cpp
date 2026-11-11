@@ -50,11 +50,10 @@ namespace
 		TEXT("GambaDestra"), TEXT("Spada"), TEXT("Scudo"),
 	};
 
-	/** Il modello di ogni pezzo (le braccia e le gambe sono lo stesso, a destra e a sinistra). */
+	/** Il modello di ogni pezzo, dopo il prefisso del tipo (le braccia e le gambe sono lo stesso, a destra e a sinistra). */
 	const TCHAR* ScheletriModelli[ScheletriNumeroPezzi] = {
-		TEXT("SM_Scheletro_Teschio"), TEXT("SM_Scheletro_Torace"), TEXT("SM_Scheletro_Bacino"), TEXT("SM_Scheletro_Braccio"),
-		TEXT("SM_Scheletro_Braccio"), TEXT("SM_Scheletro_Gamba"), TEXT("SM_Scheletro_Gamba"), TEXT("SM_Scheletro_Spada"),
-		TEXT("SM_Scheletro_Scudo"),
+		TEXT("Teschio"), TEXT("Torace"), TEXT("Bacino"), TEXT("Braccio"), TEXT("Braccio"), TEXT("Gamba"), TEXT("Gamba"), TEXT("Spada"),
+		TEXT("Scudo"),
 	};
 
 	/** In piedi: dove sta ogni pezzo (cm dai piedi), con le giunture in alto (le braccia e le gambe pendono). */
@@ -103,6 +102,20 @@ namespace
 			T.Portata = 200.f;
 			T.Corsa = 300.f;
 			T.Grandezza = 1.18f;
+			C.Add(T);
+		}
+		{
+			// (11/11) il guardiano della forgia dei nani: di pietra, enorme, lento, non teme il fuoco. Uno solo.
+			FValdorsoTipoScheletro T = ScheletriTipo(TEXT("Guardiano"), TEXT("il guardiano della forgia"), 80.f, 900.f, 38.f);
+			T.Equilibrio = 60.f;
+			T.SecondiColpo = 2.6f;
+			T.Portata = 270.f;
+			T.Passo = 80.f;
+			T.Corsa = 210.f;
+			T.Grandezza = 1.9f;
+			T.Modello = TEXT("SM_Guardiano_");
+			T.Pietra = 0.6f;
+			T.bTemeFuoco = false;
 			C.Add(T);
 		}
 		return C;
@@ -298,7 +311,14 @@ float AValdorsoScheletro::Forza() const
 
 float AValdorsoScheletro::Debolezza(EValdorsoTipoColpo Colpo) const
 {
-	return ValdorsoScheletri::Debolezza(Colpo);
+	const float Base = ValdorsoScheletri::Debolezza(Colpo);
+	const FValdorsoTipoScheletro* T = GetTipo();
+	// (11/11) la pietra: le lame e i pugni rimbalzano, le botte un po' meno
+	if (T && T->Pietra > 0.f && (Colpo == EValdorsoTipoColpo::Lama || Colpo == EValdorsoTipoColpo::Pugno))
+	{
+		return Base * (1.f - T->Pietra);
+	}
+	return Base;
 }
 
 void AValdorsoScheletro::Prepara(FName QualeTipo, const FVector& DoveDorme, bool bSveglio)
@@ -366,9 +386,11 @@ void AValdorsoScheletro::Vesti()
 	{
 		return;
 	}
+	const TCHAR* Prefisso = T ? T->Modello : TEXT("SM_Scheletro_");
 	for (int32 i = 0; i < Pezzi.Num() && i < ScheletriNumeroPezzi; ++i)
 	{
-		Pezzi[i]->SetStaticMesh(ScheletriModello(ScheletriModelli[i]));
+		const FString NomeModello = FString(Prefisso) + ScheletriModelli[i];
+		Pezzi[i]->SetStaticMesh(ScheletriModello(*NomeModello));
 	}
 	// lo scudo solo a chi lo porta; il capitano ha una spada piu' grande
 	if (Pezzi.Num() >= ScheletriNumeroPezzi)
@@ -524,7 +546,8 @@ void AValdorsoScheletro::Pensa(float DeltaSeconds)
 		Preda = CercaPreda();
 		const APawn* Chi = Preda.Get();
 		// temono il fuoco (e il battito del tempio)
-		bProtetto = Chi && (AValdorsoFalo::CaldoVicino(Mondo, Chi->GetActorLocation())
+		const FValdorsoTipoScheletro* SuoTipo = GetTipo();
+		bProtetto = Chi && (!SuoTipo || SuoTipo->bTemeFuoco) && (AValdorsoFalo::CaldoVicino(Mondo, Chi->GetActorLocation())
 			|| ValdorsoCombattimento::InPace(Mondo, Chi->GetActorLocation()));
 	}
 	const APawn* Chi = Preda.Get();
@@ -685,7 +708,8 @@ void AValdorsoScheletro::Interagisci(APawn* Chi)
 	}
 	bRovistato = true;
 	FRandomStream Caso(static_cast<int32>(FPlatformTime::Cycles()));
-	const int32 Monete = bCapitano ? Caso.RandRange(4, 7) : Caso.RandRange(1, 3);
+	const bool bGuardiano = Tipo == FName(TEXT("Guardiano"));
+	const int32 Monete = bGuardiano ? Caso.RandRange(10, 16) : (bCapitano ? Caso.RandRange(4, 7) : Caso.RandRange(1, 3));
 	Zaino->Dai(TEXT("Moneta_Nani"), Monete);
 	if (Tipo == FName(TEXT("ScheletroScudo")) && Caso.FRand() < 0.12f)
 	{
@@ -698,9 +722,18 @@ void AValdorsoScheletro::Interagisci(APawn* Chi)
 			Zaino->Dai(TEXT("Pugnale_Nani"), 1);
 		}
 	}
+	if (bGuardiano)
+	{
+		// (11/11) il cuore di pietra che lo muoveva, e a volte il suo martello
+		Zaino->Dai(TEXT("Cuore_di_Pietra"), 1);
+		if (Caso.FRand() < 0.5f)
+		{
+			Zaino->Dai(TEXT("Martello_Nani"), 1);
+		}
+	}
 	ValdorsoRegistroEventi::Annota(TEXT("Rovista"), Chi, this, GetActorLocation(), FString::Printf(TEXT("%s: %d monete"), *Tipo.ToString(), Monete));
 	// le ossa del capitano restano i loro due minuti (l'anello, per chi arriva dopo); le altre spariscono presto
-	SetLifeSpan(bCapitano ? ValdorsoScheletri::SecondiOssa : 8.f);
+	SetLifeSpan((bCapitano || bGuardiano) ? ValdorsoScheletri::SecondiOssa : 8.f);
 }
 
 void AValdorsoScheletro::Anima(float DeltaSeconds)
@@ -809,7 +842,8 @@ void AValdorsoOssario::FaiNascere()
 		FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoOssario), false, this);
 		if (Mondo->LineTraceSingleByChannel(Urto, Dove + FVector(0.f, 0.f, 150.f), Dove - FVector(0.f, 0.f, 300.f), ECC_WorldStatic, Parametri))
 		{
-			Dove = Urto.ImpactPoint + FVector(0.f, 0.f, 92.f);
+			const FValdorsoTipoScheletro* SuoTipo = ValdorsoScheletri::Tipo(TipoScheletro);
+			Dove = Urto.ImpactPoint + FVector(0.f, 0.f, 92.f * (SuoTipo ? SuoTipo->Grandezza : 1.f));
 		}
 		const FTransform Posto(FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f), Dove);
 		AValdorsoScheletro* Nuovo = Mondo->SpawnActorDeferred<AValdorsoScheletro>(AValdorsoScheletro::StaticClass(), Posto, this, nullptr,

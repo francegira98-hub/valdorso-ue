@@ -12,6 +12,7 @@
 #include "MotionWarpingComponent.h"
 #include "ValdorsoAspettoComponent.h"
 #include "ValdorsoSeduta.h"
+#include "ValdorsoGesti.h"
 #include "ValdorsoLetto.h"
 #include "ValdorsoScala.h"
 #include "ValdorsoMovenze.h"
@@ -96,6 +97,7 @@ AValdorsoCharacter::AValdorsoCharacter(const FObjectInitializer& ObjectInitializ
 	// (28/10) L'aspetto: corpo MetaHuman sopra il manichino, volto con i cursori del Registro.
 	Aspetto = CreateDefaultSubobject<UValdorsoAspettoComponent>(TEXT("Aspetto"));
 	Seduta = CreateDefaultSubobject<UValdorsoSedutaComponent>(TEXT("Seduta"));
+	Gesti = CreateDefaultSubobject<UValdorsoGestiComponent>(TEXT("Gesti"));
 	Sonno = CreateDefaultSubobject<UValdorsoSonnoComponent>(TEXT("Sonno"));
 	Scalata = CreateDefaultSubobject<UValdorsoScalataComponent>(TEXT("Scalata"));
 	Movenze = CreateDefaultSubobject<UValdorsoMovenzeComponent>(TEXT("Movenze"));

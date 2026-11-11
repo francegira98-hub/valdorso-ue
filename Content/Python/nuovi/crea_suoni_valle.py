@@ -25,7 +25,7 @@ ETICHETTA = "ValdorsoSuoniValle"
 QUOTA_MAX_CM = 80000.0
 IN_GIRO = ["S_Vento", "S_Uccelli", "S_Grilli", "S_Rane", "S_Fiume", "S_Lago", "S_Cascata", "S_Fucina", "S_Locanda", "S_Mulino",
            "S_Grotta", "S_Martelli"]
-UN_COLPO = ["S_CampanaTempio"]
+UN_COLPO = ["S_CampanaTempio", "S_Drago_Ruggito"]  # (11/11) il ruggito del drago, lontano (ValdorsoVitaValle.cpp)
 
 libreria = unreal.EditorAssetLibrary
 strumenti = unreal.AssetToolsHelpers.get_asset_tools()

@@ -76,6 +76,8 @@ private:
 	FString TestoPunti;
 	FString TestoOggetto;
 	FString TestoMonete;
+	/** (11/11) "Lame 40": l'abilita' e i punti. */
+	FString TestoAbilita;
 	FString TestoProclama;
 	FString TestoIncarico;
 	FString TestoCassa;

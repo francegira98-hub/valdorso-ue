@@ -3,6 +3,8 @@
 
 #include "ValdorsoPNG.h"
 #include "ValdorsoGrottaNord.h"
+#include "ValdorsoRiti.h"
+#include "ValdorsoStorie.h"
 #include "ValdorsoVoci.h"
 #include "ValdorsoGilda.h"
 #include "ValdorsoChat.h"
@@ -125,7 +127,7 @@ namespace
 	{
 		if (const FValdorsoNodoDialogo* Arrivo = Dati.Trova(Nodo))
 		{
-			Memoria.MettiSegno(Dati.Id, Arrivo->Segna);
+			ValdorsoDialoghi::MettiSegnoDi(Memoria, Dati.Id, Arrivo->Segna);
 		}
 	}
 }
@@ -180,6 +182,8 @@ void AValdorsoPNG::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AValdorsoPNG, Dialogo);
 	DOREPLIFETIME(AValdorsoPNG, Sguardo);
+	DOREPLIFETIME(AValdorsoPNG, Tappa);
+	DOREPLIFETIME(AValdorsoPNG, bVia);
 }
 
 void AValdorsoPNG::BeginPlay()
@@ -231,10 +235,21 @@ void AValdorsoPNG::BeginPlay()
 		}
 		// (10/11) i saluti a chi passa (ognuno con il suo ritmo, non tutti insieme)
 		GetWorldTimerManager().SetTimer(TimerSaluti, this, &AValdorsoPNG::Saluta, 2.f, true, FMath::FRandRange(1.f, 3.f));
+		// (11/11) la giornata (e chi arriva solo con un atto della storia)
+		if (Giornata.Num() > 0 || AttoMinimo > 0)
+		{
+			GetWorldTimerManager().SetTimer(TimerGiornata, this, &AValdorsoPNG::GiroGiornata, 10.f, true, 0.5f);
+		}
 	}
 	else if (bSguardoValido)
 	{
 		SetActorTickEnabled(true);
+	}
+	// (11/11) la tappa arrivata dalla rete prima del BeginPlay: di nuovo, ora che il corpo c'e' (e il Riposo qui sopra
+	// non deve coprire il gesto della tappa)
+	if (!HasAuthority() && (Tappa != INDEX_NONE || bVia))
+	{
+		OnRep_Tappa();
 	}
 }
 
@@ -244,6 +259,7 @@ void AValdorsoPNG::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		Mondo->GetTimerManager().ClearTimer(TimerRitorno);
 		Mondo->GetTimerManager().ClearTimer(TimerSaluti);
+		Mondo->GetTimerManager().ClearTimer(TimerGiornata);
 	}
 	Conversazioni.Reset();
 	Super::EndPlay(EndPlayReason);
@@ -256,6 +272,10 @@ const FValdorsoDialogo* AValdorsoPNG::DatiDialogo() const
 
 FText AValdorsoPNG::TestoInterazione(const APawn* Chi) const
 {
+	if (bVia)
+	{
+		return FText::GetEmpty();
+	}
 	const FValdorsoDialogo* Dati = DatiDialogo();
 	return Dati ? FText::Format(LOCTEXT("Parla", "Parla con {0}"), FText::FromString(Dati->NomeBreve)) : FText::GetEmpty();
 }
@@ -268,7 +288,7 @@ FVector AValdorsoPNG::PuntoInterazione() const
 
 void AValdorsoPNG::Interagisci(APawn* Chi)
 {
-	if (!HasAuthority() || !Chi)
+	if (!HasAuthority() || !Chi || bVia)
 	{
 		return;
 	}
@@ -361,9 +381,20 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	// (11/11, v0.1.7) la storia di Lucia, "Quelli che non tornarono" (ValdorsoGrottaNord.h): le due pagine, e la consegna
 	// (senza tutte le cose si va a "mancano"); prima dei segni, cosi' il segno della fine lo prende solo chi ha finito
 	ValdorsoGrottaNord::EventoDialogo(Evento, Chi, Prossimo);
+	// (11/11) i riti: la cerimonia dell'anno e un giorno (ValdorsoRiti.h; chi non puo' va a "presto")
+	// (lo annota lui, quando la cerimonia c'e' davvero: qui sotto non si annota due volte)
+	if (ValdorsoRiti::EventoDialogo(Evento, Chi, this, Prossimo))
+	{
+		Evento = NAME_None;
+	}
+	// (11/11, v0.1.8) le storie dei volti (ValdorsoStorie.h): il sasso di Tobia, l'incudine di Marta, la veglia
+	if (ValdorsoStorie::EventoDialogo(Evento, Chi, this, Prossimo))
+	{
+		Evento = NAME_None;
+	}
 	const FString Detta = Nodo->Scelte[Vera].Testo;
 	// (08/11) I segni: della risposta scelta (per esempio "MonetaOfferta": la moneta non si offre più) e del nodo dopo.
-	Memoria.MettiSegno(Dati->Id, Nodo->Scelte[Vera].Segna);
+	ValdorsoDialoghi::MettiSegnoDi(Memoria, Dati->Id, Nodo->Scelte[Vera].Segna);
 	PngSegnaNodo(*Dati, Prossimo, Memoria);
 	// (Per esempio offrire una moneta a una guardia: "Corruzione". Un giorno potrà essere un crimine.)
 	if (!Evento.IsNone())
@@ -520,7 +551,7 @@ void AValdorsoPNG::Saluta()
 {
 	UWorld* Mondo = GetWorld();
 	const FValdorsoDialogo* Dati = DatiDialogo();
-	if (!HasAuthority() || !Mondo || !Dati)
+	if (!HasAuthority() || !Mondo || !Dati || bVia)
 	{
 		return;
 	}
@@ -573,3 +604,124 @@ void AValdorsoPNG::Saluta()
 }
 
 #undef LOCTEXT_NAMESPACE
+
+// ----------------------------------------------------------------------------------------------- (11/11) la giornata
+
+namespace ValdorsoGiornata
+{
+	int32 TappaPer(const TArray<FValdorsoTappa>& Giornata, float Ora)
+	{
+		int32 Migliore = INDEX_NONE;
+		float OraMigliore = -1.f;
+		int32 Ultima = INDEX_NONE;
+		float OraUltima = -1.f;
+		for (int32 i = 0; i < Giornata.Num(); ++i)
+		{
+			const float Inizio = Giornata[i].Ora;
+			if (Inizio <= Ora && Inizio > OraMigliore)
+			{
+				Migliore = i;
+				OraMigliore = Inizio;
+			}
+			if (Inizio > OraUltima)
+			{
+				Ultima = i;
+				OraUltima = Inizio;
+			}
+		}
+		// prima della prima tappa del mattino vale l'ultima della sera prima
+		return Migliore != INDEX_NONE ? Migliore : Ultima;
+	}
+}
+
+void AValdorsoPNG::GiroGiornata()
+{
+	UWorld* Mondo = GetWorld();
+	if (!HasAuthority() || !Mondo || Conversazioni.Num() > 0)
+	{
+		return;
+	}
+	float OraValle = 12.f;
+	for (TActorIterator<AValdorsoCielo> It(Mondo); It; ++It)
+	{
+		OraValle = It->Ora();
+		break;
+	}
+	const int32 Voluta = ValdorsoGiornata::TappaPer(Giornata, OraValle);
+	const bool bVuoleVia = ValdorsoVoci::Atto(this) < AttoMinimo || (Giornata.IsValidIndex(Voluta) && Giornata[Voluta].bAssente);
+	if (Voluta == Tappa && bVuoleVia == bVia)
+	{
+		VuoleCambiareDa = -1.0;
+		bGiornataPartita = true;
+		return;
+	}
+	const double Adesso = Mondo->GetTimeSeconds();
+	if (VuoleCambiareDa < 0.0)
+	{
+		VuoleCambiareDa = Adesso;
+	}
+	// non sparisce e non compare sotto gli occhi di qualcuno (dopo dieci minuti, pazienza)
+	const FVector Qui = GetActorLocation();
+	const FVector La = Giornata.IsValidIndex(Voluta) ? Giornata[Voluta].Dove : Qui;
+	bool bVisto = false;
+	for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It && !bVisto; ++It)
+	{
+		const APawn* Corpo2 = It->Get() ? It->Get()->GetPawn() : nullptr;
+		bVisto = Corpo2 && (FVector::Dist(Corpo2->GetActorLocation(), Qui) < 1500.f || FVector::Dist(Corpo2->GetActorLocation(), La) < 1500.f);
+	}
+	// (la prima volta, appena comincia il gioco, si mette subito al suo posto)
+	if (bVisto && bGiornataPartita && Adesso - VuoleCambiareDa < 600.0)
+	{
+		return;
+	}
+	VuoleCambiareDa = -1.0;
+	bGiornataPartita = true;
+	Tappa = Voluta;
+	bVia = bVuoleVia;
+	ForceNetUpdate();
+	OnRep_Tappa();
+}
+
+void AValdorsoPNG::OnRep_Tappa()
+{
+	SetActorHiddenInGame(bVia);
+	SetActorEnableCollision(!bVia);
+	// il corpo MetaHuman e' un attore attaccato: si nasconde con lui
+	TArray<AActor*> Attaccati;
+	GetAttachedActors(Attaccati, true, true);
+	for (AActor* Attaccato : Attaccati)
+	{
+		if (Attaccato)
+		{
+			Attaccato->SetActorHiddenInGame(bVia);
+		}
+	}
+	if (bVia || !Giornata.IsValidIndex(Tappa))
+	{
+		return;
+	}
+	const FValdorsoTappa& Ora = Giornata[Tappa];
+	if (!Ora.Dove.IsZero())
+	{
+		SetActorLocationAndRotation(Ora.Dove, FRotator(0.f, Ora.Gradi, 0.f));
+		SguardoIniziale = Ora.Gradi;
+		if (HasAuthority())
+		{
+			Sguardo = Ora.Gradi;
+		}
+	}
+	if (Corpo && GetNetMode() != NM_DedicatedServer)
+	{
+		UAnimSequence* Movenza = nullptr;
+		if (!Ora.Movenza.IsNone())
+		{
+			const FString Nome = Ora.Movenza.ToString();
+			Movenza = LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("/Game/Mixamo/Gesti/%s.%s"), *Nome, *Nome), nullptr,
+				LOAD_NoWarn | LOAD_Quiet);
+		}
+		if (Movenza || Riposo)
+		{
+			Corpo->PlayAnimation(Movenza ? Movenza : Riposo.Get(), true);
+		}
+	}
+}

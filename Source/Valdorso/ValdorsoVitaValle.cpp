@@ -7,6 +7,9 @@
 #include "ValdorsoStatoMondo.h"
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoTempo.h"
+#include "ValdorsoImpostazioni.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMeshActor.h"
@@ -338,6 +341,8 @@ void AValdorsoVitaValle::BeginPlay()
 	{
 		DragoVero->SetStaticMesh(Drago);
 	}
+	// (11/11, v0.1.7) il ruggito, lontanissimo (Tools/Generatori/suoni_valle.py: ruggito)
+	Ruggito = LoadObject<USoundBase>(nullptr, TEXT("/Game/Valle/Suoni/S_Drago_Ruggito.S_Drago_Ruggito"), nullptr, LOAD_NoWarn | LOAD_Quiet);
 	Volatori->MarkRenderStateDirty();
 
 	// le foglie: tre colori (d'autunno le foglie, in primavera i petali), VitaFoglie istanze in tutto (nascoste finche'
@@ -557,6 +562,7 @@ void AValdorsoVitaValle::AggiornaDrago(const FVector& Colono, double Adesso, flo
 		}
 		bDragoInVolo = true;
 		DragoInizio = Adesso;
+		RuggitiFatti = 0;
 		// da ovest a est, alto sopra i monti a nord del colono
 		DragoDa = Colono + FVector(-VitaDragoSecondi * VitaDragoVelocita * 0.5f, -VitaDragoNord, VitaDragoAlto);
 	}
@@ -570,6 +576,15 @@ void AValdorsoVitaValle::AggiornaDrago(const FVector& Colono, double Adesso, flo
 		else
 		{
 			DragoDove = DragoDa + FVector(Volato * VitaDragoVelocita, FMath::Sin(Volato * 0.05f) * 4000.f, FMath::Sin(Volato * 0.11f) * 1500.f);
+			// (11/11) due ruggiti per passaggio, a un terzo e a due terzi del volo: piu' forte quanto piu' e' vicino
+			const float Momenti[2] = { VitaDragoSecondi * 0.33f, VitaDragoSecondi * 0.7f };
+			if (Ruggito && RuggitiFatti < 2 && Volato >= Momenti[RuggitiFatti])
+			{
+				++RuggitiFatti;
+				const float Lontano = FVector::Dist(DragoDove, Colono);
+				const float Volume = FMath::GetMappedRangeValueClamped(FVector2D(40000.f, 120000.f), FVector2D(0.9f, 0.35f), Lontano);
+				UGameplayStatics::PlaySound2D(this, Ruggito, Volume * ValdorsoImpostazioni::VolumeSuono(false), FMath::FRandRange(0.92f, 1.05f));
+			}
 		}
 	}
 	const bool bVero = bDragoInVolo && DragoVero->GetStaticMesh() != nullptr;

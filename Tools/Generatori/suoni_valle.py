@@ -475,6 +475,33 @@ def martelli(secondi=48.0, seme=13):
     return eco(x, 1.8, 1.2, rng)
 
 
+# ------------------------------------------------------------------------------------------------ il drago (11/11)
+
+def ruggito(secondi=7.0, seme=14):
+    """S_Drago_Ruggito: il drago che passa alto sopra i monti, lontanissimo (v0.1.7). Non un urlo: un brontolio enorme
+    che sale e scende, filtrato dalla distanza (niente acuti), con l'eco delle montagne. Si sente piu' che si ascolta."""
+    rng = np.random.default_rng(seme)
+    n = int(secondi * SR)
+    tt = np.arange(n) / SR
+    # la voce: una fondamentale bassa che sale piano e poi crolla, con le armoniche ruvide
+    inv = np.clip(tt / 1.6, 0, 1) ** 1.5 * np.clip((secondi - 1.2 - tt) / 2.8, 0, 1)
+    f0 = 46.0 + 22.0 * np.sin(np.pi * np.clip(tt / (secondi - 1.0), 0, 1)) + 3.0 * np.sin(2 * np.pi * 5.5 * tt)
+    fase = 2 * np.pi * np.cumsum(f0) / SR
+    voce = np.zeros(n)
+    for k, a in ((1, 1.0), (2, 0.7), (3, 0.5), (4, 0.32), (5, 0.22), (7, 0.12)):
+        voce += a * np.sin(k * fase + rng.uniform(0, 6))
+    # la gola: rumore modulato alla stessa voce
+    gola = banda(rng.standard_normal(n), 60, 420) * (0.6 + 0.4 * np.sin(fase))
+    x = (voce * 0.7 + gola * 0.9) * inv
+    x = np.tanh(x * 1.8)
+    # lontano: via gli acuti, e il rimbombo dei monti
+    x = passa_basso(x, 520, 3)
+    x = np.concatenate([x, np.zeros(int(3.0 * SR))])     # (l'eco gira in tondo: la coda finisce nel silenzio)
+    x = eco(x, secondi=0.9, quanto=0.35, rng=rng)
+    x = eco(x, secondi=1.7, quanto=0.2, rng=rng)
+    return x
+
+
 if __name__ == "__main__":
     uscita = sys.argv[1] if len(sys.argv) > 1 else "."
     os.makedirs(uscita, exist_ok=True)
@@ -492,3 +519,4 @@ if __name__ == "__main__":
     scrivi(uscita, "S_CampanaTempio", campana(), 0.9)
     scrivi(uscita, "S_Grotta", grotta(), 0.6)
     scrivi(uscita, "S_Martelli", martelli(), 0.7)
+    scrivi(uscita, "S_Drago_Ruggito", ruggito(), 0.8)

@@ -139,6 +139,22 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_grotta_nord.py")
     valdorso.add_menu_entry("Pericoli", voce)
 
+    # (11/11, v0.1.7) i gesti (Mixamo + Martellare e Spazzare provvisori) e i volti nuovi con le loro giornate
+    voce = unreal.ToolMenuEntry(name="Gesti", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Gesti: importa da Mixamo (V:\\Mixamo\\Gesti) e fai Martellare e Spazzare")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "importa_gesti.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    voce = unreal.ToolMenuEntry(name="Musica", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Musica: importa i brani (V:\\Texture\\valdorso\\musica)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "importa_musica.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    voce = unreal.ToolMenuEntry(name="Volti", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Volti: Marta, Livia, Tobia, i mugnai, Elric (con le giornate) e la pietra dei segni")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_volti.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
     # (07/11 sera) i piedi in piazza, il materiale delle rocce, Nanite sui trasparenti
     voce = unreal.ToolMenuEntry(name="SistemaValle", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Valle: sistema (piedi, materiali, Nanite)")

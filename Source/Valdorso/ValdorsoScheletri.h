@@ -62,6 +62,12 @@ struct FValdorsoTipoScheletro
 	float Parata = 0.f;
 	/** Grande (il capitano): x. */
 	float Grandezza = 1.f;
+	/** (11/11) I modelli: SM_Scheletro_Teschio... ("SM_Guardiano_" per il guardiano della forgia). */
+	const TCHAR* Modello = TEXT("SM_Scheletro_");
+	/** (11/11) Di pietra (0..1): le lame e i pugni ci rimbalzano (il guardiano della forgia). */
+	float Pietra = 0.f;
+	/** (11/11) Teme il fuoco e il battito del tempio (il guardiano no). */
+	bool bTemeFuoco = true;
 };
 
 namespace ValdorsoScheletri

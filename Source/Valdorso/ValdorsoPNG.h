@@ -36,6 +36,39 @@ class USkeletalMesh;
 class USkeletalMeshComponent;
 class UValdorsoAspettoComponent;
 
+/**
+ * (11/11, v0.1.6 "I volti e le giornate") Una tappa della giornata di un PNG: da che ora, dove sta, verso dove guarda,
+ * cosa fa (l'animazione in /Game/Mixamo/Gesti: "Martellare", "Spazzare"...; vuoto = sta fermo e respira), o se e'
+ * a casa (non si vede: dorme, o e' via).
+ */
+USTRUCT(BlueprintType)
+struct FValdorsoTappa
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	float Ora = 8.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	FVector Dove = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	float Gradi = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	FName Movenza;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	bool bAssente = false;
+};
+
+namespace ValdorsoGiornata
+{
+	/** Quale tappa vale a quell'ora della valle (0..24): l'ultima cominciata; prima della prima, l'ultima del giorno
+	 *  prima. -1 se la giornata e' vuota. */
+	VALDORSO_API int32 TappaPer(const TArray<FValdorsoTappa>& Giornata, float Ora);
+}
+
 UCLASS()
 class VALDORSO_API AValdorsoPNG : public AActor, public IValdorsoInterattivo
 {
@@ -65,6 +98,15 @@ public:
 	/** Quanto in fretta si gira verso chi gli parla (gradi al secondo). */
 	UPROPERTY(EditAnywhere, Category = "PNG", meta = (ClampMin = "10"))
 	float VelocitaGiro = 120.f;
+
+	/** (11/11) La giornata: dove sta alle varie ore (vuota = sempre dove l'hanno messo). Cambia posto solo quando nessun
+	 *  colono lo vede (o dopo dieci minuti che vorrebbe andare), e mai mentre parla. */
+	UPROPERTY(EditAnywhere, Category = "PNG|Giornata")
+	TArray<FValdorsoTappa> Giornata;
+
+	/** (11/11) Arriva nella valle solo con quell'atto della storia (Maestro Elric: 1, dopo il battito saltato). */
+	UPROPERTY(EditAnywhere, Category = "PNG|Giornata", meta = (ClampMin = "0"))
+	int32 AttoMinimo = 0;
 
 	// IValdorsoInterattivo
 	virtual FText TestoInterazione(const APawn* Chi) const override;
@@ -138,6 +180,22 @@ private:
 	float SguardoIniziale = 0.f;
 
 	FTimerHandle TimerRitorno;
+
+	/** (11/11) La giornata: la tappa di adesso e se e' via (a casa, o non ancora arrivato), in rete. */
+	UPROPERTY(ReplicatedUsing = OnRep_Tappa)
+	int32 Tappa = -1;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Tappa)
+	bool bVia = false;
+
+	UFUNCTION()
+	void OnRep_Tappa();
+
+	/** Solo sul server, ogni dieci secondi: e' ora di cambiare posto? */
+	void GiroGiornata();
+	FTimerHandle TimerGiornata;
+	double VuoleCambiareDa = -1.0;
+	bool bGiornataPartita = false;
 
 	/** (10/11) I saluti a chi passa vicino (solo sul server): una riga nella chat di quel colono, ogni tanto. */
 	void Saluta();

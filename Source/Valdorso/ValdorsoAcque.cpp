@@ -131,6 +131,45 @@ void AValdorsoAcque::PreparaScatole() const
 	bScatolePronte = true;
 }
 
+FString AValdorsoAcque::NomeQui(const FVector2D& Punto) const
+{
+	if (!bScatolePronte || ScatoleSpecchi.Num() != Specchi.Num() || ScatoleCorsi.Num() != Corsi.Num())
+	{
+		PreparaScatole();
+	}
+	FString Trovato;
+	float Pelo = -1.0e9f;
+	for (int32 i = 0; i < Specchi.Num(); ++i)
+	{
+		const FValdorsoSpecchioAcqua& Specchio = Specchi[i];
+		if (!ScatoleSpecchi[i].IsInsideOrOn(Punto) || Specchio.Pelo <= Pelo)
+		{
+			continue;
+		}
+		bool bDentro = ValdorsoAcqua::DentroRiva(Specchio.Riva, Punto);
+		if (!bDentro && Margine > 0.f)
+		{
+			const FVector2D Verso = (ScatoleSpecchi[i].GetCenter() - Punto).GetSafeNormal();
+			bDentro = ValdorsoAcqua::DentroRiva(Specchio.Riva, Punto + Verso * Margine);
+		}
+		if (bDentro)
+		{
+			Pelo = Specchio.Pelo;
+			Trovato = Specchio.Nome;
+		}
+	}
+	for (int32 i = 0; i < Corsi.Num(); ++i)
+	{
+		float PeloCorso = 0.f;
+		if (ScatoleCorsi[i].IsInsideOrOn(Punto) && ValdorsoAcqua::PeloSulCorso(Corsi[i], Punto, Margine, PeloCorso) && PeloCorso > Pelo)
+		{
+			Pelo = PeloCorso;
+			Trovato = Corsi[i].Nome;
+		}
+	}
+	return Trovato;
+}
+
 bool AValdorsoAcque::PeloQui(const FVector2D& Punto, float& OutPelo) const
 {
 	if (!bScatolePronte || ScatoleSpecchi.Num() != Specchi.Num() || ScatoleCorsi.Num() != Corsi.Num())
@@ -219,4 +258,19 @@ AValdorsoAcque* AValdorsoAcque::Di(const UWorld* Mondo)
 		return *It;
 	}
 	return nullptr;
+}
+
+// (11/11, v0.2) che acqua e', dal nome (minuscole o maiuscole non contano)
+int32 ValdorsoAcqua::Qualita(const FString& NomeAcqua)
+{
+	const FString N = NomeAcqua.ToLower();
+	if (N.Contains(TEXT("cascata")) || N.Contains(TEXT("sorgente")))
+	{
+		return 2;
+	}
+	if (N.Contains(TEXT("palude")) || N.Contains(TEXT("miniere")) || N.Contains(TEXT("stagno")) || N.Contains(TEXT("pozza nera")))
+	{
+		return 0;
+	}
+	return 1;
 }

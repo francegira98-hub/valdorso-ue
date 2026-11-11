@@ -464,6 +464,8 @@ void UValdorsoAspettoComponent::CreaCorpo(const TSoftClassPtr<AActor>& Voluta)
 	}
 	CorpoMetaHuman->SetActorEnableCollision(false);
 	CorpoMetaHuman->AttachToActor(Personaggio, FAttachmentTransformRules::KeepWorldTransform);
+	// (11/11) un PNG "via" (a casa, o non ancora arrivato: ValdorsoPNG.h, la giornata) resta nascosto anche col corpo nuovo
+	CorpoMetaHuman->SetActorHiddenInGame(Personaggio->IsHidden());
 
 	USkeletalMeshComponent* Corpo = nullptr;
 	TInlineComponentArray<USkeletalMeshComponent*> Pezzi(CorpoMetaHuman);

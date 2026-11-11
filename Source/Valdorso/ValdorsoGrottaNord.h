@@ -207,6 +207,16 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Passaggio")
 	FString Testo = TEXT("Torna alla luce");
 
+	/** (11/11) Segreto: la E lo trova solo da vicinissimo (Vicino, cm), e solo chi ha l'iscrizione richiesta, se c'e'. */
+	UPROPERTY(EditAnywhere, Category = "Passaggio")
+	bool bSegreto = false;
+
+	UPROPERTY(EditAnywhere, Category = "Passaggio")
+	float Vicino = 130.f;
+
+	UPROPERTY(EditAnywhere, Category = "Passaggio")
+	FString IscrizioneRichiesta;
+
 	virtual FText TestoInterazione(const APawn* Chi) const override;
 	virtual void Interagisci(APawn* Chi) override;
 	virtual FVector PuntoInterazione() const override { return GetActorLocation() + FVector(0.f, 0.f, 90.f); }
@@ -229,6 +239,10 @@ public:
 	/** Quanto e' ricco (1 normale, 2 quello della sala delle ossa). */
 	UPROPERTY(EditAnywhere, Category = "Forziere", meta = (ClampMin = "1", ClampMax = "3"))
 	int32 Ricchezza = 1;
+
+	/** (11/11) Una trappola: aprirlo fa scattare l'AValdorsoTesoroAllarme piu' vicino (la grata, le ossa). */
+	UPROPERTY(EditAnywhere, Category = "Forziere")
+	bool bAllarme = false;
 
 	virtual FText TestoInterazione(const APawn* Chi) const override;
 	virtual void Interagisci(APawn* Chi) override;

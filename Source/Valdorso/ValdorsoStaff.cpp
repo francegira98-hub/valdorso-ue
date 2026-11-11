@@ -4,6 +4,8 @@
 #include "SValdorsoStaff.h"
 #include "Valdorso.h"
 #include "ValdorsoArchivista.h"
+#include "ValdorsoAbilitaDati.h"
+#include "ValdorsoCrescita.h"
 #include "ValdorsoGilda.h"
 #include "ValdorsoLupi.h"
 #include "ValdorsoOggetti.h"
@@ -422,6 +424,41 @@ FString UValdorsoStaffComponent::Fai(const FString& Azione, const FString& Chi, 
 		}
 		Annota(TEXT("fatto"));
 		return FString::Printf(TEXT("Gli incarichi assegnati di %s sono fatti (le consegne no: servono le cose)."), *Nome);
+	}
+
+	// --- (11/11) Le abilita' dei coloni (permesso "abilita"): "Lame 40" ---------------------------------------
+	if (Azione == TEXT("abilita"))
+	{
+		if (!Puo(ValdorsoPermessi::Abilita))
+		{
+			return NonPuoi;
+		}
+		APlayerController* Suo = Colono(Chi.IsEmpty() ? Me : Chi);
+		UValdorsoCrescitaComponent* SuaCrescita = UValdorsoCrescitaComponent::Di(Suo);
+		if (!SuaCrescita)
+		{
+			return FString::Printf(TEXT("%s non e' nella valle."), *Chi);
+		}
+		TArray<FString> Parti;
+		Valore.ParseIntoArrayWS(Parti);
+		const FName Id = Parti.Num() > 0 ? FName(*Parti[0], FNAME_Find) : NAME_None;
+		if (Parti.Num() < 2 || !Parti[1].IsNumeric() || !ValdorsoCrescere::Trova(Id))
+		{
+			FString Elenco;
+			for (const FValdorsoAbilitaTipo& Tipo : ValdorsoCrescere::Tutte())
+			{
+				Elenco += (Elenco.IsEmpty() ? TEXT("") : TEXT(", ")) + Tipo.Id.ToString();
+			}
+			return FString::Printf(TEXT("Scrivi l'abilita' e i punti (es. Lame 40). Le abilita': %s."), *Elenco.Left(400));
+		}
+		const float Punti = FMath::Clamp(FCString::Atof(*Parti[1]), 0.f, ValdorsoCrescere::Massimo);
+		const FString Nome = Suo->PlayerState ? Suo->PlayerState->GetPlayerName() : Chi;
+		if (!SuaCrescita->ImpostaPunti(Id, Punti, FString::Printf(TEXT("staff (%s)"), *Me)))
+		{
+			return FString::Printf(TEXT("Non riesco a impostare %s a %s."), *Id.ToString(), *Nome);
+		}
+		Annota(TEXT("fatto"));
+		return FString::Printf(TEXT("%s: %s a %.0f punti."), *Nome, *Id.ToString(), Punti);
 	}
 
 	// --- Bacheche --------------------------------------------------------------------------------------

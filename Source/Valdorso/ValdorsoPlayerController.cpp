@@ -26,6 +26,10 @@
 #include "SValdorsoImpostazioni.h"
 #include "ValdorsoImpostazioni.h"
 #include "ValdorsoPalcoRegistro.h"
+#include "ValdorsoSegnala.h"
+#include "ValdorsoRiti.h"
+#include "ValdorsoMusica.h"
+#include "ValdorsoGesti.h"
 #include "ValdorsoRegole.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoInterazione.h"
@@ -104,6 +108,8 @@ AValdorsoPlayerController::AValdorsoPlayerController()
 	Staff = CreateDefaultSubobject<UValdorsoStaffComponent>(TEXT("Staff"));
 	// (10/11, scheletro della v0.1.5) le abilita' e la scheda del personaggio, K (ValdorsoCrescita.h)
 	Crescita = CreateDefaultSubobject<UValdorsoCrescitaComponent>(TEXT("Crescita"));
+	// (11/11, v0.1.7) la musica (solo sul PC)
+	Musica = CreateDefaultSubobject<UValdorsoMusicaComponent>(TEXT("Musica"));
 }
 
 void AValdorsoPlayerController::BeginPlay()
@@ -235,6 +241,13 @@ void AValdorsoPlayerController::CollegaTasti()
 		InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AValdorsoPlayerController::TastoStaff);
 		// (nell'editor F9 puo' essere la foto dello schermo: anche F7)
 		InputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AValdorsoPlayerController::TastoStaff);
+		// (11/11, v0.1.7) F8: "qui c'e' qualcosa che non va" (foto e scheda in Saved/Segnalazioni)
+		InputComponent->BindKey(EKeys::F8, IE_Pressed, this, &AValdorsoPlayerController::TastoSegnala);
+		// (nell'editor F8 e' "esci dal personaggio": anche F6)
+		InputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AValdorsoPlayerController::TastoSegnala);
+		// (11/11, v0.1.7) B tenuto premuto: la ruota dei gesti (ValdorsoGesti.h)
+		InputComponent->BindKey(EKeys::B, IE_Pressed, this, &AValdorsoPlayerController::TastoGestiGiu);
+		InputComponent->BindKey(EKeys::B, IE_Released, this, &AValdorsoPlayerController::TastoGestiSu);
 		// (10/11) K: la scheda del personaggio
 		InputComponent->BindKey(Tasto(EValdorsoTasto::Scheda), IE_Pressed, this, &AValdorsoPlayerController::TastoScheda);
 		// (11/11, v0.1.5) G: la guardia della scherma (e la croce in su del controller)
@@ -488,6 +501,48 @@ void AValdorsoPlayerController::TastoStaff()
 		return;
 	}
 	ValdorsoStaffSchermo::Alterna(this);
+}
+
+void AValdorsoPlayerController::TastoGestiGiu()
+{
+	if (GetPawn() && !SchermataAperta())
+	{
+		ValdorsoGesti::Apri(this);
+	}
+}
+
+void AValdorsoPlayerController::TastoGestiSu()
+{
+	ValdorsoGesti::Lascia(this, !SchermataAperta());
+}
+
+void AValdorsoPlayerController::TastoSegnala()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+	FString Nome;
+	FString Breve;
+	if (!ValdorsoSegnala::Fai(this, Nome, Breve))
+	{
+		ClientAvviso(NSLOCTEXT("ValdorsoSegnala", "SegnalaPresto", "Una segnalazione e' appena partita: aspetta qualche secondo."), 3.f, 0.f);
+		return;
+	}
+	ClientAvviso(FText::Format(NSLOCTEXT("ValdorsoSegnala", "Segnalato", "Segnalazione salvata ({0}): foto e scheda in Saved/Segnalazioni. Mandale a Fra o allo staff."),
+		FText::FromString(Nome)), 6.f, 0.f);
+	ServerSegnalazione(Breve.Left(120));
+}
+
+void AValdorsoPlayerController::ServerSegnalazione_Implementation(const FString& Breve)
+{
+	const double Adesso = FPlatformTime::Seconds();
+	if (Adesso - UltimaSegnalazione < 10.0 || !GetPawn())
+	{
+		return;
+	}
+	UltimaSegnalazione = Adesso;
+	ValdorsoRegistroEventi::Annota(TEXT("Segnalazione"), GetPawn(), nullptr, GetPawn()->GetActorLocation(), Breve.Left(120));
 }
 
 void AValdorsoPlayerController::TastoScheda()
@@ -1758,6 +1813,8 @@ void AValdorsoPlayerController::FaiNascere(const FString& Id)
 	ClientPersonaggioScelto(Dati->Nome);
 	// (03/11, v0.1.3) Nel registro eventi: chi entra nella valle, dove.
 	ValdorsoRegistroEventi::Annota(TEXT("Entra"), GetPawn(), nullptr, GetPawn()->GetActorLocation());
+	// (11/11, v0.1.7) i riti: la prima ora nella valle, l'anno e un giorno (ValdorsoRiti.h)
+	ValdorsoRiti::Entra(this, Dati->Registro.FirmatoIl);
 	GetWorldTimerManager().SetTimer(TimerSalvataggio, this, &AValdorsoPlayerController::SalvaPersonaggio, 60.f, true);
 }
 

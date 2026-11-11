@@ -17,6 +17,7 @@
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoTaccuino.h"
+#include "ValdorsoTrappole.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoZainoDati.h"
 #include "AbilitySystemComponent.h"
@@ -717,14 +718,36 @@ AValdorsoPassaggio::AValdorsoPassaggio()
 
 FText AValdorsoPassaggio::TestoInterazione(const APawn* Chi) const
 {
-	return Destinazione.IsZero() ? FText::GetEmpty() : FText::FromString(Testo);
+	if (Destinazione.IsZero())
+	{
+		return FText::GetEmpty();
+	}
+	// (11/11) i passaggi segreti: da vicinissimo, e solo per chi sa cosa cercare
+	if (bSegreto)
+	{
+		// (sul server un po' di margine: il colono e' arrivato qui con il ritardo della rete)
+		const float Limite = Vicino + (HasAuthority() && GetNetMode() != NM_Standalone ? 60.f : 0.f);
+		if (!Chi || FVector::Dist2D(Chi->GetActorLocation(), GetActorLocation()) > Limite)
+		{
+			return FText::GetEmpty();
+		}
+		if (!IscrizioneRichiesta.IsEmpty())
+		{
+			const UValdorsoTaccuinoComponent* Taccuino = UValdorsoTaccuinoComponent::Di(Cast<APlayerController>(Chi->GetController()));
+			if (!Taccuino || !Taccuino->TitoliIscrizioni().Contains(IscrizioneRichiesta))
+			{
+				return FText::GetEmpty();
+			}
+		}
+	}
+	return FText::FromString(Testo);
 }
 
 void AValdorsoPassaggio::Interagisci(APawn* Chi)
 {
-	if (HasAuthority())
+	if (HasAuthority() && !TestoInterazione(Chi).IsEmpty())
 	{
-		ValdorsoGrottaNord::Porta(Chi, Destinazione, GradiDestinazione, LOCTEXT("Fuori", "Risali verso la luce."));
+		ValdorsoGrottaNord::Porta(Chi, Destinazione, GradiDestinazione, bSegreto ? FText::GetEmpty() : LOCTEXT("Fuori", "Risali verso la luce."));
 	}
 }
 
@@ -789,6 +812,25 @@ void AValdorsoForziere::Interagisci(APawn* Chi)
 	Giocatore->ClientAvviso(FText::Format(LOCTEXT("Aperto", "Nel forziere: {0} monete dei nani e {1} Aureus."), FText::AsNumber(Monete),
 		FText::AsNumber(Aureus)), 4.f, 0.f);
 	ValdorsoRegistroEventi::Annota(TEXT("Forziere"), Chi, this, GetActorLocation(), FString::Printf(TEXT("%d monete, %d Aureus"), Monete, Aureus));
+	// (11/11) il forziere-trappola: la grata e le ossa (ValdorsoTrappole.h)
+	if (bAllarme)
+	{
+		AValdorsoTesoroAllarme* Piu = nullptr;
+		double Migliore = FMath::Square(3000.0);
+		for (TActorIterator<AValdorsoTesoroAllarme> It(GetWorld()); It; ++It)
+		{
+			const double D = FVector::DistSquared(It->GetActorLocation(), GetActorLocation());
+			if (D < Migliore)
+			{
+				Migliore = D;
+				Piu = *It;
+			}
+		}
+		if (Piu)
+		{
+			Piu->Scatta(Chi);
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------------------------- le tracce

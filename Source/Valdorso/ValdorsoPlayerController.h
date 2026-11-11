@@ -103,6 +103,10 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Valdorso")
 	TObjectPtr<class UValdorsoCrescitaComponent> Crescita;
 
+	/** (11/11, v0.1.7) La musica della valle, solo su questo PC (ValdorsoMusica.h). */
+	UPROPERTY(VisibleAnywhere, Category = "Valdorso")
+	TObjectPtr<class UValdorsoMusicaComponent> Musica;
+
 	/**
 	 * (28/10) Solo per le prove nell'editor (console): apre il Registro di Val d'Orso su un colono di prova, con il
 	 * palco e la pagina del volto, senza account. Le risposte non si salvano (il server non conosce quel colono).
@@ -250,6 +254,8 @@ public:
 
 	bool EAutenticato() const { return bAutenticato; }
 	const FString& GetAccountId() const { return AccountId; }
+	/** (11/11) Il personaggio con cui e' entrato (vuoto prima di entrare). */
+	const FString& GetPersonaggioId() const { return PersonaggioId; }
 	EValdorsoRuolo GetRuolo() const { return Ruolo; }
 	/** (10/11) Il nome dell'account (per i permessi dello staff: ValdorsoStaff.h). */
 	const FString& GetNomeAccount() const { return NomeAccount; }
@@ -357,6 +363,17 @@ private:
 	void Immersione();
 	/** (10/11) F9: la finestra dello staff. */
 	void TastoStaff();
+	/** (11/11) B: la ruota dei gesti (ValdorsoGesti.h), aperta finche' e' premuto. */
+	void TastoGestiGiu();
+	void TastoGestiSu();
+
+	/** (11/11) F8: la segnalazione (ValdorsoSegnala.h). */
+	void TastoSegnala();
+
+	/** (11/11) Al server: qualcuno ha segnalato un problema qui (nel registro eventi). */
+	UFUNCTION(Server, Reliable)
+	void ServerSegnalazione(const FString& Breve);
+	double UltimaSegnalazione = -1000.0;
 	/** (10/11) K: la scheda del personaggio (le abilita'). */
 	void TastoScheda();
 	/** (11/11, v0.1.5) G: la guardia dopo (ValdorsoScherma.h). */

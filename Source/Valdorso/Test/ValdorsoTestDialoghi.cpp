@@ -98,7 +98,8 @@ bool FValdorsoTestDialoghiSani::RunTest(const FString& Parameters)
 		TestNotNull(FString::Printf(TEXT("%s si trova per nome"), *Dialogo.Id.ToString()), ValdorsoDialoghi::Trova(Dialogo.Id));
 	}
 	for (const TCHAR* Atteso : { TEXT("Gaspare"), TEXT("GuardiaCorrado"), TEXT("GuardiaOttone"), TEXT("NonnaEdda"), TEXT("Bruno"),
-		TEXT("PadreAnselmo") })
+		TEXT("PadreAnselmo"), TEXT("Lucia"), TEXT("CapoGilda"), TEXT("Marta"), TEXT("Livia"), TEXT("Tobia"), TEXT("Teodoro"),
+		TEXT("Agnese"), TEXT("Elric") })
 	{
 		TestNotNull(FString::Printf(TEXT("c'è il dialogo %s"), Atteso), ValdorsoDialoghi::Trova(FName(Atteso)));
 	}

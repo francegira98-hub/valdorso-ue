@@ -180,7 +180,7 @@ namespace ValdorsoTasti
 
 	bool Riservato(const FKey& Tasto)
 	{
-		static const FKey Fissi[] = { EKeys::Escape, EKeys::F10, EKeys::F9, EKeys::F7, EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four,
+		static const FKey Fissi[] = { EKeys::Escape, EKeys::F10, EKeys::F9, EKeys::F8, EKeys::F7, EKeys::F6, EKeys::B, EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four,
 			EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::MouseX, EKeys::MouseY, EKeys::Mouse2D, EKeys::MouseWheelAxis,
 			EKeys::MouseScrollUp, EKeys::MouseScrollDown };
 		if (!Tasto.IsValid() || Tasto.IsGamepadKey() || Tasto.IsTouch() || Tasto.IsAxis1D() || Tasto.IsAxis2D())

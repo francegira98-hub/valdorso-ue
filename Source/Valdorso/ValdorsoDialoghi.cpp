@@ -4,6 +4,8 @@
 #include "ValdorsoDialoghi.h"
 #include "ValdorsoRune.h"
 #include "ValdorsoGrottaNord.h"
+#include "ValdorsoRiti.h"
+#include "ValdorsoStorie.h"
 
 namespace
 {
@@ -127,13 +129,13 @@ namespace ValdorsoDialoghi
 		for (int32 i = 0; i < Attuale->Scelte.Num() && Fuori.Num() < MassimoScelte; ++i)
 		{
 			const FName Nascosta = Attuale->Scelte[i].NascostaSe;
-			if (!Nascosta.IsNone() && Memoria.HaSegno(Dialogo.Id, Nascosta))
+			if (!Nascosta.IsNone() && HaSegnoDi(Memoria, Dialogo.Id, Nascosta))
 			{
 				continue;
 			}
 			// (11/11) e quelle che si vedono solo con un segno
 			const FName Serve = Attuale->Scelte[i].VisibileSe;
-			if (!Serve.IsNone() && !Memoria.HaSegno(Dialogo.Id, Serve))
+			if (!Serve.IsNone() && !HaSegnoDi(Memoria, Dialogo.Id, Serve))
 			{
 				continue;
 			}
@@ -346,6 +348,39 @@ namespace ValdorsoDialoghi
 	void SegnaParlato(FName Id, const FString& Chi)
 	{
 		DialoghiMemoria().Add(DialoghiChiave(Id, Chi));
+	}
+
+	void DividiSegno(FName IdDialogo, FName Segno, FName& OutDialogo, FName& OutSegno)
+	{
+		FString Prima;
+		FString Dopo;
+		if (!Segno.IsNone() && Segno.ToString().Split(TEXT(":"), &Prima, &Dopo) && !Prima.IsEmpty() && !Dopo.IsEmpty())
+		{
+			OutDialogo = FName(*Prima);
+			OutSegno = FName(*Dopo);
+			return;
+		}
+		OutDialogo = IdDialogo;
+		OutSegno = Segno;
+	}
+
+	bool HaSegnoDi(const FValdorsoMemoriaDialoghi& Memoria, FName IdDialogo, FName Segno)
+	{
+		FName Dialogo;
+		FName Nome;
+		DividiSegno(IdDialogo, Segno, Dialogo, Nome);
+		return !Nome.IsNone() && Memoria.HaSegno(Dialogo, Nome);
+	}
+
+	void MettiSegnoDi(FValdorsoMemoriaDialoghi& Memoria, FName IdDialogo, FName Segno)
+	{
+		FName Dialogo;
+		FName Nome;
+		DividiSegno(IdDialogo, Segno, Dialogo, Nome);
+		if (!Nome.IsNone())
+		{
+			Memoria.MettiSegno(Dialogo, Nome);
+		}
 	}
 
 	bool HaSegno(FName Id, const FString& Chi, FName Segno)

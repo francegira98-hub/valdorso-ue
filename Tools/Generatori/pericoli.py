@@ -340,6 +340,13 @@ def arma(nome):
         _colorato(m, OTTONE, lambda t: t.blocco("x", -11.5, -9, -2.2, 2.2, -2.2, 2.2))
         _colorato(m, OTTONE, lambda t: t.blocco("x", 1, 3, -1.4, 1.4, -6, 6))
         lama(m, 3, 24, 4.4, 0.6, punta=0.3)
+    elif nome == "Martello_Nani":
+        # (11/11) il martello del guardiano della forgia: testa nera squadrata, fasce d'ottone
+        manico(m, -34, 48, 2.2, LEGNOSCURO)
+        fasce(m, -33, -18, 2.2, 4, OTTONE)
+        _colorato(m, FERRO, lambda t: t.blocco("x", 40, 58, -6.5, 6.5, -9, 9))
+        _colorato(m, OTTONE, lambda t: t.blocco("x", 39, 59, -6.8, 6.8, -1, 1))
+        _colorato(m, FERRO, lambda t: t.blocco("x", 44, 54, -7.2, 7.2, -10, -8))
     return m
 
 
@@ -347,7 +354,7 @@ ARMI = ["Coltello", "Pugnale", "Falcetto", "Martello", "Bastone_Pastore", "Spada
         "Accetta", "Ascia_Guerra", "Mazza", "Clava", "Lancia", "Forcone", "Bastone_Ferrato", "Spada_Lunga", "Gladio",
         "Brocchiere", "Scudo_Rotondo", "Scudo_Aquilone", "Scudo_Legione",
         # (11/11, v0.1.7) la grotta del nord
-        "Piccone", "Pugnale_Nani"]
+        "Piccone", "Pugnale_Nani", "Martello_Nani"]
 
 
 # ------------------------------------------------------------------------------------------------ suoni

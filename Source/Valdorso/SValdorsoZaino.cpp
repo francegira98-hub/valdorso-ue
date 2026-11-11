@@ -97,6 +97,7 @@ namespace
 		{
 		case EValdorsoUso::Mangia: return TEXT("Clic destro: lo mangi") + Tra;
 		case EValdorsoUso::Bevi: return TEXT("Clic destro: bevi un sorso") + Tra;
+		case EValdorsoUso::Raccogli: return TEXT("Clic destro, dentro l'acqua: lo riempi");
 		case EValdorsoUso::Cura: return TEXT("Clic destro: ti medichi") + Tra;
 		case EValdorsoUso::Leggi: return TEXT("Clic destro: lo leggi");
 		case EValdorsoUso::Documento: return TEXT("Clic destro: la apri (e la puoi mostrare a chi hai davanti)");

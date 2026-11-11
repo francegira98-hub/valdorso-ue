@@ -386,7 +386,8 @@ namespace ValdorsoZaino
 		for (FValdorsoPostoZaino& Posto : Zaino.Posti)
 		{
 			const FValdorsoTipoOggetto* Tipo = Posto.Vuoto() ? nullptr : ValdorsoOggetti::Trova(Posto.Id);
-			if (Tipo && Tipo->Uso == EValdorsoUso::Bevi && Posto.Cariche < Tipo->Cariche)
+			// (11/11, v0.2) i secchi no: la loro acqua ha una qualita', si riempiono vuoti (EValdorsoUso::Raccogli)
+			if (Tipo && Tipo->Uso == EValdorsoUso::Bevi && Posto.Cariche < Tipo->Cariche && FCString::Strlen(Tipo->Vuoto) == 0)
 			{
 				Posto.Cariche = Tipo->Cariche;
 				bRiempite = true;

@@ -264,6 +264,47 @@ namespace
 			TEXT("Squadrata, con un foro nel mezzo e segni che nessuno sa leggere. Marta, alla fucina, le compra per il metallo."), 0.02f, 50));
 		C.Add(OggSemplice(TEXT("Pugnale_Nani"), TEXT("Pugnale dei nani"),
 			TEXT("Corto, pesante, la lama scura che non ha preso ruggine in mille anni. Sul pomo, un segno squadrato."), 0.6f));
+		// (11/11) la forgia dei nani: il martello e il cuore del guardiano
+		C.Add(OggSemplice(TEXT("Martello_Nani"), TEXT("Martello dei nani"),
+			TEXT("Il martello del guardiano della forgia: una testa di ferro nero grande come un pane, il manico fasciato d'ottone. Pesa, e si sente."), 4.5f));
+		C.Add(OggSemplice(TEXT("Cuore_di_Pietra"), TEXT("Cuore di pietra"),
+			TEXT("Una pietra grande come un pugno, liscia, tiepida. Dentro, se la tieni all'orecchio, qualcosa batte piano. Marta la vuole vedere."), 0.5f, 10));
+		// (11/11, v0.2 "L'acqua della valle") il secchio e l'acqua: quale acqua, lo decide dove la prendi
+		{
+			FValdorsoTipoOggetto Secchio = OggSemplice(TEXT("Secchio"), TEXT("Secchio"),
+				TEXT("Un secchio di doghe cerchiate di ferro, con il manico di corda. Entra nell'acqua fino alle ginocchia e riempilo: la pozza della cascata da' l'acqua pura, il lago e il fiume la chiara, le gallerie allagate dei nani la torbida."), 1.2f);
+			Secchio.Uso = EValdorsoUso::Raccogli;
+			C.Add(Secchio);
+			struct FAcqua { const TCHAR* Id; const TCHAR* Nome; const TCHAR* Descrizione; float Salute; float Stamina; float Equilibrio; };
+			const FAcqua Acque[] = {
+				{ TEXT("Secchio_Acqua_Pura"), TEXT("Secchio d'acqua pura"),
+					TEXT("Acqua della cascata, fredda e trasparente: sa di pietra e di neve. La migliore della valle: Bruno la paga per la birra."), 3.f, 25.f, 12.f },
+				{ TEXT("Secchio_Acqua_Chiara"), TEXT("Secchio d'acqua chiara"),
+					TEXT("Acqua del lago o del fiume: buona da bere, buona per cucinare. Ogni tanto ci nuota dentro qualcosa."), 0.f, 20.f, 8.f },
+				{ TEXT("Secchio_Acqua_Torbida"), TEXT("Secchio d'acqua torbida"),
+					TEXT("Acqua scura, che sa di foglie marce e di ferro. Si beve se proprio si deve, e disseta poco. A qualcuno, nella palude, potrebbe servire."), 0.f, 8.f, 0.f },
+			};
+			for (const FAcqua& A : Acque)
+			{
+				FValdorsoTipoOggetto Pieno = OggSemplice(A.Id, A.Nome, A.Descrizione, 9.f);
+				Pieno.Uso = EValdorsoUso::Bevi;
+				Pieno.Salute = A.Salute;
+				Pieno.Stamina = A.Stamina;
+				Pieno.Equilibrio = A.Equilibrio;
+				Pieno.Cariche = 8;
+				Pieno.Vuoto = TEXT("Secchio");
+				C.Add(Pieno);
+			}
+		}
+		// (11/11, v0.1.8 "Le storie della valle") i ricordi delle storie dei volti nuovi (ValdorsoStorie.h)
+		C.Add(OggRicordo(TEXT("Fischietto_di_Livia"), TEXT("Il fischietto della capitana"),
+			TEXT("Un fischietto d'ottone consumato, con una S incisa. La capitana Livia l'ha usato otto anni sui confini. \"Se fischi tre volte, chi ha servito con me si volta.\""), 0.05f));
+		C.Add(OggRicordo(TEXT("Sasso_di_Tobia"), TEXT("Il sasso dell'orsetto"),
+			TEXT("Un sasso liscio di fiume, con la forma di un orso che dorme. Tobia l'ha tenuto sotto il cuscino per due anni: adesso e' tuo, perche' tu sei andato a vedere."), 0.2f));
+		C.Add(OggRicordo(TEXT("Chiodo_Runico"), TEXT("Il chiodo che canta"),
+			TEXT("Un chiodo di ferro battuto da Marta sull'incudine antica, la notte che canto'. Sulla testa c'e' un segno che nessuno le ha insegnato. Se lo stringi, e' tiepido."), 0.1f));
+		C.Add(OggRicordo(TEXT("Candela_della_Veglia"), TEXT("La candela della veglia"),
+			TEXT("Un mozzicone di cera d'api, consumato fino in fondo accanto al frammento del Cuore. Padre Anselmo ne da' uno a chi ha vegliato con lui fino all'alba."), 0.1f));
 		C.Add(OggDaLeggere(OggRicordo(TEXT("Mappa_Gallerie"), TEXT("Due pagine della mappa delle gallerie"),
 			TEXT("Le due pagine che Gisella lego' alla corda nell'autunno del 309: la galleria della frana, la sala delle colonne, una scala che scende. Poi il foglio finisce."),
 			0.02f), TEXT("La galleria della frana scende verso nord fino a una sala con sei colonne. A ovest, un campo. A nord, una scala che scende. Poi, il bordo strappato.")));
@@ -313,6 +354,8 @@ namespace
 			// (11/11, v0.1.7) il piccone (una botta: conta come le mazze) e il pugnale dei nani
 			{ TEXT("Piccone"), EValdorsoPosto::ManoDestra, 15.f, 40.f, 7.f, 120.f, 2, 0.f },
 			{ TEXT("Pugnale_Nani"), EValdorsoPosto::ManoDestra, 19.f, 22.f, 3.f, 115.f, 1, 0.f },
+			// (11/11) il martello dei nani: la botta piu' forte della valle, lento e pesante
+			{ TEXT("Martello_Nani"), EValdorsoPosto::ManoDestra, 32.f, 65.f, 11.f, 135.f, 2, 0.f },
 		};
 		for (const FArmaDati& A : Armi)
 		{
@@ -878,6 +921,56 @@ namespace
 			L.Add(OggLinea({ { -0.38f, -0.14f }, { 0.6f, -0.1f }, { 0.85f, 0.f }, { 0.6f, 0.1f }, { -0.38f, 0.14f } }));
 			L.Add(OggRett(-0.95f, -0.08f, -0.85f, 0.08f));
 		}
+		else if (N == TEXT("Martello_Nani"))
+		{
+			L.Add(OggLinea({ { -0.1f, -0.9f }, { -0.1f, 0.35f } }));
+			L.Add(OggRett(-0.6f, 0.35f, 0.4f, 0.85f));
+			L.Add(OggLinea({ { -0.6f, 0.6f }, { 0.4f, 0.6f } }));
+			L.Add(OggLinea({ { -0.2f, -0.6f }, { 0.f, -0.6f } }));
+			L.Add(OggLinea({ { -0.2f, -0.45f }, { 0.f, -0.45f } }));
+		}
+		else if (N == TEXT("Secchio") || N.StartsWith(TEXT("Secchio_Acqua_")))
+		{
+			// il secchio: un trapezio con il manico; pieno, la linea dell'acqua (torbida: con le onde)
+			L.Add(OggLinea({ { -0.55f, -0.45f }, { -0.4f, 0.75f }, { 0.4f, 0.75f }, { 0.55f, -0.45f }, { -0.55f, -0.45f } }));
+			L.Add(OggLinea({ { -0.55f, -0.45f }, { -0.35f, -0.85f }, { 0.35f, -0.85f }, { 0.55f, -0.45f } }));
+			if (N != TEXT("Secchio"))
+			{
+				L.Add(N.EndsWith(TEXT("Torbida")) ? OggLinea({ { -0.5f, -0.25f }, { -0.25f, -0.32f }, { 0.f, -0.22f }, { 0.25f, -0.32f }, { 0.5f, -0.25f } })
+					: OggLinea({ { -0.51f, -0.27f }, { 0.51f, -0.27f } }));
+			}
+		}
+		else if (N == TEXT("Fischietto_di_Livia"))
+		{
+			L.Add(OggRett(-0.8f, -0.2f, 0.3f, 0.2f));
+			L.Add(OggCerchio(0.55f, 0.f, 0.3f, 12));
+			L.Add(OggLinea({ { -0.8f, 0.f }, { -0.95f, 0.f } }));
+		}
+		else if (N == TEXT("Sasso_di_Tobia"))
+		{
+			L.Add(OggCerchio(0.f, 0.1f, 0.6f, 16));
+			L.Add(OggCerchio(-0.4f, -0.45f, 0.15f, 8));
+			L.Add(OggCerchio(0.4f, -0.45f, 0.15f, 8));
+		}
+		else if (N == TEXT("Chiodo_Runico"))
+		{
+			L.Add(OggRett(-0.35f, -0.85f, 0.35f, -0.65f));
+			L.Add(OggLinea({ { 0.f, -0.65f }, { 0.f, 0.9f } }));
+			L.Add(OggLinea({ { -0.15f, -0.8f }, { 0.f, -0.7f }, { 0.15f, -0.8f } }));
+		}
+		else if (N == TEXT("Candela_della_Veglia"))
+		{
+			L.Add(OggRett(-0.25f, -0.2f, 0.25f, 0.8f));
+			L.Add(OggLinea({ { 0.f, -0.2f }, { 0.f, -0.4f } }));
+			L.Add(OggLinea({ { 0.f, -0.45f }, { -0.12f, -0.65f }, { 0.f, -0.85f }, { 0.12f, -0.65f }, { 0.f, -0.45f } }));
+		}
+		else if (N == TEXT("Cuore_di_Pietra"))
+		{
+			L.Add(OggCerchio(0.f, 0.f, 0.6f, 14));
+			L.Add(OggCerchio(0.f, 0.f, 0.22f, 8));
+			L.Add(OggLinea({ { -0.6f, 0.f }, { -0.3f, 0.f } }));
+			L.Add(OggLinea({ { 0.3f, 0.f }, { 0.6f, 0.f } }));
+		}
 		else if (N == TEXT("Mappa_Gallerie"))
 		{
 			L.Add(OggLinea({ { -0.8f, -0.7f }, { 0.75f, -0.7f }, { 0.8f, -0.2f }, { 0.65f, 0.05f }, { 0.8f, 0.35f }, { 0.7f, 0.7f },
@@ -1054,6 +1147,10 @@ namespace ValdorsoOggetti
 		static const FDono Doni[] = {
 			{ TEXT("Bruno"), TEXT("PrimaScodella"), TEXT("Pane_Nero"), 1 },
 			{ TEXT("NonnaEdda"), TEXT("DovutoRispetto"), TEXT("Erbe_Palude"), 2 },
+			// (11/11, v0.1.8) le storie dei volti nuovi (ValdorsoStorie.h)
+			{ TEXT("Livia"), TEXT("LetteraArrivata"), TEXT("Fischietto_di_Livia"), 1 },
+			{ TEXT("Tobia"), TEXT("SassoTrovato"), TEXT("Sasso_di_Tobia"), 1 },
+			{ TEXT("Marta"), TEXT("Canta"), TEXT("Chiodo_Runico"), 1 },
 		};
 		for (const FDono& Dono : Doni)
 		{

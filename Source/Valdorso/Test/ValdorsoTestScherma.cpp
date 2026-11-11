@@ -12,6 +12,7 @@
 #include "ValdorsoScheletri.h"
 #include "ValdorsoScherma.h"
 #include "ValdorsoTasti.h"
+#include "ValdorsoTrappole.h"
 #include "ValdorsoVigore.h"
 
 namespace ValdorsoTestScherma
@@ -141,7 +142,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestGrottaScheletri, "Valdorso.Grotta.
 bool FValdorsoTestGrottaScheletri::RunTest(const FString& Parameters)
 {
 	using namespace ValdorsoScheletri;
-	TestEqual(TEXT("tre tipi"), Tipi().Num(), 3);
+	TestEqual(TEXT("quattro tipi (con il guardiano della forgia)"), Tipi().Num(), 4);
+	const FValdorsoTipoScheletro* Guardiano = Tipo(TEXT("Guardiano"));
+	TestTrue(TEXT("il guardiano e' il piu' forte, di pietra, e non teme il fuoco"),
+		Guardiano && Guardiano->Forza == 80.f && Guardiano->Pietra > 0.f && !Guardiano->bTemeFuoco);
 	const FValdorsoTipoScheletro* Semplice = Tipo(TEXT("Scheletro"));
 	const FValdorsoTipoScheletro* Scudo = Tipo(TEXT("ScheletroScudo"));
 	const FValdorsoTipoScheletro* Capitano = Tipo(TEXT("Capitano"));
@@ -190,6 +194,38 @@ bool FValdorsoTestGrottaFrana::RunTest(const FString& Parameters)
 	}
 	TestFalse(TEXT("la storia ha un titolo"), ValdorsoGrottaNord::TitoloStoria().IsEmpty());
 	TestTrue(TEXT("la storia ha le righe"), ValdorsoGrottaNord::RigheStoria().Num() > 0 && ValdorsoGrottaNord::RigheFine().Num() > 0);
+	return true;
+}
+
+// (11/11) Le trappole dei nani: le lance escono dopo il ritardo e rientrano, la botola si apre e si richiude, il pendolo
+// oscilla dentro la sua ampiezza e torna uguale a ogni periodo.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestGrottaTrappole, "Valdorso.Grotta.Trappole", ValdorsoTestScherma::Bandiere)
+bool FValdorsoTestGrottaTrappole::RunTest(const FString& Parameters)
+{
+	using namespace ValdorsoTrappole;
+	TestEqual(TEXT("le lance prima del ritardo: giu'"), LanceFuori(0.3, 0.45f), 0.f);
+	TestEqual(TEXT("le lance subito dopo: fuori"), LanceFuori(0.6, 0.45f), 1.f);
+	TestEqual(TEXT("le lance dopo tre secondi: di nuovo giu'"), LanceFuori(3.5, 0.45f), 0.f);
+	TestFalse(TEXT("la botola regge un attimo"), BotolaAperta(0.5, 0.7f, 6.f));
+	TestTrue(TEXT("poi cede"), BotolaAperta(1.0, 0.7f, 6.f));
+	TestFalse(TEXT("e si richiude"), BotolaAperta(7.0, 0.7f, 6.f));
+	for (double T = 0.0; T < 10.0; T += 0.37)
+	{
+		const float A = AngoloPendolo(T, 3.f, 0.25f, 26.f);
+		if (FMath::Abs(A) > 26.001f)
+		{
+			AddError(TEXT("il pendolo esce dalla sua ampiezza"));
+			break;
+		}
+		if (!FMath::IsNearlyEqual(A, AngoloPendolo(T + 3.0, 3.f, 0.25f, 26.f), 0.01f))
+		{
+			AddError(TEXT("il pendolo non torna uguale dopo un periodo"));
+			break;
+		}
+	}
+	TestTrue(TEXT("i due pendoli sfasati di mezzo periodo sono opposti"),
+		FMath::IsNearlyEqual(AngoloPendolo(1.1, 3.f, 0.f, 26.f), -AngoloPendolo(1.1, 3.f, 0.5f, 26.f), 0.01f));
+	TestTrue(TEXT("una trappola uccide"), DannoMortale > 10000.f);
 	return true;
 }
 

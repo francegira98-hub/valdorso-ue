@@ -307,4 +307,10 @@ namespace ValdorsoDialoghi
 
 	/** Dimentica tutto, anche i segni (per i test). */
 	VALDORSO_API void Dimentica();
+
+	/** (11/11, v0.1.8) Un segno puo' essere di un altro PNG: si scrive "Altro:Segno" (per esempio
+	 *  "Livia:LetteraData" nel dialogo di Nonna Edda). Senza i due punti e' del dialogo IdDialogo. */
+	VALDORSO_API void DividiSegno(FName IdDialogo, FName Segno, FName& OutDialogo, FName& OutSegno);
+	VALDORSO_API bool HaSegnoDi(const FValdorsoMemoriaDialoghi& Memoria, FName IdDialogo, FName Segno);
+	VALDORSO_API void MettiSegnoDi(FValdorsoMemoriaDialoghi& Memoria, FName IdDialogo, FName Segno);
 }

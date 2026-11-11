@@ -71,6 +71,10 @@ class AValdorsoCharacter : public ACharacter, public IAbilitySystemInterface
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoSedutaComponent* Seduta;
 
+	/** (11/11, v0.1.7) I gesti, tasto B (vedi ValdorsoGesti.h) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UValdorsoGestiComponent> Gesti;
+
 	/** (05/11) Dormire nei letti (vedi ValdorsoLetto.h) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UValdorsoSonnoComponent* Sonno;

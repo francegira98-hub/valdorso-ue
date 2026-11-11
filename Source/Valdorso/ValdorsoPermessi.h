@@ -27,8 +27,10 @@ namespace ValdorsoPermessi
 	inline constexpr int32 Giocatori = 1 << 5;
 	/** I permessi e i ruoli degli altri (solo l'Amministratore). */
 	inline constexpr int32 Permessi = 1 << 6;
+	/** (11/11) Le abilita' dei coloni: impostarne i punti (per le prove, o per rimediare a un errore). */
+	inline constexpr int32 Abilita = 1 << 7;
 
-	inline constexpr int32 Quanti = 7;
+	inline constexpr int32 Quanti = 8;
 	inline constexpr int32 Tutti = (1 << Quanti) - 1;
 	/** Quelli di uno Staff nuovo (o di un file di prima): Gilda, Bacheche, Registro. */
 	inline constexpr int32 DiSerieStaff = Gilda | Bacheche | Registro;
@@ -36,7 +38,7 @@ namespace ValdorsoPermessi
 	/** Il nome del permesso numero Indice (0..Quanti-1): "gilda", "bacheche"... */
 	inline const TCHAR* Nome(int32 Indice)
 	{
-		static const TCHAR* Nomi[Quanti] = { TEXT("gilda"), TEXT("bacheche"), TEXT("registro"), TEXT("prove"), TEXT("mondo"), TEXT("giocatori"), TEXT("permessi") };
+		static const TCHAR* Nomi[Quanti] = { TEXT("gilda"), TEXT("bacheche"), TEXT("registro"), TEXT("prove"), TEXT("mondo"), TEXT("giocatori"), TEXT("permessi"), TEXT("abilita") };
 		return Indice >= 0 && Indice < Quanti ? Nomi[Indice] : TEXT("?");
 	}
 

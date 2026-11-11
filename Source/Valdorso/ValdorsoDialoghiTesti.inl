@@ -487,10 +487,27 @@ namespace
 			TEXT("Odore di piazza e di fumo di locanda: sei di nuovo tu. Stavolta il canneto l'hai salutato?"),
 			TEXT("Siediti, se vuoi. Se non vuoi, sta' in piedi, ma non sulle mie radici di mandragola."),
 			})
-			.Scelta(TEXT("Parlami delle erbe."), TEXT("erbe"))
+			// (11/11, v0.1.8) "Una lettera per casa" (ValdorsoStorie.h): solo a chi porta la lettera della capitana
+			.Scelta(TEXT("Ho una lettera che deve passare il velo."), TEXT("corvo"))
+			.SceltaVisibileSe(TEXT("Livia:LetteraData")).SceltaNascostaSe(TEXT("CorvoPartito"))
 			.Scelta(TEXT("Gaspare dice che anche tu credi all'Orso."), TEXT("orso"))
 			.Scelta(TEXT("Ho delle domande."), TEXT("ancora"))
 			.Scelta(TEXT("Passavo soltanto. Buona giornata, Nonna."), TEXT("congedo"));
+
+		D.Nodo(TEXT("corvo"), {
+			TEXT("(Nonna Edda prende la lettera con due dita, la annusa, la gira. Il sigillo e' di cera semplice, senza stemma.)"),
+			TEXT("Ah. La capitana. Una donna che mette le mani avanti anche quando chiede un favore: si vede dalla piega."),
+			TEXT("Il velo ferma gli uomini, ragazzo mio. Ferma i carri, ferma le spade, ferma perfino le preghiere, dicono. Ma non ferma i corvi. I corvi sono piu' vecchi dei sigilli."),
+			})
+			.Scelta(TEXT("Allora mandala con un corvo."), TEXT("corvo_via"))
+			.Scelta(TEXT("Ci devo pensare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("corvo_via"), {
+			TEXT("(Fischia, basso. Dal tetto della capanna scende un corvo grosso come un gatto, con un occhio bianco. Nonna Edda gli lega la lettera alla zampa con un filo di giunco e gli parla all'orecchio, in una lingua che non e' la tua.)"),
+			TEXT("(Il corvo sale, gira due volte sopra il lago e punta a sud. Quando arriva al velo, il velo trema appena, come l'acqua quando ci passa sopra il vento. Poi il corvo non c'e' piu'.)"),
+			TEXT("Fatto. Di' alla capitana che il corvo non chiede ordini a nessuno. E che la prossima volta venga lei: ho un unguento per la sua schiena."),
+			}).Segno(TEXT("CorvoPartito"))
+			.Scelta(TEXT("Grazie, Nonna."), TEXT("congedo"));
 
 		D.Nodo(TEXT("niente"), {
 			TEXT("(Nonna Edda ride, e il calderone fa una bolla grossa, come se ridesse anche lui.)"),
@@ -543,8 +560,24 @@ namespace
 			})
 			.Scelta(TEXT("Il Maestro? Chi è?"), TEXT("elric"))
 			.Scelta(TEXT("Le erbe che non si dicono..."), TEXT("segrete"))
-			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
+			// (11/11, v0.2) l'acqua torbida (ValdorsoStorie.h): il server guarda se hai il secchio pieno
+			.Scelta(TEXT("Ti ho portato un secchio d'acqua torbida."), TEXT("acqua_torbida"), FName(ValdorsoStorie::EventoAcquaEdda))
 			.Scelta(TEXT("Ti lascio al calderone."), TEXT("congedo"));
+
+		D.Nodo(TEXT("acqua_torbida"), {
+			TEXT("(Nonna Edda annusa il secchio e fa una smorfia contenta, come davanti a una torta.)"),
+			TEXT("Ah, l'acqua delle gallerie dei nani. Ferro, muschio e qualcosa che non ti dico. Per gli unguenti e' meglio di quella del lago: la ruggine tiene lontane le febbri."),
+			TEXT("(Versa l'acqua nel calderone e ti rende il secchio. Poi ti mette in mano tre mazzetti d'erbe.) Il dovuto, al contrario. Non abituarti."),
+			})
+			.Scelta(TEXT("Grazie, Nonna."), TEXT("congedo"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
+
+		D.Nodo(TEXT("acqua_niente"), {
+			TEXT("(Nonna Edda ti guarda le mani.) Mi serve acqua torbida, ragazzo mio. Non quella del lago, che e' buona solo per le rane: quella ferrosa."),
+			TEXT("Quella che serve a me sta nelle gallerie dei nani, sotto il nord, dove l'acqua ha allagato le miniere. Riempi un secchio laggiu' e portamelo: ti pago in erbe."),
+			})
+			.Scelta(TEXT("Tornero' con il secchio."), TEXT("congedo"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
 
 		D.Nodo(TEXT("elric"), {
 			TEXT("Maestro Elric. Quello che sa leggere tutto, tranne le facce."),
@@ -658,6 +691,7 @@ namespace
 			TEXT("E perché le erbe buone crescono qui, tra l'acqua ferma e la terra molle, dove il lago smette di essere lago. La capanna sta sui pali perché d'autunno l'acqua sale, e non chiede permesso."),
 			TEXT("Quando vieni, cammina sulla passerella. Chi taglia dritto tra le pozze per fare prima, di solito arriva dopo. E con un piede solo dentro lo stivale."),
 			})
+			.Scelta(TEXT("Ti serve qualcosa, dalla valle?"), TEXT("acqua_niente"))
 			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
 			.Scelta(TEXT("Starò sulla passerella. Ciao, Nonna."), TEXT("congedo"));
 
@@ -896,8 +930,10 @@ namespace
 			TEXT("{se:atto1}(Ha gli occhi cerchiati di chi non dorme, e non sorride.) Ecco una faccia che conosco. L'hai sentito anche tu, vero? Il battito. Si è fermato, per un respiro. E da allora, ogni tanto, si ferma ancora."),
 			TEXT("Cosa ti porta al tempio? Una domanda, una preghiera o soltanto la voglia di stare al fresco? Vanno bene tutte e tre."),
 			})
+			// (11/11) la cerimonia dell'anno e un giorno (ValdorsoRiti.h): solo a chi e' arrivato il suo giorno
+			.Scelta(TEXT("Padre, e' passato un anno e un giorno."), TEXT("cerimonia"), FName(ValdorsoRiti::EventoCerimonia))
+			.SceltaVisibileSe(FName(ValdorsoRiti::SegnoAnno)).SceltaNascostaSe(FName(ValdorsoRiti::SegnoCittadino))
 			.Scelta(TEXT("Raccontami ancora del Cuore."), TEXT("cuore"))
-			.Scelta(TEXT("Parlami delle fedi."), TEXT("fedi"))
 			.Scelta(TEXT("Ho delle domande."), TEXT("ancora"))
 			.Scelta(TEXT("Solo un saluto, padre."), TEXT("congedo"));
 
@@ -1004,7 +1040,29 @@ namespace
 			TEXT("Per te è ancora presto. Ma tienilo a mente: un anno e un giorno. Non è tanto, e non è poco."),
 			})
 			.Scelta(TEXT("Cosa vuol dire, che la valle lo tiene?"), TEXT("tiene"))
+			.Scelta(TEXT("E per me, quanto manca?"), TEXT("presto"))
 			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
+
+		// (11/11) la cerimonia (ValdorsoRiti.h): il server ci manda solo chi ha il segno dell'anno; gli altri a "presto"
+		D.Nodo(TEXT("presto"), {
+			TEXT("(Padre Anselmo apre il Registro, cerca la tua pagina e fa scorrere il dito sulla data della firma.)"),
+			TEXT("Non e' ancora il tuo giorno, figliolo. Un anno e un giorno da quando hai firmato: quando sara' il momento, lo saprai. Il Cuore se ne accorge prima di noi."),
+			})
+			.Scelta(TEXT("Aspettero'."), TEXT("ancora"))
+			.Scelta(TEXT("Grazie, padre."), TEXT("congedo"));
+
+		D.Nodo(TEXT("cerimonia"), {
+			TEXT("(Padre Anselmo chiude il libro dei canti. Va all'altare, prende il Registro e lo apre alla tua pagina. Poi suona la campanella, tre volte.)"),
+			TEXT("Davanti al Cuore di Val d'Orso, che batte due colpi e una pausa da prima di tutti noi: questo nome e' stato scritto un anno e un giorno fa. Ha lavorato, ha camminato, ha dormito sotto questo cielo. La valle lo conosce."),
+			TEXT("(Legge il tuo nome ad alta voce. Nel tempio vuoto la voce torna indietro due volte, come il battito.)"),
+			TEXT("Da oggi non sei piu' un ospite. Sei di Valdorso. E Valdorso e' un po' tua."),
+			}).Segno(FName(ValdorsoRiti::SegnoCittadino))
+			.Scelta(TEXT("Grazie, padre."), TEXT("cittadino"))
+			.Scelta(TEXT("(Resta in silenzio, e ascolta il battito.)"), TEXT("cittadino"));
+
+		D.Nodo(TEXT("cittadino"), {
+			TEXT("(Padre Anselmo sorride, e per un momento non sembra stanco.) Vai, cittadino. E torna a trovare il vecchio prete, ogni tanto."),
+			}).Fine();
 
 		D.Nodo(TEXT("tiene"), {
 			TEXT("Vuol dire quello che vuol dire. Che non sei più un ospite. Che il tuo nome è scritto dove le ombre non lo cancellano."),
@@ -1019,8 +1077,23 @@ namespace
 			TEXT("Ma sono vecchio. Un giorno chiederò a qualcuno del villaggio di vegliare con me. Qualcuno di cui il Cuore si fidi. (Ti guarda.) Chissà."),
 			})
 			.Scelta(TEXT("Chi è Tobia?"), TEXT("tobia"))
-			.Scelta(TEXT("Se un giorno vorrai, veglierò con te."), TEXT("ancora"))
+			.Scelta(TEXT("Quando si fa, la veglia?"), TEXT("di_giorno"))
+			// (11/11, v0.1.8) la veglia del frammento (ValdorsoStorie.h): di notte si comincia davvero
+			.Scelta(TEXT("Lasciami vegliare con te, stanotte."), TEXT("veglia_inizio"), FName(ValdorsoStorie::EventoVeglia))
 			.Scelta(TEXT("Me ne vado, padre."), TEXT("congedo"));
+
+		D.Nodo(TEXT("veglia_inizio"), {
+			TEXT("(Padre Anselmo ti guarda a lungo. Poi prende due candele dall'altare, ne accende una con l'altra e te la mette in mano.)"),
+			TEXT("Allora siediti qui, vicino alla pietra. Non serve pregare, se non vuoi. Serve ascoltare, e non andarsene."),
+			TEXT("Quando la candela finisce, finisce la veglia. Se ti allontani, il Cuore resta solo: non succede niente di male, ma lui se ne accorge."),
+			})
+			.Scelta(TEXT("(Ti siedi accanto all'altare, e ascolti.)"), NAME_None);
+
+		D.Nodo(TEXT("di_giorno"), {
+			TEXT("(Padre Anselmo sorride e indica la finestra.) Di notte, figliolo: dalle nove fino all'alba, quando il villaggio dorme e il battito si sente meglio. Di giorno la pietra parla troppo piano."),
+			TEXT("Se vuoi vegliare, torna a notte fonda e chiedimelo. Io sono qui."),
+			})
+			.Scelta(TEXT("Tornerò stanotte."), TEXT("congedo"));
 
 		D.Nodo(TEXT("tobia"), {
 			TEXT("Tobia. È arrivato al tempio in una cesta, una mattina di neve, sei anni fa. Nessuno l'ha mai reclamato. Adesso dorme in canonica, mangia per tre e conosce il tempio meglio di me: ogni crepa, ogni gradino."),
@@ -1258,6 +1331,554 @@ namespace
 		return D;
 	}
 
+	// (11/11, v0.1.8 "Le storie della valle") le quest segrete dei volti nuovi sono dentro i loro dialoghi: la lettera di
+	// Livia (con il corvo di Nonna Edda), il sogno di Tobia, l'incudine che canta di Marta, la veglia con Padre Anselmo.
+	// Vedi ValdorsoStorie.h; i segni di un altro PNG si scrivono "Altro:Segno" (ValdorsoDialoghi::HaSegnoDi).
+	// --- (11/11, v0.1.7 "Volti e giornate") Sei volti nuovi, scritti da Claude l'11/11/2026, dal Design MMO -----------
+	// - Marta, la fabbra (la fucina): burbera, orgogliosa. Il segreto (l'incudine e' una pietra degli Antichi, con rune che
+	//   si scaldano) NON si dice: si vede solo che l'incudine e' strana e che lei cambia discorso. Compra i cuori di
+	//   pietra dei guardiani (la bottega). La spada spezzata del padre: un accenno.
+	// - La capitana Livia Serra (al passo, con le guardie): dura, incorruttibile, parla poco; vecchia comandante di
+	//   Bruno. Le lettere da casa e le pietre del sigillo: solo accenni (le quest verranno).
+	// - Tobia, l'orfano (dieci anni, protetto da Padre Anselmo): curioso, sogna l'Orso e ha paura di dirlo. I suoi sogni
+	//   anticipano i fatti (ValdorsoSogni: si sogna anche lui). Sempre trattato con delicatezza: e' un bambino.
+	// - Teodoro e Agnese, i mugnai: la radio del villaggio. Due PNG, ognuno con le sue voci ({voci}) e le frecciate
+	//   all'altro. Il grano nascosto: niente, per ora (v0.2).
+	// - Maestro Elric, il mago di corte: arriva con l'Atto I (AValdorsoPNG::AttoMinimo = 1) e studia le rovine.
+	//   Arrogante e brillante; disprezza Nonna Edda; ha paura di fallire davanti al collegio (si intuisce soltanto).
+	FValdorsoDialogo DialoghiMarta()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Marta");
+		D.NomeBreve = TEXT("Marta");
+		D.Titolo = TEXT("Marta, la fabbra");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Una donna con le braccia nude fino alle spalle e un grembiule di cuoio bruciacchiato tiene un ferro rosso sull'incudine. Batte tre colpi prima di guardarti.)"),
+			TEXT("Se vuoi comprare, il banco e' quello. Se vuoi guardare, guarda da li': le scintille non chiedono permesso."),
+			TEXT("Marta. La fucina e' mia, e prima era di mio padre. Il ferro che gira per la valle, chi l'ha fatto lo sai."),
+			})
+			.Scelta(TEXT("Che cosa sai fare?"), TEXT("lavoro"))
+			.Scelta(TEXT("Che strana incudine. Di che pietra e'?"), TEXT("incudine"))
+			.Scelta(TEXT("Cosa compri, alla fucina?"), TEXT("compri"))
+			.Scelta(TEXT("Non ti disturbo. Buon lavoro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Marta immerge il ferro nel secchio. Il vapore sale fino alle travi.)"),
+			TEXT("Tu. Hai rovinato la lama che ti ho venduto? Fammela vedere. No? Bene. Allora dimmi."),
+			})
+			.Scelta(TEXT("Raccontami del tuo lavoro."), TEXT("lavoro"))
+			.Scelta(TEXT("Cosa compri, alla fucina?"), TEXT("compri"))
+			.Scelta(TEXT("Ho sentito parlare delle gallerie dei nani."), TEXT("nani"))
+			.Scelta(TEXT("Passavo a salutare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("lavoro"), {
+			TEXT("Lame, punte, chiodi, cerchioni, serrature. Una zappa ben fatta sfama una famiglia per vent'anni; una spada ben fatta ne salva una in una notte. Faccio tutte e due, e non mi chiedere quale preferisco."),
+			TEXT("Il metallo buono si sente sotto il martello: canta. Quello cattivo tossisce. Al passo arriva poco ferro, da quando c'e' il sigillo, e quel poco tossisce parecchio."),
+			})
+			.Scelta(TEXT("E cosa vorresti forgiare, un giorno?"), TEXT("sogno"))
+			.Scelta(TEXT("Cosa compri, alla fucina?"), TEXT("compri"))
+			.Scelta(TEXT("Grazie, Marta."), TEXT("congedo"));
+
+		D.Nodo(TEXT("sogno"), {
+			TEXT("(Per un momento il martello resta sospeso.)"),
+			TEXT("Un'arma che si ricordino. Non per chi l'ha usata: per com'era fatta. Che tra cent'anni qualcuno la prenda in mano e dica: questa l'ha battuta una donna di Valdorso."),
+			TEXT("Mio padre ne ha fatta una, una volta. Si e' spezzata. Non te lo racconto, non oggi."),
+			})
+			.Scelta(TEXT("E l'incudine? Sembra antica."), TEXT("incudine"))
+			.Scelta(TEXT("Un giorno me lo racconterai."), TEXT("congedo"));
+
+		D.Nodo(TEXT("incudine"), {
+			TEXT("(Marta mette una mano piatta sull'incudine, come si fa con un cavallo. La pietra e' grigia, con delle linee sottili che sembrano graffi. Non e' ferro.)"),
+			TEXT("E' pietra. La piu' dura della valle. L'ha trovata mio nonno, mezza sepolta vicino alle rovine, e ci sono voluti sei buoi per portarla qui. Da allora non si e' scheggiata una volta."),
+			TEXT("Ma che domande sono? Sei venuto a comprare o a fare il curioso? Il banco e' quello."),
+			})
+			.Scelta(TEXT("Quei segni sembrano rune."), TEXT("rune"))
+			.Scelta(TEXT("Va bene, va bene. Cosa compri, tu?"), TEXT("compri"))
+			.Scelta(TEXT("Scusa. Me ne vado."), TEXT("congedo"));
+
+		D.Nodo(TEXT("rune"), {
+			TEXT("Graffi. Sono graffi. Sessant'anni di martello lasciano il segno anche sulla pietra."),
+			TEXT("(Lo dice troppo in fretta. E per un momento, mentre ti volta le spalle, ti sembra che le linee sotto la sua mano siano piu' chiare, come braci sotto la cenere. Poi niente.)"),
+			})
+			.Segno(TEXT("IncudineVista"))
+			.Scelta(TEXT("Come vuoi tu."), TEXT("congedo"));
+
+		D.Nodo(TEXT("compri"), {
+			TEXT("Ferro e rame buoni, quando ne trovi. E i cuori di pietra, quelle cose grigie che hanno nel petto i guardiani dei nani, la' sotto il nord: pesano come sassi e si lavorano come burro caldo. Te li pago bene, quarantacinque l'uno."),
+			TEXT("Se trovi un martello dei nani, invece, tienitelo. Non c'e' niente che io sappia fare meglio di loro, e me ne vergogno un po'."),
+			})
+			.Scelta(TEXT("Le gallerie dei nani? Raccontami."), TEXT("nani"))
+			// (11/11, v0.1.8) "L'incudine che canta" (ValdorsoStorie.h): solo a chi ha visto le linee dell'incudine
+			.Scelta(TEXT("Ho un cuore di pietra. Battilo sulla tua incudine."), TEXT("canta"), FName(ValdorsoStorie::EventoIncudine))
+			.SceltaVisibileSe(TEXT("IncudineVista")).SceltaNascostaSe(TEXT("Canta"))
+			.Scelta(TEXT("Me ne ricordero'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("canta"), {
+			TEXT("(Marta prende il cuore di pietra, lo soppesa, lo posa sull'incudine. Alza il martello, esita, e batte una volta sola.)"),
+			TEXT("(Le linee dell'incudine si accendono. Non come braci: come acqua al sole. E dalla pietra sale una nota bassa, lunga, che fa tremare i ferri appesi alle pareti. Il cuore di pietra si scalda, si apre, diventa polvere luminosa e sparisce nelle linee.)"),
+			TEXT("(Marta non dice niente per un pezzo. Poi prende un chiodo dal secchio, lo mette nel fuoco e lo batte sull'incudine che ancora canta. Quando lo raffredda, sulla testa c'e' un segno che lei non ha fatto.)"),
+			TEXT("Va bene. Non sono graffi. Mio nonno lo sapeva, e mio padre anche, e io ho fatto finta per vent'anni. Prendi questo: e' il primo. Ce ne saranno altri, e non saranno chiodi. Ma di questo, alla Corona, non si parla."),
+			}).Segno(TEXT("Canta"))
+			.Scelta(TEXT("Non ne parlero'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("senza_cuore"), {
+			TEXT("I cuori di pietra li hanno i guardiani dei nani, sotto il nord: nel petto, dove noi abbiamo il cuore vero. Grossi come armadi, lenti, e picchiano come una frana."),
+			TEXT("(Ti guarda le mani.) E finche' non ne hai uno in tasca, e' inutile che vieni a chiedermi di batterlo. Prima trovalo."),
+			})
+			.Scelta(TEXT("Tornero' con uno."), TEXT("congedo"));
+
+		D.Nodo(TEXT("nani"), {
+			TEXT("Ne so quello che sa Bartolo, e Bartolo lo sa da una bottiglia. Che i nani lavoravano la pietra come noi lavoriamo il legno. Che sotto la montagna hanno lasciato forge, sale, e cose che non dovevano essere trovate."),
+			TEXT("E trappole. Se ci scendi, guarda per terra: una piastra piu' scura del resto e' una piastra che ti vuole morto. E conta, quando senti le lame. I nani contavano tutto."),
+			})
+			.Scelta(TEXT("E i cuori di pietra, dove si trovano?"), TEXT("senza_cuore"))
+			.Scelta(TEXT("Grazie del consiglio."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Marta e' gia' tornata al ferro.) Chiudi la tenda, che entra il freddo e il ferro si offende."),
+			}).Fine();
+
+		return D;
+	}
+
+	FValdorsoDialogo DialoghiLivia()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Livia");
+		D.NomeBreve = TEXT("la capitana Livia");
+		D.Titolo = TEXT("Livia Serra, capitana della Guardia");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Una donna asciutta, i capelli corti grigi alle tempie, legge un rapporto in piedi. Ha il mantello della Corona e una cicatrice sottile sotto lo zigomo.)"),
+			TEXT("Capitana Livia Serra. Comando il passo e chi lo guarda. Se sei qui per il sigillo, la risposta e' no. Se sei qui per un'altra cosa, sii breve."),
+			})
+			.Scelta(TEXT("Perche' il passo e' chiuso?"), TEXT("sigillo"))
+			.Scelta(TEXT("Bruno dice che eri la sua comandante."), TEXT("bruno"))
+			.Scelta(TEXT("(Offri una moneta) Forse possiamo intenderci."), TEXT("moneta"), TEXT("Corruzione"))
+			.SceltaSegna(TEXT("MonetaOfferta")).SceltaNascostaSe(TEXT("MonetaOfferta"))
+			.Scelta(TEXT("Niente, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Livia non alza gli occhi dal rapporto.)"),
+			TEXT("Ancora tu. Breve."),
+			})
+			.Scelta(TEXT("Parlami del sigillo."), TEXT("sigillo"))
+			.Scelta(TEXT("Parlami di Bruno."), TEXT("bruno"))
+			.Scelta(TEXT("Ti manca casa?"), TEXT("casa"))
+			.Scelta(TEXT("Niente. Buona guardia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("sigillo"), {
+			TEXT("Perche' la Corona l'ha ordinato, con un sigillo di ceralacca grosso come una mano. Io gli ordini li eseguo. Non li commento con i coloni."),
+			TEXT("(Guarda il velo di luce, oltre la sbarra.) Ti dico solo questo: non toccarlo. E se di notte vedi qualcuno vicino alle pietre che lo tengono su, vieni a dirmelo. A me. Non al Balivo."),
+			})
+			.Segno(TEXT("PietreSigillo"))
+			.Scelta(TEXT("Perche' non al Balivo?"), TEXT("balivo"))
+			.Scelta(TEXT("Lo faro'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("balivo"), {
+			TEXT("Perche' il Balivo scrive. Scrive tutto, e le cose scritte viaggiano. Io preferisco che certe cose restino tra chi le ha viste e chi deve saperle."),
+			TEXT("E con questo ti ho detto anche troppo."),
+			})
+			.Scelta(TEXT("Me ne ricordero'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("bruno"), {
+			TEXT("(Per la prima volta, l'angolo della bocca si muove.)"),
+			TEXT("Bruno. Otto anni sui confini. Il miglior sergente che abbia avuto e il peggiore a giocare a dadi. Ha lasciato due dita in una palude, e ancora mi deve quattro monete."),
+			TEXT("Quando passo dalla locanda beviamo, e non parliamo di quello che abbiamo visto. E' cosi' che si resta amici, dopo una guerra."),
+			})
+			.Scelta(TEXT("E tu, da dove vieni?"), TEXT("casa"))
+			.Scelta(TEXT("Grazie, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("casa"), {
+			TEXT("Aurelia. Una casa con un fico nel cortile e una madre che mi scrive una volta al mese, anche se le lettere ci mettono due."),
+			TEXT("(Piega il rapporto in quattro, piu' piano del necessario.) Da quando c'e' il sigillo non passano piu' nemmeno quelle. Ordini. Li ho firmati io, gli ordini."),
+			})
+			.Scelta(TEXT("Mi dispiace."), TEXT("dispiace"))
+			.Scelta(TEXT("Se un giorno potro' portarne una, lo faro'."), TEXT("lettera")).SceltaSegna(TEXT("LetteraPromessa"))
+			.SceltaNascostaSe(TEXT("LetteraPromessa"))
+			// (11/11, v0.1.8) "Una lettera per casa" (ValdorsoStorie.h)
+			.Scelta(TEXT("Scrivi la lettera, capitana. Il modo lo trovo io."), TEXT("scrivi"))
+			.SceltaVisibileSe(TEXT("LetteraPromessa")).SceltaNascostaSe(TEXT("LetteraData"))
+			.Scelta(TEXT("La tua lettera e' partita. Con un corvo."), TEXT("partita"))
+			.SceltaVisibileSe(TEXT("NonnaEdda:CorvoPartito")).SceltaNascostaSe(TEXT("LetteraArrivata"));
+
+		D.Nodo(TEXT("scrivi"), {
+			TEXT("(La capitana ti guarda come si guarda un ponte che non si sa se regge. Poi tira fuori un foglio dalla giubba: e' gia' scritto, piegato e ripiegato tante volte che gli angoli sono morbidi.)"),
+			TEXT("L'ho scritta la prima settimana. Non l'ho mai data a nessuno, perche' gli ordini li ho firmati io."),
+			TEXT("(Te la mette in mano.) Il passo no. Il sigillo no. Qualunque altra strada trovi, io non voglio saperla. E se ti prendono, questa lettera non l'hai mai vista."),
+			}).Segno(TEXT("LetteraData"))
+			.Scelta(TEXT("Arrivera'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("partita"), {
+			TEXT("Con un... (Si ferma. Guarda verso sud-ovest, dove c'e' la palude.) La vecchia. Naturalmente."),
+			TEXT("(Per un momento la capitana Livia Serra non sembra una capitana. Si passa una mano sulla faccia, e quando la toglie e' di nuovo lei.)"),
+			TEXT("Tieni. (Si sfila dal collo un fischietto d'ottone.) Otto anni sui confini. Se fischi tre volte, chi ha servito con me si volta. Bruno compreso, anche se fa finta di no."),
+			}).Segno(TEXT("LetteraArrivata"))
+			.Scelta(TEXT("Grazie, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("dispiace"), {
+			TEXT("Non ti dispiacere per me. Dispiaciti per chi sta dall'altra parte del velo e non sa se siamo ancora vivi."),
+			})
+			.Scelta(TEXT("Buona guardia, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("lettera"), {
+			TEXT("(Ti guarda a lungo, come si guarda una recluta che ha detto una cosa stupida e coraggiosa.)"),
+			TEXT("Non l'hai detto. E io non l'ho sentito. Ma me lo ricordo."),
+			})
+			.Scelta(TEXT("Buona guardia, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("moneta"), {
+			TEXT("(Livia guarda la moneta. Poi te. Non dice niente per il tempo di tre respiri.)"),
+			TEXT("Rimettila via, prima che la veda qualcuno che non sono io. Ho fatto impiccare uomini migliori di te per meno. No, non e' vero. Ma ci ho pensato."),
+			TEXT("Questa volta faccio finta che tu sia solo stupido. La prossima no."),
+			})
+			.Scelta(TEXT("Chiedo scusa."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(La capitana e' gia' tornata al rapporto.) Vai."),
+			}).Fine();
+
+		return D;
+	}
+
+	FValdorsoDialogo DialoghiTobia()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Tobia");
+		D.NomeBreve = TEXT("Tobia");
+		D.Titolo = TEXT("Tobia, il ragazzino del tempio");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Un ragazzino con le ginocchia sbucciate e una fionda infilata nella cintura ti gira intorno due volte prima di fermarsi.)"),
+			TEXT("Tu sei un colono nuovo! Si vede. Hai la faccia di uno che non sa ancora dove sta il forno. Il forno sta la'. Io sono Tobia. Abito al tempio, con Padre Anselmo."),
+			TEXT("Hai mai visto un lupo? Da vicino? Quanto era grosso? Piu' di un cane? Molto di piu'?"),
+			})
+			.Scelta(TEXT("Si', ne ho visto uno. Grosso cosi'."), TEXT("lupo"))
+			.Scelta(TEXT("Cosa fai tutto il giorno, Tobia?"), TEXT("giorno"))
+			.Scelta(TEXT("Hai una faccia stanca. Dormi bene?"), TEXT("sogni"))
+			.Scelta(TEXT("Devo andare, Tobia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Tobia ti corre incontro.)"),
+			TEXT("Sei tornato! Hai una storia? Una storia vera, non come quelle di Teodoro che cambiano ogni volta."),
+			})
+			.Scelta(TEXT("Ti racconto di un lupo."), TEXT("lupo"))
+			.Scelta(TEXT("Cosa hai fatto oggi?"), TEXT("giorno"))
+			.Scelta(TEXT("Hai fatto ancora quel sogno?"), TEXT("sogni"))
+			.Scelta(TEXT("Oggi niente storie, scusa."), TEXT("congedo"));
+
+		D.Nodo(TEXT("lupo"), {
+			TEXT("(Tobia spalanca gli occhi e sta zitto per tutto il racconto, cosa che non gli succede mai.)"),
+			TEXT("Io da grande faccio l'avventuriero. Come te. Padre Anselmo dice che prima devo imparare a leggere. Ma gli avventurieri non leggono, combattono! ...Vero?"),
+			})
+			.Scelta(TEXT("Leggono anche. Le mappe, soprattutto."), TEXT("leggere"))
+			.Scelta(TEXT("Combattono, ma solo quando serve."), TEXT("leggere"))
+			.Scelta(TEXT("Devo andare, Tobia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("leggere"), {
+			TEXT("Uffa. Va bene. Allora imparo. Ma solo le mappe."),
+			TEXT("(Abbassa la voce.) Sai che Agnese del mulino fa le frittelle col miele, la domenica? Se le porti la legna te ne da' due. Una la puoi dare a me."),
+			})
+			.Scelta(TEXT("Affare fatto."), TEXT("congedo"));
+
+		D.Nodo(TEXT("giorno"), {
+			TEXT("La mattina aiuto Padre Anselmo a spazzare il tempio e a pulire la pietra. Poi vado al mulino, che Teodoro mi fa girare la ruota piccola. Poi vado alla fucina, ma Marta mi caccia. Poi torno."),
+			TEXT("E la sera la capitana Livia passa dalla locanda e io la guardo dalla finestra. Ha una spada vera. Una volta mi ha fatto un cenno. Cosi'. (Fa un cenno serissimo con il mento.)"),
+			})
+			.Scelta(TEXT("E di notte, dormi bene?"), TEXT("sogni"))
+			.Scelta(TEXT("Una vita piena. Ciao, Tobia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("sogni"), {
+			TEXT("(Tobia smette di saltellare. Si guarda intorno, per vedere se c'e' qualcuno.)"),
+			TEXT("Se te lo dico non lo dici a Padre Anselmo? Si preoccupa. Gli vengono le rughe qui."),
+			})
+			.Scelta(TEXT("Promesso. Non lo dico a nessuno."), TEXT("orso"))
+			.Scelta(TEXT("Non devi dirmelo per forza."), TEXT("forza"))
+			// (11/11, v0.1.8) "Il sogno di Tobia" (ValdorsoStorie.h): il server guarda se hai letto il sasso
+			.Scelta(TEXT("Il sasso del tuo sogno: l'ho trovato."), TEXT("sasso_trovato"), FName(ValdorsoStorie::EventoSasso))
+			.SceltaVisibileSe(TEXT("SassoSognato")).SceltaNascostaSe(TEXT("SassoTrovato"));
+
+		D.Nodo(TEXT("sasso_sogno"), {
+			TEXT("(Tobia si avvicina e parla piano, con le mani a coppa intorno alla bocca.)"),
+			TEXT("Stanotte non era l'orso grande. Era un sasso. Un sasso grande, sulla collina dell'Orso, in cima, dove l'erba e' piegata. Ha la forma di un orso che dorme, con la testa sulle zampe."),
+			TEXT("E sopra c'e' un segno. Nel sogno ci mettevo la mano e il segno era caldo. Io non ci posso andare, e' troppo lontano e Padre Anselmo si arrabbia. Ci vai tu? Poi mi dici se c'e' davvero?"),
+			}).Segno(TEXT("SassoSognato"))
+			.Scelta(TEXT("Ci vado. Te lo prometto."), TEXT("congedo"))
+			.Scelta(TEXT("E cosa c'e' scritto, sul segno?"), TEXT("non_ancora"));
+
+		D.Nodo(TEXT("sasso_trovato"), {
+			TEXT("(Tobia spalanca la bocca. Poi la chiude. Poi la spalanca di nuovo.)"),
+			TEXT("C'e' davvero? Con il segno? Allora... allora i miei sogni non sono matti. Allora l'orso me lo dice apposta."),
+			TEXT("(Fruga nella tasca e tira fuori un sasso liscio, piccolo, a forma di orsetto.) Questo l'ho trovato al fiume, due anni fa. Lo tenevo sotto il cuscino. Adesso e' tuo, perche' tu ci sei andato. Non perderlo, eh."),
+			}).Segno(TEXT("SassoTrovato"))
+			.Scelta(TEXT("Lo terro' con cura."), TEXT("congedo"));
+
+		D.Nodo(TEXT("non_ancora"), {
+			TEXT("(Tobia ti guarda storto.) Non te lo dico. Io me lo ricordo, dal sogno, ma se te lo dico poi non vale: devi leggerlo tu, con i tuoi occhi."),
+			TEXT("Vai sulla collina dell'Orso, in cima. Leggi il segno. Poi torni e me lo dici."),
+			})
+			.Scelta(TEXT("Hai ragione. Ci vado."), TEXT("congedo"));
+
+		D.Nodo(TEXT("forza"), {
+			TEXT("No, te lo dico. Tanto tu sei nuovo, e i nuovi non ridono."),
+			})
+			.Scelta(TEXT("Ti ascolto."), TEXT("orso"));
+
+		D.Nodo(TEXT("orso"), {
+			TEXT("Sogno un orso. Ogni notte. E' grande come il tempio, ma non fa paura. Sta seduto sulla collina e guarda giu', verso il villaggio, come fa Padre Anselmo quando dormo e lui crede che non lo veda."),
+			TEXT("{senza:atto1}E certe volte, nel sogno, succede una cosa, e poi il giorno dopo succede davvero. Piccole cose. Che piove. Che Teodoro cade dallo sgabello. E' una cosa brutta?"),
+			TEXT("{se:atto1}L'altra notte, nel sogno, l'orso ha messo la zampa sulla pietra del tempio e la pietra si e' fermata. E il giorno dopo... lo sai anche tu. Tutti dicono che e' il battito. Io l'avevo sognato prima. E' colpa mia?"),
+			})
+			.Segno(TEXT("SognoTobia"))
+			.Scelta(TEXT("No, Tobia. Non e' colpa tua."), TEXT("colpa"))
+			.Scelta(TEXT("Forse l'orso ti vuole bene."), TEXT("bene"))
+			.Scelta(TEXT("Anch'io faccio sogni strani, qui."), TEXT("anche"))
+			.Scelta(TEXT("E stanotte, cos'hai sognato?"), TEXT("sasso_sogno")).SceltaNascostaSe(TEXT("SassoSognato"));
+
+		D.Nodo(TEXT("colpa"), {
+			TEXT("(Tira su col naso, piano.) Va bene. Se lo dici tu, che sei grande."),
+			TEXT("Se lo sogno ancora, te lo dico. Solo a te."),
+			})
+			.Scelta(TEXT("Solo a me. Ciao, Tobia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("bene"), {
+			TEXT("Dici? (Ci pensa.) Si'. Secondo me si'. Non mi guarda mai come guarda il bosco. Mi guarda come si guarda una cosa da tenere."),
+			TEXT("Ora vado, che se Padre Anselmo non mi trova per il vespro mi fa pulire tutte le panche."),
+			})
+			.Scelta(TEXT("Corri, allora."), TEXT("congedo"));
+
+		D.Nodo(TEXT("anche"), {
+			TEXT("Davvero? Anche tu? (Gli si illumina la faccia.) Allora non sono matto. Allora siamo in due."),
+			TEXT("Quando sogni l'orso, fagli ciao con la mano. Io faccio cosi', e lui una volta ha girato la testa."),
+			})
+			.Scelta(TEXT("Lo faro'. Ciao, Tobia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Tobia e' gia' corso via, a meta' strada, quando si gira e ti saluta con tutte e due le braccia.)"),
+			}).Fine();
+
+		return D;
+	}
+
+	FValdorsoDialogo DialoghiTeodoro()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Teodoro");
+		D.NomeBreve = TEXT("Teodoro");
+		D.Titolo = TEXT("Teodoro, il mugnaio");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Un omone infarinato fino alle sopracciglia ti stringe la mano e te la lascia bianca.)"),
+			TEXT("Teodoro, del mulino! Il mulino e' mio, la ruota e' mia, il grano e' della valle e la farina... be', la farina e' un po' di tutti, specie quella che resta sui vestiti."),
+			TEXT("Sei nuovo? Allora non sai ancora niente. Siediti. No, non li': quello e' il mio sgabello. Ecco. Chiedimi pure, io so tutto. E quello che non so, lo sa Agnese, e me lo dice anche se non voglio."),
+			})
+			.Scelta(TEXT("Che si dice in giro?"), TEXT("voci"))
+			.Scelta(TEXT("Chi e' Agnese?"), TEXT("agnese"))
+			.Scelta(TEXT("Come va il mulino?"), TEXT("mulino"))
+			.Scelta(TEXT("Ti lascio lavorare, Teodoro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Teodoro allarga le braccia, e una nuvola di farina si alza intorno a lui.)"),
+			TEXT("Ecco il mio colono preferito! Be', uno dei sei. Che mi racconti? No, aspetta: prima racconto io."),
+			})
+			.Scelta(TEXT("Che si dice in giro?"), TEXT("voci"))
+			.Scelta(TEXT("Come sta Agnese?"), TEXT("agnese"))
+			.Scelta(TEXT("Come va il mulino?"), TEXT("mulino"))
+			.Scelta(TEXT("Passavo soltanto."), TEXT("congedo"));
+
+		D.Nodo(TEXT("voci"), {
+			TEXT("(Teodoro si china verso di te, e la voce scende di un tono solo, cioe' la sentono comunque fino alla piazza.)"),
+			TEXT("{voci}"),
+			TEXT("Ma non dire che te l'ho detto io. Di' che te l'ha detto Agnese: tanto ci crederanno lo stesso."),
+			})
+			.Scelta(TEXT("E Agnese, che ne pensa?"), TEXT("agnese"))
+			.Scelta(TEXT("Grazie delle notizie."), TEXT("congedo"));
+
+		D.Nodo(TEXT("agnese"), {
+			TEXT("Agnese e' mia moglie da ventidue anni, e da ventidue anni ha ragione lei. Anche quando ho ragione io. Specie allora."),
+			TEXT("Lei dice che io parlo troppo. Io dico che lei ascolta troppo. Insieme sappiamo tutto quello che succede tra il passo e la palude. Il Balivo ha i suoi rapporti; noi abbiamo il pozzo, il forno e la locanda."),
+			})
+			.Scelta(TEXT("E il grano? Basta per l'inverno?"), TEXT("grano"))
+			.Scelta(TEXT("Salutamela."), TEXT("congedo"));
+
+		D.Nodo(TEXT("mulino"), {
+			TEXT("Gira! Gira sempre. Finche' c'e' acqua nel torrente e grano nei campi, Teodoro macina. Il pane di Valdorso e' fatto con la mia farina, e il pane di Valdorso e' il migliore del regno. Chiedi a chiunque. No, non al fornaio: e' di parte."),
+			TEXT("La sera, pero', il mulino si ferma e Teodoro va alla locanda. Il mio sgabello mi aspetta. Se lo trovo occupato, mi offendo."),
+			})
+			.Scelta(TEXT("E il grano? Basta per l'inverno?"), TEXT("grano"))
+			.Scelta(TEXT("Lo terro' a mente."), TEXT("congedo"));
+
+		D.Nodo(TEXT("grano"), {
+			TEXT("(Per la prima volta, Teodoro esita. Si spolvera le mani sui calzoni, a lungo.)"),
+			TEXT("Basta, basta. Quest'anno basta. E' il prossimo che... be', chi lo sa il prossimo. Con il passo chiuso non sale niente da Aurelia."),
+			TEXT("Ma non pensarci tu, che sei nuovo. Ci pensa Agnese. Agnese pensa a tutto."),
+			})
+			.Scelta(TEXT("Va bene. Ciao, Teodoro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Teodoro ti da' una pacca sulla spalla, e la tua spalla diventa bianca.) Torna! Domani ne so altre."),
+			}).Fine();
+
+		return D;
+	}
+
+	FValdorsoDialogo DialoghiAgnese()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Agnese");
+		D.NomeBreve = TEXT("Agnese");
+		D.Titolo = TEXT("Agnese, la mugnaia");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Una donna minuta, le maniche rimboccate e un fazzoletto in testa, setaccia la farina con colpi secchi. Ti guarda dalla testa ai piedi, e poi di nuovo, piu' lentamente.)"),
+			TEXT("Agnese. La moglie di Teodoro, che ti avra' gia' raccontato che ho sempre ragione io. E' vero."),
+			TEXT("Tu sei quello arrivato col carro dell'altra settimana. O quella. Al pozzo non si sono messi d'accordo. Sistemiamo subito: come ti chiami, da dove vieni, e sei sposato?"),
+			})
+			.Scelta(TEXT("Che si dice al pozzo?"), TEXT("voci"))
+			.Scelta(TEXT("Teodoro parla molto di te."), TEXT("teodoro"))
+			.Scelta(TEXT("Preferisco non dirlo."), TEXT("segreto"))
+			.Scelta(TEXT("Scusate, devo andare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Agnese batte il setaccio sul bordo della madia.)"),
+			TEXT("Ah, sei tu. Ho saputo tutto di te, sai? Be', quasi tutto. Il resto me lo dici adesso."),
+			})
+			.Scelta(TEXT("Che si dice al pozzo?"), TEXT("voci"))
+			.Scelta(TEXT("Dov'e' Teodoro?"), TEXT("teodoro"))
+			.Scelta(TEXT("Hai qualcosa per me?"), TEXT("frittelle"))
+			.Scelta(TEXT("Passavo a salutare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("voci"), {
+			TEXT("(Agnese posa il setaccio. Questo, a quanto pare, merita entrambe le mani.)"),
+			TEXT("{voci}"),
+			TEXT("E non ascoltare Teodoro, che le cose le sente a meta' e le racconta doppie."),
+			})
+			.Scelta(TEXT("E Teodoro, dov'e' adesso?"), TEXT("teodoro"))
+			.Scelta(TEXT("Grazie, Agnese."), TEXT("congedo"));
+
+		D.Nodo(TEXT("teodoro"), {
+			TEXT("Di giorno al mulino, a parlare con la ruota. La sera alla locanda, sul suo sgabello, a parlare con chiunque altro. Di notte russa. Ventidue anni."),
+			TEXT("(Ma lo dice sorridendo, e il setaccio, per un momento, va piu' piano.) E' un brav'uomo. Non dirglielo, che poi se ne approfitta."),
+			})
+			.Scelta(TEXT("Il vostro segreto e' al sicuro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("segreto"), {
+			TEXT("Ah. Uno di quelli. Bene, bene."),
+			TEXT("(Ti guarda con un'attenzione nuova, come si guarda un pacco ben legato.) Tanto lo scopro lo stesso. Lo scopro sempre."),
+			})
+			.Scelta(TEXT("Che si dice al pozzo, allora?"), TEXT("voci"))
+			.Scelta(TEXT("Vedremo. Buona giornata."), TEXT("congedo"));
+
+		D.Nodo(TEXT("frittelle"), {
+			TEXT("La domenica faccio le frittelle col miele. Chi porta legna al mulino ne ha due. Chi non porta niente ne ha il profumo."),
+			TEXT("E se vedi Tobia, digli che le frittelle non spariscono da sole dalla finestra: lo so che e' lui."),
+			})
+			.Scelta(TEXT("Glielo diro'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Agnese ha gia' ripreso a setacciare.) Vai, vai. E se senti qualcosa, sai dove trovarmi."),
+			}).Fine();
+
+		return D;
+	}
+
+	FValdorsoDialogo DialoghiElric()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Elric");
+		D.NomeBreve = TEXT("Maestro Elric");
+		D.Titolo = TEXT("Maestro Elric, mago di corte");
+		D.Inizio = TEXT("primo");
+		D.Ritorno = TEXT("ritorno");
+
+		D.Nodo(TEXT("primo"), {
+			TEXT("(Un uomo alto, sulla quarantina, la veste blu del collegio sporca di terra fino al ginocchio, copia dei segni da una pietra delle rovine su un quaderno rilegato in pelle. Non si volta.)"),
+			TEXT("Se sei del villaggio, non ho bisogno di uova, di guide, ne' di storie sulla vecchia della palude. Se sei un colono con il richiamo, aspetta che finisca la riga."),
+			TEXT("(Finisce la riga.) Maestro Elric, del collegio dei maghi di corte, mandato dall'Arcimago in persona. Il battito del vostro frammento si e' fermato, e qualcuno a corte vuole sapere perche'. Quel qualcuno sono io."),
+			})
+			.Scelta(TEXT("Cosa stai studiando?"), TEXT("rune"))
+			.Scelta(TEXT("Perche' il battito si e' fermato?"), TEXT("battito"))
+			.Scelta(TEXT("Nonna Edda dice che-"), TEXT("edda"))
+			.Scelta(TEXT("Non ti disturbo, Maestro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ritorno"), {
+			TEXT("(Elric alza un dito, senza staccare gli occhi dal quaderno. Aspetti. Poi lo abbassa.)"),
+			TEXT("Tu. Hai qualcosa di intelligente da dirmi, o devo tornare alle mie pietre?"),
+			})
+			.Scelta(TEXT("Come vanno le ricerche?"), TEXT("rune"))
+			.Scelta(TEXT("Ho visto iscrizioni dei nani, sotto il nord."), TEXT("nani"))
+			.Scelta(TEXT("Hai paura di sbagliare, vero?"), TEXT("paura"))
+			.Scelta(TEXT("Niente, Maestro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("rune"), {
+			TEXT("Rune degli Antichi. Non quelle dei nani, che sono conti e confini: queste sono parole. Alcune le leggo, altre le indovino, la maggior parte le ignoro, come tutti. La differenza e' che io lo so."),
+			TEXT("Vedi questa? (Una linea spezzata, con un punto nel mezzo.) Si e' accesa, l'altra notte. Una luce fioca, per il tempo di tre battiti. Nessuno l'ha toccata. Da trecento anni nessuna runa si accendeva da sola."),
+			})
+			.Scelta(TEXT("Cosa vuol dire?"), TEXT("significa"))
+			.Scelta(TEXT("Ne ho viste anche sotto la montagna del nord."), TEXT("nani"))
+			.Scelta(TEXT("Affascinante. Ti lascio lavorare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("significa"), {
+			TEXT("Vuol dire che qualcosa sotto questa valle si e' svegliato, o sta per farlo. Oppure che mi sono sbagliato, e la pietra rifletteva una lanterna."),
+			TEXT("(Chiude il quaderno di scatto.) Non mi sono sbagliato. Al collegio diranno di si'. Al collegio dicono sempre di si', quando non sono loro a camminare nel fango."),
+			})
+			.Scelta(TEXT("E il battito del frammento?"), TEXT("battito"))
+			.Scelta(TEXT("Buona fortuna, Maestro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("battito"), {
+			TEXT("Il vostro sacerdote crede che sia un segno degli dei. La vecchia della palude crede che sia l'Orso. I coloni credono che porti sfortuna. Io credo che sia un fenomeno, e i fenomeni si misurano."),
+			TEXT("Ho portato da Aurelia due pendoli e una clessidra d'argento. Quando il battito si ferma ancora, lo saprò al granello. E allora qualcuno al collegio dovra' ascoltarmi."),
+			})
+			.Scelta(TEXT("E se non fosse solo qui?"), TEXT("ovunque"))
+			.Scelta(TEXT("Spero che tu abbia ragione."), TEXT("congedo"));
+
+		D.Nodo(TEXT("ovunque"), {
+			TEXT("(Elric ti guarda, e per un istante non sembra arrogante. Sembra stanco.)"),
+			TEXT("Allora non sarebbe un problema di Valdorso. Sarebbe un problema del regno. E nessuno vuole essere quello che porta al re una notizia cosi', con un quaderno di appunti presi nel fango."),
+			TEXT("(Riapre il quaderno.) Domanda intelligente. Rara. Torna, se ne hai altre."),
+			})
+			.Segno(TEXT("DomandaIntelligente"))
+			.Scelta(TEXT("Tornero'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("edda"), {
+			TEXT("No. Ti fermo qui. Qualunque cosa dica la vecchia della palude, e' un'erba bollita con una filastrocca sopra."),
+			TEXT("(Pausa.) Anche se, devo ammetterlo, le sue erbe per la febbre funzionano. Questo non lo scrivo nel rapporto. E nemmeno tu lo racconterai."),
+			})
+			.Scelta(TEXT("Cosa stai studiando, allora?"), TEXT("rune"))
+			.Scelta(TEXT("Il tuo segreto e' al sicuro."), TEXT("congedo"));
+
+		D.Nodo(TEXT("nani"), {
+			TEXT("(Il quaderno si chiude a meta' di una parola.)"),
+			TEXT("Sotto il nord? Dietro la frana? Non me l'aveva detto nessuno. Naturalmente: qui nessuno dice niente a chi viene dalla capitale."),
+			TEXT("Se trovi delle iscrizioni, copiale. Esatte, segno per segno: non come le ricordi, come sono. Quello che i nani hanno scritto sui muri, di solito, e' quello che volevano che non si dimenticasse."),
+			})
+			.Scelta(TEXT("Lo faro'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("paura"), {
+			TEXT("(Elric posa la penna. Lentamente.)"),
+			TEXT("Paura? Io ho studiato vent'anni al collegio, sono il piu' giovane maestro della mia generazione, e l'Arcimago in persona mi ha scelto per questo incarico."),
+			TEXT("...Il che vuol dire che se sbaglio, sbaglio davanti a tutti. Si'. Contento? Adesso lasciami lavorare."),
+			})
+			.Scelta(TEXT("Non sbaglierai."), TEXT("congedo"));
+
+		D.Nodo(TEXT("congedo"), {
+			TEXT("(Elric e' gia' chino sulla pietra, a contare i segni con la punta della penna.)"),
+			}).Fine();
+
+		return D;
+	}
+
 	TArray<FValdorsoDialogo> DialoghiScritti()
 	{
 		TArray<FValdorsoDialogo> Tutti;
@@ -1271,6 +1892,13 @@ namespace
 		// (10/11)
 		Tutti.Add(DialoghiLucia());
 		Tutti.Add(DialoghiCapoGilda());
+		// (11/11) volti e giornate
+		Tutti.Add(DialoghiMarta());
+		Tutti.Add(DialoghiLivia());
+		Tutti.Add(DialoghiTobia());
+		Tutti.Add(DialoghiTeodoro());
+		Tutti.Add(DialoghiAgnese());
+		Tutti.Add(DialoghiElric());
 		return Tutti;
 	}
 
@@ -1310,6 +1938,24 @@ namespace
 		{ TEXT("CapoGilda"), 0, TEXT("Lavora bene e Lucia avra' da scrivere. E io da firmare.") },
 		{ TEXT("CapoGilda"), 1, TEXT("Una giornata onesta? Bene. Domani un'altra.") },
 		{ TEXT("CapoGilda"), 2, TEXT("Anche la Gilda dorme, colono. Quasi.") },
+		{ TEXT("Marta"), 0, TEXT("Le scintille non chiedono permesso. Stai indietro.") },
+		{ TEXT("Marta"), 1, TEXT("La forgia si spegne al tramonto. Se hai fretta, avevi fretta stamattina.") },
+		{ TEXT("Marta"), 2, TEXT("(non risponde: dorme, o fa finta)") },
+		{ TEXT("Livia"), 0, TEXT("Circolare. E tieni le mani dove le vedo.") },
+		{ TEXT("Livia"), 1, TEXT("Una birra da Bruno e poi di nuovo al passo. Non ditelo al Balivo.") },
+		{ TEXT("Livia"), 2, TEXT("Di notte al passo non si viene. Lo dico una volta.") },
+		{ TEXT("Tobia"), 0, TEXT("Ciao! Hai visto un lupo oggi? No? Peccato.") },
+		{ TEXT("Tobia"), 1, TEXT("Corro, che se non arrivo per il vespro Padre Anselmo mi fa pulire le panche!") },
+		{ TEXT("Tobia"), 2, TEXT("(sbadiglia) Stanotte sogno l'orso, me lo sento.") },
+		{ TEXT("Teodoro"), 0, TEXT("Ehi, colono! Ne ho una nuova: vieni che te la racconto!") },
+		{ TEXT("Teodoro"), 1, TEXT("Il mio sgabello mi aspetta. Chi tocca lo sgabello tocca Teodoro.") },
+		{ TEXT("Teodoro"), 2, TEXT("(canta, stonato) ...e la mugnaia ride, ride, e il mulino gira...") },
+		{ TEXT("Agnese"), 0, TEXT("Hai una faccia da notizia. Avanti, dimmi.") },
+		{ TEXT("Agnese"), 1, TEXT("Hai visto Teodoro? Si', alla locanda. Lo sapevo.") },
+		{ TEXT("Agnese"), 2, TEXT("A quest'ora? Brutte cose, o belle storie. Domattina mi racconti.") },
+		{ TEXT("Elric"), 0, TEXT("Non adesso. Sto contando.") },
+		{ TEXT("Elric"), 1, TEXT("La luce cala. Le rune si leggono meglio al tramonto, sai? No, non lo sai.") },
+		{ TEXT("Elric"), 2, TEXT("Hai visto una luce sulle pietre, stanotte? No? Allora non disturbarmi.") },
 	};
 
 }

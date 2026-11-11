@@ -6,6 +6,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "ValdorsoGatto.h"
+#include "ValdorsoPNG.h"
 #include "ValdorsoSogni.h"
 #include "ValdorsoVoci.h"
 
@@ -133,6 +134,35 @@ bool FValdorsoTestVitaGatto::RunTest(const FString& Parameters)
 			break;
 		}
 	}
+	return true;
+}
+
+// (11/11) La giornata dei PNG: vale l'ultima tappa cominciata; prima della prima, l'ultima della sera prima.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FValdorsoTestVitaGiornata, "Valdorso.Vita.Giornata", ValdorsoTestVita::Bandiere)
+bool FValdorsoTestVitaGiornata::RunTest(const FString& Parameters)
+{
+	TArray<FValdorsoTappa> Vuota;
+	TestEqual(TEXT("senza tappe, nessuna"), ValdorsoGiornata::TappaPer(Vuota, 10.f), (int32)INDEX_NONE);
+
+	// le tappe non sono per forza in ordine
+	TArray<FValdorsoTappa> Giorno;
+	Giorno.AddDefaulted(4);
+	Giorno[0].Ora = 13.f;
+	Giorno[1].Ora = 7.f;
+	Giorno[2].Ora = 22.5f;
+	Giorno[2].bAssente = true;
+	Giorno[3].Ora = 19.f;
+	TestEqual(TEXT("alle 8 la tappa delle 7"), ValdorsoGiornata::TappaPer(Giorno, 8.f), 1);
+	TestEqual(TEXT("alle 7 in punto la tappa delle 7"), ValdorsoGiornata::TappaPer(Giorno, 7.f), 1);
+	TestEqual(TEXT("alle 15 quella delle 13"), ValdorsoGiornata::TappaPer(Giorno, 15.f), 0);
+	TestEqual(TEXT("alle 20 quella delle 19"), ValdorsoGiornata::TappaPer(Giorno, 20.f), 3);
+	TestEqual(TEXT("alle 23 a casa"), ValdorsoGiornata::TappaPer(Giorno, 23.f), 2);
+	TestEqual(TEXT("alle 3 di notte ancora a casa (la sera prima)"), ValdorsoGiornata::TappaPer(Giorno, 3.f), 2);
+
+	TArray<FValdorsoTappa> Una;
+	Una.AddDefaulted(1);
+	Una[0].Ora = 9.f;
+	TestEqual(TEXT("una tappa sola vale sempre"), ValdorsoGiornata::TappaPer(Una, 2.f), 0);
 	return true;
 }
 

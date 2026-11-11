@@ -32,6 +32,7 @@
 
 class UInstancedStaticMeshComponent;
 class UStaticMeshComponent;
+class USoundBase;
 class AValdorsoCielo;
 class UMaterialInstanceDynamic;
 class AValdorsoTempo;
@@ -212,6 +213,11 @@ private:
 	FVector DragoDa = FVector::ZeroVector;
 	FVector DragoDove = FVector::ZeroVector;
 	int32 GiornoDelDrago = -1;
+
+	/** (11/11) Il ruggito del drago (lontano) e quanti ne ha fatti in questo passaggio. */
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> Ruggito;
+	int32 RuggitiFatti = 0;
 
 	TWeakObjectPtr<AValdorsoCielo> Cielo;
 	TWeakObjectPtr<AValdorsoTempo> Tempo;

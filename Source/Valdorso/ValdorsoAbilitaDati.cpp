@@ -166,7 +166,7 @@ namespace ValdorsoCrescere
 			{ TEXT("Lancia"), TEXT("Aste") }, { TEXT("Forcone"), TEXT("Aste") }, { TEXT("Bastone_Pastore"), TEXT("Aste") },
 			{ TEXT("Bastone_Ferrato"), TEXT("Aste") },
 			// (11/11, v0.1.7) il piccone e il pugnale dei nani della grotta del nord
-			{ TEXT("Piccone"), TEXT("Mazze") }, { TEXT("Pugnale_Nani"), TEXT("Pugnali") },
+			{ TEXT("Piccone"), TEXT("Mazze") }, { TEXT("Pugnale_Nani"), TEXT("Pugnali") }, { TEXT("Martello_Nani"), TEXT("Mazze") },
 		};
 		if (!IdOggetto.IsNone())
 		{

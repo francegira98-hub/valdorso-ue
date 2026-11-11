@@ -105,8 +105,19 @@ namespace
 		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana; le monete dei nani si vendono per il metallo
 		T.Add(BottegaCompra(TEXT("Compra_Piccone"), B::Fucina, TEXT("Piccone"), 14));
 		T.Add(BottegaVendi(TEXT("Vendi_Moneta_Nani"), B::Fucina, TEXT("Moneta_Nani"), 6));
+		// (11/11) il cuore del guardiano della forgia: Marta lo paga bene (e non dice per farci cosa)
+		T.Add(BottegaVendi(TEXT("Vendi_Cuore_di_Pietra"), B::Fucina, TEXT("Cuore_di_Pietra"), 45));
 		// --- il falegname: legno
 		T.Add(BottegaCompra(TEXT("Compra_Clava"), B::Falegname, TEXT("Clava"), 6));
+		// (11/11, v0.2 "L'acqua della valle") il secchio, e Bruno compra l'acqua della cascata (per la birra)
+		T.Add(BottegaCompra(TEXT("Compra_Secchio"), B::Falegname, TEXT("Secchio"), 5));
+		{
+			// il secchio torna indietro vuoto
+			FValdorsoRicetta Acqua = BottegaServe(BottegaRicetta(TEXT("Vendi_Acqua_Pura"), B::Locanda, TEXT("Vendi"), TEXT("Secchio"), 1),
+				TEXT("Secchio_Acqua_Pura"), 1);
+			Acqua.Guadagno = 4;
+			T.Add(Acqua);
+		}
 		T.Add(BottegaCompra(TEXT("Compra_Bastone_Pastore"), B::Falegname, TEXT("Bastone_Pastore"), 6));
 		T.Add(BottegaCompra(TEXT("Compra_Bastone_Ferrato"), B::Falegname, TEXT("Bastone_Ferrato"), 12));
 		T.Add(BottegaCompra(TEXT("Compra_Forcone"), B::Falegname, TEXT("Forcone"), 10));
@@ -266,6 +277,11 @@ namespace ValdorsoBotteghe
 
 	FText TestoDa(const FValdorsoRicetta& Ricetta)
 	{
+		// (11/11, v0.2) Aureus e qualcosa indietro (l'acqua venduta: torna il secchio vuoto)
+		if (Ricetta.Risultato && Ricetta.Guadagno > 0)
+		{
+			return FText::FromString(FString::Printf(TEXT("%d Aureus e %s"), Ricetta.Guadagno, *BottegaNome(Ricetta.Risultato).ToString().ToLower()));
+		}
 		if (Ricetta.Risultato)
 		{
 			return Ricetta.QuantiRisultato > 1

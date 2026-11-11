@@ -138,7 +138,7 @@ bool SValdorsoStaff::SchedaVisibile(EScheda Quale) const
 	switch (Quale)
 	{
 	case EScheda::Coloni: return (P & ValdorsoPermessi::Gilda) || S->Vista().bCapo || P != 0;
-	case EScheda::Prove: return (P & ValdorsoPermessi::Prove) != 0;
+	case EScheda::Prove: return (P & (ValdorsoPermessi::Prove | ValdorsoPermessi::Abilita)) != 0;   // (11/11) anche solo per le abilita'
 	case EScheda::Bacheche: return (P & ValdorsoPermessi::Bacheche) != 0;
 	case EScheda::Mondo: return (P & ValdorsoPermessi::Mondo) != 0;
 	case EScheda::Giocatori: return (P & ValdorsoPermessi::Giocatori) != 0;
@@ -374,6 +374,7 @@ TSharedRef<SWidget> SValdorsoStaff::Prove()
 {
 	const FString* Oggetto = &TestoOggetto;
 	const FString* Monete = &TestoMonete;
+	const FString* AbilitaScritta = &TestoAbilita;
 	auto ChiScelto = [this]() { return Scelto(); };
 	TSharedRef<SWrapBox> Oggetti = SNew(SWrapBox).UseAllottedSize(true);
 	TWeakPtr<SValdorsoStaff> Debole = SharedThis(this);
@@ -412,6 +413,13 @@ TSharedRef<SWidget> SValdorsoStaff::Prove()
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Armeria", "Armeria"), TEXT("armeria"), ChiScelto, nullptr)]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Fatto", "Incarichi fatti"), TEXT("fatto"), ChiScelto, nullptr)]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Svuota", "Svuota lo zaino"), TEXT("svuota"), ChiScelto, nullptr)]
+		]
+		// (11/11) le abilita' (permesso "abilita"): Id e punti 0..100
+		+ SScrollBox::Slot()
+		[
+			SNew(SWrapBox).UseAllottedSize(true)
+			+ SWrapBox::Slot()[Casella(TestoAbilita, LOCTEXT("AbilitaHint", "Abilita' punti (es. Lame 40)"), 260.f)]
+			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Abilita", "Imposta l'abilita'"), TEXT("abilita"), ChiScelto, [AbilitaScritta]() { return *AbilitaScritta; })]
 		]
 		+ SScrollBox::Slot()[Titoletto(LOCTEXT("Oggetti", "Gli oggetti (clic: nella casella)"))]
 		+ SScrollBox::Slot()[Oggetti];
@@ -654,9 +662,13 @@ TSharedRef<SWidget> SValdorsoStaff::Permessi()
 		}
 		TSharedRef<SHorizontalBox> Spunte = SNew(SHorizontalBox);
 		// i permessi sui permessi sono dell'Amministratore: non si danno
-		for (int32 i = 0; i < ValdorsoPermessi::Quanti - 1; ++i)
+		for (int32 i = 0; i < ValdorsoPermessi::Quanti; ++i)
 		{
 			const int32 Bit = 1 << i;
+			if (Bit == ValdorsoPermessi::Permessi)
+			{
+				continue;
+			}
 			Spunte->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 8.f, 0.f)).VAlign(VAlign_Center)
 			[
 				SNew(SCheckBox)

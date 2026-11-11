@@ -37,6 +37,9 @@ enum class EValdorsoUso : uint8
 	Documento,
 	/** (09/11, v0.1.4) Si impugna (un'arma nella mano destra, lo scudo nella sinistra); di nuovo, si rimette via. */
 	Impugna,
+	/** (11/11, v0.2 "L'acqua della valle") Un recipiente vuoto: si riempie dentro l'acqua (ValdorsoAcque.h: la cascata
+	 *  da' l'acqua pura, il lago e il fiume la chiara, la palude e le miniere la torbida). */
+	Raccogli,
 };
 
 /** (09/11, v0.1.4) Dove si porta un oggetto addosso. */
@@ -68,6 +71,9 @@ struct FValdorsoTipoOggetto
 	bool bRicordo = false;
 	/** Cosa si legge usandolo (Uso Leggi). */
 	const TCHAR* Lettura = TEXT("");
+	/** (11/11, v0.2) Un recipiente pieno: finite le cariche torna questo oggetto vuoto (il secchio); vuoto = resta com'e'
+	 *  (la borraccia, che si riempie da sola entrando nell'acqua). */
+	const TCHAR* Vuoto = TEXT("");
 
 	/** (09/11, v0.1.4) Le armi: dove si impugnano, il danno, quanto equilibrio toglie, la stamina in piu' a colpo
 	 *  (oltre ai 10 del pugno), la portata (cm) e che colpo e' (EValdorsoTipoColpo: 0 pugno, 1 lama, 2 botta, 4 scudo). */

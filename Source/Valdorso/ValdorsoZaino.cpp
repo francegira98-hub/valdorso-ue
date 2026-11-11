@@ -7,7 +7,9 @@
 #include "SValdorsoBottega.h"
 #include "ValdorsoBotteghe.h"
 #include "Valdorso.h"
+#include "ValdorsoAcque.h"
 #include "ValdorsoArmi.h"
+#include "ValdorsoTempo.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoFalo.h"
 #include "ValdorsoModoFoto.h"
@@ -736,7 +738,71 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 			return;
 		}
 		--Dove.Cariche;
+		// (11/11, v0.2) il secchio finito torna vuoto
+		if (Dove.Cariche <= 0 && FCString::Strlen(Tipo->Vuoto) > 0 && ValdorsoOggetti::Trova(FName(Tipo->Vuoto)))
+		{
+			const FName Prima = Dove.Id;
+			Dove.Id = FName(Tipo->Vuoto);
+			Dove.Cariche = 0;
+			// (anche nella barra delle azioni)
+			for (FName& Azione : Zaino.Azioni)
+			{
+				Azione = Azione == Prima ? Dove.Id : Azione;
+			}
+		}
 		break;
+	case EValdorsoUso::Raccogli:
+	{
+		// (11/11, v0.2 "L'acqua della valle") il secchio: dentro l'acqua almeno fino alle ginocchia; quale acqua, lo dice
+		// il nome dello specchio o del corso (ValdorsoAcqua::Qualita)
+		const ACharacter* Colono = Cast<ACharacter>(Corpo);
+		const UValdorsoMovementComponent* Movimento = Colono ? Cast<UValdorsoMovementComponent>(Colono->GetCharacterMovement()) : nullptr;
+		const bool bDentro = Movimento && (Movimento->IsSwimming() || Movimento->ImmersioneNellaValle() >= ZainoAcquaPerBorraccia);
+		// (11/11) fuori dall'acqua, sotto la pioggia vera e senza un tetto sopra: l'acqua piovana (pura, ma poca)
+		if (!bDentro && Corpo && GetWorld())
+		{
+			const AValdorsoTempo* Tempo = AValdorsoTempo::Di(GetWorld());
+			const FVector Testa = Corpo->GetActorLocation() + FVector(0.f, 0.f, 80.f);
+			FHitResult Tetto;
+			const FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoSecchioPioggia), false, Corpo);
+			if (Tempo && Tempo->AriaAdesso().Pioggia >= 0.35f
+				&& !GetWorld()->LineTraceSingleByChannel(Tetto, Testa, Testa + FVector(0.f, 0.f, 3000.f), ECC_Visibility, Parametri))
+			{
+				for (FName& Azione : Zaino.Azioni)
+				{
+					Azione = Azione == Dove.Id ? FName(TEXT("Secchio_Acqua_Pura")) : Azione;
+				}
+				Dove.Id = TEXT("Secchio_Acqua_Pura");
+				Dove.Cariche = 3;
+				Cambiato();
+				Avvisa(LOCTEXT("SecchioPioggia", "Lasci il secchio sotto la pioggia: un fondo d'acqua piovana, pura (3 sorsi)."), 3.f);
+				return;
+			}
+		}
+		if (!bDentro)
+		{
+			Avvisa(LOCTEXT("SecchioFuori", "Per riempire il secchio entra nell'acqua, almeno fino alle ginocchia (la pozza della cascata, il lago, il fiume), tiralo su dal pozzo del villaggio, o lascialo sotto la pioggia."), 3.5f);
+			return;
+		}
+		const AValdorsoAcque* Acque = AValdorsoAcque::Di(GetWorld());
+		const FString Dove2D = Acque ? Acque->NomeQui(FVector2D(Corpo->GetActorLocation())) : FString();
+		static const TCHAR* Pieni[] = { TEXT("Secchio_Acqua_Torbida"), TEXT("Secchio_Acqua_Chiara"), TEXT("Secchio_Acqua_Pura") };
+		const FName Pieno(Pieni[FMath::Clamp(ValdorsoAcqua::Qualita(Dove2D), 0, 2)]);
+		const FValdorsoTipoOggetto* TipoPieno = ValdorsoOggetti::Trova(Pieno);
+		if (!TipoPieno)
+		{
+			return;
+		}
+		for (FName& Azione : Zaino.Azioni)
+		{
+			Azione = Azione == Dove.Id ? Pieno : Azione;
+		}
+		Dove.Id = Pieno;
+		Dove.Cariche = TipoPieno->Cariche;
+		Cambiato();
+		Avvisa(FText::Format(LOCTEXT("SecchioPieno", "Riempi il secchio: {0}."), FText::FromString(FString(TipoPieno->Nome).ToLower())), 3.f);
+		return;
+	}
 	case EValdorsoUso::Mangia:
 	case EValdorsoUso::Cura:
 		ValdorsoZaino::Togli(Zaino, Posto, 1);

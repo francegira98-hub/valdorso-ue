@@ -68,6 +68,10 @@ namespace ValdorsoAcqua
 
 	/** Quanto del corpo è sott'acqua (0 = niente, 1 = tutto): dal fondo della capsula al pelo, diviso l'altezza. */
 	VALDORSO_API float Immersione(float Pelo, float ZCentro, float MezzaAltezza);
+
+	/** (11/11, v0.2) Che acqua e', dal nome dello specchio o del corso: 2 pura (la cascata), 1 chiara (il lago, il fiume,
+	 *  il resto), 0 torbida (la palude, le miniere, gli stagni). */
+	VALDORSO_API int32 Qualita(const FString& NomeAcqua);
 }
 
 UCLASS()
@@ -91,6 +95,10 @@ public:
 
 	/** Il pelo dell'acqua in quel punto (X, Y nel mondo): vero se lì c'è acqua. Se ce n'è più d'una, la più alta. */
 	bool PeloQui(const FVector2D& Punto, float& OutPelo) const;
+
+	/** (11/11, v0.2) Il nome dell'acqua in quel punto (lo specchio o il corso col pelo piu' alto; vuoto se non c'e'):
+	 *  per il secchio, che acqua si prende (ValdorsoAcqua::Qualita). */
+	FString NomeQui(const FVector2D& Punto) const;
 
 	/** (10/11, v0.1.4) Quanto veloce va la corrente dei corsi d'acqua (cm/s): chi nuota ci viene portato. Nel lago e
 	 *  nella pozza niente corrente. */

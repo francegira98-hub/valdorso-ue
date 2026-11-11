@@ -98,7 +98,7 @@ def materiale_ossa():
 
 def materiali():
     mat = {}
-    for n in ("Pietra", "Intonaco", "Assi", "Trave", "Roccia", "Vetro", "Ferro", "Fiamma", "Stoffa", "Runa", "Muschio"):
+    for n in ("Pietra", "Intonaco", "Assi", "Trave", "Roccia", "Vetro", "Ferro", "Fiamma", "Stoffa", "Runa", "Muschio", "Acqua"):
         a = unreal.load_asset("%s/MI_Villaggio_%s" % (MATERIALI, n))
         if a is None:
             avviso("manca MI_Villaggio_%s (prima il villaggio)" % n)
@@ -168,14 +168,14 @@ def importa(nomi):
     for n in nomi:
         f = "%s/%s.glb" % (CARTELLA, n)
         if os.path.exists(f):
-            compiti.append(compito(f, SCHELETRI if n.startswith("SM_Scheletro_") else PEZZI))
+            compiti.append(compito(f, SCHELETRI if n.startswith(("SM_Scheletro_", "SM_Guardiano_")) else PEZZI))
         else:
             avviso("manca il file %s" % f)
     scrivi("importo %d pezzi..." % len(compiti))
     strumenti.import_asset_tasks(compiti)
     pezzi = {}
     for n in nomi:
-        cartella = SCHELETRI if n.startswith("SM_Scheletro_") else PEZZI
+        cartella = SCHELETRI if n.startswith(("SM_Scheletro_", "SM_Guardiano_")) else PEZZI
         a = cerca_e_metti_a_posto(cartella, n, unreal.StaticMesh)
         if a is not None:
             pezzi[n] = a
@@ -187,13 +187,13 @@ def importa(nomi):
 
 def importa_suoni():
     compiti = []
-    for n in ("S_Frana", "S_Scheletro_Sveglia", "S_Scheletro_Crollo"):
+    for n in ("S_Frana", "S_Scheletro_Sveglia", "S_Scheletro_Crollo", "S_Trappola_Scatto"):
         f = "%s/%s.wav" % (CARTELLA, n)
         if os.path.exists(f):
             compiti.append(compito(f, SUONI_NUOVI))
     strumenti.import_asset_tasks(compiti)
     fatti = 0
-    for n in ("S_Frana", "S_Scheletro_Sveglia", "S_Scheletro_Crollo"):
+    for n in ("S_Frana", "S_Scheletro_Sveglia", "S_Scheletro_Crollo", "S_Trappola_Scatto"):
         s = cerca_e_metti_a_posto(SUONI_NUOVI, n, unreal.SoundWave)
         if s is None:
             avviso("suono non importato: %s" % n)
@@ -229,6 +229,28 @@ def togli_vecchi():
             via += 1
     if via:
         scrivi("tolti %d attori della volta prima" % via)
+
+
+def aggiungi_acqua(c, qui):
+    """(11/11) Uno specchio d'acqua in piu' nell'AValdorsoAcque del livello (sostituisce quello con lo stesso nome)."""
+    classe = getattr(unreal, "ValdorsoAcque", None)
+    acque = next((x for x in attori.get_all_level_actors() if classe and x and isinstance(x, classe)), None)
+    if acque is None:
+        avviso("%s: nel livello non c'e' ValdorsoAcque (crea_acque_nuoto.py): niente nuoto nelle miniere" % c["nome"])
+        return False
+    specchi = [x for x in acque.get_editor_property("specchi") if str(x.get_editor_property("nome")) != c["nome"]]
+    nuovo = unreal.ValdorsoSpecchioAcqua()
+    nuovo.set_editor_property("nome", c["nome"])
+    riva = []
+    for x, y in c["riva"]:
+        w = qui([x, y, 0.0])
+        riva.append(unreal.Vector2D(w.x, w.y))
+    nuovo.set_editor_property("riva", riva)
+    nuovo.set_editor_property("pelo", float(qui([0.0, 0.0, c["pelo"]]).z))
+    specchi.append(nuovo)
+    acque.set_editor_property("specchi", specchi)
+    scrivi("acqua: '%s' aggiunta a ValdorsoAcque (pelo %.0f)" % (c["nome"], qui([0.0, 0.0, c["pelo"]]).z))
+    return True
 
 
 def cerca_grotta():
@@ -286,6 +308,10 @@ def principale():
     importa_suoni()
     pezzi = importa(dati["mesh"])
     con_collisione = set(c["asset"] for c in dati["cose"] if c["tipo"] == "mesh" and c.get("collisione", True))
+    # (11/11) le stanze segrete, e i pezzi che fanno da muro o da pavimento (la botola, la porta segreta, la grata)
+    for st in dati.get("segreti", []):
+        con_collisione |= set(c["asset"] for c in st["cose"] if c["tipo"] == "mesh" and c.get("collisione", True))
+    con_collisione |= {"SM_Trappola_Botola", "SM_GrottaNord_PortaSegreta", "SM_GrottaNord_Grata"}
     for n, m in pezzi.items():
         veste(m, mat, n in con_collisione or n in ("SM_GrottaNord_Forziere", "SM_GrottaNord_Sasso"))
     specchio = controlla_assi(pezzi)
@@ -325,96 +351,125 @@ def principale():
     # 2. sotto: le gallerie
     classi = {n: getattr(unreal, c, None) for n, c in (("ossario", "ValdorsoOssario"), ("forziere", "ValdorsoForziere"),
                                                        ("traccia", "ValdorsoTraccia"), ("passaggio", "ValdorsoPassaggio"),
-                                                       ("iscrizione", "ValdorsoIscrizione"), ("suono", "ValdorsoSorgenteSuono"))}
+                                                       ("iscrizione", "ValdorsoIscrizione"), ("suono", "ValdorsoSorgenteSuono"),
+                                                       ("trappola", "ValdorsoTrappola"), ("porta_segreta", "ValdorsoPortaSegreta"),
+                                                       ("allarme", "ValdorsoTesoroAllarme"))}
     conti = {}
+    tipi_trappola = {"Lance": "LANCE", "Botola": "BOTOLA", "Pendolo": "PENDOLO", "Fondo": "FONDO"}
+
+    def metti(c, p, rot):
+        """Una cosa del JSON nel livello (le gallerie e le stanze segrete). Restituisce l'attore, o None."""
+        tipo = c["tipo"]
+        a = None
+        if tipo == "mesh":
+            m = pezzi.get(c["asset"])
+            if m is None:
+                return None
+            a = attori.spawn_actor_from_object(m, p, rot)
+            if a and specchio < 0:
+                a.set_actor_scale3d(unreal.Vector(1, -1, 1))
+            comp = a.get_component_by_class(unreal.StaticMeshComponent) if a else None
+            if comp and not c.get("collisione", True):
+                comp.set_collision_profile_name("NoCollision")
+            if a and (c["asset"] == "SM_GrottaNord_PortaDormienti" or c.get("rune") == "sempre"):
+                # le rune battono piano, giorno e notte (AValdorsoRuneNotte)
+                a.set_editor_property("tags", [unreal.Name(ETICHETTA), unreal.Name("ValdorsoRuneSempre")])
+        elif tipo == "torcia":
+            m = pezzi.get("SM_GrottaNord_Torcia")
+            if m is None:
+                return None
+            a = attori.spawn_actor_from_object(m, p, rot)
+            comp = a.get_component_by_class(unreal.StaticMeshComponent) if a else None
+            if comp:
+                comp.set_collision_profile_name("NoCollision")
+        elif tipo == "luce":
+            a = attori.spawn_actor_from_class(unreal.PointLight, p, rot)
+            lc = a.get_component_by_class(unreal.PointLightComponent)
+            lc.set_mobility(unreal.ComponentMobility.MOVABLE)
+            try:
+                lc.set_editor_property("intensity_units", unreal.LightUnits.CANDELAS)
+            except Exception:  # noqa: BLE001
+                pass
+            lc.set_intensity(float(c.get("intensita", 5.0)))
+            lc.set_attenuation_radius(float(c.get("raggio", 1000.0)))
+            col = c.get("colore", [1.0, 0.55, 0.25])
+            lc.set_light_color(unreal.LinearColor(col[0], col[1], col[2], 1.0))
+            lc.set_cast_shadows(True)
+        elif tipo == "ossario" and classi["ossario"]:
+            a = attori.spawn_actor_from_class(classi["ossario"], p, rot)
+            a.set_editor_property("tipo_scheletro", unreal.Name(c.get("scheletro", "Scheletro")))
+            a.set_editor_property("quanti", int(c.get("quanti", 3)))
+            a.set_editor_property("raggio", float(c.get("raggio", 500.0)))
+            a.set_editor_property("minuti_ritorno", float(c.get("minuti", 30.0)))
+        elif tipo == "forziere" and classi["forziere"]:
+            a = attori.spawn_actor_from_class(classi["forziere"], p, rot)
+            a.set_editor_property("ricchezza", int(c.get("ricchezza", 1)))
+            a.set_editor_property("allarme", bool(c.get("allarme", False)))
+            comp = a.get_component_by_class(unreal.StaticMeshComponent)
+            if comp and pezzi.get("SM_GrottaNord_Forziere"):
+                comp.set_static_mesh(pezzi["SM_GrottaNord_Forziere"])
+        elif tipo == "traccia" and classi["traccia"]:
+            a = attori.spawn_actor_from_class(classi["traccia"], p, rot)
+            a.set_editor_property("oggetto", unreal.Name(c["oggetto"]))
+            comp = a.get_component_by_class(unreal.StaticMeshComponent)
+            if comp and pezzi.get(c.get("asset", "")):
+                comp.set_static_mesh(pezzi[c["asset"]])
+        elif tipo == "iscrizione" and classi["iscrizione"]:
+            a = attori.spawn_actor_from_class(classi["iscrizione"], p, rot)
+            a.set_editor_property("titolo", unreal.Text(c.get("titolo", c["nome"])))
+            a.set_editor_property("avvisi", c.get("avvisi", []))
+        elif tipo == "suono" and classi["suono"]:
+            s = unreal.load_asset("%s/%s" % (SUONI_VALLE, c["suono"]))
+            if s is None:
+                avviso("%s: manca il suono %s (prima i suoni della valle)" % (c["nome"], c["suono"]))
+                return None
+            a = attori.spawn_actor_from_class(classi["suono"], p, rot)
+            a.set_editor_property("suono", s)
+            a.set_editor_property("quando", getattr(unreal.ValdorsoQuando, str(c.get("quando", "Sempre")).upper()))
+            a.set_editor_property("vicino", float(c.get("vicino", 500.0)))
+            a.set_editor_property("lontano", float(c.get("lontano", 2500.0)))
+            a.set_editor_property("volume", float(c.get("volume", 1.0)))
+        elif tipo == "trappola" and classi["trappola"]:
+            a = attori.spawn_actor_from_class(classi["trappola"], p, rot)
+            a.set_editor_property("tipo", getattr(unreal.ValdorsoTipoTrappola, tipi_trappola.get(c.get("trappola", "Lance"), "LANCE")))
+            mi = c.get("misura", [100.0, 150.0, 60.0])
+            a.set_editor_property("misura", unreal.Vector(mi[0], mi[1], mi[2]))
+            for chiave, prop in (("ritardo", "ritardo"), ("ripristino", "ripristino"), ("periodo", "periodo"), ("fase", "fase"),
+                                 ("ampiezza", "ampiezza"), ("braccio", "braccio")):
+                if chiave in c:
+                    a.set_editor_property(prop, float(c[chiave]))
+            try:
+                a.rerun_construction_scripts()
+            except Exception:  # noqa: BLE001
+                pass   # (in 5.8 per gli attori C++ non c'e': OnConstruction gira lo stesso al cambio delle proprieta')
+        elif tipo == "porta_segreta" and classi["porta_segreta"]:
+            a = attori.spawn_actor_from_class(classi["porta_segreta"], p, rot)
+            a.set_editor_property("testo", c.get("testo", "Spingi la pietra"))
+            a.set_editor_property("iscrizione_richiesta", c.get("iscrizione", ""))
+            a.set_editor_property("minuti_aperta", float(c.get("minuti", 10.0)))
+            comp = a.get_component_by_class(unreal.StaticMeshComponent)
+            if comp and pezzi.get("SM_GrottaNord_PortaSegreta"):
+                comp.set_static_mesh(pezzi["SM_GrottaNord_PortaSegreta"])
+        elif tipo == "allarme" and classi["allarme"]:
+            a = attori.spawn_actor_from_class(classi["allarme"], p, rot)
+            a.set_editor_property("tipo_scheletro", unreal.Name(c.get("scheletro", "Scheletro")))
+            a.set_editor_property("quanti", int(c.get("quanti", 6)))
+            a.set_editor_property("raggio", float(c.get("raggio", 420.0)))
+            gd = c.get("grata", [0.0, 0.0, 0.0])
+            a.set_editor_property("grata_dove", unreal.Vector(gd[0], gd[1], gd[2]))
+            a.set_editor_property("grata_gradi", float(c.get("grata_gradi", 0.0)))
+            comp = a.get_component_by_class(unreal.StaticMeshComponent)
+            if comp and pezzi.get("SM_GrottaNord_Grata"):
+                comp.set_static_mesh(pezzi["SM_GrottaNord_Grata"])
+        return a
+
     for c in dati["cose"]:
         tipo = c["tipo"]
         p = qui(c["pos"])
         rot = unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(c.get("gradi", 0.0)))
         a = None
         try:
-            if tipo == "mesh":
-                m = pezzi.get(c["asset"])
-                if m is None:
-                    continue
-                a = attori.spawn_actor_from_object(m, p, rot)
-                if a and specchio < 0:
-                    a.set_actor_scale3d(unreal.Vector(1, -1, 1))
-                comp = a.get_component_by_class(unreal.StaticMeshComponent) if a else None
-                if comp and not c.get("collisione", True):
-                    comp.set_collision_profile_name("NoCollision")
-                if a and c["asset"] == "SM_GrottaNord_PortaDormienti":
-                    # le rune della porta dei dormienti battono piano, giorno e notte (AValdorsoRuneNotte)
-                    finisci(a, c["nome"], CONTORNO + "/Gallerie")
-                    a.set_editor_property("tags", [unreal.Name(ETICHETTA), unreal.Name("ValdorsoRuneSempre")])
-                    conti[tipo] = conti.get(tipo, 0) + 1
-                    continue
-            elif tipo == "torcia":
-                m = pezzi.get("SM_GrottaNord_Torcia")
-                if m is None:
-                    continue
-                a = attori.spawn_actor_from_object(m, p, rot)
-                comp = a.get_component_by_class(unreal.StaticMeshComponent) if a else None
-                if comp:
-                    comp.set_collision_profile_name("NoCollision")
-            elif tipo == "luce":
-                a = attori.spawn_actor_from_class(unreal.PointLight, p, rot)
-                lc = a.get_component_by_class(unreal.PointLightComponent)
-                lc.set_mobility(unreal.ComponentMobility.MOVABLE)
-                try:
-                    lc.set_editor_property("intensity_units", unreal.LightUnits.CANDELAS)
-                except Exception:  # noqa: BLE001
-                    pass
-                lc.set_intensity(float(c.get("intensita", 5.0)))
-                lc.set_attenuation_radius(float(c.get("raggio", 1000.0)))
-                col = c.get("colore", [1.0, 0.55, 0.25])
-                lc.set_light_color(unreal.LinearColor(col[0], col[1], col[2], 1.0))
-                # le luci fanno ombra: senza, passerebbero dalle pareti nelle sale accanto
-                lc.set_cast_shadows(True)
-            elif tipo == "ossario":
-                if classi["ossario"] is None:
-                    continue
-                a = attori.spawn_actor_from_class(classi["ossario"], p, rot)
-                a.set_editor_property("tipo_scheletro", unreal.Name(c.get("scheletro", "Scheletro")))
-                a.set_editor_property("quanti", int(c.get("quanti", 3)))
-                a.set_editor_property("raggio", float(c.get("raggio", 500.0)))
-                a.set_editor_property("minuti_ritorno", float(c.get("minuti", 30.0)))
-            elif tipo == "forziere":
-                if classi["forziere"] is None:
-                    continue
-                a = attori.spawn_actor_from_class(classi["forziere"], p, rot)
-                a.set_editor_property("ricchezza", int(c.get("ricchezza", 1)))
-                comp = a.get_component_by_class(unreal.StaticMeshComponent)
-                if comp and pezzi.get("SM_GrottaNord_Forziere"):
-                    comp.set_static_mesh(pezzi["SM_GrottaNord_Forziere"])
-            elif tipo == "traccia":
-                if classi["traccia"] is None:
-                    continue
-                a = attori.spawn_actor_from_class(classi["traccia"], p, rot)
-                a.set_editor_property("oggetto", unreal.Name(c["oggetto"]))
-                comp = a.get_component_by_class(unreal.StaticMeshComponent)
-                if comp and pezzi.get(c.get("asset", "")):
-                    comp.set_static_mesh(pezzi[c["asset"]])
-            elif tipo == "iscrizione":
-                if classi["iscrizione"] is None:
-                    continue
-                a = attori.spawn_actor_from_class(classi["iscrizione"], p, rot)
-                a.set_editor_property("titolo", unreal.Text(c.get("titolo", c["nome"])))
-                a.set_editor_property("avvisi", c.get("avvisi", []))
-            elif tipo == "suono":
-                if classi["suono"] is None:
-                    continue
-                s = unreal.load_asset("%s/%s" % (SUONI_VALLE, c["suono"]))
-                if s is None:
-                    avviso("%s: manca il suono %s (prima i suoni della valle)" % (c["nome"], c["suono"]))
-                    continue
-                a = attori.spawn_actor_from_class(classi["suono"], p, rot)
-                a.set_editor_property("suono", s)
-                a.set_editor_property("quando", getattr(unreal.ValdorsoQuando, str(c.get("quando", "Sempre")).upper()))
-                a.set_editor_property("vicino", float(c.get("vicino", 500.0)))
-                a.set_editor_property("lontano", float(c.get("lontano", 2500.0)))
-                a.set_editor_property("volume", float(c.get("volume", 1.0)))
-            elif tipo == "passaggio":
+            if tipo == "passaggio":
                 if classi["passaggio"] is None:
                     continue
                 a = attori.spawn_actor_from_class(classi["passaggio"], p, rot)
@@ -427,9 +482,16 @@ def principale():
             elif tipo == "arrivo":
                 conti[tipo] = conti.get(tipo, 0) + 1
                 continue
-            else:
-                avviso("%s: tipo sconosciuto %s" % (c["nome"], tipo))
+            elif tipo == "acqua":
+                # (11/11) le miniere allagate: uno specchio d'acqua in piu' per AValdorsoAcque (cosi' ci si nuota)
+                if aggiungi_acqua(c, qui):
+                    conti[tipo] = conti.get(tipo, 0) + 1
                 continue
+            else:
+                a = metti(c, p, rot)
+                if a is None and tipo not in classi and tipo not in ("mesh", "torcia", "luce"):
+                    avviso("%s: tipo sconosciuto %s" % (c["nome"], tipo))
+                    continue
         except Exception as e:  # noqa: BLE001
             avviso("%s (%s): %s" % (c["nome"], tipo, e))
             continue
@@ -437,8 +499,72 @@ def principale():
             avviso("%s (%s): non messo" % (c["nome"], tipo))
             continue
         cartella = CONTORNO + ("/Gallerie" if tipo in ("mesh", "torcia", "luce") else "/Dentro")
+        tags = [t for t in a.get_editor_property("tags")]
         finisci(a, c["nome"], cartella)
+        if any(str(t) == "ValdorsoRuneSempre" for t in tags):
+            a.set_editor_property("tags", [unreal.Name(ETICHETTA), unreal.Name("ValdorsoRuneSempre")])
         conti[tipo] = conti.get(tipo, 0) + 1
+
+    # 2b. (11/11) le stanze segrete della valle: sotto il mulino e sotto le rovine (un passaggio segreto per entrare)
+    for st in dati.get("segreti", []):
+        ancora = next((x for x in attori.get_all_level_actors() if x and x.get_actor_label() == st["ancora"]), None)
+        if ancora is None:
+            avviso("%s: non trovo l'attore '%s' nel livello (prima il villaggio)" % (st["nome"], st["ancora"]))
+            continue
+        al = ancora.get_actor_location()
+        ix, iy = al.x + st["ingresso"][0], al.y + st["ingresso"][1]
+        zi = None
+        try:
+            r = unreal.SystemLibrary.line_trace_single(mondo, unreal.Vector(ix, iy, al.z + 250.0), unreal.Vector(ix, iy, al.z - 600.0),
+                                                       unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, [], unreal.DrawDebugTrace.NONE, True)
+            hit = r[0] if isinstance(r, tuple) else r
+            if hit is not None and hit.to_tuple()[0]:
+                zi = hit.to_tuple()[4].z
+        except Exception as e:  # noqa: BLE001
+            avviso("%s: terreno dell'ingresso non trovato (%s)" % (st["nome"], e))
+        if zi is None:
+            zi = al.z
+        base = unreal.Vector(ix, iy, zi - float(st["giu"]))
+
+        def li(pp, base=base):
+            return unreal.Vector(base.x + pp[0], base.y + pp[1], base.z + pp[2])
+
+        arr = next((c for c in st["cose"] if c["tipo"] == "arrivo"), None)
+        dentro = 0
+        for c in st["cose"]:
+            rot = unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(c.get("gradi", 0.0)))
+            try:
+                if c["tipo"] == "arrivo":
+                    continue
+                if c["tipo"] == "uscita":
+                    a = attori.spawn_actor_from_class(classi["passaggio"], li(c["pos"]), rot)
+                    a.set_editor_property("testo", c["nome"])
+                    a.set_editor_property("destinazione", unreal.Vector(ix, iy, zi + 110.0))
+                    a.set_editor_property("gradi_destinazione", float(ancora.get_actor_rotation().yaw))
+                else:
+                    a = metti(c, li(c["pos"]), rot)
+            except Exception as e:  # noqa: BLE001
+                avviso("%s, %s: %s" % (st["nome"], c["nome"], e))
+                continue
+            if a is None:
+                avviso("%s, %s: non messo" % (st["nome"], c["nome"]))
+                continue
+            tags = [str(t) for t in a.get_editor_property("tags")]
+            finisci(a, c["nome"], "Valle/Segreti/" + st["nome"])
+            if "ValdorsoRuneSempre" in tags:
+                a.set_editor_property("tags", [unreal.Name(ETICHETTA), unreal.Name("ValdorsoRuneSempre")])
+            dentro += 1
+        # l'ingresso segreto, lassu'
+        if classi["passaggio"] and arr:
+            a = attori.spawn_actor_from_class(classi["passaggio"], unreal.Vector(ix, iy, zi), unreal.Rotator(roll=0.0, pitch=0.0, yaw=0.0))
+            a.set_editor_property("testo", st["testo"])
+            a.set_editor_property("segreto", True)
+            a.set_editor_property("vicino", 130.0)
+            a.set_editor_property("destinazione", li(arr["pos"]))
+            a.set_editor_property("gradi_destinazione", float(arr["gradi"]))
+            finisci(a, "Ingresso segreto: " + st["nome"], "Valle/Segreti/" + st["nome"])
+        scrivi("stanza segreta '%s': %d cose, ingresso a (%.0f, %.0f, %.0f), stanza %.0f m sotto" % (
+            st["nome"], dentro, ix, iy, zi, float(st["giu"]) / 100.0))
     scrivi("messo: " + ", ".join("%s %d" % (k, v) for k, v in sorted(conti.items())))
     for n, classe in classi.items():
         if classe is None:
@@ -447,7 +573,9 @@ def principale():
     # 3. le gallerie non devono uscire dal paesaggio: quanta roccia c'e' sopra il soffitto, in qualche punto
     sopra = []
     for x, y, tetto in ((0, 0, 440), (0, -1500, 280), (0, -3800, 450), (-2700, -3850, 120), (0, -5300, -380),
-                        (0, -6900, 280), (900, -6900, -100), (-900, -6900, -100)):
+                        (0, -6900, 280), (900, -6900, -100), (-900, -6900, -100),
+                        # (11/11) l'ala segreta, il tesoro, le miniere, la cava, la forgia
+                        (2400, -3850, 60), (4060, -3850, 220), (-4400, -3850, -550), (-5700, -3850, 150), (-3900, -6900, -500)):
         zt = terreno(mondo, origine.x + x, origine.y + y, origine.z + 20000.0, origine.z - 2000.0)
         if zt is not None:
             sopra.append((zt - (origine.z + tetto), x, y))
