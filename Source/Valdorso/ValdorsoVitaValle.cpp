@@ -86,7 +86,8 @@ namespace
 	{
 		static const TCHAR* const Case[] = { TEXT("SM_Casa"), TEXT("SM_Locanda"), TEXT("SM_Fucina"), TEXT("SM_Caserma"),
 			TEXT("SM_Fattoria"), TEXT("SM_Palude_Capanna"), TEXT("SM_Villaggio_Capanna"), TEXT("SM_Canonica"), TEXT("SM_Gilda"),
-			TEXT("SM_Falegname"), TEXT("SM_Conceria"), TEXT("SM_Mulino"), TEXT("SM_Casermetta") };
+			TEXT("SM_Falegname"), TEXT("SM_Conceria"), TEXT("SM_Mulino"), TEXT("SM_Casermetta"),
+			TEXT("SM_Alloggi"), TEXT("SM_Mensa") };  // (12/11) la caserma nuova della fase 3
 		for (const TCHAR* Una : Case)
 		{
 			if (NomeMesh.StartsWith(Una))
@@ -601,6 +602,12 @@ void AValdorsoVitaValle::CercaComignoli(const FVector& Colono)
 	for (TActorIterator<AStaticMeshActor> It(GetWorld()); It; ++It)
 	{
 		AStaticMeshActor* Casa = *It;
+		// (12/11) le case delle altre fasi del villaggio sono nascoste (AValdorsoFasiVillaggio): niente fumo dai loro camini.
+		// Si guarda ogni volta, non solo la prima: la fase puo' cambiare mentre si gioca.
+		if (Casa->IsHidden())
+		{
+			continue;
+		}
 		if (FVector::DistSquared2D(Casa->GetActorLocation(), Colono) > FMath::Square(VitaRaggioComignoli))
 		{
 			continue;

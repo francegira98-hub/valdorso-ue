@@ -6,9 +6,16 @@
 #   Fase 2  la zona della milizia fuori dalla palizzata di oggi, tra le due strade di est (grotta e passo): una caserma
 #           piccola (16 x 8 m, 5 brande, un tavolo con le panche) e un campo d'addestramento recintato (22 x 16 m:
 #           quattro fantocci, due bersagli per l'arco, la rastrelliera), con una lanterna.
-#   Fase 3  sullo stesso posto, più grande: la caserma di pietra a due piani (30 x 10 m, 18 brande al piano terra, due
-#           tavoli con le panche), l'armeria, il campo grande (34 x 18 m: sei fantocci, il tiro con l'arco con tre
-#           bersagli, due rastrelliere, lo stendardo), le lanterne.
+#   Fase 3  sullo stesso posto, più grande. (12/11, rifatta: chiesta da Fra, "letti messi a caso, coprono l'ingresso;
+#           voglio strutture belle, non il solito quadrato") Un quartiere vero, a ferro di cavallo intorno al campo:
+#           - a ovest l'ala degli alloggi (17,5 x 9 m, due piani) con il portico di legno sul cortile: dentro la
+#             camerata, le brande in due file di testa contro i muri lunghi, ognuna con il suo baule ai piedi, il
+#             corridoio libero nel mezzo e l'entrata libera (la porta è in fondo, verso la torre);
+#           - nel mezzo la torre di guardia (5 x 5 m, 11 m, con la scala a pioli): il perno tra le due ali;
+#           - a est la mensa (11 x 8 m) con il focolare, il bancone e due tavoli;
+#           - sul lato est del campo, girata verso il campo, l'armeria;
+#           - il campo grande (25 x 15,5 m: sei fantocci, tre bersagli, due rastrelliere, lo stendardo), le lanterne.
+#           Le porte di alloggi e mensa sono tutte e due vicino alla torre: chi esce si trova sul cortile.
 # Il posto della fase 3 è tenuto libero già dalla fase 2 (le case dell'anello non lo prendono).
 # Coordinate: metri dal centro della piazza (x est, y sud), come L() di villaggio.py.
 
@@ -17,7 +24,7 @@ import math
 import numpy as np
 
 import villaggio_edifici as ed
-from villaggio_mesh import Mesh
+from villaggio_mesh import Mesh, normalizza
 
 # il posto: tutta la zona (fase 3) è larga 38 m (x) e profonda 30 m (y), intorno al centro scelto
 ZONA_W, ZONA_D = 38.0, 30.0
@@ -135,19 +142,27 @@ def zona(pr, S, L, t, mappa, lastricato, rettangolo, dentro, poli_largo, poli_og
                                                      "/Game/Fab/Mercato_Tenda1/Crate_003"][k], *M(x, y), 15.0 * k)
 
     # ---------------------------------------------------------------- fase 3 (per sempre)
+    # (12/11) rifatta: alloggi con il portico a ovest, la torre nel mezzo, la mensa a est, l'armeria sul lato del campo
     pr.fase = (3, 0)
-    X, Y = M(-4.0, -10.0)
-    pav, gr, info = pr.edificio(S, "Caserma_grande_della_milizia",
-                                lambda nome, W, D, **kw: caserma(nome, W, D, kw["fondazione"], piani=2, file=2),
-                                X, Y, 90.0, 3000, 1000, chiave=False)
-    _tavoli(pr, S, "Tavolo della caserma grande", X, Y, gr, pav, info)
-    X, Y = M(15.0, -11.0)
-    pr.edificio(S, "Armeria_della_milizia", ed.casa, X, Y, 90.0, 800, 600, chiave=True, piani=1, base="Pietra",
+    X, Y = M(-10.0, -10.5)
+    pr.edificio(S, "Alloggi_della_milizia", lambda nome, W, D, **kw: alloggi(nome, W, D, kw["fondazione"]),
+                X, Y, 90.0, 1750, 900, chiave=False)
+    X, Y = M(1.5, -11.0)
+    pr.edificio(S, "Torre_di_guardia_della_milizia",
+                lambda nome, W, D, **kw: ed.torre(nome, lato=W, altezza=1100, fondazione=kw["fondazione"]),
+                X, Y, 90.0, 500, 500, chiave=False)
+    X, Y = M(10.5, -11.0)
+    pav, gr, info = pr.edificio(S, "Mensa_della_milizia", lambda nome, W, D, **kw: mensa(nome, W, D, kw["fondazione"]),
+                                X, Y, 90.0, 1100, 800, chiave=False)
+    _tavoli(pr, S, "Tavolo della mensa", X, Y, gr, pav, info)
+    X, Y = M(16.8, 4.5)
+    pr.edificio(S, "Armeria_della_milizia", ed.casa, X, Y, 180.0, 700, 450, chiave=True, piani=1, base="Pietra",
                 sopra="Pietra", tetto="Coppi", pendenza=30, seme=4401, camino=False)
-    _campo(pr, S, M, t, lastricato, "SM_Milizia_Campo3", "Campo grande della milizia", (0.0, 5.5), 34.0, 18.0, fantocci=6,
+    _campo(pr, S, M, t, lastricato, "SM_Milizia_Campo3", "Campo grande della milizia", (0.0, 7.1), 25.0, 15.5, fantocci=6,
            bersagli=3, rastrelliere=2, stendardo_=True)
-    _lanterne(pr, S, M, t, "SM_Milizia_Lanterne3", "Lanterna della caserma grande", [(-12.0, -4.0), (4.0, -4.0), (17.0, -7.4)])
-    for k, (x, y) in enumerate(((-18.0, -4.3), (-17.2, -4.0), (12.0, -7.6), (12.8, -7.8))):
+    _lanterne(pr, S, M, t, "SM_Milizia_Lanterne3", "Lanterna della caserma grande",
+              [(-14.0, -1.9), (-4.0, -1.9), (6.0, -6.2), (14.6, -0.2)])
+    for k, (x, y) in enumerate(((-18.3, -1.9), (-17.5, -1.6), (16.6, -6.0), (17.3, -5.7))):
         pr.oggetto(S, "Botte della caserma %d" % k, ["/Game/Fab/Mercato_Tenda2/wooden_barrel", "/Game/Fab/Mercato_Tenda1/Crate_003"][k % 2],
                    *M(x, y), 20.0 * k)
     pr.fase = fase_prima
@@ -172,6 +187,142 @@ def caserma(nome, W, D, fondazione, piani=1, file=1):
                 cose.append(("letto", x, -D / 2 + 150, 90.0, 0.0))
     # tavoli (li mette villaggio.py come i tavoli della locanda) e panche
     tavoli = [(0.0, 0.0)] if file < 2 else [(-600.0, 0.0), (600.0, 0.0)]
+    for tx, ty in tavoli:
+        cose.append(("panca", tx, ty - 90, 0.0))
+        cose.append(("panca", tx, ty + 90, 180.0))
+    info["cose"] = info.get("cose", []) + cose
+    info["tavoli"] = tavoli
+    return m, info
+
+
+BRANDA_L, BRANDA_P = 140.0, 232.0      # il letto di Fab (BP_Letto): 140 cm di larghezza, 232 di lunghezza (Y locale)
+
+
+def baule(m, x, y, gradi=0.0):
+    """Il baule di un soldato ai piedi della branda: assi, coperchio, due cerchi di ferro (90 x 50 x 50 cm)."""
+    a = math.radians(gradi)
+    u = np.array([math.cos(a), math.sin(a), 0.0]) * 45
+    v = np.array([-math.sin(a), math.cos(a), 0.0]) * 25
+    m.scatola({"altri": "Assi", "+z": "Trave"}, [x, y, 22], u, v, [0, 0, 22])
+    m.scatola("Trave", [x, y, 47], u * 1.04, v * 1.08, [0, 0, 4])
+    for s_ in (-0.6, 0.6):
+        m.scatola("Ferro", [x + u[0] * s_, y + u[1] * s_, 26], u * 0.04, v * 1.06, [0, 0, 25])
+
+
+def portico(m, x0, x1, y_muro, prof, h_muro, h_fuori, fondazione, passo=300.0, porta_x=None):
+    """Un portico di legno appoggiato al muro (la facciata è a -Y): pavimento di pietra rialzato, pali sul davanti,
+    la trave, il tetto a una falda di coppi che scende dal muro verso fuori."""
+    yf = y_muro - prof                                   # il filo dei pali
+    m.blocco({"altri": "Pietra", "+z": "Pietra"}, x0, x1, yf - 30, y_muro, -fondazione, 0)
+    m.blocco("Pietra", x0, x1, yf - 70, yf - 30, -fondazione, -22)     # il gradino lungo
+    # i pali: uno ogni 'passo', con la porta (se c'è) a metà tra due pali, e sempre un palo ai due capi
+    a0, a1 = x0 + 20, x1 - 20
+    if porta_x is None:
+        n = max(2, int(round((a1 - a0) / passo)) + 1)
+        pali = [a0 + (a1 - a0) * k / (n - 1) for k in range(n)]
+    else:
+        pali = []
+        x = porta_x - passo / 2
+        while x - passo >= a0:
+            x -= passo
+        while x <= a1:
+            if x >= a0:
+                pali.append(x)
+            x += passo
+        if not pali:
+            pali = [a0, a1]
+        if pali[0] - a0 > 100:
+            pali.insert(0, a0)
+        else:
+            pali[0] = a0
+        if a1 - pali[-1] > 100:
+            pali.append(a1)
+        else:
+            pali[-1] = a1
+    for x in pali:
+        m.blocco("Pietra", x - 22, x + 22, yf - 22, yf + 22, 0, 18)    # la base del palo
+        m.cilindro("Trave", [x, yf, 18], 13, h_fuori - 18, lati=8)
+        m.trave("Trave", [x, yf, h_fuori - 60], [x, yf + 70, h_fuori], 10, 10)  # il saettone
+    m.trave("Trave", [x0, yf, h_fuori + 10], [x1, yf, h_fuori + 10], 20, 22)
+    a = np.array([0.0, yf - 45, h_fuori + 10 - 45 * (h_muro - h_fuori) / prof])
+    b = np.array([0.0, y_muro, h_muro])
+    su = normalizza(b - a)
+    nn = normalizza(np.cross([1.0, 0, 0], su))
+    if nn[2] < 0:
+        nn = -nn
+    m.scatola({"+z": "Coppi", "-z": "Assi", "altri": "Trave"}, (a + b) / 2 + nn * 8 + [(x0 + x1) / 2, 0, 0],
+              [(x1 - x0) / 2 + 20, 0, 0], su * np.linalg.norm(b - a) / 2, nn * 8)
+    # i travetti sotto il tetto, uno per palo
+    for x in pali:
+        m.trave("Trave", [x, yf, h_fuori + 4], [x, y_muro, h_muro - 14], 10, 14)
+
+
+def lume_appeso(m, cose, x, y, soffitto, intensita=5.0, raggio=900.0):
+    """(12/11) Un lume appeso al soffitto: la catena, la gabbia di ferro con la fiamma; e la sua luce calda."""
+    z = soffitto - 75                                   # la fiamma a 2 m e più: non si sbatte la testa
+    m.trave("Ferro", [x, y, soffitto - 15], [x, y, z + 30], 3, 3)
+    m.blocco("Ferro", x - 16, x + 16, y - 16, y + 16, z + 26, z + 30)
+    m.blocco("Ferro", x - 14, x + 14, y - 14, y + 14, z - 6, z - 2)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            m.blocco("Ferro", x + sx * 14 - 2, x + sx * 14 + 2, y + sy * 14 - 2, y + sy * 14 + 2, z - 2, z + 26)
+    m.blocco("Fiamma", x - 5, x + 5, y - 5, y + 5, z, z + 14)
+    cose.append(("luce", x, y, 0.0, z + 8, {"intensita": intensita, "raggio": raggio}))
+
+
+def alloggi(nome, W, D, fondazione):
+    """(12/11) L'ala degli alloggi: due piani, la porta in fondo verso la torre, il portico sul cortile. Dentro, la
+    camerata: brande di testa contro i muri lunghi, un baule ai piedi di ognuna, il corridoio libero nel mezzo; davanti
+    alla porta niente brande, e accanto alla porta, contro il muro di fondo, la rastrelliera delle lance."""
+    T = ed.SPESSORE
+    # (la facciata guarda il cortile e la casa è girata di 180 gradi: il +X di qui è l'ovest, quindi la porta, verso la
+    # torre a est, sta a -X)
+    porta_x = -W / 2 + 220.0
+    m, info = ed.casa(nome, W, D, piani=2, base="Pietra", sopra="Intonaco", tetto="Coppi", pendenza=32,
+                      fondazione=fondazione, porta_x=porta_x, finestre_aperte=False, seme=4402, camino=True)
+    portico(m, -W / 2 + 30, W / 2 - 30, -D / 2, 250.0, 290.0, 250.0, fondazione, porta_x=porta_x)
+    cose = []
+    yb = D / 2 - T - BRANDA_P / 2 - 6            # la fila contro il muro di fondo (testa al muro)
+    yf = -yb                                      # la fila contro la facciata
+    passo = BRANDA_L + 95.0
+    x = W / 2 - T - BRANDA_L / 2 - 45
+    while x - BRANDA_L / 2 > -W / 2 + T + 330:  # dal fondo della camerata verso la porta, fino alla rastrelliera
+        cose.append(("letto", x, yb, 180.0, 0.0))
+        baule(m, x, yb - BRANDA_P / 2 - 32)
+        if x - BRANDA_L / 2 > porta_x + 260:     # la facciata: libera per 2,6 m davanti alla porta
+            cose.append(("letto", x, yf, 0.0, 0.0))
+            baule(m, x, yf + BRANDA_P / 2 + 32)
+        x -= passo
+    rastrelliera(m, -W / 2 + T + 170, D / 2 - T - 12, 0, 180.0, lance=3)
+    for lx in (-W / 2 + 330, 0.0, W / 2 - 330):        # (12/11) i lumi del corridoio: la camerata non è più buia
+        lume_appeso(m, cose, lx, 0.0, 300.0 - 22)
+    info["cose"] = info.get("cose", []) + cose
+    return m, info
+
+
+def mensa(nome, W, D, fondazione):
+    """(12/11) La mensa della milizia: un piano alto, la porta verso la torre, il focolare contro il muro di fianco,
+    il bancone della cucina contro il muro di fondo, due tavoli con le panche."""
+    T = ed.SPESSORE
+    # (girata di 180 gradi come gli alloggi: +X è l'ovest, la torre; il focolare sta a -X, sul fianco est)
+    m, info = ed.casa(nome, W, D, piani=1, base="Pietra", sopra="Pietra", tetto="Coppi", pendenza=36, h1=360.0,
+                      fondazione=fondazione, porta_x=W / 2 - 200, finestre_aperte=False, seme=4403, camino=False,
+                      finestre_lato=False)
+    xc = -W / 2 + T
+    m.blocco("Pietra", xc, xc + 70, -110, 110, 0, 120)                 # il focolare
+    m.blocco("Fiamma", xc + 20, xc + 60, -50, 50, 40, 70)
+    m.blocco("Pietra", xc, xc + 80, -130, 130, 120, 140)                # la mensola
+    m.blocco("Pietra", xc, xc + 60, -90, 90, 140, 360)                  # la cappa
+    cima = info["cima"]
+    # (il comignolo sta a 150 cm dal bordo del tetto, dove lo cerca il fumo di ValdorsoVitaValle)
+    m.blocco({"altri": "Pietra", "+z": "Ferro"}, xc - 20, xc + 80, -55, 55, cima - 15, cima + D / 2 * math.tan(math.radians(36)) + 90)
+    ed.bancone(m, -W / 2 + 220, W / 2 - 320, D / 2 - T - 50)
+    tavoli = [(-230.0, -60.0), (150.0, -60.0)]
+    cose = []
+    for tx, ty in tavoli:                              # (12/11) un lume sopra ogni tavolo
+        lume_appeso(m, cose, tx, ty, 360.0, intensita=4.0, raggio=800.0)
+    # e la luce del focolare, arancione, che fa ombra
+    cose.append(("luce", xc + 45, 0.0, 0.0, 70.0, {"intensita": 6.0, "raggio": 700.0, "colore": [1.0, 0.45, 0.15], "ombre": True}))
     for tx, ty in tavoli:
         cose.append(("panca", tx, ty - 90, 0.0))
         cose.append(("panca", tx, ty + 90, 180.0))
