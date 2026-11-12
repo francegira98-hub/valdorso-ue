@@ -161,6 +161,18 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_scatole.py")
     valdorso.add_menu_entry("Strumenti", voce)
 
+    # (12/11) le spade di Paragon: Greystone nel nostro colono (porta_armi_greystone.py) e il controllo delle
+    # animazioni in numeri per Claude (controlla_animazioni.py: scrive Saved/Claude/animazioni.txt)
+    voce = unreal.ToolMenuEntry(name="ArmiGreystone", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Armi: porta le spade di Greystone nel colono")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "porta_armi_greystone.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
+    voce = unreal.ToolMenuEntry(name="ControllaAnimazioni", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Per Claude: controlla le animazioni (numeri)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "controlla_animazioni.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
     # (07/11 sera) i piedi in piazza, il materiale delle rocce, Nanite sui trasparenti
     voce = unreal.ToolMenuEntry(name="SistemaValle", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Valle: sistema (piedi, materiali, Nanite)")
