@@ -1018,6 +1018,7 @@ namespace Valdorso.Launcher
                 argomenti.Add("-ValdorsoStato=" + pagina);
             }
             argomenti.Add("-DalLauncher");
+            MettiChiaveServer(exe);
             try
             {
                 ProcessStartInfo avvio = new ProcessStartInfo(exe, string.Join(" ", argomenti.ToArray()));
@@ -1038,6 +1039,34 @@ namespace Valdorso.Launcher
             {
                 Registro.Scrivi("gioco non avviato: " + e);
                 Imposta(StatoLauncher.Errore, "Il gioco non parte: " + e.Message, -1, true);
+            }
+        }
+
+        /// <summary>(12/11, 1.3.1) Il gioco si collega solo a un server di cui conosce la chiave pubblica: il launcher la
+        /// scrive dove il gioco la cerca (Valdorso\Saved\Server\Chiavi\server_pubblica.pem accanto all'eseguibile).
+        /// Solo una chiave PUBBLICA: una privata non la scrive mai.</summary>
+        void MettiChiaveServer(string exe)
+        {
+            string chiave = manifesto != null ? manifesto.ChiaveServer : "";
+            if (chiave.IndexOf("BEGIN PUBLIC KEY", StringComparison.Ordinal) < 0 || chiave.IndexOf("PRIVATE", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return;
+            }
+            try
+            {
+                string cartella = Path.Combine(Path.GetDirectoryName(exe), "Valdorso", "Saved", "Server", "Chiavi");
+                Directory.CreateDirectory(cartella);
+                string file = Path.Combine(cartella, "server_pubblica.pem");
+                string testo = chiave.Replace("\r\n", "\n").Replace("\n", "\r\n") + "\r\n";
+                if (!File.Exists(file) || File.ReadAllText(file) != testo)
+                {
+                    File.WriteAllText(file, testo);
+                    Registro.Scrivi("chiave del server scritta in " + file);
+                }
+            }
+            catch (Exception e)
+            {
+                Registro.Scrivi("chiave del server non scritta: " + e.Message);
             }
         }
 

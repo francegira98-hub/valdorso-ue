@@ -67,6 +67,8 @@ namespace Valdorso.Launcher
         public string Argomenti = "";
         public string Server = "";
         public string Stato = "";
+        /// <summary>(12/11, 1.3.1) La chiave PUBBLICA del server (PEM): il launcher la mette nel gioco prima di avviarlo.</summary>
+        public string ChiaveServer = "";
         public string VersioneLauncher = "";
         public string UrlLauncher = "";
         public bool Aperto = true;
@@ -123,6 +125,7 @@ namespace Valdorso.Launcher
             Dictionary<string, object> s = Json.Oggetto(d, "server");
             m.Server = Json.Testo(s, "indirizzo", "").Trim();
             m.Stato = Json.Testo(s, "stato", "").Trim();
+            m.ChiaveServer = Json.Testo(s, "chiave", "").Trim();
             Dictionary<string, object> l = Json.Oggetto(d, "launcher");
             m.VersioneLauncher = Json.Testo(d, "launcher_versione", Json.Testo(l, "versione", ""));
             m.UrlLauncher = Json.Testo(d, "launcher_url", Json.Testo(l, "url", ""));

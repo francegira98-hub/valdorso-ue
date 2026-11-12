@@ -10,7 +10,8 @@ rem (il repository deve essere PUBBLICO, se no il launcher dei giocatori non puo
 set RILASCI=https://github.com/francegira98-hub/valdorso-ue/releases/download
 rem L'indirizzo del server per i giocatori, per esempio 93.40.12.7:7777. Vuoto = resta quello di prima
 rem (la prima volta nessuno: il launcher dice "La valle dorme").
-set SERVER=
+rem (12/11) il PC di Fra dentro Tailscale (desktop-s3mdko4): lo raggiunge solo chi ha la condivisione
+set SERVER=100.124.215.111:7777
 rem =====================================
 
 cd /d V:\Valdorso

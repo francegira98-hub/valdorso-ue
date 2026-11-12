@@ -52,3 +52,14 @@ Content/Valle/Villaggio/
 # stanno in Content/Fab/FreeAnimationLibrary/Movenze (porta_movenze.py).
 Content/FreeAnimationLibrary/
 Content/SampleAnimationPack/
+
+# (12/11) pacchetti di Fab per le armi, i dungeon e le creature: mai su GitHub (licenza e peso)
+Content/ParagonGreystone/
+Content/ParagonGrux/
+Content/ParagonAurora/
+Content/ParagonSevarog/
+Content/Megascans/
+Content/MSPresets/
+Content/StoneGolem/
+Content/Slay/
+Content/Paladin*/

@@ -43,6 +43,7 @@ import os
 import re
 import shutil
 import sys
+import urllib.parse
 import zipfile
 
 QUI = os.path.dirname(os.path.abspath(__file__))
@@ -364,6 +365,25 @@ def zip_launcher(cartella_launcher, destinazione):
                 z.write(completo, "Valdorso/" + relativo)
 
 
+HTACCESS_LAUNCHER = """# Valdorso — la cartella del launcher (scritto da prepara_aggiornamento.py; lo stesso che c'è sul sito).
+# /launcher/ apre la pagina con la cornice del sito (index.php); index.html (la vecchia pagina) resta come riserva.
+DirectoryIndex index.php index.html
+# I vecchi link al file (pagine vecchie, segnalibri) mostrano la pagina che lo dà, /scarica.php (con il codice 403).
+ErrorDocument 403 /scarica.php
+# Il launcher si scarica solo da /scarica.php, con un account abilitato: dal suo indirizzo diretto il file non si apre.
+# manifesto.json, patch.json, notizie.json, roadmap.json, cronache.json e le immagini restano aperti: li legge il launcher.
+<Files "ValdorsoLauncher.zip">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</Files>
+"""
+
+
 def prepara_sito(a, manifesto, sito_cartella):
     """La cartella da caricare su Altervista, nella cartella /launcher/ del sito."""
     adesso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -442,6 +462,10 @@ def prepara_sito(a, manifesto, sito_cartella):
     pagina = pagina.replace("/*DATI*/null", testo_dati)
     with open(os.path.join(sito_cartella, "index.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(pagina)
+
+    # (12/11/2026) il .htaccess della cartella: /launcher/ apre la pagina del sito (index.php), lo zip non si scarica diretto
+    with open(os.path.join(sito_cartella, ".htaccess"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(HTACCESS_LAUNCHER)
 
     # Altervista gratis: file piccoli
     troppo = []
@@ -610,10 +634,21 @@ def principale(argomenti=None):
             s["indirizzo"] = a.server
         if a.stato is not None:
             s["stato"] = a.stato
+    # (12/11, launcher 1.3.1) la chiave PUBBLICA del server: il launcher la mette nel gioco, cosi' il gioco si fida del
+    # server (senza, dice "Manca la chiave del server"). Mai la privata.
+    pubblica = os.path.join(PROGETTO, "Saved", "Server", "Chiavi", "server_pubblica.pem")
+    if os.path.isfile(pubblica):
+        with open(pubblica, encoding="utf-8") as f:
+            testo = f.read().strip()
+        if "BEGIN PUBLIC KEY" in testo and "PRIVATE" not in testo.upper():
+            manifesto.setdefault("server", {})["chiave"] = testo
+            print("La chiave pubblica del server e' nel manifesto (il launcher 1.3.1 la mette nel gioco).")
     if a.chiuso:
         manifesto["aperto"] = False
     manifesto["launcher_versione"] = a.launcher if a.launcher is not None else versione_launcher()
-    manifesto["launcher_url"] = a.url_launcher if a.url_launcher is not None else a.sito + "ValdorsoLauncher.zip"
+    # (12/11/2026) il launcher nuovo non si scarica più dal file diretto: il launcher apre nel browser la pagina del sito
+    # /scarica.php, che lo dà solo agli account abilitati (Key o pacchetto). Il file resta in /launcher/, bloccato da .htaccess.
+    manifesto["launcher_url"] = a.url_launcher if a.url_launcher is not None else urllib.parse.urljoin(a.sito, "/scarica.php")
     manifesto["launcher"] = {"versione": manifesto["launcher_versione"], "url": manifesto["launcher_url"]}
     # il manifesto della versione resta aggiornato (server compreso) per la prossima volta
     scrivi_json(os.path.join(a.uscita, "Aggiornamento", manifesto["versione"], "manifesto.json"), manifesto)
@@ -709,7 +744,7 @@ footer{max-width:1100px;margin:60px auto 0;padding:28px 24px 40px;border-top:1px
 <header class="cima"><div class="dentro">
  <h1>VALDORSO</h1>
  <div class="motto">Ogni gesto lascia un segno. Scegli chi diventare.</div>
- <a class="scarica" href="ValdorsoLauncher.zip" id="scarica">Scarica il launcher<small id="scarica-info">per Windows 10 e 11</small></a>
+ <a class="scarica" href="/scarica.php" id="scarica">Scarica il launcher<small id="scarica-info">per Windows 10 e 11</small></a>
  <p class="nota">Scompatta lo zip dove vuoi e apri <b>ValdorsoLauncher.exe</b>: il gioco lo scarica e lo aggiorna lui, e ti dice com'è la valle prima di entrare. Se Windows avvisa che il programma non è firmato: «Ulteriori informazioni», poi «Esegui comunque».</p>
 </div></header>
 <nav><div class="dentro">

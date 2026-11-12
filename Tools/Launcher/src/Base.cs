@@ -19,7 +19,7 @@ namespace Valdorso.Launcher
     /// <summary>La versione del launcher (si cambia a ogni versione nuova del launcher).</summary>
     public static class Info
     {
-        public const string Versione = "1.3.0";
+        public const string Versione = "1.3.1";
         public const string Nome = "Valdorso";
     }
 
