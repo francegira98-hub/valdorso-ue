@@ -1,5 +1,5 @@
 # Valdorso - Il gioco in scatole: il .pak a pezzi (v0.2.1 "Dopo la prova"). Scritto da Claude il 12/11/2026.
-# Deciso da Fra il 12/11: il gioco non è più un solo scatolone (cambiava un file e si riscaricavano 1,9 GB), ma cinque
+# Deciso da Fra il 12/11: il gioco non è più un solo scatolone (cambiava un file e si riscaricavano 1,9 GB), ma sei
 # scatole divise per quanto spesso cambiano. Il launcher 1.3 scarica solo i file cambiati (prepara_aggiornamento.py):
 # con le scatole separate, una patch normale non deve più riscaricare i pacchetti di Fab o la musica.
 #
@@ -7,7 +7,8 @@
 #   scatola 1  i pacchetti comprati o scaricati (Fab, Kite Demo, animazioni, MetaHuman...): non cambiano quasi mai
 #   scatola 2  la valle: la mappa L_Valle con il terreno e tutto quello che ci sta sopra
 #   scatola 3  i suoni e la musica
-#   scatola 4  le nostre cose: i pezzi del villaggio, l'interfaccia, il menu, i volti
+#   scatola 4  le nostre cose: i pezzi del villaggio, l'interfaccia, i volti
+#   scatola 5  (12/11, dopo il primo pacchetto) il menu: 300 MB di texture della scena dell'Orso, che non cambiano mai
 #
 # Come: in ogni cartella una "etichetta" (PrimaryAssetLabel) che dice "le cose di questa cartella vanno nella scatola N"
 # (Etichetta assets nella mia cartella). L'etichetta non fa cucinare niente in più: finisce nel gioco solo quello che il
@@ -39,7 +40,7 @@ SCATOLE = [
     ("/Game/Valle/Suoni", 3, 20, "suoni"),
     ("/Game/Valle", 4, 10, "nostre cose"),
     ("/Game/UI", 4, 10, "nostre cose"),
-    ("/Game/Menu", 4, 10, "nostre cose"),
+    ("/Game/Menu", 5, 10, "il menu"),
     ("/Game/Volto", 4, 10, "nostre cose"),
     ("/Game/Peli", 4, 10, "nostre cose"),
     ("/Game/Legami", 4, 10, "nostre cose"),

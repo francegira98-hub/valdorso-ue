@@ -509,6 +509,14 @@ def principale(argomenti=None):
         if not os.path.isfile(os.path.join(cartella, a.eseguibile)):
             print("ERRORE: in %s non c'è %s. È la cartella giusta (quella del gioco pacchettizzato)?" % (cartella, a.eseguibile))
             return 1
+        # (12/11, v0.2.1) il gioco in scatole: se nella cartella ci sono anche i file del pacchetto di prima (lo scatolone
+        # Valdorso-Windows), finirebbero nel gioco due volte. Pacchettizza Valdorso.cmd ora li toglie da solo.
+        paks = os.path.join(cartella, "Valdorso", "Content", "Paks")
+        if os.path.isdir(paks):
+            nomi = {n.lower() for n in os.listdir(paks)}
+            if "pakchunk0-windows.ucas" in nomi and "valdorso-windows.ucas" in nomi:
+                print("ERRORE: in %s ci sono sia le scatole (pakchunk...) sia il vecchio Valdorso-Windows: rifare il pacchetto" % paks)
+                return 1
         versione = leggi_h("Numero") if a.versione.lower() == "auto" else a.versione
         if not re.fullmatch(r"\d+(\.\d+)*", versione or ""):
             print("ERRORE: la versione deve essere fatta di numeri e punti (per esempio 0.1.3)")
