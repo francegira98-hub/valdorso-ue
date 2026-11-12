@@ -155,6 +155,12 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_volti.py")
     valdorso.add_menu_entry("Villaggio", voce)
 
+    # (12/11, v0.2.1) il .pak a pezzi: le etichette che dividono il gioco in cinque scatole (crea_scatole.py)
+    voce = unreal.ToolMenuEntry(name="Scatole", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Pacchetto: prepara le scatole (il .pak a pezzi)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_scatole.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
     # (07/11 sera) i piedi in piazza, il materiale delle rocce, Nanite sui trasparenti
     voce = unreal.ToolMenuEntry(name="SistemaValle", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Valle: sistema (piedi, materiali, Nanite)")

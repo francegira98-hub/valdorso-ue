@@ -23,6 +23,8 @@ if "%CODICE%"=="0" (
   echo FATTO %date% %time% codice 0>> "%ESITO%"
   title Valdorso - pacchetto FATTO
   echo  PACCHETTO FATTO: %USCITA%\Windows
+  rem (12/11, v0.2.1) le scatole del gioco e quanto pesano, per Claude
+  dir /-c "%USCITA%\Windows\Valdorso\Content\Paks" >> "%ESITO%"
 ) else (
   echo ERRORE %date% %time% codice %CODICE%>> "%ESITO%"
   title Valdorso - pacchetto con ERRORE

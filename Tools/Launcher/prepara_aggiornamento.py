@@ -253,6 +253,9 @@ def fai_patch(cartella, cartella_uscita, versione, elenco, vecchio, grandezza):
     flusso.close()
     parti = flusso.parti()
     print("  patch dalla %s: %d file cambiati (%s), %d da togliere, %d parti" % (da, len(cambiati), misura(grandi), len(togli), len(parti)))
+    # (12/11, v0.2.1) i file cambiati piu' grandi: con il gioco in scatole si vede quali scatole sono cambiate
+    for f in sorted(cambiati, key=lambda x: -x["b"])[:8]:
+        print("     %s  %s" % (misura(f["b"]).rjust(9), f["p"]))
     return da, parti, togli, grandi
 
 
