@@ -781,6 +781,16 @@ def principale():
         scrivi("salvato (livello e pezzi)")
     except Exception as e:  # noqa: BLE001
         avviso("salvataggio non riuscito (%s): salvare a mano con Ctrl+Maiusc+S" % e)
+    # (13/11) le cose che si usano restano sempre caricate (nuovi/sempre_caricati.py): così il server e il gioco
+    # pacchettizzato le chiamano con lo stesso nome (alla prova del 12/11 la E non funzionava per questo)
+    _sc = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()),
+                       "Python", "nuovi", "sempre_caricati.py")
+    try:
+        with open(_sc, "r", encoding="utf-8") as f:
+            exec(compile(f.read(), _sc, "exec"), {"__name__": "__main__"})
+        scrivi("sempre caricati: fatto (Saved/Claude/sempre_caricati.txt)")
+    except Exception as e:  # noqa: BLE001
+        avviso("sempre caricati non fatto (%s): lanciare Valdorso -> Strumenti -> Rete" % e)
     scrivi("FATTO. Il villaggio è intorno alla piazza; la palude a sud del lago; il posto di guardia al passo.")
 
 

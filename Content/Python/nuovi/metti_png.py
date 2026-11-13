@@ -24,6 +24,7 @@
 # (etichetta "ValdorsoPNG"); crea_villaggio.py non li tocca. Alla fine salva il livello.
 
 import math
+import os
 
 import unreal
 
@@ -279,6 +280,16 @@ def principale():
         scrivi("livello salvato")
     except Exception as e:  # noqa: BLE001
         avviso("salvataggio non riuscito (%s): Ctrl+Maiusc+S" % e)
+    # (13/11) le cose che si usano restano sempre caricate (nuovi/sempre_caricati.py): così il server e il gioco
+    # pacchettizzato le chiamano con lo stesso nome (alla prova del 12/11 la E non funzionava per questo)
+    _sc = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()),
+                       "Python", "nuovi", "sempre_caricati.py")
+    try:
+        with open(_sc, "r", encoding="utf-8") as f:
+            exec(compile(f.read(), _sc, "exec"), {"__name__": "__main__"})
+        scrivi("sempre caricati: fatto (Saved/Claude/sempre_caricati.txt)")
+    except Exception as e:  # noqa: BLE001
+        avviso("sempre caricati non fatto (%s): lanciare Valdorso -> Strumenti -> Rete" % e)
     scrivi("FATTO. In Play: Gaspare sulla strada per le rovine, dove comincia il bosco; Tebaldo e Fulvio davanti alla "
            "porta del passo; Nonna Edda al fuoco della palude; Bruno al bancone della locanda; Padre Anselmo davanti "
            "all'altare del Tempio del Cuore. Avvicinati e premi E.")

@@ -179,6 +179,13 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "sistema_valle.py")
     valdorso.add_menu_entry("Villaggio", voce)
 
+    # (13/11) dopo la grande prova: le cose che si usano (porte, PNG, pozzo, pietre) sempre caricate, con lo stesso nome
+    # nel server e nel gioco (nuovi/sempre_caricati.py; lo fanno da sole anche crea_villaggio e metti_png)
+    voce = unreal.ToolMenuEntry(name="SempreCaricati", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Rete: le cose che si usano sempre caricate (dopo ogni generatore)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "sempre_caricati.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
     menu_tool.refresh_all_widgets()
     unreal.log("Valdorso: menu pronto")
 

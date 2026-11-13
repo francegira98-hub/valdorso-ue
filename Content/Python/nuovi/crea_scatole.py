@@ -32,6 +32,7 @@ SCATOLE = [
     ("/Game/FreeAnimationLibrary", 1, 10, "pacchetti"),
     ("/Game/SampleAnimationPack", 1, 10, "pacchetti"),
     ("/Game/MetaHumans", 1, 10, "pacchetti"),
+    ("/Game/Unpacked", 1, 10, "pacchetti"),   # (13/11) le dieci teste MetaHuman del Registro
     ("/Game/Mixamo", 1, 10, "pacchetti"),
     ("/Game/LevelPrototyping", 1, 10, "pacchetti"),
     ("/Game/Characters", 1, 10, "pacchetti"),

@@ -32,7 +32,7 @@ void SValdorsoPausa::Construct(const FArguments& InArgs)
 	const TAttribute<bool> Liberi = TAttribute<bool>::CreateLambda([this]() { return !bInUscita; });
 	auto Riga = [](const TSharedRef<SWidget>& Pulsante)
 	{
-		return SNew(SBox).WidthOverride(340.f)[ Pulsante ];
+		return SNew(SBox).WidthOverride(400.f)[ Pulsante ];   // (13/11) 340 tagliava "Torna ai personaggi"
 	};
 
 	TSharedRef<SVerticalBox> Pulsanti = SNew(SVerticalBox);
@@ -81,7 +81,7 @@ void SValdorsoPausa::Construct(const FArguments& InArgs)
 			.BorderImage(&Stile->SfondoPannello)
 			.Padding(FMargin(50.f, 36.f))
 			[
-				SNew(SBox).WidthOverride(440.f)
+				SNew(SBox).WidthOverride(500.f)
 				[
 					SNew(SVerticalBox)
 

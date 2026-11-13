@@ -2384,8 +2384,8 @@ void AValdorsoPlayerController::ClientWasKicked_Implementation(const FText& Kick
 
 void AValdorsoPlayerController::MostraSulloSchermo(const FString& Testo, const FColor& Colore) const
 {
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, Colore, Testo);
-	}
+	// (13/11) Prima era una scritta di prova di Unreal (in alto a sinistra, sparisce nel gioco pacchettizzato): ora è
+	// l'avviso del gioco, come tutti gli altri. Il colore non serve più.
+	(void)Colore;
+	const_cast<AValdorsoPlayerController*>(this)->ClientAvviso_Implementation(FText::FromString(Testo), 4.f, 0.f);
 }

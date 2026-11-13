@@ -15,6 +15,10 @@
 #include "ValdorsoGrottaNord.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Engine/NetDriver.h"
+#include "GenericPlatform/GenericPlatformMisc.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 AValdorsoGameMode::AValdorsoGameMode()
 {
@@ -25,6 +29,25 @@ AValdorsoGameMode::AValdorsoGameMode()
 void AValdorsoGameMode::StartPlay()
 {
 	Super::StartPlay();
+	// (13/11) Due server sullo stesso PC: il secondo trova la porta occupata e Unreal lo mette sulla successiva senza
+	// dirlo (alla prova del 12/11 la password nuova di Fra era finita nel server sbagliato). Ora il server si ferma.
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		int32 PortaChiesta = 0;
+		UNetDriver* Rete = GetWorld() ? GetWorld()->GetNetDriver() : nullptr;
+		if (Rete && FParse::Value(FCommandLine::Get(), TEXT("-port="), PortaChiesta) && PortaChiesta > 0)
+		{
+			const FString Indirizzo = Rete->LowLevelGetNetworkNumber();
+			int32 Due = INDEX_NONE;
+			const int32 PortaVera = Indirizzo.FindLastChar(TEXT(':'), Due) ? FCString::Atoi(*Indirizzo.Mid(Due + 1)) : 0;
+			if (PortaVera > 0 && PortaVera != PortaChiesta)
+			{
+				UE_LOG(LogTemp, Error, TEXT("[Valdorso] La porta %d e' gia' occupata: c'e' gia' un server Valdorso acceso su questo PC. Chiudi quello vecchio e riavvia. Questo si ferma."), PortaChiesta);
+				FPlatformMisc::RequestExit(false);
+				return;
+			}
+		}
+	}
 	// Il giorno e la notte: uno solo per mondo, deciso dal server e mandato a tutti.
 	UWorld* Mondo = GetWorld();
 	if (Mondo && !TActorIterator<AValdorsoCielo>(Mondo))

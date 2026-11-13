@@ -58,6 +58,15 @@ void UValdorsoGameInstance::Init()
 {
 	Super::Init();
 
+#if !WITH_EDITOR
+	// (13/11) Nel gioco pacchettizzato niente scritte di prova di Unreal sullo schermo (alla prova coprivano l'angolo
+	// in alto a sinistra). Nell'editor restano, servono per lavorare.
+	if (GEngine)
+	{
+		GEngine->bEnableOnScreenDebugMessages = false;
+	}
+#endif
+
 	if (GEngine)
 	{
 		ManigliaErroreDiRete = GEngine->OnNetworkFailure().AddUObject(this, &UValdorsoGameInstance::SuErroreDiRete);
