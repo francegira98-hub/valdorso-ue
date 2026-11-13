@@ -122,8 +122,18 @@ private:
 	UFUNCTION()
 	void OnRep_Verso();
 
+	/** (13/11) Chi prova ad aprire una porta chiusa a chiave: tutti i vicini sentono la maniglia che scatta. */
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastAChiave();
+
+	/** (13/11) Un suono della porta (in /Game/Valle/Suoni), nel punto della porta; niente sul server senza finestra. */
+	void SuonaPorta(const TCHAR* Nome, float Volume) const;
+
 	/** L'angolo di adesso (si muove piano verso quello voluto). */
 	float AngoloAttuale = 0.f;
+
+	/** (13/11) Quando la porta è nata (orologio del mondo): appena entrati non si sentono le porte già aperte. */
+	double NataAlle = 0.0;
 };
 
 /**

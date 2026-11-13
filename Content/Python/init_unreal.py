@@ -186,6 +186,18 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "sempre_caricati.py")
     valdorso.add_menu_entry("Strumenti", voce)
 
+    # (13/11) dopo la prova della 0.2.1: i materiali che nel gioco pacchettizzato uscivano grigi sugli oggetti ripetuti
+    # (nuovi/sistema_materiali.py) e i suoni rifatti da Claude (nuovi/aggiorna_suoni.py: uccelli più calmi, le porte)
+    voce = unreal.ToolMenuEntry(name="SistemaMateriali", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Pacchetto: sistema i materiali (oggetti ripetuti)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "sistema_materiali.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
+    voce = unreal.ToolMenuEntry(name="AggiornaSuoni", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Suoni: reimporta i suoni rifatti da Claude")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "aggiorna_suoni.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
     menu_tool.refresh_all_widgets()
     unreal.log("Valdorso: menu pronto")
 

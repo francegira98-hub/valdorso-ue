@@ -3,6 +3,7 @@
 #   2D, stereo, intorno al colono:  S_Vento, S_Uccelli (giorno), S_Grilli (notte)
 #   3D, mono, nel punto giusto:     S_Fiume, S_Lago (la riva), S_Rane, S_Cascata, S_Fucina, S_Locanda, S_Mulino
 #   un colpo solo:                  S_CampanaTempio (la campana del Tempio del Cuore)
+#   (13/11) un colpo solo, 3D:      S_Porta_Chiave (chiusa a chiave), S_Porta_Apri, S_Porta_Chiudi (AValdorsoPorta)
 #   (06/11, sera) 3D, nelle grotte:  S_Grotta (gocce e eco nella grotta est), S_Martelli (sotto la frana, di notte)
 # Li importa e li mette nella valle Content/Python/nuovi/crea_suoni_valle.py; la logica (giorno, notte, pioggia, campane che
 # suonano le ore) è in ValdorsoAmbiente.h/.cpp e ValdorsoCampane.h/.cpp. Se un giorno ci sono suoni veri migliori (Fab),
@@ -179,26 +180,111 @@ def canto(rng, specie):
     return np.concatenate(pezzi)
 
 
-def uccelli(secondi=40.0, seme=2):
+def uccelli(secondi=96.0, seme=2):
+    """(13/11, dopo la prova: "troppo spesso, serve qualcosa di più calmo") Prima erano 9 uccelli che cantavano ogni
+    2-7 secondi in un giro di 40 secondi: un coro continuo. Ora sono 4, quasi tutti lontani, che cantano ogni 12-35
+    secondi in un giro lungo (96 s, così non si sente che si ripete); in mezzo restano lunghi momenti di sole foglie.
+    Il merlo (morbido) canta più spesso, il pettirosso (acuto) quasi mai."""
     rng = np.random.default_rng(seme)
     n = int(secondi * SR)
     x = np.zeros((n, 2))
-    # ogni uccello sta in un posto (pan e distanza) e canta con un suo ritmo
-    for u in range(9):
-        specie = u % 4
-        pan = rng.uniform(-0.9, 0.9)
-        lontano = rng.uniform(0.25, 1.0)
-        t = rng.uniform(0, 4)
+    # (specie, quanto è lontano 0..1, pausa minima, pausa massima)
+    uccelli_valle = [(0, 0.55, 12.0, 26.0), (2, 0.35, 16.0, 32.0), (1, 0.30, 20.0, 35.0), (0, 0.25, 14.0, 30.0)]
+    for specie, lontano, pausa_min, pausa_max in uccelli_valle:
+        pan = rng.uniform(-0.85, 0.85)
+        t = rng.uniform(0, pausa_max)
         while t < secondi:
             c = canto(rng, specie)
-            if lontano < 0.5:
-                c = passa_basso(c, 4500)
-            aggiungi(x, c * lontano * rng.uniform(0.6, 1.0), int(t * SR), pan)
-            t += len(c) / SR + rng.uniform(2.0, 7.0)
-    x = eco(x, 0.6, 0.35, rng)
-    # un filo di fruscio di foglie sotto
-    fondo = np.stack([banda(rosa(n, rng), 2000, 8000) for _ in range(2)], axis=1) * 0.012
+            # lontano = via gli acuti (l'aria li mangia)
+            c = passa_basso(c, 3200 if lontano < 0.4 else 4500)
+            aggiungi(x, c * lontano * rng.uniform(0.7, 1.0), int(t * SR), pan)
+            t += len(c) / SR + rng.uniform(pausa_min, pausa_max)
+    x = eco(x, 0.9, 0.45, rng)
+    # le foglie mosse dall'aria, un po' più presenti di prima (il fondo calmo che resta tra un canto e l'altro)
+    fondo = np.stack([banda(rosa(n, rng), 1500, 6000) * lento(n, rng, 6.0, 0.5) for _ in range(2)], axis=1) * 0.02
     return x + fondo
+
+
+# ------------------------------------------------------------------------------------------------ le porte (13/11)
+
+def risonanza(rng, frequenze, durata, smorzo):
+    """Un pezzo di metallo o di legno che suona: alcune frequenze che si spengono (smorzo = secondi per spegnersi)."""
+    n = int(durata * SR)
+    t = np.arange(n) / SR
+    x = np.zeros(n)
+    for f in frequenze:
+        f = f * rng.uniform(0.97, 1.03)
+        x += np.sin(2 * np.pi * f * t + rng.uniform(0, 6.28)) * np.exp(-t / (smorzo * rng.uniform(0.7, 1.3)))
+    return x / len(frequenze)
+
+
+def scatto(rng, forza=1.0):
+    """Lo scatto di un saliscendi di ferro: un colpetto secco e il ferro che vibra un attimo."""
+    n = int(0.12 * SR)
+    t = np.arange(n) / SR
+    colpo = banda(rng.standard_normal(n), 1800, 7000) * np.exp(-t / 0.004)
+    ferro = risonanza(rng, [1850, 2930, 4310, 6020], 0.12, 0.025)
+    return (colpo * 0.8 + ferro * 0.6) * forza
+
+
+def tonfo(rng, forza=1.0):
+    """L'anta di legno che batte sullo stipite: un colpo sordo e basso."""
+    n = int(0.5 * SR)
+    t = np.arange(n) / SR
+    legno = risonanza(rng, [92, 141, 233, 410], 0.5, 0.07)
+    botta = passa_basso(rng.standard_normal(n), 900) * np.exp(-t / 0.012)
+    return (legno * 1.2 + botta * 0.6) * forza
+
+
+def cigolio(rng, durata, f0, f1, forza=1.0):
+    """I cardini che cigolano: tanti piccoli strappi (attrito che si attacca e si stacca), sempre un po' irregolari,
+    che il legno dell'anta fa risuonare."""
+    n = int(durata * SR)
+    x = np.zeros(n)
+    t = 0.0
+    while t < durata:
+        f = f0 + (f1 - f0) * (t / durata)
+        f *= rng.uniform(0.9, 1.1)
+        i = int(t * SR)
+        if i < n:
+            x[i] += rng.uniform(0.6, 1.0)
+        t += 1.0 / f
+    x = banda(x, 350, 3200, 2)
+    # il legno: tre risonanze larghe
+    x = banda(x, 500, 1600, 1) * 0.7 + banda(x, 1800, 2600, 1) * 0.3
+    inv = np.sin(np.pi * np.arange(n) / n) ** 0.7
+    return x * inv * forza
+
+
+def porta_chiave(seme=21):
+    """Chi prova una porta chiusa a chiave: il saliscendi si alza, sbatte due volte contro la serratura, ricade."""
+    rng = np.random.default_rng(seme)
+    x = np.zeros(int(1.4 * SR))     # (la coda dell'eco gira in tondo: un po' di silenzio in fondo)
+    aggiungi(x, scatto(rng, 0.7), int(0.02 * SR))
+    for k, quando in enumerate((0.22, 0.38, 0.52)):
+        aggiungi(x, scatto(rng, 1.0 - 0.15 * k), int(quando * SR))
+        aggiungi(x, tonfo(rng, 0.18), int((quando + 0.005) * SR))
+    aggiungi(x, scatto(rng, 0.6), int(0.78 * SR))
+    return eco(x, 0.25, 0.15, rng)
+
+
+def porta_apri(seme=22):
+    """Una porta di legno che si apre: il saliscendi e poi i cardini che cigolano salendo."""
+    rng = np.random.default_rng(seme)
+    x = np.zeros(int(1.4 * SR))
+    aggiungi(x, scatto(rng, 0.8), int(0.02 * SR))
+    aggiungi(x, cigolio(rng, 0.9, 210, 340, 0.9), int(0.15 * SR))
+    return eco(x, 0.3, 0.18, rng)
+
+
+def porta_chiudi(seme=23):
+    """Una porta che si chiude: un cigolio corto, l'anta che batte e il saliscendi che ricade."""
+    rng = np.random.default_rng(seme)
+    x = np.zeros(int(1.3 * SR))
+    aggiungi(x, cigolio(rng, 0.45, 300, 220, 0.6), int(0.02 * SR))
+    aggiungi(x, tonfo(rng, 1.0), int(0.5 * SR))
+    aggiungi(x, scatto(rng, 0.7), int(0.56 * SR))
+    return eco(x, 0.35, 0.2, rng)
 
 
 # ------------------------------------------------------------------------------------------------ i grilli
@@ -503,11 +589,19 @@ def ruggito(secondi=7.0, seme=14):
 
 
 if __name__ == "__main__":
-    uscita = sys.argv[1] if len(sys.argv) > 1 else "."
+    cartelle = [a for a in sys.argv[1:] if not a.startswith("--")]
+    uscita = cartelle[0] if cartelle else "."
     os.makedirs(uscita, exist_ok=True)
     print("suoni in", uscita)
+    # (13/11) le porte (un colpo solo, 3D) e gli uccelli più calmi; con "--solo-nuovi" fa solo questi quattro
+    scrivi(uscita, "S_Porta_Chiave", porta_chiave(), 0.8)
+    scrivi(uscita, "S_Porta_Apri", porta_apri(), 0.7)
+    scrivi(uscita, "S_Porta_Chiudi", porta_chiudi(), 0.8)
+    if "--solo-nuovi" in sys.argv:
+        scrivi(uscita, "S_Uccelli", uccelli(), 0.6)
+        sys.exit(0)
     scrivi(uscita, "S_Vento", vento(), 0.7)
-    scrivi(uscita, "S_Uccelli", uccelli(), 0.7)
+    scrivi(uscita, "S_Uccelli", uccelli(), 0.6)
     scrivi(uscita, "S_Grilli", grilli(), 0.6)
     scrivi(uscita, "S_Rane", rane(), 0.8)
     scrivi(uscita, "S_Fiume", fiume(), 0.7)

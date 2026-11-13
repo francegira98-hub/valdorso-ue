@@ -235,6 +235,21 @@ namespace
 		}),
 		ECVF_Default);
 
+	// (13/11) Valdorso.Capelli.Diagnosi: scrive nel registro dove stanno i capelli di tutti i coloni di questo PC.
+	FAutoConsoleCommandWithWorldAndArgs ComandoDiagnosiCapelli(
+		TEXT("Valdorso.Capelli.Diagnosi"),
+		TEXT("Scrive nel registro (Saved/Logs) dove stanno i capelli rispetto al volto, per ogni colono."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>&, UWorld* Mondo)
+		{
+			for (TObjectIterator<UValdorsoAspettoComponent> Componente; Componente; ++Componente)
+			{
+				if (Componente->GetWorld() == Mondo)
+				{
+					Componente->DiagnosiCapelli();
+				}
+			}
+		}));
+
 	// Valdorso.Occhi.Prova <tinta1> <luce1> <tinta2> <luce2> <saturazione>: prova un colore sugli occhi di tutti i coloni di questo PC.
 	FAutoConsoleCommandWithWorldAndArgs ComandoProvaOcchi(
 		TEXT("Valdorso.Occhi.Prova"),
@@ -938,6 +953,49 @@ void UValdorsoAspettoComponent::ApplicaPeli()
 		ColoreCapelliMesso = INDEX_NONE;
 	}
 	ApplicaPosizioneCapelli();
+
+	// (13/11) la diagnosi dei capelli, una volta sola per i primi otto coloni di questa partita, dopo qualche secondo
+	// (i peli si mettono a posto sul volto al primo disegno)
+	static int32 DiagnosiFatte = 0;
+	UWorld* Mondo = GetWorld();
+	if (bCambiato && Mondo && DiagnosiFatte < 8 && GetNetMode() != NM_DedicatedServer)
+	{
+		++DiagnosiFatte;
+		FTimerHandle Attesa;
+		Mondo->GetTimerManager().SetTimer(Attesa, FTimerDelegate::CreateWeakLambda(this, [this]() { DiagnosiCapelli(); }), 6.f, false);
+	}
+}
+
+void UValdorsoAspettoComponent::DiagnosiCapelli() const
+{
+	const USkeletalMeshComponent* Faccia = Volto.Get();
+	if (!CorpoMetaHuman || !Faccia)
+	{
+		return;
+	}
+	const FBoxSphereBounds Testa = Faccia->Bounds;
+	const float CimaTesta = Testa.Origin.Z + Testa.BoxExtent.Z;
+	const FString Chi = GetOwner() ? GetOwner()->GetName() : FString(TEXT("?"));
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Capelli (diagnosi) di %s, testa %s: volto %s, LOD %d, cima del volto a z %.1f"),
+		*Chi, *NomeTesta, Faccia->GetSkeletalMeshAsset() ? *Faccia->GetSkeletalMeshAsset()->GetName() : TEXT("-"),
+		Faccia->GetPredictedLODLevel(), CimaTesta);
+	TInlineComponentArray<UGroomComponent*> Peli(CorpoMetaHuman);
+	for (const UGroomComponent* Pelo : Peli)
+	{
+		if (!Pelo || !Pelo->IsVisible())
+		{
+			continue;
+		}
+		const FBoxSphereBounds Dove = Pelo->Bounds;
+		const USceneComponent* Padre = Pelo->GetAttachParent();
+		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Capelli (diagnosi):   %s: pelo %s, legame %s, attaccato a %s (osso %s), centro z %.1f, cima z %.1f (%.1f cm dalla cima del volto), posizione relativa %s"),
+			*Pelo->GetName(),
+			Pelo->GroomAsset ? *Pelo->GroomAsset->GetName() : TEXT("-"),
+			Pelo->BindingAsset ? *Pelo->BindingAsset->GetName() : TEXT("NESSUNO"),
+			Padre ? *Padre->GetName() : TEXT("-"), *Pelo->GetAttachSocketName().ToString(),
+			Dove.Origin.Z, Dove.Origin.Z + Dove.BoxExtent.Z, Dove.Origin.Z + Dove.BoxExtent.Z - CimaTesta,
+			*Pelo->GetRelativeLocation().ToString());
+	}
 }
 
 void UValdorsoAspettoComponent::ApplicaPosizioneCapelli()

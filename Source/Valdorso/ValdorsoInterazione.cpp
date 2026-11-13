@@ -9,6 +9,8 @@
 #include "ValdorsoScala.h"
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoGilda.h"
+#include "ValdorsoCombattimento.h"
+#include "Sound/SoundBase.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
@@ -166,6 +168,27 @@ void AValdorsoPorta::BeginPlay()
 	}
 	AngoloAttuale = Verso * AngoloApertura;
 	Cerniera->SetRelativeRotation(FRotator(0.f, AngoloAttuale, 0.f));
+	NataAlle = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+}
+
+void AValdorsoPorta::SuonaPorta(const TCHAR* Nome, float Volume) const
+{
+	UWorld* Mondo = GetWorld();
+	if (!Mondo || GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	const FString Percorso = FString::Printf(TEXT("/Game/Valle/Suoni/%s.%s"), Nome, Nome);
+	USoundBase* Suono = LoadObject<USoundBase>(nullptr, *Percorso, nullptr, LOAD_NoWarn | LOAD_Quiet);
+	// le imposte sono più piccole e leggere: un suono più acuto e più piano
+	const bool bImposta = IsA<AValdorsoImposta>();
+	ValdorsoCombattimento::Suona(Mondo, Suono, PuntoInterazione(), 1500.f, bImposta ? Volume * 0.6f : Volume,
+		(bImposta ? 1.35f : 1.f) * FMath::FRandRange(0.94f, 1.06f));
+}
+
+void AValdorsoPorta::MulticastAChiave_Implementation()
+{
+	SuonaPorta(TEXT("S_Porta_Chiave"), 0.8f);
 }
 
 void AValdorsoPorta::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -203,6 +226,7 @@ void AValdorsoPorta::Interagisci(APawn* Chi)
 	if (Verso == 0 && bChiusaAChiave)
 	{
 		ValdorsoRegistroEventi::Annota(TEXT("PortaChiusa"), Chi, this, GetActorLocation(), TEXT("ha provato ad aprire"));
+		MulticastAChiave();
 		return;
 	}
 	if (Verso != 0)
@@ -230,6 +254,13 @@ void AValdorsoPorta::OnRep_Verso()
 {
 	// Si muove nel Tick finché arriva all'angolo voluto.
 	SetActorTickEnabled(true);
+	// (13/11) il cigolio dei cardini (o il colpo dell'anta che si chiude). Non quando la porta arriva già aperta (entrando
+	// nella valle o avvicinandosi: la prima replica arriva prima del BeginPlay), né nel primo secondo.
+	const UWorld* Mondo = GetWorld();
+	if (Mondo && HasActorBegunPlay() && Mondo->GetTimeSeconds() - NataAlle > 1.0)
+	{
+		SuonaPorta(Verso != 0 ? TEXT("S_Porta_Apri") : TEXT("S_Porta_Chiudi"), 0.7f);
+	}
 }
 
 void AValdorsoPorta::Tick(float DeltaSeconds)

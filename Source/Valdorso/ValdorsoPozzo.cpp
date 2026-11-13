@@ -7,6 +7,11 @@
 #include "ValdorsoZaino.h"
 #include "ValdorsoZainoDati.h"
 #include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
+#include "UObject/ConstructorHelpers.h"
 #include "GameFramework/Pawn.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoPozzo"
@@ -23,6 +28,46 @@ AValdorsoPozzo::AValdorsoPozzo()
 	Presa->SetCollisionResponseToAllChannels(ECR_Overlap);
 	Presa->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
 	Presa->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+
+	// (13/11) l'acqua dentro: il cilindro di serie (100 cm) schiacciato in un disco di 138 cm, appena meno della canna
+	// del pozzo (raggio 70 cm). L'attore sta 60 cm sopra la base del pozzo e il bordo è a 90 cm: l'acqua 130 cm più giù.
+	Specchio = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Specchio"));
+	Specchio->SetupAttachment(Presa);
+	Specchio->SetMobility(EComponentMobility::Movable);
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Disco(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	if (Disco.Succeeded())
+	{
+		Specchio->SetStaticMesh(Disco.Object);
+	}
+	Specchio->SetRelativeLocation(FVector(0.f, 0.f, -100.f));
+	Specchio->SetRelativeScale3D(FVector(1.38f, 1.38f, 0.01f));
+	Specchio->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Specchio->SetCastShadow(false);
+	Specchio->SetCanEverAffectNavigation(false);
+}
+
+void AValdorsoPozzo::BeginPlay()
+{
+	Super::BeginPlay();
+	if (!Specchio || GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	// il materiale dell'acqua del villaggio (lo stesso dei ruscelli); se manca, un blu scuro che luccica un po'
+	if (UMaterialInterface* Acqua = LoadObject<UMaterialInterface>(nullptr,
+		TEXT("/Game/Valle/Villaggio/Materiali/MI_Villaggio_Acqua.MI_Villaggio_Acqua"), nullptr, LOAD_NoWarn | LOAD_Quiet))
+	{
+		Specchio->SetMaterial(0, Acqua);
+	}
+	else if (UMaterialInterface* Semplice = LoadObject<UMaterialInterface>(nullptr,
+		TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"), nullptr, LOAD_NoWarn | LOAD_Quiet))
+	{
+		if (UMaterialInstanceDynamic* Blu = UMaterialInstanceDynamic::Create(Semplice, this))
+		{
+			Blu->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.02f, 0.06f, 0.08f));
+			Specchio->SetMaterial(0, Blu);
+		}
+	}
 }
 
 FText AValdorsoPozzo::TestoInterazione(const APawn* Chi) const

@@ -200,7 +200,9 @@ void UValdorsoSedutaComponent::Siedi(AValdorsoPanca* Panca, int32 Posto)
 	{
 		return;
 	}
-	const FTransform Seduto = Panca->TrasformaSeduto(Posto, Colono);
+	// (13/11) La panca non ha schienale: chi arriva da dietro si siede girato dall'altra parte (prima passava attraverso la seduta).
+	const bool bDietro = Panca->DaDietro(Colono);
+	const FTransform Seduto = Panca->TrasformaSeduto(Posto, Colono, bDietro);
 
 	// L'animazione dalla parte da cui arriva: l'angolo tra "davanti al posto" e "dove sta il colono".
 	const FVector DalPosto = Seduto.InverseTransformVectorNoScale(Colono->GetActorLocation() - Seduto.GetLocation());
@@ -233,6 +235,7 @@ void UValdorsoSedutaComponent::Siedi(AValdorsoPanca* Panca, int32 Posto)
 	Panca->Occupanti[Posto] = Colono;
 	Stato.Panca = Panca;
 	Stato.Posto = static_cast<uint8>(Posto);
+	Stato.bDietro = bDietro;
 	Stato.Entrata = static_cast<uint8>(Indice);
 	Stato.Correzione = Correzione;
 	Stato.bFermo = bFermo;
@@ -450,7 +453,8 @@ void UValdorsoSedutaComponent::SeguiAnimazione()
 		// Prova "fermo": alzandosi la capsula è rimasta sul posto; la si porta 60 cm davanti, fuori dalla panca.
 		if (Stato.bFermo && Stato.Fase == 3)
 		{
-			const FVector Davanti = Stato.Panca ? Stato.Panca->GetActorForwardVector() : Colono->GetActorForwardVector();
+			// (13/11) davanti al colono, non alla panca: ci si può sedere dai due lati
+			const FVector Davanti = Colono->GetActorForwardVector();
 			Colono->SetActorLocation(Colono->GetActorLocation() + Davanti * 60.f, false, nullptr, ETeleportType::TeleportPhysics);
 		}
 		CambiaFase(Stato.Fase == 1 ? 2 : 0);
@@ -524,7 +528,7 @@ void UValdorsoSedutaComponent::Diagnosi(const TCHAR* Quando) const
 	FString Atteso = TEXT("-");
 	if (Stato.Panca && Stato.Panca->Posti.IsValidIndex(Stato.Posto))
 	{
-		Atteso = PancaTesto(Stato.Panca->TrasformaSeduto(Stato.Posto, Colono));
+		Atteso = PancaTesto(Stato.Panca->TrasformaSeduto(Stato.Posto, Colono, Stato.bDietro));
 	}
 	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Panca: %s %s: attore %s, mesh %s, posto voluto (attore) %s, fase %d dopo %.2f s"),
 		*Colono->GetName(), Quando, *PancaTesto(Colono->GetActorTransform()), *PancaTesto(Mesh), *Atteso,
@@ -602,14 +606,28 @@ void AValdorsoPanca::BeginPlay()
 	}
 }
 
-FTransform AValdorsoPanca::TrasformaSeduto(int32 Posto, const APawn* Chi) const
+bool AValdorsoPanca::DaDietro(const APawn* Chi) const
 {
+	if (!Chi)
+	{
+		return false;
+	}
+	// Il colono nello spazio della panca: X negativa = dietro la seduta.
+	const FVector Locale = GetActorTransform().InverseTransformPositionNoScale(Chi->GetActorLocation());
+	return Locale.X < 0.f;
+}
+
+FTransform AValdorsoPanca::TrasformaSeduto(int32 Posto, const APawn* Chi, bool bDietro) const
+{
+	// (13/11) Da dietro: lo stesso posto (Y uguale), ma il colono dall'altra parte della seduta (X rovesciata) e girato
+	// di mezzo giro.
+	const float Verso = bDietro ? -1.f : 1.f;
 	const float Lungo = Posti.IsValidIndex(Posto) ? Posti[Posto] : 0.f;
 	const ACharacter* Colono = Cast<ACharacter>(Chi);
 	const float MezzaAltezza = Colono && Colono->GetCapsuleComponent() ? Colono->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 96.f;
 	// L'attore del colono: a terra (più mezza capsula), sul posto, girato come la panca (guarda davanti).
-	const FVector Luogo = GetActorTransform().TransformPosition(FVector(AvantiPosto, Lungo, 0.f)) + FVector(0.f, 0.f, MezzaAltezza);
-	return FTransform(FRotator(0.f, GetActorRotation().Yaw, 0.f), Luogo);
+	const FVector Luogo = GetActorTransform().TransformPosition(FVector(AvantiPosto * Verso, Lungo, 0.f)) + FVector(0.f, 0.f, MezzaAltezza);
+	return FTransform(FRotator(0.f, GetActorRotation().Yaw + (bDietro ? 180.f : 0.f), 0.f), Luogo);
 }
 
 int32 AValdorsoPanca::PostoLibero(const APawn* Chi) const
@@ -622,7 +640,7 @@ int32 AValdorsoPanca::PostoLibero(const APawn* Chi) const
 		{
 			continue;
 		}
-		const float D = FVector::Dist2D(TrasformaSeduto(i, Chi).GetLocation(), Chi->GetActorLocation());
+		const float D = FVector::Dist2D(TrasformaSeduto(i, Chi, DaDietro(Chi)).GetLocation(), Chi->GetActorLocation());
 		if (D < Distanza)
 		{
 			Distanza = D;

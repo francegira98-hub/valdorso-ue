@@ -11,6 +11,7 @@
 #include "ValdorsoPozzo.generated.h"
 
 class USphereComponent;
+class UStaticMeshComponent;
 
 UCLASS()
 class VALDORSO_API AValdorsoPozzo : public AActor, public IValdorsoInterattivo
@@ -24,7 +25,15 @@ public:
 	virtual void Interagisci(APawn* Chi) override;
 	virtual FVector PuntoInterazione() const override { return GetActorLocation() + FVector(0.f, 0.f, 80.f); }
 
+protected:
+	virtual void BeginPlay() override;
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Pozzo")
 	TObjectPtr<USphereComponent> Presa;
+
+	/** (13/11, chiesto da Fra dopo la prova) L'acqua che si vede guardando dentro il pozzo: un disco d'acqua un metro e
+	 *  trenta sotto il bordo (quella del modello stava a due metri, al buio, e non si vedeva). */
+	UPROPERTY(VisibleAnywhere, Category = "Pozzo")
+	TObjectPtr<UStaticMeshComponent> Specchio;
 };

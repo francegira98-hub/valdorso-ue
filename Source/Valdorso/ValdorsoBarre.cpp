@@ -153,7 +153,16 @@ void UValdorsoBarreComponent::MettiSchermo()
 		return;
 	}
 	// (11/11, v0.1.5) sopra la barra delle azioni: la guardia di adesso, quando si ha un'arma in mano o si e' agganciati
+	// (13/11, dopo la prova) non sempre: con il coltello in mano restava ferma sulla barra ("Mezza Porta di Ferro").
+	// Si vede quando si e' agganciati a qualcuno, e per qualche secondo dopo aver preso l'arma o cambiato guardia.
 	TWeakObjectPtr<APlayerController> DeboleControllore(Controllore);
+	struct FUltimaGuardia
+	{
+		FName Arma;
+		int32 Guardia = INDEX_NONE;
+		double Da = -100.0;
+	};
+	TSharedRef<FUltimaGuardia> Ultima = MakeShared<FUltimaGuardia>();
 	static FValdorsoCaratteri* CaratteriGuardia = new FValdorsoCaratteri();
 	Hud = SNew(SBox)
 		.HAlign(HAlign_Center)
@@ -172,7 +181,7 @@ void UValdorsoBarreComponent::MettiSchermo()
 				.ColorAndOpacity(ValdorsoTema::OroChiaro())
 				.ShadowOffset(FVector2D(1.f, 1.f))
 				.ShadowColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.7f))
-				.Text_Lambda([DeboleControllore]()
+				.Text_Lambda([DeboleControllore, Ultima]()
 				{
 					const APlayerController* Chi = DeboleControllore.Get();
 					const APawn* Corpo = Chi ? Chi->GetPawn() : nullptr;
@@ -180,11 +189,27 @@ void UValdorsoBarreComponent::MettiSchermo()
 					const UValdorsoArmiComponent* Armi = UValdorsoArmiComponent::Di(Corpo);
 					const UValdorsoAggancioComponent* Aggancio = UValdorsoAggancioComponent::Di(Chi);
 					const FValdorsoTipoOggetto* Arma = Armi ? Armi->Arma() : nullptr;
-					if (!Scherma || !ValdorsoBarre::SchermoLibero(Chi) || (!Arma && !(Aggancio && Aggancio->Agganciato())))
+					const bool bAgganciato = Aggancio && Aggancio->Agganciato();
+					if (!Scherma || !ValdorsoBarre::SchermoLibero(Chi) || (!Arma && !bAgganciato))
+					{
+						Ultima->Arma = NAME_None;
+						return FText::GetEmpty();
+					}
+					// l'arma presa o la guardia cambiata: la scritta si vede per qualche secondo
+					const double Ora = FPlatformTime::Seconds();
+					const FName ArmaOra = Arma ? Arma->Id : NAME_None;
+					const int32 GuardiaOra = static_cast<int32>(Scherma->GetGuardia());
+					if (ArmaOra != Ultima->Arma || GuardiaOra != Ultima->Guardia)
+					{
+						Ultima->Arma = ArmaOra;
+						Ultima->Guardia = GuardiaOra;
+						Ultima->Da = Ora;
+					}
+					if (!bAgganciato && Ora - Ultima->Da > 4.0)
 					{
 						return FText::GetEmpty();
 					}
-					return ValdorsoScherma::NomeGuardia(ValdorsoScherma::FamigliaGuardie(Arma ? Arma->Id : NAME_None), Scherma->GetGuardia());
+					return ValdorsoScherma::NomeGuardia(ValdorsoScherma::FamigliaGuardie(ArmaOra), Scherma->GetGuardia());
 				})
 			]
 			+ SVerticalBox::Slot()

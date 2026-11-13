@@ -36,6 +36,10 @@ struct FValdorsoStatoSeduta
 	UPROPERTY()
 	uint8 Posto = 0;
 
+	/** (13/11) Seduto dalla parte di dietro della panca (girato di mezzo giro). */
+	UPROPERTY()
+	bool bDietro = false;
+
 	/** 0 in piedi, 1 si siede, 2 seduto, 3 si alza. */
 	UPROPERTY()
 	uint8 Fase = 0;
@@ -182,8 +186,12 @@ public:
 	/** Il colono seduto in ogni posto (solo sul server). */
 	TArray<TWeakObjectPtr<APawn>> Occupanti;
 
-	/** Dove deve trovarsi il colono (il suo attore) quando è seduto in quel posto. */
-	FTransform TrasformaSeduto(int32 Posto, const APawn* Chi) const;
+	/** Dove deve trovarsi il colono (il suo attore) quando è seduto in quel posto. (13/11) bDietro: seduto dall'altra
+	 *  parte della seduta, girato di mezzo giro (la panca non ha schienale); il posto lungo la panca resta lo stesso. */
+	FTransform TrasformaSeduto(int32 Posto, const APawn* Chi, bool bDietro = false) const;
+
+	/** (13/11) Il colono sta dietro la seduta (dalla parte opposta al suo davanti)? */
+	bool DaDietro(const APawn* Chi) const;
 
 	/** Il posto libero più vicino al colono (INDEX_NONE se la panca è piena). */
 	int32 PostoLibero(const APawn* Chi) const;

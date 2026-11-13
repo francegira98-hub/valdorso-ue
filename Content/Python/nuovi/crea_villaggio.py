@@ -133,6 +133,8 @@ def materiale_base(nome, mascherato=False, colore_vertici=False, predefinite=Non
     else:
         m = strumenti.create_asset(nome, DEST + "/Materiali", unreal.Material, unreal.MaterialFactoryNew())
     m.set_editor_property("two_sided", True)
+    # (13/11) anche sugli oggetti ripetuti (istanze): senza, nel gioco pacchettizzato esce il materiale grigio di serie
+    m.set_editor_property("used_with_instanced_static_meshes", True)
     tinta = nodo(m, unreal.MaterialExpressionVectorParameter, -800, -300)
     tinta.set_editor_property("parameter_name", "Tinta")
     tinta.set_editor_property("default_value", unreal.LinearColor(1, 1, 1, 1))

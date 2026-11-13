@@ -403,7 +403,10 @@ def vita(pr, rng):
                 elif scelta == "vaso":
                     vaso_fiori(m, L(q) - [0, 0, 2], rng)
                 elif scelta == "scopa":
-                    scopa(m, L(q), math.degrees(math.atan2(o[1], o[0])) + 90)
+                    # (13/11, visto da Fra in gioco) la scopa stava in piedi da sola, mezzo metro davanti al muro: ora
+                    # appoggiata al muro (la base a 24 cm, la cima che pende 18 cm verso il muro e lo tocca)
+                    q_muro = P + lato[:2] * s * d + o[:2] * (fronte + 24.0)
+                    scopa(m, L(q_muro), math.degrees(math.atan2(o[1], o[0])) + 90)
                 elif scelta == "cassa":
                     pr.oggetto(SEZIONE, "%s cassa %d" % (nome, k), FAB_CASSE[int(rng.integers(2))], q[0], q[1], rng.uniform(0, 360))
                 elif scelta == "cesta":

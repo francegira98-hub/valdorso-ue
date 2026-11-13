@@ -98,6 +98,11 @@ public:
 	/** (02/11) Abbassa un filo i capelli della libreria sulle teste da uomo (variabile Valdorso.Capelli.Abbassa). */
 	void ApplicaPosizioneCapelli();
 
+	/** (13/11, dopo la prova della 0.2.1: nel gioco pacchettizzato i capelli stanno più in basso della testa) Scrive nel
+	 *  registro dove stanno i capelli rispetto al volto: pelo, legame, a chi è attaccato, quanto sporge sopra la testa.
+	 *  Parte da sola qualche secondo dopo che i peli sono messi (solo i primi coloni), e con Valdorso.Capelli.Diagnosi. */
+	void DiagnosiCapelli() const;
+
 	/** Il volto MetaHuman (nullptr se non c'è). */
 	USkeletalMeshComponent* GetVolto() const { return Volto.Get(); }
 

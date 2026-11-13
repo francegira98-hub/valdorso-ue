@@ -34,6 +34,11 @@ public class Valdorso : ModuleRules
         // (28/10) I capelli dei MetaHuman (GroomComponent), per il ritratto del Registro.
         PrivateDependencyModuleNames.Add("HairStrandsCore");
 
+        // (13/11) La tavolozza degli occhi (ValdorsoAspettoComponent.cpp) si legge da un file .csv: nel gioco pacchettizzato
+        // non c'era ("non trovo la tavolozza degli occhi" nel registro del launcher). Così il pacchetto lo porta con sé,
+        // accanto al gioco, nello stesso posto (Valdorso/Plugins/VoltoValdorso/Dati).
+        RuntimeDependencies.Add("$(ProjectDir)/Plugins/VoltoValdorso/Dati/ColoriOcchi.csv", StagedFileType.NonUFS);
+
         // (07/11) Lo stato del mondo: il server lo dà a una pagina (HTTPServer), il menu la legge (HTTP).
         PrivateDependencyModuleNames.AddRange(new string[] { "HTTP", "HTTPServer" });
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
