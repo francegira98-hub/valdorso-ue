@@ -1,0 +1,308 @@
+{
+ "_come": "La Bibbia della valle: quello che il Sognatore sa del mondo (13/11/2026, scritta da Claude dalle Cronache, dal Design e dai commenti dei dialoghi). Si ritocca con il Blocco note: ogni storia nuova deve stare dentro queste regole. 'mai_detto' sono i segreti che una storia puo' far intuire ma non dire mai.",
+ "tono": "Fantasy rustico e malinconico, mai comico. Frasi brevi, concrete, odori e mestieri. La magia e' rara e fa paura. I PNG parlano come gente di valle: poche parole, mezze verita', proverbi. Il colono e' un nuovo arrivato: lo si mette alla prova prima di fidarsi.",
+ "anno": "312 dopo il Crepuscolo",
+ "regole": [
+  "Il Re e la capitale non compaiono mai di persona: arrivano solo ordini, voci e lettere con la cera.",
+  "Il sigillo della Corona chiude la strada per Aurelia: nessuno passa (tranne la carovana di Sibilla con il lasciapassare). Le lettere non passano; i corvi si', di nascosto.",
+  "L'Orso non si vede mai davvero: solo un'ombra, tracce, un sogno. Nessuna storia lo fa combattere o morire.",
+  "Una storia personale non uccide un PNG con nome e non cambia la valle per tutti (quello e' il livello 3 della patente).",
+  "Le ricompense sono piccole: pochi oggetti comuni, qualche moneta, un segno, un'iscrizione nel taccuino. Mai armi rare o Leggende.",
+  "Le rune si usano come nelle Cronache: un elemento e un verbo. Ur e' la runa del custode e non si spiega mai fino in fondo.",
+  "Niente contenuti crudi: la morte c'e', ma raccontata con pudore.",
+  "Il colono decide: ogni storia ha almeno due finali, e nessuno dei due e' 'sbagliato'."
+ ],
+ "mai_detto": [
+  "Il segreto di Gaspare: trent'anni fa l'Orso gli salvo' la vita (si lascia solo intuire).",
+  "Il nome della ragazza a cui Nonna Edda insegna di nascosto (Iole): si intuisce, non si dice.",
+  "Cosa c'e' sul fondo del lago: Nonna Edda congeda chi lo chiede.",
+  "Dove sia finito Ranieri, il capo della compagnia della grotta del nord: tra le ossa c'era solo il suo anello.",
+  "Da dove passa Vera: c'e' un passaggio sotto la torre, solo accennato.",
+  "Perche' Padre Anselmo diffida di Nico: non lo sa nemmeno lui."
+ ],
+ "personaggi": {
+  "Padre Anselmo": {
+   "dove": "Tempio del Cuore",
+   "chi": "Sacerdote, custode del frammento del Cuore e della pietra di Val d'Orso; scrive i coloni nel Registro.",
+   "carattere": "Paziente, stanco, ascolta piu' di quanto parla.",
+   "vuole": "Che il frammento continui a battere; proteggere Tobia.",
+   "teme": "Il giorno in cui il battito si fermera'."
+  },
+  "Corrado Valli": {
+   "dove": "Piazza del villaggio",
+   "chi": "Il Balivo: governa per conto della Corona, legge gli ordini in piazza.",
+   "carattere": "Freddo, preciso, ambizioso; la legge come scudo.",
+   "vuole": "Ordine, tasse, una lettera di lode dalla capitale.",
+   "teme": "Che qualcuno passi il sigillo senza il suo permesso."
+  },
+  "Livia Serra": {
+   "dove": "Posto di guardia del passo",
+   "chi": "Capitana della milizia, salita dalla capitale a primavera.",
+   "carattere": "Leale, dura fuori e stanca dentro; scrive alla madre.",
+   "vuole": "Tenere i suoi uomini vivi.",
+   "teme": "Ordini ingiusti dal Balivo."
+  },
+  "Bruno": {
+   "dove": "Locanda di Bruno",
+   "chi": "Locandiere, vecchio sergente, compagno d'armi di Livia.",
+   "carattere": "Gioviale, curioso, prudente quando parla del Balivo.",
+   "vuole": "Che la locanda sia piena e le voci girino.",
+   "teme": "Che una voce sbagliata faccia male a qualcuno."
+  },
+  "Nonna Edda": {
+   "dove": "Palude",
+   "chi": "Guaritrice della palude, un po' strega; capanna su pali a sud del lago.",
+   "carattere": "Tagliente, ironica, generosa con chi saluta.",
+   "vuole": "Rispetto, e chi le porti il dovuto.",
+   "teme": "Quello che sta sul fondo del lago (non lo dice)."
+  },
+  "Gaspare": {
+   "dove": "Margine del bosco",
+   "chi": "Vecchio cacciatore; ha visto l'ombra dell'Orso piu' di chiunque.",
+   "carattere": "Burbero, solitario, odia chi caccia per divertimento.",
+   "vuole": "Che il bosco resti in pace.",
+   "teme": "Chi non sa stare zitto nel bosco."
+  },
+  "Marta": {
+   "dove": "Fucina",
+   "chi": "La fabbra; la sua incudine ha linee che a volte cantano.",
+   "carattere": "Schietta, orgogliosa, mani bruciate e cuore grande.",
+   "vuole": "Lavoro onesto e ferro buono.",
+   "teme": "Che qualcuno scopra troppo della sua incudine."
+  },
+  "Maestro Elric": {
+   "dove": "Villaggio (non sempre si trova)",
+   "chi": "Il maestro di cui si parla poco; disprezza Nonna Edda ma ha bisogno di lei.",
+   "carattere": "Colto, altezzoso, segreto.",
+   "vuole": "Capire le rune degli Antichi.",
+   "teme": "Di non essere il primo a capirle."
+  },
+  "Lucia": {
+   "dove": "Ufficio della Gilda",
+   "chi": "Della Gilda: cerca braccia per gli incarichi; ha perso la compagnia di Ranieri nella grotta del nord.",
+   "carattere": "Pratica, gentile, un dolore tenuto stretto.",
+   "vuole": "Sapere cosa e' successo a Ranieri.",
+   "teme": "Mandare qualcuno a morire."
+  },
+  "Mastro Ettore": {
+   "dove": "Ufficio della Gilda",
+   "chi": "Il capo della Gilda nella valle: decide i gradi.",
+   "carattere": "Severo, giusto, conta tutto.",
+   "vuole": "Che la Gilda conti piu' del Balivo.",
+   "teme": "Un'altra compagnia perduta."
+  },
+  "Tebaldo": {
+   "dove": "Posto di guardia del passo",
+   "chi": "Guardia della Corona, il veterano.",
+   "carattere": "Poche parole, non si compra.",
+   "vuole": "Finire il turno.",
+   "teme": "Niente che ammetta."
+  },
+  "Fulvio": {
+   "dove": "Posto di guardia del passo",
+   "chi": "Guardia della Corona, il giovane venuto dalla capitale.",
+   "carattere": "Ingenuo, curioso, sente la mancanza di casa.",
+   "vuole": "Dimostrare di valere.",
+   "teme": "Il bosco di notte."
+  },
+  "Tobia": {
+   "dove": "Tempio del Cuore",
+   "chi": "Orfano di dieci anni, spazza il tempio, sogna l'Orso ogni notte.",
+   "carattere": "Chiacchierone, coraggioso per finta.",
+   "vuole": "Che qualcuno gli creda.",
+   "teme": "Di restare solo."
+  },
+  "Teodoro": {
+   "dove": "Mulino",
+   "chi": "Mugnaio, marito di Agnese da ventidue anni; sta spesso alla locanda.",
+   "carattere": "Pettegolo bonario.",
+   "vuole": "Sapere tutto per primo.",
+   "teme": "La carestia."
+  },
+  "Agnese": {
+   "dove": "Pozzo",
+   "chi": "Mugnaia, moglie di Teodoro; sta al pozzo e sa tutto di tutti.",
+   "carattere": "Lingua svelta, occhio fino.",
+   "vuole": "Che il grano basti per l'inverno.",
+   "teme": "Che si scopra il grano nascosto."
+  },
+  "Sibilla": {
+   "dove": "La carovana (passa ogni tanto)",
+   "chi": "Guida la carovana che passa il sigillo; porta sale, spezie e notizie; lettere con la cera nera.",
+   "carattere": "Affabile, calcolatrice, misteriosa.",
+   "vuole": "Affari e segreti.",
+   "teme": "Perdere il lasciapassare."
+  },
+  "Vera": {
+   "dove": "Villaggio (non la vedi mai entrare)",
+   "chi": "Una donna che va e viene senza passare sotto il naso del Balivo.",
+   "carattere": "Silenziosa, ironica.",
+   "vuole": "Non si sa.",
+   "teme": "Non si sa."
+  },
+  "Nico": {
+   "dove": "Villaggio, lavatoio",
+   "chi": "Ragazzo che porta l'acqua al lavatoio e va alla funzione; Padre Anselmo diffida di lui senza sapere perche'.",
+   "carattere": "Gentile, troppo tranquillo.",
+   "vuole": "Non si sa.",
+   "teme": "Non si sa."
+  },
+  "Dino": {
+   "dove": "Locanda di Bruno",
+   "chi": "Caporale della milizia; dopo il terzo boccale parla troppo.",
+   "carattere": "Spaccone simpatico.",
+   "vuole": "Una promozione.",
+   "teme": "Livia arrabbiata."
+  }
+ },
+ "luoghi": {
+  "Piazza del villaggio": "Il cuore del villaggio: la bacheca, gli ordini del Balivo, le chiacchiere.",
+  "Locanda di Bruno": "A ovest della piazza: zuppa, birra, voci.",
+  "Tempio del Cuore": "Il frammento del Cuore batte due colpi e una pausa; accanto all'altare la pietra di Val d'Orso.",
+  "Fucina": "La fucina di Marta: si sente da tutta la piazza.",
+  "Ufficio della Gilda": "Lucia e la bacheca degli incarichi.",
+  "Mulino": "Il mulino di Teodoro e Agnese.",
+  "Pozzo": "Il pozzo della piazza: acqua e pettegolezzi.",
+  "Cimitero": "Lapidi vecchie e nuove; di notte ci si va poco.",
+  "Posto di guardia del passo": "La sbarra, le guardie, e dietro il sigillo della Corona.",
+  "Margine del bosco": "Dove Gaspare siede sul suo ceppo.",
+  "Collina dell'Orso": "La collina piu' alta: li' cadde l'Orso. Lupi di notte, un orso vero, il sasso inciso.",
+  "Rovine degli Antichi": "A ovest nel bosco: pietre in cerchio, una stella incisa, cinque segni, una cripta sigillata.",
+  "Grotta est": "In fondo, una porta che non si apre con sopra la runa Ur.",
+  "Grotta nord": "Dietro la frana: le gallerie dei nani e le ossa della compagnia di Ranieri.",
+  "Lago": "Acqua profonda, cozze e perle; il fondo non si nomina.",
+  "Palude": "A sud del lago, la capanna su pali di Nonna Edda.",
+  "Pascoli": "A sud-est: pecore, e lupi visti di recente."
+ },
+ "fazioni": {
+  "La Corona": "Il Balivo, le guardie, il sigillo, gli ordini.",
+  "La milizia": "Livia e i suoi: leali alla Corona ma prima alla gente.",
+  "Il Tempio": "Padre Anselmo, i Cinque e i Vecchi Dei.",
+  "La Gilda": "Incarichi, gradi, e una compagnia perduta.",
+  "I due matti": "Gaspare e Nonna Edda: gli unici che credono all'Orso."
+ },
+ "fedi": {
+  "solara": "Solara, la Luce: giustizia e guarigione",
+  "ignar": "Ignar, il Fuoco: la forgia e la guerra",
+  "nereia": "Nereia, l'Acqua: il mare e i viaggi",
+  "torvald": "Torvald, la Terra: il raccolto e le montagne",
+  "zefira": "Zefira, l'Aria: la liberta' e i messaggi",
+  "vecchidei": "I Vecchi Dei della foresta",
+  "nessuna": "Nessuna fede"
+ },
+ "rune": "Undici rune: cinque elementi (Aeth fuoco, Nir acqua, Dorn terra, Sil vento, Lume luce), cinque verbi (Var andare, Ka proteggere, Ren guarire, Vel vedere, Tor fermare) e Ur, il custode.",
+ "registro": {
+  "_come": "Le risposte del Registro di Val d'Orso (le chiavi come le salva il gioco). Il Sognatore le usa per scrivere storie che parlano proprio di quel colono.",
+  "origine": {
+   "lago": "un villaggio di pescatori sul lago",
+   "minatori": "un borgo di minatori sui monti",
+   "capitale": "i quartieri poveri della capitale",
+   "sud": "le campagne del sud",
+   "confine": "le terre di confine, vicino alle rovine",
+   "dimenticato": "nessun ricordo del passato: il primo ricordo e' il bosco"
+  },
+  "mestiere": {
+   "contadino": "contadino",
+   "pastore": "pastore",
+   "apprendista": "apprendista di bottega",
+   "soldato": "soldato congedato",
+   "servo": "servo in una casa nobile",
+   "allievo": "allievo mancato dell'accademia",
+   "orfano": "orfano cresciuto al tempio",
+   "mercante": "mercante caduto in rovina",
+   "cacciatore": "cacciatore",
+   "marinaio": "marinaio"
+  },
+  "motivo": {
+   "terra": "la terra promessa",
+   "fuga": "fugge da qualcosa o qualcuno",
+   "scomparso": "cerca una persona scomparsa",
+   "sogno": "un sogno, un'ombra enorme tra gli alberi",
+   "debito": "un debito da saldare",
+   "fede": "la fede",
+   "avventura": "l'avventura"
+  },
+  "ricordo": {
+   "anello": "l'anello di sua madre",
+   "lettera": "una lettera mai aperta",
+   "spada": "la spada spezzata di suo padre",
+   "amuleto": "un amuleto di legno",
+   "mappa": "una mappa strappata",
+   "libro": "un libro di preghiere"
+  },
+  "paura": {
+   "fuoco": "il fuoco",
+   "acqua": "l'acqua profonda",
+   "buio": "il buio",
+   "solitudine": "la solitudine",
+   "morti": "i morti",
+   "magia": "la magia"
+  }
+ },
+ "parole_vietate": [
+  "Iole"
+ ],
+ "ricordi": {
+  "_come": "Come i PNG salutano un colono dopo le storie (idea 4, approvata da Fra il 13/11): 'buono' se si fida (fiducia >= 1), 'freddo' se no (fiducia <= -1). {titolo} e' l'ultima storia vissuta con quel PNG, {nome} il colono. Il gioco le usera' come prima battuta dei dialoghi.",
+  "Gaspare": {
+   "buono": "Ancora tu. Quello di «{titolo}». Siediti, ma piano: il bosco ascolta.",
+   "freddo": "Tu. Il bosco si ricorda di te, e io pure. Parla in fretta."
+  },
+  "Nonna Edda": {
+   "buono": "Oh, guarda chi c'e'. {nome}, che ha saputo fare «{titolo}». Entra, e saluta.",
+   "freddo": "Hai di nuovo bisogno di me? Il dovuto, prima. Doppio."
+  },
+  "Bruno": {
+   "buono": "{nome}! La sedia e' sempre li'. Racconta, racconta: dopo «{titolo}» la valle non parla d'altro.",
+   "freddo": "Una scodella, e basta. Stasera ho da fare."
+  },
+  "Padre Anselmo": {
+   "buono": "Il Cuore batte piu' tranquillo quando ci sei, {nome}. Me ne accorgo da «{titolo}».",
+   "freddo": "Il tempio e' aperto a tutti. Anche a te."
+  },
+  "Lucia": {
+   "buono": "{nome}! Ho un incarico che e' tuo prima ancora di scriverlo.",
+   "freddo": "La bacheca e' quella. Scegli da solo."
+  },
+  "Mastro Ettore": {
+   "buono": "La Gilda si ricorda di chi c'era. Tu c'eri.",
+   "freddo": "La Gilda conta tutto. Anche quello che non hai fatto."
+  },
+  "Marta": {
+   "buono": "Mani sporche, cuore pulito. Entra, {nome}: il ferro e' caldo.",
+   "freddo": "Se vuoi qualcosa, paghi prima. Il ferro non fa credito."
+  },
+  "Livia Serra": {
+   "buono": "Colono {nome}. Al passo si parla bene di te, e al passo si parla poco.",
+   "freddo": "Documenti. Anche se ti conosco."
+  },
+  "Tebaldo": {
+   "buono": "(Tebaldo ti fa un cenno. Per lui e' un discorso.)",
+   "freddo": "(Tebaldo guarda oltre la tua spalla.)"
+  },
+  "Fulvio": {
+   "buono": "{nome}! Mi sento meglio quando ci sei tu, di notte.",
+   "freddo": "Ah. Sei tu. Devo... fare il giro."
+  },
+  "Tobia": {
+   "buono": "{nome}! {nome}! Hai visto? Io mi ricordo tutto di «{titolo}»!",
+   "freddo": "(Tobia scappa dietro una colonna e ti guarda da li'.)"
+  },
+  "Teodoro": {
+   "buono": "Ecco il mio colono preferito! Siediti, che ti racconto l'ultima.",
+   "freddo": "Ho sentito delle cose su di te. Non dico niente. Per ora."
+  },
+  "Agnese": {
+   "buono": "Tu, al pozzo, sei sempre il benvenuto. Le voci migliori le tengo per te.",
+   "freddo": "L'acqua e' di tutti. Le chiacchiere no."
+  },
+  "Maestro Elric": {
+   "buono": "Ah, {nome}. Una mente che vale la pena. Dopo «{titolo}» ho delle domande.",
+   "freddo": "Non ho tempo. Non per te."
+  },
+  "Sibilla": {
+   "buono": "Il mio cliente migliore. Per te, prezzi da amica. Quasi.",
+   "freddo": "Per te, prezzi da capitale."
+  }
+ }
+}

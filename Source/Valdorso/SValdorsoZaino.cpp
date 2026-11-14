@@ -17,6 +17,9 @@
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/STextBlock.h"
 #include "GameFramework/PlayerController.h"
+#include "Engine/Texture2D.h"
+#include "HAL/IConsoleManager.h"
+#include "UObject/StrongObjectPtr.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoZaino"
 
@@ -121,17 +124,98 @@ namespace
 
 // ------------------------------------------------------------------------------------------------- i disegni
 
+namespace
+{
+	/** Il riquadro di pergamena dell'icona è più grande del disegno: nell'immagine il disegno occupa 0,72 del mezzo lato. */
+	constexpr float IconaSuDisegno = 1.39f;
+
+	struct FIconaOggetto
+	{
+		TStrongObjectPtr<UTexture2D> Texture;
+		FSlateBrush Pennello;
+	};
+
+	/** Le icone già cercate (anche quelle che mancano). Sta nella memoria e non si libera mai: le texture tenute vive non
+	 *  devono essere liberate alla chiusura del gioco, quando Unreal ha già spento i suoi oggetti. */
+	TMap<FName, TSharedPtr<FIconaOggetto>>& ZainoIcone()
+	{
+		static TMap<FName, TSharedPtr<FIconaOggetto>>& Icone = *new TMap<FName, TSharedPtr<FIconaOggetto>>();
+		return Icone;
+	}
+
+	// (13/11) Le icone ad acquerello: 1 = le icone (se ci sono), 0 = le linee a penna di prima. Cambiandola le icone si
+	// ricercano (così quelle importate con l'editor aperto si vedono subito).
+	int32 IconeAcquerello = 1;
+	FAutoConsoleVariableRef VariabileIconeAcquerello(
+		TEXT("Valdorso.Icone.Acquerello"),
+		IconeAcquerello,
+		TEXT("1 = le icone degli oggetti ad acquerello (/Game/UI/Icone), 0 = i disegni a penna di prima."),
+		FConsoleVariableDelegate::CreateLambda([](IConsoleVariable*) { ZainoIcone().Empty(); }),
+		ECVF_Default);
+
+	/** L'icona di un oggetto, caricata una volta sola (nullptr se non c'è: allora si disegnano le linee). */
+	const FSlateBrush* ZainoIcona(FName Nome)
+	{
+		TMap<FName, TSharedPtr<FIconaOggetto>>& Icone = ZainoIcone();
+		if (const TSharedPtr<FIconaOggetto>* Gia = Icone.Find(Nome))
+		{
+			return Gia->IsValid() ? &(*Gia)->Pennello : nullptr;
+		}
+		const FString S = Nome.ToString();
+		const FString Percorso = FString::Printf(TEXT("/Game/UI/Icone/T_Icona_%s.T_Icona_%s"), *S, *S);
+		// (come le texture del Registro: nell'editor si aspetta che la texture sia pronta, se no il primo disegno è vuoto)
+		UTexture2D* Texture = ValdorsoCaricaTextureUI(*Percorso);
+		if (!Texture)
+		{
+			Icone.Add(Nome, nullptr);
+			return nullptr;
+		}
+		TSharedPtr<FIconaOggetto> Nuova = MakeShared<FIconaOggetto>();
+		Nuova->Texture.Reset(Texture);
+		Nuova->Pennello.SetResourceObject(Texture);
+		Nuova->Pennello.ImageSize = FVector2D(Texture->GetSizeX(), Texture->GetSizeY());
+		Nuova->Pennello.DrawAs = ESlateBrushDrawType::Image;
+		Icone.Add(Nome, Nuova);
+		return &Nuova->Pennello;
+	}
+
+	bool ZainoDisegnaIcona(FSlateWindowElementList& Elementi, int32 Strato, const FGeometry& Geometria, FName Nome,
+		const FVector2f& Centro, float Lato, const FLinearColor& Colore, float Grande = IconaSuDisegno)
+	{
+		const FSlateBrush* Pennello = IconeAcquerello != 0 ? ZainoIcona(Nome) : nullptr;
+		if (!Pennello)
+		{
+			return false;
+		}
+		const float Misura = Lato * Grande;
+		const FVector2f Angolo = Centro - FVector2f(Misura * 0.5f, Misura * 0.5f);
+		FSlateDrawElement::MakeBox(Elementi, Strato,
+			Geometria.ToPaintGeometry(FVector2D(Misura, Misura), FSlateLayoutTransform(1.f, FVector2D(Angolo))),
+			Pennello, ESlateDrawEffect::None, FLinearColor(1.f, 1.f, 1.f, Colore.A));
+		return true;
+	}
+}
+
 namespace ValdorsoDisegnoOggetti
 {
 	void Disegna(FSlateWindowElementList& Elementi, int32 Strato, const FGeometry& Geometria, FName Id,
 		const FVector2f& Centro, float Lato, const FLinearColor& Colore, float Spessore)
 	{
+		if (ZainoDisegnaIcona(Elementi, Strato, Geometria, Id, Centro, Lato, Colore))
+		{
+			return;
+		}
 		ZainoLinee(Elementi, Strato, Geometria, ValdorsoOggetti::Disegno(Id), Centro, Lato, Colore, Spessore);
 	}
 
 	void DisegnaMoneta(FSlateWindowElementList& Elementi, int32 Strato, const FGeometry& Geometria,
 		const FVector2f& Centro, float Lato, const FLinearColor& Colore, float Spessore)
 	{
+		// la moneta sta accanto ai numeri (gli Aureus): l'icona un poco più piccola, per non toccarli
+		if (ZainoDisegnaIcona(Elementi, Strato, Geometria, FName(TEXT("Moneta")), Centro, Lato, Colore, 1.1f))
+		{
+			return;
+		}
 		ZainoLinee(Elementi, Strato, Geometria, ValdorsoOggetti::DisegnoMoneta(), Centro, Lato, Colore, Spessore);
 	}
 }

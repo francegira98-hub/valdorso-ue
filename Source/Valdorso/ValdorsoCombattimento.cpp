@@ -188,30 +188,40 @@ namespace ValdorsoCombattimento
 		return CombattimentoSuono(Nome);
 	}
 
-	void Suona(UWorld* Mondo, USoundBase* Suono, const FVector& Dove, float Lontano, float Volume, float Tono)
+	/** (14/11) Lo smorzamento per una distanza (arrotondata a 100 cm): creato una volta sola e tenuto per sempre (sono
+	 *  pochi: uno per ogni distanza usata). Una mappa mai liberata, come le icone dello zaino: niente distruttori statici. */
+	USoundAttenuation* SmorzoPer(float Lontano)
 	{
-		AWorldSettings* Impostazioni = Mondo ? Mondo->GetWorldSettings() : nullptr;
-		if (!Suono || !Impostazioni || Mondo->GetNetMode() == NM_DedicatedServer)
+		static TMap<int32, USoundAttenuation*>* Tutti = new TMap<int32, USoundAttenuation*>();
+		const int32 Chiave = FMath::Max(1, FMath::RoundToInt(Lontano / 100.f));
+		if (USoundAttenuation** Trovato = Tutti->Find(Chiave))
 		{
-			return;
+			return *Trovato;
 		}
-		UAudioComponent* Audio = NewObject<UAudioComponent>(Impostazioni);
-		Audio->SetSound(Suono);
-		Audio->bAutoDestroy = true;
-		Audio->bAllowSpatialization = true;
-		Audio->bOverrideAttenuation = true;
-		FSoundAttenuationSettings& Smorzo = Audio->AttenuationOverrides;
+		USoundAttenuation* Nuovo = NewObject<USoundAttenuation>(GetTransientPackage());
+		Nuovo->AddToRoot();
+		const float Distanza = Chiave * 100.f;
+		FSoundAttenuationSettings& Smorzo = Nuovo->Attenuation;
 		Smorzo.bAttenuate = true;
 		Smorzo.bSpatialize = true;
 		Smorzo.AttenuationShape = EAttenuationShape::Sphere;
-		Smorzo.AttenuationShapeExtents = FVector(FMath::Min(300.f, Lontano * 0.1f), 0.0, 0.0);
-		Smorzo.FalloffDistance = Lontano;
+		Smorzo.AttenuationShapeExtents = FVector(FMath::Min(300.f, Distanza * 0.1f), 0.0, 0.0);
+		Smorzo.FalloffDistance = Distanza;
 		Smorzo.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
-		Audio->SetVolumeMultiplier(Volume);
-		Audio->SetPitchMultiplier(Tono);
-		Audio->SetWorldLocation(Dove);
-		Audio->RegisterComponentWithWorld(Mondo);
-		Audio->Play();
+		Tutti->Add(Chiave, Nuovo);
+		return Nuovo;
+	}
+
+	void Suona(UWorld* Mondo, USoundBase* Suono, const FVector& Dove, float Lontano, float Volume, float Tono)
+	{
+		if (!Suono || !Mondo || Mondo->bIsTearingDown || Mondo->GetNetMode() == NM_DedicatedServer)
+		{
+			return;
+		}
+		// (14/11) prima: un AudioComponent nuovo appeso alle impostazioni del mondo, registrato a mano. Nella prova con due
+		// giocatori il secondo mondo (UEDPIE_1) e' andato in crash alla registrazione ("Failed to route OnRegister",
+		// miagolio del gatto). Adesso il suono parte "spara e dimentica" dal motore audio, senza componenti.
+		UGameplayStatics::PlaySoundAtLocation(Mondo, Suono, Dove, FRotator::ZeroRotator, Volume, Tono, 0.f, SmorzoPer(Lontano));
 		// (11/11, v0.1.5) i sottotitoli dei suoni importanti (ValdorsoInterfaccia.h)
 		ValdorsoInterfaccia::SuonoSentito(Mondo, Suono, Dove, Lontano);
 	}

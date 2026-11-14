@@ -23,6 +23,7 @@
 #include "AbilitySystemComponent.h"
 #include "ValdorsoArmi.h"
 #include "ValdorsoCombattimento.h"
+#include "ValdorsoPlayerController.h"
 #include "GameplayAbilitySpec.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
@@ -373,6 +374,15 @@ void AValdorsoCharacter::DoSchivata()
 
 void AValdorsoCharacter::DoPugno()
 {
+	// (13/11, chiesto da Fra dopo la prova) con una schermata aperta (la tessera che si guarda o si mostra, lo zaino, un
+	// dialogo...) non si colpisce: il clic era per la schermata, non un pugno
+	if (const AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetController()))
+	{
+		if (Giocatore->IsLocalController() && Giocatore->SchermataAperta())
+		{
+			return;
+		}
+	}
 	if (!SuUnaPanca() && AbilitySystemComponent && AbilitaPugno)
 	{
 		AbilitySystemComponent->TryActivateAbilityByClass(AbilitaPugno);

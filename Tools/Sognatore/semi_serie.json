@@ -1,0 +1,1056 @@
+{
+ "_come": "I fili (serie) e le Eco (13/11/2026, scritte da Claude). Un filo e' una trama a capitoli: il finale scelto decide il capitolo dopo, la rarita' sale. Le Eco sono zone dove si rivivono i fatti delle Cronache com'erano allora, per una ricompensa. Gli spiriti del passato si vedono solo dal colono della storia. I segreti della Bibbia (dove sia Ranieri, da dove passi Vera) si avvicinano ma non si dicono mai: l'ultimo capitolo lo scrive lo staff con il Battito, quando sara' il momento. 'annuncio' = il sogno che il Battito manda quando un finale apre quel capitolo (idea 5: i sogni che annunciano).",
+ "semi": [
+  {
+   "id": "ranieri_1_le_ossa",
+   "titolo": "Solo l'anello",
+   "rarita": "insolita",
+   "difficolta": 2,
+   "serie": {
+    "id": "ranieri",
+    "capitolo": 1
+   },
+   "per": {},
+   "piace": {
+    "esploratore": 2,
+    "curioso": 1
+   },
+   "innesco": [
+    {
+     "tipo": "evento",
+     "evento": "Storia"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Lucia"
+    }
+   ],
+   "png": [
+    "Lucia"
+   ],
+   "luogo": [
+    "Ufficio della Gilda"
+   ],
+   "aggancio": "Lucia rigira l'anello di Ranieri tra le dita da giorni. «Tra le ossa c'erano Gisella e Cecco. Ranieri no. Un uomo non lascia il suo anello. A meno che non voglia farsi trovare.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Lucia",
+     "testo": "Fatti raccontare com'era Ranieri."
+    },
+    {
+     "mattone": "parla",
+     "png": "Mastro Ettore",
+     "testo": "Mastro Ettore chiude la porta prima di parlare. «Ranieri aveva un debito con la Gilda. E un altro con qualcuno peggiore.»"
+    },
+    {
+     "mattone": "scegli",
+     "png": "Lucia",
+     "testo": "Lucia aspetta che tu le dica cosa ne pensi."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "«Era vivo, quando ha lasciato l'anello.»",
+     "esito": "Lucia chiude gli occhi. «Allora l'ha lasciato per me.» Ti da' la lanterna di Cecco: «Lui la accendeva per ritrovare la strada. Forse la ritrova ancora.»",
+     "premio": {
+      "segno": "RanieriVivo",
+      "monete": 15
+     },
+     "prossimo": "ranieri_2_la_lanterna"
+    },
+    {
+     "scelta": "«Lascialo andare, Lucia.»",
+     "esito": "Lucia annuisce, e mette l'anello in un cassetto. Ma la sera la vedi ancora alla finestra, verso il nord.",
+     "premio": {
+      "segno": "RanieriLasciato",
+      "monete": 10
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Lucia smette di parlarne. Con te.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Lucia",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "ranieri_2_la_lanterna",
+   "titolo": "La lanterna che si accende da sola",
+   "rarita": "rara",
+   "difficolta": 3,
+   "serie": {
+    "id": "ranieri",
+    "capitolo": 2
+   },
+   "per": {},
+   "piace": {
+    "esploratore": 2,
+    "mistico": 1
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "ranieri_1_le_ossa"
+    },
+    {
+     "tipo": "storia",
+     "storia": "figlio_delle_miniere"
+    }
+   ],
+   "png": [
+    "Lucia"
+   ],
+   "luogo": [
+    "Grotta nord"
+   ],
+   "aggancio": "La lanterna di Cecco, appesa sopra il tuo letto, una notte si accende da sola. La fiamma non trema, e punta verso nord come un ago.",
+   "passi": [
+    {
+     "mattone": "notte",
+     "luogo": "Grotta nord",
+     "testo": "Porta la lanterna alla grotta del nord, di notte."
+    },
+    {
+     "mattone": "fantasma",
+     "luogo": "Grotta nord",
+     "testo": "Nelle gallerie, una ragazza con un taccuino ti fa segno di seguirla. Ha la polvere della frana nei capelli. E' Gisella."
+    },
+    {
+     "mattone": "segui",
+     "luogo": "Grotta nord",
+     "testo": "Seguila senza perdere la luce."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Lucia",
+     "testo": "Gisella si ferma davanti a una parete liscia e ci appoggia la mano. Poi ti guarda, e aspetta."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Appoggi la mano dove l'ha appoggiata lei.",
+     "esito": "La parete e' calda. Dall'altra parte, lontanissimo, tre colpi e una pausa. Gisella sorride per la prima volta e si spegne con la lanterna.",
+     "premio": {
+      "segno": "ManoSullaParete",
+      "iscrizione": "Tre colpi dall'altra parte",
+      "monete": 30
+     },
+     "prossimo": "ranieri_3_eco_autunno"
+    },
+    {
+     "scelta": "Le chiedi cosa e' successo.",
+     "esito": "Gisella apre il taccuino e ti mostra l'ultima pagina: una mappa, e una parola. 'Oltre'. Poi il taccuino si sbriciola come cenere, ma tu la mappa la ricordi.",
+     "premio": {
+      "segno": "MappaDiGisella",
+      "iscrizione": "L'ultima pagina di Gisella",
+      "monete": 25
+     },
+     "prossimo": "ranieri_3_eco_autunno"
+    }
+   ],
+   "rifiuto": {
+    "testo": "La lanterna si spegne e non si riaccende piu'. Lucia, quando lo sa, la rimette nel cassetto con l'anello.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     },
+     {
+      "tipo": "fiducia",
+      "png": "Lucia",
+      "quanto": -1
+     }
+    ]
+   },
+   "annuncio": "Sogni una corda che si tende tre volte nel buio, e una ragazza con un taccuino che ti fa segno di seguirla."
+  },
+  {
+   "id": "ranieri_3_eco_autunno",
+   "titolo": "Eco: autunno del 309",
+   "rarita": "epica",
+   "difficolta": 4,
+   "serie": {
+    "id": "ranieri",
+    "capitolo": 3
+   },
+   "per": {},
+   "piace": {
+    "esploratore": 2,
+    "coraggioso": 2
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "ranieri_2_la_lanterna"
+    }
+   ],
+   "zona": "eco_autunno_309",
+   "png": [
+    "Lucia"
+   ],
+   "luogo": [
+    "Grotta nord"
+   ],
+   "aggancio": "Lucia ti mette in mano la corda della compagnia. «Il Battito ha aperto un'eco. Dentro e' ancora l'autunno del 309. Entra con loro. Guarda cosa e' successo. E se puoi, non cambiare niente: il passato si offende.»",
+   "passi": [
+    {
+     "mattone": "eco",
+     "luogo": "Grotta nord",
+     "testo": "Entra nell'Eco: la frana non c'e' ancora, e le lanterne della compagnia sono accese."
+    },
+    {
+     "mattone": "fantasma",
+     "luogo": "Grotta nord",
+     "testo": "Ranieri ti scambia per il quinto uomo della compagnia. «Sei in ritardo. Tieni la corda: tre strattoni, tutto bene.»"
+    },
+    {
+     "mattone": "segui",
+     "luogo": "Grotta nord",
+     "testo": "Scendi con loro fino ai martelli."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Lucia",
+     "testo": "La montagna trema. Ranieri non scappa verso l'uscita: corre verso il fondo, dove battono i martelli. «Di' a Lucia che torno.»"
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Lo segui verso il fondo.",
+     "esito": "L'Eco si chiude come un occhio. Fuori, Lucia ti aspetta. Le racconti tutto. Lei piange e ride insieme. «Ha detto che torna. Allora aspetto.»",
+     "premio": {
+      "segno": "HaVistoRanieriAndare",
+      "titolo": "Il quinto della compagnia",
+      "oggetti": [
+       "Moneta_Nani"
+      ],
+      "monete": 80
+     },
+     "prossimo": "ranieri_4_oltre"
+    },
+    {
+     "scelta": "Porti fuori Gisella e Cecco.",
+     "esito": "Nell'Eco li salvi, e fuori non cambia niente: le ossa sono ancora li'. Ma la notte, in sogno, Gisella ti restituisce il taccuino, e Cecco ti insegna a leggere la roccia.",
+     "premio": {
+      "segno": "HaSalvatoLEco",
+      "titolo": "Chi ha portato fuori i morti",
+      "oggetti": [
+       "Piccone"
+      ],
+      "monete": 60
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "L'Eco si chiude. Qualcuno, tra cent'anni, forse la riaprira'.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   },
+   "annuncio": "Sogni di essere in cinque, con le lanterne accese, e la montagna intera che trattiene il fiato."
+  },
+  {
+   "id": "ranieri_4_oltre",
+   "titolo": "Oltre",
+   "rarita": "leggendaria",
+   "difficolta": 5,
+   "serie": {
+    "id": "ranieri",
+    "capitolo": 4
+   },
+   "per": {},
+   "piace": {
+    "esploratore": 3
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "ranieri_3_eco_autunno"
+    }
+   ],
+   "zona": "grotta_piccola",
+   "png": [
+    "Lucia"
+   ],
+   "luogo": [
+    "Grotta nord"
+   ],
+   "aggancio": "Una notte, dalla grotta del nord, arrivano tre colpi e una pausa. Non nel passato: adesso. Tutta la valle li sente. Lucia corre da te senza mantello. «E' il segnale. Da dove arriva? Tu sei l'unico che e' stato con lui.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Lucia",
+     "testo": "Lucia vuole venire. Mastro Ettore glielo vieta. Decidi tu."
+    },
+    {
+     "mattone": "tasca",
+     "luogo": "Grotta nord",
+     "testo": "Dietro la parete calda il Battito ha aperto una galleria che prima non c'era."
+    },
+    {
+     "mattone": "segui",
+     "luogo": "Grotta nord",
+     "testo": "Segui i colpi fino alla fine della galleria."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Lucia",
+     "testo": "In fondo c'e' una porta dei nani, e accanto, inciso nella pietra con un coltello: R."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Bussi tre volte, e aspetti.",
+     "esito": "Dall'altra parte qualcuno bussa tre volte, e poi una pausa lunghissima. Questa porta si aprira'. Non oggi. Il Battito ha scritto il tuo nome accanto alla R.",
+     "premio": {
+      "segno": "HaBussatoOltre",
+      "titolo": "Chi ha bussato oltre",
+      "oggetti": [
+       "Martello_Nani",
+       "Moneta_Nani"
+      ],
+      "monete": 150,
+      "iscrizione": "La porta con la R"
+     }
+    },
+    {
+     "scelta": "Porti Lucia fino alla porta.",
+     "esito": "Lucia appoggia la fronte alla pietra e parla piano, a lungo. Quando torna, ha gli occhi asciutti per la prima volta. «Sta bene. Non chiedermi come lo so.»",
+     "premio": {
+      "segno": "LuciaAllaPorta",
+      "titolo": "Amico della Gilda perduta",
+      "oggetti": [
+       "Pugnale_Nani"
+      ],
+      "monete": 120
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "I colpi continuano per tre notti, poi smettono. Lucia non te lo perdonera' del tutto.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Lucia",
+      "quanto": -2
+     },
+     {
+      "tipo": "mondo",
+      "testo": "Per tre notti, dalla grotta del nord, tre colpi e una pausa."
+     }
+    ]
+   },
+   "annuncio": "Sogni una porta di pietra con una lettera sola incisa. Dall'altra parte, qualcuno bussa."
+  },
+  {
+   "id": "vera_2_la_chiave",
+   "titolo": "La chiave piccola",
+   "rarita": "rara",
+   "difficolta": 3,
+   "serie": {
+    "id": "vera",
+    "capitolo": 2
+   },
+   "per": {},
+   "piace": {
+    "ombroso": 2,
+    "curioso": 1
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "l_ombroso"
+    }
+   ],
+   "zona": "cantina",
+   "png": [
+    "Bruno"
+   ],
+   "luogo": [
+    "Locanda di Bruno"
+   ],
+   "aggancio": "Un secondo biglietto, sotto la porta: 'Il gatto conosce la strada. La chiave conosce la porta. - V.'",
+   "passi": [
+    {
+     "mattone": "notte",
+     "luogo": "Locanda di Bruno",
+     "testo": "Di notte, alla locanda, segui il gatto dietro le botti."
+    },
+    {
+     "mattone": "tasca",
+     "luogo": "Locanda di Bruno",
+     "testo": "Dietro la fessura c'e' una cantina che Bruno non ha mai nominato. In fondo, una cassa con una serratura piccola."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Bruno",
+     "testo": "Nella cassa: mappe del villaggio con segni rossi sotto le case, e il sigillo del Balivo, rotto a meta'."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Rimetti tutto com'era.",
+     "esito": "Il giorno dopo, sul tuo cuscino, una ghianda nera. 'Bravo. Sai tacere. - V.'",
+     "premio": {
+      "segno": "SaTacere",
+      "monete": 35
+     },
+     "prossimo": "vera_3_sotto_la_torre"
+    },
+    {
+     "scelta": "Porti il sigillo rotto a Bruno.",
+     "esito": "Bruno impallidisce, poi ride piano. «Allora sei dei nostri. O sei morto. Speriamo la prima.» Ti versa da bere, e ti dice un nome: Vera.",
+     "premio": {
+      "segno": "BrunoSaCheSai",
+      "monete": 25,
+      "oggetti": [
+       "Stoffa_Fine"
+      ]
+     },
+     "prossimo": "vera_3_sotto_la_torre"
+    }
+   ],
+   "rifiuto": {
+    "testo": "La chiave piccola, una mattina, non c'e' piu'. Qualcuno se l'e' ripresa.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   },
+   "annuncio": "Sogni un gatto che cammina dentro il muro, e una chiave piccola che ti scotta in tasca."
+  },
+  {
+   "id": "vera_3_sotto_la_torre",
+   "titolo": "Sotto la torre",
+   "rarita": "epica",
+   "difficolta": 4,
+   "serie": {
+    "id": "vera",
+    "capitolo": 3
+   },
+   "per": {},
+   "piace": {
+    "ombroso": 3
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "vera_2_la_chiave"
+    }
+   ],
+   "zona": "passaggio_torre",
+   "png": [
+    "Bruno"
+   ],
+   "luogo": [
+    "Piazza del villaggio"
+   ],
+   "aggancio": "Una donna che non hai mai visto entrare si siede di fronte a te alla locanda. Ha le mani da fabbro e gli occhi da gatto. «Sono V. Il Balivo ha messo una guardia nel posto sbagliato. Mi serve qualcuno che passi da dove passo io.»",
+   "passi": [
+    {
+     "mattone": "png_nuovo",
+     "png": "Vera",
+     "testo": "Vera entra nella valle: il Battito la fa esistere, per te."
+    },
+    {
+     "mattone": "tasca",
+     "luogo": "Piazza del villaggio",
+     "testo": "Il passaggio sotto la torre: gallerie vecchie, muri del villaggio, e una scala che sale dove non dovrebbe."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Bruno",
+     "testo": "In cima alla scala, la stanza delle lettere del Balivo. Una lettera e' per la capitale, e parla di 'chiudere il sigillo per sempre'."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Copi la lettera per Vera.",
+     "esito": "Vera la legge al buio. «Allora e' vero. Vuole chiuderci dentro.» Ti da' una ghianda nera: «Con questa, sotto la torre, si passa sempre.»",
+     "premio": {
+      "segno": "DeiTopiDellaTorre",
+      "titolo": "Chi passa sotto la torre",
+      "monete": 70,
+      "oggetti": [
+       "Stoffa_Fine"
+      ]
+     }
+    },
+    {
+     "scelta": "Lasci la lettera dov'e' e lo dici a Livia.",
+     "esito": "Livia legge la tua copia a memoria e diventa di pietra. «Non l'hai mai vista. Io neanche.» Ma da quel giorno al passo cambiano i turni, e Vera ti saluta da lontano, con rispetto.",
+     "premio": {
+      "segno": "LiviaSa",
+      "titolo": "Amico della milizia",
+      "monete": 60
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Vera si alza e se ne va. Non la vedi uscire, come non l'avevi vista entrare.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   },
+   "annuncio": "Sogni scale che scendono sotto la torre e salgono dove non dovrebbero. In cima, una lettera con il sigillo del Balivo."
+  },
+  {
+   "id": "orso_2_le_impronte",
+   "titolo": "Le impronte che salgono",
+   "rarita": "rara",
+   "difficolta": 3,
+   "serie": {
+    "id": "orso",
+    "capitolo": 2
+   },
+   "per": {},
+   "piace": {
+    "mistico": 2,
+    "cacciatore": 1
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "l_ombra_del_sogno"
+    }
+   ],
+   "png": [
+    "Gaspare",
+    "Tobia"
+   ],
+   "luogo": [
+    "Collina dell'Orso"
+   ],
+   "aggancio": "La neve e' caduta in una notte sola, fuori stagione. Sopra, dal margine del bosco fino alla collina, ci sono impronte grandi come scudi. Gaspare le guarda da un'ora. «Non tornano indietro,» dice. «Salgono e basta.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Gaspare",
+     "testo": "Gaspare viene con te, ma solo fino al limite degli alberi."
+    },
+    {
+     "mattone": "segui",
+     "luogo": "Collina dell'Orso",
+     "testo": "Segui le impronte fino in cima, prima che la neve si sciolga."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Collina dell'Orso",
+     "testo": "In cima le impronte finiscono nel nulla, davanti alla quercia. Resta li', in silenzio."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Appoggi la mano sull'ultima impronta.",
+     "esito": "E' calda. Per un momento senti sette giorni e sette notti di stanchezza in un respiro solo. Poi la neve si scioglie tutta insieme.",
+     "premio": {
+      "segno": "UltimaImpronta",
+      "iscrizione": "Sette giorni in un respiro",
+      "monete": 40
+     },
+     "prossimo": "orso_3_eco_sette_giorni"
+    },
+    {
+     "scelta": "Torni da Gaspare e gli dici dove finiscono.",
+     "esito": "Gaspare si toglie il cappello. Non l'avevi mai visto senza. «Allora e' ancora qui,» dice, e non aggiunge altro. Ti regala il suo coltello migliore.",
+     "premio": {
+      "segno": "GaspareSenzaCappello",
+      "oggetti": [
+       "Coltello"
+      ],
+      "monete": 30
+     },
+     "prossimo": "orso_3_eco_sette_giorni"
+    }
+   ],
+   "rifiuto": {
+    "testo": "La neve si scioglie entro mezzogiorno. Le impronte con lei.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   },
+   "annuncio": "Sogni la neve, fuori stagione, e passi grandi come scudi che salgono senza mai tornare."
+  },
+  {
+   "id": "orso_3_eco_sette_giorni",
+   "titolo": "Eco: la settima notte",
+   "rarita": "leggendaria",
+   "difficolta": 5,
+   "serie": {
+    "id": "orso",
+    "capitolo": 3
+   },
+   "per": {},
+   "piace": {
+    "mistico": 3,
+    "coraggioso": 2
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "orso_2_le_impronte"
+    }
+   ],
+   "zona": "eco_sette_giorni",
+   "png": [
+    "Gaspare",
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Collina dell'Orso"
+   ],
+   "aggancio": "Il frammento del tempio batte tre volte, poi tace. Padre Anselmo ti trova prima che tu lo cerchi: «Il Battito ha aperto l'eco della settima notte. Non so come lo so. So che e' per te, e che sara' solo per te, per sempre.»",
+   "passi": [
+    {
+     "mattone": "eco",
+     "luogo": "Collina dell'Orso",
+     "testo": "Entra nell'Eco: e' la settima notte prima del Crepuscolo. Sulla collina ardono fuochi, e dal bosco salgono gli eserciti del Senza Nome."
+    },
+    {
+     "mattone": "fantasma",
+     "luogo": "Collina dell'Orso",
+     "testo": "Un guardiano degli Antichi ti mette in mano una torcia. «Fino all'alba. Gli Antichi devono finire il rito.»"
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Collina dell'Orso",
+     "testo": "Tieni il fuoco acceso fino all'alba. Accanto a te, sempre, un'ombra enorme che respira."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Padre Anselmo",
+     "testo": "All'alba l'ombra si volta verso di te. Non la vedi. La senti guardarti."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Resti al tuo posto fino all'ultimo.",
+     "esito": "L'Eco si chiude con l'alba. Torni nel tempio con la torcia ancora accesa in mano: non si spegne. Padre Anselmo la mette accanto al frammento. «Da oggi il Cuore ha due fiamme.»",
+     "premio": {
+      "segno": "LaSettimaNotte",
+      "titolo": "Chi ha tenuto il fuoco con l'Orso",
+      "oggetti": [
+       "Pelle_Orso",
+       "Mantello_Orso"
+      ],
+      "monete": 200,
+      "iscrizione": "La torcia della settima notte"
+     }
+    },
+    {
+     "scelta": "Ti inchini all'ombra.",
+     "esito": "L'ombra si abbassa, e per un respiro ti sfiora la fronte. Quando apri gli occhi sei sulla collina di oggi, e sulla quercia c'e' un segno nuovo. E' il tuo.",
+     "premio": {
+      "segno": "SegnatoDallOrso",
+      "titolo": "Segnato dall'Orso",
+      "oggetti": [
+       "Artigli_Orso"
+      ],
+      "monete": 180,
+      "iscrizione": "Il segno sulla quercia"
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il frammento torna a battere, due colpi e una pausa. L'Eco si chiude per sempre. Nessun altro la vedra'.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   },
+   "annuncio": "Sogni sette fuochi su una collina e, accanto all'ultimo, un respiro enorme che aspetta te."
+  },
+  {
+   "id": "eco_la_notte_del_battito",
+   "titolo": "Eco: la notte del battito mancato",
+   "rarita": "rara",
+   "difficolta": 3,
+   "per": {},
+   "piace": {
+    "devoto": 2,
+    "mistico": 2
+   },
+   "innesco": [
+    {
+     "tipo": "luogo",
+     "luogo": "Tempio del Cuore",
+     "ora": "notte"
+    },
+    {
+     "tipo": "evento",
+     "evento": "GuardaPietra"
+    }
+   ],
+   "zona": "eco_battito",
+   "png": [
+    "Padre Anselmo",
+    "Bruno"
+   ],
+   "luogo": [
+    "Tempio del Cuore"
+   ],
+   "aggancio": "{png} giura che una notte il frammento ha saltato un battito. Stanotte, al tempio, le candele si accendono da sole: il Battito ha aperto un'eco di quella notte.",
+   "passi": [
+    {
+     "mattone": "eco",
+     "luogo": "Tempio del Cuore",
+     "testo": "Entra nell'Eco: e' la notte del battito mancato. Padre Anselmo, piu' giovane di un anno, prega da solo."
+    },
+    {
+     "mattone": "ascolta",
+     "luogo": "Tempio del Cuore",
+     "testo": "Conta i battiti. Due colpi, una pausa. Due colpi, una pausa. Poi..."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Padre Anselmo",
+     "testo": "Nel silenzio del battito mancato, qualcuno e' entrato nel tempio. Ha il cappuccio. Si avvicina al frammento."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Guardi chi e'.",
+     "esito": "Il cappuccio cade. Non riconosci la faccia, ma riconosci il gesto: tocca il frammento come si tocca un figlio. Quando l'Eco si chiude, ricordi una cosa sola. Aveva le mani sporche di terra di palude.",
+     "premio": {
+      "segno": "HaVistoIlCappuccio",
+      "iscrizione": "Mani di palude",
+      "monete": 40
+     }
+    },
+    {
+     "scelta": "Ti metti tra lui e il frammento.",
+     "esito": "Il cappuccio si ferma, ti guarda, e ride piano. «Bravo. E' quello che dovevi fare.» Poi l'Eco si chiude, e il frammento batte di nuovo.",
+     "premio": {
+      "segno": "CustodeDelBattito",
+      "oggetti": [
+       "Medaglietta"
+      ],
+      "monete": 45
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Le candele si spengono da sole, una alla volta.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "eco_la_prima_carovana",
+   "titolo": "Eco: la valle riaperta",
+   "rarita": "insolita",
+   "difficolta": 1,
+   "per": {},
+   "piace": {
+    "socievole": 2,
+    "curioso": 1
+   },
+   "innesco": [
+    {
+     "tipo": "evento",
+     "evento": "Carovana"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Sibilla"
+    }
+   ],
+   "zona": "eco_carovana",
+   "png": [
+    "Sibilla"
+   ],
+   "luogo": [
+    "Piazza del villaggio"
+   ],
+   "aggancio": "Sibilla ti offre una pastiglia di zucchero e cannella. «Mangiala in piazza. Sentirai il giorno in cui sono arrivata la prima volta. Quel giorno, la valle rideva.»",
+   "passi": [
+    {
+     "mattone": "eco",
+     "luogo": "Piazza del villaggio",
+     "testo": "Entra nell'Eco: primavera del 312. La piazza e' piena, i carri sono appena passati il sigillo."
+    },
+    {
+     "mattone": "parla",
+     "png": "Bruno",
+     "testo": "Il Bruno dell'Eco e' piu' magro e ride di piu'. Offre da bere a tutti."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Sibilla",
+     "testo": "La Sibilla dell'Eco ti nota: «Tu non eri ancora arrivato. Come fai a essere qui?»"
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "«Mi hai mandato tu.»",
+     "esito": "La Sibilla dell'Eco ride: «Allora ti mandero'.» Quando esci, la Sibilla di oggi ti fa l'occhiolino, come chi ricorda una cosa che non e' ancora successa.",
+     "premio": {
+      "segno": "SibillaRicorda",
+      "oggetti": [
+       "Spezie"
+      ],
+      "monete": 15
+     }
+    },
+    {
+     "scelta": "Balli con la piazza finche' l'Eco finisce.",
+     "esito": "Esci dall'Eco con il fiato corto e il cuore leggero. Per un giorno intero, chi ti incontra sorride senza sapere perche'.",
+     "premio": {
+      "segno": "BallatoNel312",
+      "monete": 10,
+      "iscrizione": "Primavera del 312"
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "La pastiglia si scioglie in tasca. Profuma di cannella per giorni.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "eco_il_rito",
+   "titolo": "Eco: il rito degli Antichi",
+   "rarita": "epica",
+   "difficolta": 4,
+   "per": {
+    "richiamoMagia": [
+     "si"
+    ]
+   },
+   "piace": {
+    "mistico": 3
+   },
+   "innesco": [
+    {
+     "tipo": "luogo",
+     "luogo": "Rovine degli Antichi",
+     "ora": "notte"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Maestro Elric"
+    }
+   ],
+   "zona": "eco_rito",
+   "png": [
+    "Maestro Elric",
+    "Nonna Edda"
+   ],
+   "luogo": [
+    "Rovine degli Antichi"
+   ],
+   "aggancio": "Sulle rovine, stanotte, i cinque segni si accendono tutti insieme. {png} arriva di corsa e si ferma al limite del cerchio. «Non posso entrare. Tu si'. Tu l'hai sentita, la magia. Vai, e ricorda tutto.»",
+   "passi": [
+    {
+     "mattone": "eco",
+     "luogo": "Rovine degli Antichi",
+     "testo": "Entra nell'Eco: le rovine sono intere, dorate. Gli Antichi sono in cerchio intorno alla stella."
+    },
+    {
+     "mattone": "ascolta",
+     "luogo": "Rovine degli Antichi",
+     "testo": "Ascolta il rito: undici rune, cantate una dopo l'altra. L'undicesima non riesci a sentirla."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Maestro Elric",
+     "testo": "Un Antico si volta verso di te, come se ti vedesse. Ti porge la mano aperta: dentro c'e' una luce."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Prendi la luce.",
+     "esito": "La luce ti entra nella mano e non brucia. Fuori dall'Eco, {png} ti guarda la mano come si guarda un altare. «Lume. Te l'hanno data loro. Nessuno te la potra' togliere.»",
+     "premio": {
+      "segno": "LaLuceDegliAntichi",
+      "titolo": "Chi ha ascoltato il rito",
+      "monete": 90,
+      "iscrizione": "La luce nella mano"
+     }
+    },
+    {
+     "scelta": "Chiudi la mano dell'Antico nella tua.",
+     "esito": "L'Antico sorride e chiude la luce dentro le vostre mani. Quando l'Eco finisce, ti resta una cosa sola: il suono dell'undicesima runa. Non sai dirlo. Ma lo sai.",
+     "premio": {
+      "segno": "IlSuonoDiUr",
+      "titolo": "Chi ha sentito l'undicesima",
+      "monete": 80,
+      "iscrizione": "Il suono che non si dice"
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "I cinque segni si spengono uno dopo l'altro. {png} resta al limite del cerchio fino all'alba.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "la_sposa_del_passo",
+   "titolo": "La sposa alla sbarra",
+   "rarita": "rara",
+   "difficolta": 2,
+   "per": {},
+   "piace": {
+    "gentile": 2,
+    "mistico": 1
+   },
+   "innesco": [
+    {
+     "tipo": "luogo",
+     "luogo": "Posto di guardia del passo",
+     "ora": "notte"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Fulvio"
+    }
+   ],
+   "png": [
+    "Fulvio",
+    "Tebaldo"
+   ],
+   "luogo": [
+    "Posto di guardia del passo"
+   ],
+   "aggancio": "Fulvio trema nel turno di notte. «C'e' una donna in bianco alla sbarra. Aspetta qualcuno dalla capitale. Tebaldo dice che la vede da vent'anni, e che non bisogna risponderle.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Tebaldo",
+     "testo": "Tebaldo, a denti stretti: «Si chiamava Ada. Il suo sposo doveva salire dalla capitale per le nozze. Poi misero il sigillo.»"
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Posto di guardia del passo",
+     "testo": "Fai il turno alla sbarra, di notte."
+    },
+    {
+     "mattone": "fantasma",
+     "luogo": "Posto di guardia del passo",
+     "testo": "La sposa ti guarda. «E' arrivato? L'avete visto passare?»"
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "«E' arrivato. Ti aspetta in piazza.»",
+     "esito": "La sposa sorride e cammina verso il villaggio. A meta' strada diventa nebbia, e la nebbia va. Tebaldo, il giorno dopo, ti stringe la mano senza dire niente.",
+     "premio": {
+      "segno": "LaSposaVa",
+      "monete": 35,
+      "iscrizione": "Ada e' andata"
+     }
+    },
+    {
+     "scelta": "«Il sigillo non lascia passare nessuno.»",
+     "esito": "La sposa annuisce piano, come chi lo sapeva gia'. «Allora aspettero' che si apra.» E' ancora li', ogni notte. Ma adesso, quando passi, ti saluta.",
+     "premio": {
+      "segno": "LaSposaAspetta",
+      "monete": 25,
+      "oggetti": [
+       "Candeliere"
+      ]
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Fulvio fa il turno da solo, e chiede di cambiare posto.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Fulvio",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_colono_del_primo_inverno",
+   "titolo": "Il primo inverno",
+   "rarita": "insolita",
+   "difficolta": 2,
+   "per": {},
+   "piace": {
+    "devoto": 1,
+    "gentile": 1,
+    "socievole": 1
+   },
+   "innesco": [
+    {
+     "tipo": "storia",
+     "storia": "paura_morti"
+    },
+    {
+     "tipo": "storia",
+     "storia": "lo_scettico"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Cimitero"
+    }
+   ],
+   "png": [
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Cimitero"
+   ],
+   "aggancio": "Accanto alla lapide senza nome, una sera, c'e' un uomo con un cappello di paglia e la neve sulle spalle, anche se non nevica. «Sono arrivato il primo inverno,» dice. «Qualcuno si ricorda di me?»",
+   "passi": [
+    {
+     "mattone": "fantasma",
+     "luogo": "Cimitero",
+     "testo": "Parla con il colono del primo inverno."
+    },
+    {
+     "mattone": "parla",
+     "png": "Padre Anselmo",
+     "testo": "Chiedi a Padre Anselmo del primo inverno dopo la riapertura."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Padre Anselmo",
+     "testo": "Padre Anselmo apre il Registro alla prima pagina: un nome cancellato da una macchia d'acqua."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Incidi il suo nome sulla pietra dei segni, al posto suo.",
+     "esito": "Lo incidi come te lo ricordi. Non sei sicuro delle lettere. La sera dopo, accanto alla lapide, la neve non c'e' piu'.",
+     "premio": {
+      "segno": "NomeRestituito",
+      "monete": 20,
+      "iscrizione": "Il nome del primo inverno"
+     }
+    },
+    {
+     "scelta": "Gli prometti che qualcuno se ne ricordera'.",
+     "esito": "«Allora basta,» dice, e si toglie il cappello. Da quel giorno, quando passi dal cimitero, ti sembra di sentire uno che saluta.",
+     "premio": {
+      "segno": "PromessaAlPrimoInverno",
+      "monete": 12
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "La neve sulla lapide resta, anche d'estate.",
+    "effetti": []
+   }
+  }
+ ]
+}

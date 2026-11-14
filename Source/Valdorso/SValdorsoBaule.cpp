@@ -48,7 +48,7 @@ namespace
 		{
 			const FVector2f Misura = FVector2f(AllottedGeometry.GetLocalSize());
 			ValdorsoDisegnoOggetti::Disegna(OutDrawElements, LayerId, AllottedGeometry, Id, Misura * 0.5f,
-				FMath::Min(Misura.X, Misura.Y) * 0.85f, ValdorsoTema::Inchiostro(), 1.8f);
+				FMath::Min(Misura.X, Misura.Y) * 0.7f, ValdorsoTema::Inchiostro(), 1.8f);   // (13/11) 0,7: l'icona (x1,39) sta nel riquadro
 			return LayerId;
 		}
 

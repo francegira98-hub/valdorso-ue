@@ -406,6 +406,30 @@ def prepara_sito(a, manifesto, sito_cartella):
         dati[nome] = d
     if a.notizie and "notizie.json" in dati:
         dati["notizie.json"]["notizie"] = leggi_json(a.notizie)
+    # (13/11) la Gazzetta del passo e gli annunci dello staff approvati (Tools/Gazzetta, ValdorsoBanditore.cpp) diventano
+    # notizie del launcher e del sito, insieme a quelle di contenuti/notizie.json, dalla più nuova
+    if "notizie.json" in dati and os.path.isdir(a.gazzetta):
+        fogli = []
+        for nome in sorted(os.listdir(a.gazzetta)):
+            if not nome.endswith(".json"):
+                continue
+            try:
+                f = leggi_json(os.path.join(a.gazzetta, nome))
+            except (OSError, ValueError):
+                print("ATTENZIONE: non riesco a leggere %s" % nome)
+                continue
+            fogli.append({"data": f.get("data", oggi), "etichetta": f.get("etichetta", "Gazzetta"), "titolo": f.get("titolo", ""),
+                          "testo": f.get("testo") or f.get("riassunto", ""), "link": "", "_foglio": nome})
+        if fogli:
+            # solo gli ultimi dieci fogli (i nomi hanno il numero o la data: in ordine, l'ultimo è il più nuovo)
+            fogli = fogli[-10:]
+            tutte = dati["notizie.json"].get("notizie", []) + fogli
+            # dalla più nuova; a parità di data prima la Gazzetta e gli annunci, e fra loro il più nuovo
+            tutte.sort(key=lambda n: (n.get("data", ""), 1 if n.get("_foglio") else 0, n.get("_foglio", "")), reverse=True)
+            for n in tutte:
+                n.pop("_foglio", None)
+            dati["notizie.json"]["notizie"] = tutte
+            print("notizie: %d fogli della Gazzetta e annunci dello staff aggiunti" % len(fogli))
     # la versione che si pubblica adesso prende la data di oggi, se non ce l'ha
     for v in dati.get("patch.json", {}).get("versioni", []):
         if v.get("versione") == versione and not v.get("data"):
@@ -511,6 +535,8 @@ def principale(argomenti=None):
     p.add_argument("--launcher-cartella", default=os.path.join(PROGETTO, "Build", "Launcher"))
     p.add_argument("--contenuti", default=os.path.join(QUI, "contenuti"))
     p.add_argument("--notizie", default=None)
+    # (13/11) i fogli approvati della Gazzetta del passo e gli annunci dello staff (Tools/Gazzetta/gazzetta.py)
+    p.add_argument("--gazzetta", default=os.path.join(PROGETTO, "Saved", "Server", "Gazzetta", "Approvate"))
     p.add_argument("--chiuso", action="store_true")
     p.add_argument("--senza-patch", action="store_true", help="niente patch dalla versione di prima: solo il gioco intero")
     p.add_argument("--patch-da", default=None, help="la versione da cui fare la patch (se no: l'ultima preparata prima di questa)")
@@ -705,6 +731,7 @@ h3{font-family:Cinzel,Georgia,serif;color:var(--oroc);font-size:24px;margin:0 0 
 .carta{background:rgba(21,17,13,.85);border:1px solid rgba(212,175,55,.35);border-radius:6px;padding:18px 20px;overflow:hidden}
 .carta img{display:block;width:calc(100% + 40px);margin:-18px -20px 14px;height:150px;object-fit:cover}
 .carta h4{font-family:Cinzel,Georgia,serif;color:var(--perg);font-size:18px;margin:0 0 2px}
+.carta p{white-space:pre-line}
 .cartellino{display:inline-block;font-family:Cinzel,Georgia,serif;font-size:11px;font-weight:700;letter-spacing:.08em;padding:1px 7px;border:1px solid currentColor;border-radius:3px;margin-right:8px;vertical-align:2px}
 ul.voci{list-style:none;padding:0;margin:8px 0 18px;columns:2 340px;column-gap:32px}
 ul.voci li{position:relative;padding-left:20px;margin-bottom:6px;break-inside:avoid}

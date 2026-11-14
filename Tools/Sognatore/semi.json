@@ -1,0 +1,2389 @@
+{
+ "_come": "Le storie seme: la prima dote del Sognatore (13/11/2026, scritte da Claude). Il Sognatore le sceglie per chi le merita (le risposte del Registro, quello che ha fatto nella valle) e le cuce su di lui: PNG, luogo, oggetto e parole cambiano da colono a colono, e la stessa storia non torna mai due volte alla stessa persona. Con l'intelligenza artificiale accesa, servono anche da esempio per scriverne di nuove. Segnaposto: {colono} {png} {luogo} {oggetto} {animale} {ricordo} {paura} {origine} {mestiere} {fede} {motivo}; {o} diventa o/a, {lo} lo/la, {gli} gli/le, {figlio} figlio/figlia. 'per' = solo per chi ha queste risposte nel Registro; 'piace' = piu' probabile per chi ha questi tratti. (13/11 pomeriggio) Ogni seme ha anche: rarita' (comune, insolita, rara, epica, leggendaria), difficolta' (1-5 stelle), innesco (cosa la fa nascere nel mondo), rifiuto (cosa succede se il colono dice no: testo ed effetti, vedi mattoni.json), e se fa parte di un filo: serie {id, capitolo} e nei finali 'prossimo' (il seme del capitolo dopo). I semi delle serie si danno solo a chi ha finito il capitolo prima con quel finale.",
+ "semi": [
+  {
+   "id": "lettera_mai_aperta",
+   "titolo": "La lettera mai aperta",
+   "per": {
+    "ricordo": [
+     "lettera"
+    ]
+   },
+   "piace": {
+    "mistico": 1,
+    "curioso": 1
+   },
+   "png": [
+    "Sibilla",
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Tempio del Cuore"
+   ],
+   "aggancio": "{png} ha visto la lettera che porti con te e ha smesso di parlare a meta' frase. \"Quella cera,\" dice, \"io l'ho gia' vista.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Chiedi a {png} dove ha visto quella cera."
+    },
+    {
+     "mattone": "notte",
+     "luogo": "{luogo}",
+     "testo": "\"Non qui. Non di giorno.\" Torna al tempio quando la valle dorme."
+    },
+    {
+     "mattone": "scegli",
+     "png": "{png}",
+     "testo": "Davanti alla candela, la lettera ti pesa in mano come un sasso."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "La apri.",
+     "esito": "Dentro ci sono tre righe e un nome. Non e' il tuo. {png} legge da sopra la tua spalla e impallidisce: \"Allora qualcuno di loro e' arrivato fin qui.\"",
+     "premio": {
+      "segno": "LetteraAperta",
+      "iscrizione": "La lettera aperta"
+     }
+    },
+    {
+     "scelta": "La lasci chiusa.",
+     "esito": "\"Fai bene,\" dice {png}. \"Certe lettere aspettano chi le deve leggere.\" Ti sembra che la cera sia un poco piu' calda.",
+     "premio": {
+      "segno": "LetteraChiusa",
+      "monete": 5
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Sibilla"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Padre Anselmo"
+    }
+   ],
+   "rifiuto": {
+    "testo": "La lettera resta chiusa, e chi l'ha vista fa finta di niente.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "anello_della_madre",
+   "titolo": "Il segno dentro l'anello",
+   "per": {
+    "ricordo": [
+     "anello"
+    ]
+   },
+   "piace": {
+    "socievole": 1
+   },
+   "png": [
+    "Marta"
+   ],
+   "luogo": [
+    "Fucina"
+   ],
+   "aggancio": "Alla fucina Marta ti afferra la mano senza chiedere: \"Fammi vedere quell'anello. Dentro c'e' un segno. Lo conosco, quel segno.\"",
+   "passi": [
+    {
+     "mattone": "porta",
+     "png": "Marta",
+     "oggetto": "Legna",
+     "testo": "\"Prima la legna: non lavoro a forno freddo.\" Porta a Marta un fascio di legna."
+    },
+    {
+     "mattone": "parla",
+     "png": "Marta",
+     "testo": "Marta pulisce l'anello e lo gira verso la brace. Il segno e' una piccola incudine con una stella."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Marta",
+     "testo": "\"E' il segno di una bottega di {origine}. Bottega chiusa da vent'anni.\""
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Chiedi chi era il fabbro.",
+     "esito": "\"Una donna. Come me.\" Marta ti restituisce l'anello e per un momento non ti guarda. \"Tua madre ha portato un anello buono, {colono}. Tienilo stretto.\"",
+     "premio": {
+      "segno": "AnelloLetto",
+      "iscrizione": "Il segno dell'anello"
+     }
+    },
+    {
+     "scelta": "Non vuoi saperlo.",
+     "esito": "Marta annuisce. \"Il ferro ricorda anche per chi non vuole.\" Ti lucida l'anello gratis, e non ne parla piu'.",
+     "premio": {
+      "segno": "AnelloLucidato",
+      "monete": 5
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 1,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Marta"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Fucina"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Marta alza le spalle: \"Come vuoi. Il ferro aspetta.\"",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Marta",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "spada_spezzata",
+   "titolo": "La spada di tuo padre",
+   "per": {
+    "ricordo": [
+     "spada"
+    ]
+   },
+   "piace": {
+    "combattente": 2
+   },
+   "png": [
+    "Livia Serra",
+    "Tebaldo"
+   ],
+   "luogo": [
+    "Posto di guardia del passo"
+   ],
+   "aggancio": "{png} ha visto l'elsa che spunta dal tuo fagotto. \"Quel fodero e' della vecchia legione del sud. Dove l'hai preso?\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Racconta a {png} di tuo padre."
+    },
+    {
+     "mattone": "parla",
+     "png": "Marta",
+     "testo": "Marta guarda la lama spezzata: \"Si puo' rifondere. Ma non sara' piu' la sua.\""
+    },
+    {
+     "mattone": "scegli",
+     "png": "Marta",
+     "testo": "Il ferro aspetta sulla forgia."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Rifondila in un coltello per te.",
+     "esito": "Marta batte fino al tramonto. Il coltello che ne esce e' piccolo, ma la tempra e' quella di tuo padre.",
+     "premio": {
+      "oggetti": [
+       "Coltello"
+      ],
+      "segno": "SpadaRifusa"
+     }
+    },
+    {
+     "scelta": "Tienila spezzata.",
+     "esito": "\"Allora tienila come si tiene una promessa,\" dice {png}. \"La legione non dimentica i suoi.\" Da oggi le guardie ti salutano per prim{o}.",
+     "premio": {
+      "segno": "SpadaTenuta",
+      "monete": 8
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Livia Serra"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Tebaldo"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Posto di guardia del passo"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Le guardie non ti chiederanno piu' della spada.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Livia Serra",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "amuleto_di_quercia",
+   "titolo": "Legno di questa valle",
+   "per": {
+    "ricordo": [
+     "amuleto"
+    ]
+   },
+   "piace": {
+    "cacciatore": 1,
+    "esploratore": 1
+   },
+   "png": [
+    "Gaspare"
+   ],
+   "luogo": [
+    "Collina dell'Orso"
+   ],
+   "aggancio": "Gaspare annusa l'aria quando passi. \"Quell'amuleto. E' quercia della collina. Non ne cresce altrove, quel nodo.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Gaspare",
+     "testo": "Chiedi a Gaspare come fa a saperlo."
+    },
+    {
+     "mattone": "vai",
+     "luogo": "Collina dell'Orso",
+     "testo": "\"Sali in cima. Cerca la quercia che ha un taglio come il tuo amuleto.\""
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Collina dell'Orso",
+     "testo": "Siedi sotto la quercia e resta in silenzio, come ti ha detto lui."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Torni da Gaspare e gli racconti cosa hai sentito.",
+     "esito": "Gaspare ascolta senza voltarsi. \"Allora chi te l'ha dato era passato di qui. E qualcuno, quassu', l'ha lasciato andare.\"",
+     "premio": {
+      "segno": "QuerciaTrovata",
+      "iscrizione": "La quercia dell'amuleto"
+     }
+    },
+    {
+     "scelta": "Non dici niente a nessuno.",
+     "esito": "Il silenzio ti sembra giusto. Quando ripassi, Gaspare ti fa un cenno: il primo.",
+     "premio": {
+      "segno": "QuerciaSilenzio"
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Gaspare"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Margine del bosco"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Gaspare torna a guardare il bosco. Non te lo chiedera' due volte.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Gaspare",
+      "quanto": -1
+     },
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "mappa_strappata",
+   "titolo": "L'altra meta' della mappa",
+   "per": {
+    "ricordo": [
+     "mappa"
+    ]
+   },
+   "piace": {
+    "esploratore": 2
+   },
+   "png": [
+    "Teodoro",
+    "Agnese",
+    "Bruno"
+   ],
+   "luogo": [
+    "Rovine degli Antichi"
+   ],
+   "aggancio": "{png} abbassa la voce: \"Una volta un mercante ha lasciato qui un pezzo di carta strappato, uguale al tuo. Ci ha pagato una cena.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Fatti raccontare del mercante e del pezzo di carta."
+    },
+    {
+     "mattone": "vai",
+     "luogo": "{luogo}",
+     "testo": "Le due meta' insieme indicano una stella incisa nella pietra."
+    },
+    {
+     "mattone": "leggi",
+     "luogo": "{luogo}",
+     "testo": "Sotto il muschio, accanto alla stella, c'e' una riga che nessuno ha copiato."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Copi la riga nel tuo quaderno.",
+     "esito": "Le parole non si capiscono, ma la mano le copia come se le conoscesse gia'.",
+     "premio": {
+      "segno": "MappaUnita",
+      "iscrizione": "La riga sotto il muschio"
+     }
+    },
+    {
+     "scelta": "Rimetti il muschio al suo posto.",
+     "esito": "Qualcuno l'aveva nascosta per una ragione. Te ne vai, e la mappa ti sembra finalmente intera.",
+     "premio": {
+      "segno": "MappaRispetto",
+      "monete": 6
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Bruno"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Teodoro"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Agnese"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Rovine degli Antichi"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Un altro colono, prima o poi, sentira' parlare del mercante e della carta.",
+    "effetti": [
+     {
+      "tipo": "passa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "libro_di_preghiere",
+   "titolo": "Il fiore tra le pagine",
+   "per": {
+    "ricordo": [
+     "libro"
+    ]
+   },
+   "piace": {
+    "mistico": 2
+   },
+   "png": [
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Tempio del Cuore"
+   ],
+   "aggancio": "Dal tuo libro di preghiere cade un fiore secco. Padre Anselmo lo raccoglie prima di te. \"Questo fiore cresce solo nella palude.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Padre Anselmo",
+     "testo": "Chiedi a Padre Anselmo come puo' esserci un fiore della palude in un libro venuto da {origine}."
+    },
+    {
+     "mattone": "parla",
+     "png": "Nonna Edda",
+     "testo": "Nonna Edda guarda il fiore e poi te. \"Chi l'ha messo li' sapeva dove saresti finito.\""
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Tempio del Cuore",
+     "testo": "Torna al tempio e leggi la pagina segnata, accanto al frammento."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Leggi la preghiera ad alta voce.",
+     "esito": "Il frammento batte. Due colpi e una pausa. Poi, per un attimo, tre.",
+     "premio": {
+      "segno": "PreghieraLetta",
+      "iscrizione": "La pagina del fiore"
+     }
+    },
+    {
+     "scelta": "Lasci il fiore sull'altare.",
+     "esito": "Padre Anselmo non dice niente, ma la mattina dopo il fiore e' ancora li', e non e' piu' secco.",
+     "premio": {
+      "segno": "FioreDonato",
+      "oggetti": [
+       "Erbe_Palude"
+      ]
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Padre Anselmo"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Tempio del Cuore"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il fiore secco resta tra le pagine. Forse un giorno.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "il_nome_a_bassa_voce",
+   "titolo": "Il nome detto a bassa voce",
+   "per": {
+    "motivo": [
+     "scomparso"
+    ]
+   },
+   "piace": {
+    "socievole": 1,
+    "curioso": 1
+   },
+   "png": [
+    "Lucia",
+    "Agnese",
+    "Sibilla"
+   ],
+   "luogo": [
+    "Ufficio della Gilda",
+    "Pozzo"
+   ],
+   "aggancio": "Hai detto quel nome solo a Padre Anselmo, il giorno del Registro. Eppure {png} ti ferma: \"Mi hanno detto che cerchi qualcuno.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Chiedi a {png} chi gliel'ha detto."
+    },
+    {
+     "mattone": "parla",
+     "png": "Padre Anselmo",
+     "testo": "Padre Anselmo giura di non aver parlato. Ma il Registro, dice, non e' l'unico libro della valle."
+    },
+    {
+     "mattone": "scegli",
+     "png": "{png}",
+     "testo": "{png} ha un foglio con una lista di nomi passati dalla valle."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Cerchi il nome nella lista.",
+     "esito": "Il nome c'e'. Accanto, una data di tre anni fa e una parola sola: 'oltre'. Oltre cosa, nessuno lo sa.",
+     "premio": {
+      "segno": "NomeTrovato",
+      "iscrizione": "Una riga nella lista"
+     }
+    },
+    {
+     "scelta": "Chiedi di tenere il segreto.",
+     "esito": "{png} piega il foglio e te lo da'. \"Allora lo tieni tu. Io non l'ho mai visto.\"",
+     "premio": {
+      "segno": "ListaAvuta",
+      "oggetti": [
+       "Quaderno"
+      ]
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Lucia"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Agnese"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Sibilla"
+    }
+   ],
+   "rifiuto": {
+    "testo": "La lista dei nomi finisce nel fuoco di qualcun altro.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_debito",
+   "titolo": "Qualcuno lo sapeva",
+   "per": {
+    "motivo": [
+     "debito"
+    ]
+   },
+   "piace": {
+    "ombroso": 1
+   },
+   "png": [
+    "Sibilla"
+   ],
+   "luogo": [
+    "Piazza del villaggio"
+   ],
+   "aggancio": "Sibilla ti mette in mano una lettera con la cera nera. \"Viene da fuori. Non chiedermi come.\" Dentro c'e' solo una cifra.",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Sibilla",
+     "testo": "Chiedi a Sibilla chi l'ha mandata."
+    },
+    {
+     "mattone": "parla",
+     "png": "Bruno",
+     "testo": "Bruno conosce quella cera: \"Gente che presta a chi scappa. E che trova sempre chi scappa.\""
+    },
+    {
+     "mattone": "scegli",
+     "png": "Sibilla",
+     "testo": "Sibilla aspetta la risposta: domani la carovana riparte."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Mandi le monete che hai.",
+     "esito": "Sibilla le conta senza sorridere. \"Non bastano. Ma per ora tacciono.\"",
+     "premio": {
+      "segno": "DebitoPagatoInParte"
+     }
+    },
+    {
+     "scelta": "Rispondi che nella valle non c'e' nessuno con quel nome.",
+     "esito": "Sibilla ride piano. \"Bugia buona. La porto io.\" Ti restituisce la cera spezzata: un ricordo che qualcuno ti cerca.",
+     "premio": {
+      "segno": "DebitoNegato",
+      "monete": 4
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Sibilla"
+    },
+    {
+     "tipo": "evento",
+     "evento": "Carovana"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Sibilla riparte con la lettera. Chi ti cerca sapra' che non hai risposto.",
+    "effetti": [
+     {
+      "tipo": "voce",
+      "testo": "Qualcuno, fuori dalla valle, cerca un colono che ha un debito."
+     }
+    ]
+   }
+  },
+  {
+   "id": "chi_fugge",
+   "titolo": "Una descrizione dalla capitale",
+   "per": {
+    "motivo": [
+     "fuga"
+    ]
+   },
+   "piace": {
+    "ombroso": 1,
+    "prudente": 1
+   },
+   "png": [
+    "Fulvio"
+   ],
+   "luogo": [
+    "Posto di guardia del passo"
+   ],
+   "aggancio": "Fulvio ti guarda troppo a lungo. \"Strano. Dalla capitale e' arrivata la descrizione di qualcuno. Ti somiglia un po'.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Fulvio",
+     "testo": "Chiedi a Fulvio cosa dice la descrizione."
+    },
+    {
+     "mattone": "parla",
+     "png": "Bruno",
+     "testo": "Bruno ti versa da bere. \"Il ragazzo e' buono. E' solo che ha paura di sbagliare.\""
+    },
+    {
+     "mattone": "scegli",
+     "png": "Fulvio",
+     "testo": "Fulvio ha il foglio in mano. Il Balivo non l'ha ancora visto."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Gli dici la verita'.",
+     "esito": "Fulvio ascolta tutto. Poi piega il foglio in quattro. \"Nella valle si arriva per ricominciare. Lo dice anche la capitana.\"",
+     "premio": {
+      "segno": "FulvioSaLaVerita"
+     }
+    },
+    {
+     "scelta": "Gli dici che si sbaglia.",
+     "esito": "\"Sara' cosi',\" dice Fulvio, e non ci crede. Ma il foglio, la sera, finisce nel fuoco della locanda.",
+     "premio": {
+      "segno": "FulvioBruciaFoglio",
+      "monete": 3
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Fulvio"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Posto di guardia del passo"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il foglio arriva al Balivo. Nessuno ti accusa, ma le guardie ti guardano un po' di piu'.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Fulvio",
+      "quanto": -1
+     },
+     {
+      "tipo": "voce",
+      "testo": "Al passo gira la descrizione di qualcuno venuto dalla capitale."
+     }
+    ]
+   }
+  },
+  {
+   "id": "l_ombra_del_sogno",
+   "titolo": "La stessa ombra",
+   "per": {
+    "motivo": [
+     "sogno"
+    ]
+   },
+   "piace": {
+    "mistico": 2
+   },
+   "png": [
+    "Tobia"
+   ],
+   "luogo": [
+    "Collina dell'Orso"
+   ],
+   "aggancio": "Tobia ti tira per la manica. \"Stanotte ho sognato l'Orso. E c'eri tu. Eri sulla collina, e lui ti guardava.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Tobia",
+     "testo": "Fatti raccontare tutto il sogno di Tobia."
+    },
+    {
+     "mattone": "dormi",
+     "testo": "Dormi. Forse il sogno torna anche a te."
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Collina dell'Orso",
+     "testo": "Sali sulla collina di notte, dove Tobia ti ha visto."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Racconti a Tobia che c'eri davvero.",
+     "esito": "Tobia salta come un capretto. \"Allora e' vero! Lo dico a Gaspare!\" Gaspare, quando lo sa, non ride.",
+     "premio": {
+      "segno": "SognoCondiviso",
+      "iscrizione": "La notte sulla collina"
+     },
+     "prossimo": "orso_2_le_impronte"
+    },
+    {
+     "scelta": "Gli dici che era solo un sogno.",
+     "esito": "Tobia annuisce, deluso. Ma la notte dopo, nel tuo sogno, l'ombra e' un passo piu' vicina.",
+     "premio": {
+      "segno": "SognoTaciuto"
+     },
+     "prossimo": "orso_2_le_impronte"
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Tobia"
+    },
+    {
+     "tipo": "sogno"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Tobia racconta il sogno a qualcun altro.",
+    "effetti": [
+     {
+      "tipo": "passa"
+     },
+     {
+      "tipo": "fiducia",
+      "png": "Tobia",
+      "quanto": -1
+     }
+    ]
+   },
+   "serie": {
+    "id": "orso",
+    "capitolo": 1
+   }
+  },
+  {
+   "id": "dove_ti_sei_svegliato",
+   "titolo": "Dove ti sei svegliat{o}",
+   "per": {
+    "origine": [
+     "dimenticato"
+    ]
+   },
+   "piace": {
+    "esploratore": 1,
+    "mistico": 1
+   },
+   "png": [
+    "Nonna Edda"
+   ],
+   "luogo": [
+    "Margine del bosco"
+   ],
+   "aggancio": "Nonna Edda ti annusa come si annusa il pane. \"Tu non ti ricordi niente, vero? Ho un'erba per questo. Ma non e' gratis.\"",
+   "passi": [
+    {
+     "mattone": "porta",
+     "png": "Nonna Edda",
+     "oggetto": "Funghi",
+     "testo": "\"Funghi del bosco, quelli col cappello rosso scuro. E salutami quando arrivi.\""
+    },
+    {
+     "mattone": "dormi",
+     "testo": "\"Bevi questo e dormi. Quello che vedi, e' tuo.\""
+    },
+    {
+     "mattone": "vai",
+     "luogo": "{luogo}",
+     "testo": "Nel sogno c'era un albero spaccato dal fulmine, vicino al bosco. Cercalo."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Scavi tra le radici.",
+     "esito": "Trovi un bottone d'argento con un'aquila. Non sai di chi sia. Ma la mano lo riconosce.",
+     "premio": {
+      "segno": "BottoneTrovato",
+      "iscrizione": "L'albero del risveglio"
+     }
+    },
+    {
+     "scelta": "Lasci stare: il passato puo' aspettare.",
+     "esito": "Nonna Edda, quando glielo racconti, sorride. \"Saggi{o}. Il passato non scappa. Sei tu che scappavi.\"",
+     "premio": {
+      "segno": "RisveglioLasciato",
+      "oggetti": [
+       "Erbe_Palude"
+      ]
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Nonna Edda"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Palude"
+    }
+   ],
+   "rifiuto": {
+    "testo": "\"Il passato aspetta,\" dice Nonna Edda. \"Ma non per sempre.\"",
+    "effetti": []
+   }
+  },
+  {
+   "id": "paura_buio",
+   "titolo": "Una candela per il buio",
+   "per": {
+    "paura": [
+     "buio"
+    ]
+   },
+   "piace": {
+    "esploratore": 1
+   },
+   "png": [
+    "Bruno",
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Grotta est"
+   ],
+   "aggancio": "{png} ti allunga un mozzicone di candela. \"Lo so che il buio non ti piace. A nessuno piace. Ma nella valle c'e' un buio che bisogna conoscere.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Chiedi a {png} di quale buio parla."
+    },
+    {
+     "mattone": "vai",
+     "luogo": "Grotta est",
+     "testo": "Vai fino alla porta con la runa Ur, in fondo alla grotta est."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Grotta est",
+     "testo": "Spegni la candela e resta li', al buio, finche' il cuore non rallenta."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Resti fino alla fine.",
+     "esito": "Nel buio la runa sulla porta ha un riflesso suo, lievissimo. Non fa paura: sembra una lanterna lasciata accesa per te.",
+     "premio": {
+      "segno": "BuioConosciuto",
+      "iscrizione": "La runa nel buio"
+     }
+    },
+    {
+     "scelta": "Riaccendi la candela e scappi.",
+     "esito": "{png} non ride. \"Ci sei andat{o}. E' gia' piu' di quanto faccia il Balivo.\"",
+     "premio": {
+      "segno": "BuioTentato",
+      "monete": 5
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Bruno"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Padre Anselmo"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Grotta est"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il mozzicone di candela resta sul bancone.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "paura_acqua",
+   "titolo": "L'acqua ricorda",
+   "per": {
+    "paura": [
+     "acqua"
+    ]
+   },
+   "piace": {},
+   "png": [
+    "Nonna Edda"
+   ],
+   "luogo": [
+    "Lago"
+   ],
+   "aggancio": "\"Tu hai paura dell'acqua,\" dice Nonna Edda, senza domandare. \"E vivi accanto a un lago. Che spreco.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Nonna Edda",
+     "testo": "Chiedi a Nonna Edda come lo sa."
+    },
+    {
+     "mattone": "raccogli",
+     "luogo": "Lago",
+     "oggetto": "Cozze",
+     "testo": "\"Portami cozze del lago. Dalla riva, non serve affogare.\""
+    },
+    {
+     "mattone": "porta",
+     "png": "Nonna Edda",
+     "oggetto": "Cozze",
+     "testo": "Porta le cozze a Nonna Edda."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Le chiedi del fondo del lago.",
+     "esito": "Lo sguardo si chiude come una porta. \"Questa domanda non si fa. Ma l'hai fatta con paura, e la paura e' onesta. Vai.\"",
+     "premio": {
+      "segno": "DomandaDelLago"
+     }
+    },
+    {
+     "scelta": "La ringrazi e basta.",
+     "esito": "Ti insegna la ninnananna delle rune: Nir-Ren-Ka, Acqua che veglia. \"Cantala quando l'acqua ti guarda.\"",
+     "premio": {
+      "segno": "NinnannanaNir",
+      "iscrizione": "Acqua che veglia"
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Nonna Edda"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Lago"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Nonna Edda sputa nell'acqua. \"Peggio per te.\"",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Nonna Edda",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "paura_morti",
+   "titolo": "La lapide senza nome",
+   "per": {
+    "paura": [
+     "morti"
+    ]
+   },
+   "piace": {
+    "mistico": 1
+   },
+   "png": [
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Cimitero"
+   ],
+   "aggancio": "Padre Anselmo ha bisogno di una mano. \"Al cimitero c'e' una lapide senza nome. Ogni anno qualcuno ci lascia un fiore, e io non so chi.\"",
+   "passi": [
+    {
+     "mattone": "notte",
+     "luogo": "Cimitero",
+     "testo": "Vai al cimitero di notte, quando qualcuno porta il fiore."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Cimitero",
+     "testo": "Aspetta tra le lapidi, anche se ogni ombra ti sembra alzarsi."
+    },
+    {
+     "mattone": "parla",
+     "png": "Padre Anselmo",
+     "testo": "Torna da Padre Anselmo con quello che hai visto."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Racconti chi hai visto.",
+     "esito": "Padre Anselmo chiude gli occhi. \"Allora lo sa anche lui. Va bene. Va bene cosi'.\" Non ti dice di chi e' la lapide, ma ti benedice.",
+     "premio": {
+      "segno": "LapideVista",
+      "oggetti": [
+       "Medaglietta"
+      ]
+     }
+    },
+    {
+     "scelta": "Dici che non e' venuto nessuno.",
+     "esito": "Qualcuno ti ha visto e ti ha lasciato in pace: e' un segreto che adesso e' anche tuo.",
+     "premio": {
+      "segno": "LapideSegreto",
+      "monete": 5
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Padre Anselmo"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Cimitero"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il fiore sulla lapide continua ad arrivare. Chi lo porta resta un segreto.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "paura_fuoco",
+   "titolo": "Le pinze di Marta",
+   "per": {
+    "paura": [
+     "fuoco"
+    ]
+   },
+   "piace": {},
+   "png": [
+    "Marta"
+   ],
+   "luogo": [
+    "Fucina"
+   ],
+   "aggancio": "Marta ti vede fermo sulla soglia della fucina, lontano dalla brace. \"Entra. Il fuoco morde solo chi non lo guarda.\"",
+   "passi": [
+    {
+     "mattone": "porta",
+     "png": "Marta",
+     "oggetto": "Legna",
+     "testo": "Porta legna alla fucina. Avvicinarti alla brace e' gia' meta' lezione."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Fucina",
+     "testo": "Tieni le pinze mentre Marta batte. Non mollarle."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Marta",
+     "testo": "Il ferro e' pronto. Marta ti porge il martello."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Dai tu l'ultimo colpo.",
+     "esito": "Il chiodo che ne esce e' storto. Marta lo mette da parte lo stesso: \"Il primo non si butta.\"",
+     "premio": {
+      "segno": "PrimoChiodo",
+      "oggetti": [
+       "Chiodi"
+      ]
+     }
+    },
+    {
+     "scelta": "Restituisci il martello.",
+     "esito": "\"La prossima volta,\" dice Marta. \"Ma oggi sei rimast{o}. Ed e' quello che conta.\"",
+     "premio": {
+      "segno": "FuocoGuardato",
+      "monete": 5
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Marta"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Fucina"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Marta chiude la porta della fucina. Il calore resta fuori, con te.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "paura_solitudine",
+   "titolo": "Un posto alla tavola",
+   "per": {
+    "paura": [
+     "solitudine"
+    ]
+   },
+   "piace": {
+    "socievole": 1
+   },
+   "png": [
+    "Bruno"
+   ],
+   "luogo": [
+    "Locanda di Bruno"
+   ],
+   "aggancio": "Bruno ti mette davanti una sedia libera al tavolo grande. \"Stasera si mangia insieme. E' una regola della casa. L'ho inventata adesso.\"",
+   "passi": [
+    {
+     "mattone": "siedi",
+     "luogo": "Locanda di Bruno",
+     "testo": "Siediti al tavolo grande della locanda, la sera."
+    },
+    {
+     "mattone": "parla",
+     "png": "Teodoro",
+     "testo": "Teodoro ha una storia per ogni boccale. Ascoltane almeno una."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Bruno",
+     "testo": "A fine serata Bruno pulisce il tavolo e ti chiede: \"Torni domani?\""
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Rispondi di si'.",
+     "esito": "Bruno incide una tacca sotto la sedia. \"Questa e' tua. Nessuno ci si siede, se non ci sei.\"",
+     "premio": {
+      "segno": "SediaDiBruno",
+      "oggetti": [
+       "Zuppa_Bruno"
+      ]
+     }
+    },
+    {
+     "scelta": "Rispondi che non lo sai.",
+     "esito": "\"Allora la tengo libera lo stesso,\" dice Bruno. \"Le sedie sono pazienti.\"",
+     "premio": {
+      "segno": "SediaAspetta",
+      "oggetti": [
+       "Zuppa_Bruno"
+      ]
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 1,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Bruno"
+    },
+    {
+     "tipo": "evento",
+     "evento": "Siede"
+    }
+   ],
+   "rifiuto": {
+    "testo": "La sedia resta libera. Bruno la tiene li' lo stesso.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "paura_magia",
+   "titolo": "La candela che ha tremato",
+   "per": {
+    "paura": [
+     "magia"
+    ]
+   },
+   "piace": {
+    "mistico": 1
+   },
+   "png": [
+    "Maestro Elric",
+    "Nonna Edda"
+   ],
+   "luogo": [
+    "Rovine degli Antichi"
+   ],
+   "aggancio": "{png} ti guarda le mani. \"Tu hai paura della magia. E la magia, a quanto pare, non ha paura di te.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Chiedi a {png} cosa intende."
+    },
+    {
+     "mattone": "vai",
+     "luogo": "Rovine degli Antichi",
+     "testo": "Vai alle rovine e appoggia la mano sulla stella incisa."
+    },
+    {
+     "mattone": "scegli",
+     "png": "{png}",
+     "testo": "La pietra era tiepida. {png} aspetta la tua risposta."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Chiedi di imparare.",
+     "esito": "\"Una runa sola, per cominciare. Lume: la luce. Quella non ha mai fatto male a nessuno.\"",
+     "premio": {
+      "segno": "RunaLume",
+      "iscrizione": "Lume, la luce"
+     }
+    },
+    {
+     "scelta": "Chiedi di dimenticare.",
+     "esito": "\"Non si dimentica,\" dice {png}. \"Ma si puo' smettere di tremare.\" Ti da' un'erba da bruciare la sera.",
+     "premio": {
+      "segno": "MagiaRifiutata",
+      "oggetti": [
+       "Erbe_Palude"
+      ]
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Maestro Elric"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Nonna Edda"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Rovine degli Antichi"
+    }
+   ],
+   "rifiuto": {
+    "testo": "La pietra si raffredda. Qualcosa, li', ha smesso di aspettarti.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "figlio_del_lago",
+   "titolo": "Gente di lago",
+   "per": {
+    "origine": [
+     "lago"
+    ]
+   },
+   "piace": {},
+   "png": [
+    "Nonna Edda",
+    "Agnese"
+   ],
+   "luogo": [
+    "Lago"
+   ],
+   "aggancio": "\"Tu sei gente di lago,\" dice {png}. \"Si vede da come guardi l'acqua: non la guardi, la leggi.\"",
+   "passi": [
+    {
+     "mattone": "raccogli",
+     "luogo": "Lago",
+     "oggetto": "Perla",
+     "testo": "\"Dicono che quest'anno ci siano perle. Uno di lago le trova.\""
+    },
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Mostra la perla a {png}."
+    },
+    {
+     "mattone": "scegli",
+     "png": "{png}",
+     "testo": "La perla ha un riflesso verde, come le luci sulle rovine."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "La regali a {png}.",
+     "esito": "{png} la stringe nel pugno. \"Te ne ricorderai, e me ne ricordero' io.\"",
+     "premio": {
+      "segno": "PerlaDonata",
+      "monete": 10
+     }
+    },
+    {
+     "scelta": "La tieni.",
+     "esito": "Di notte, accanto al letto, la perla fa una luce piccola. Proprio piccola.",
+     "premio": {
+      "segno": "PerlaTenuta",
+      "oggetti": [
+       "Perla"
+      ]
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Nonna Edda"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Agnese"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Lago"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Le perle di quest'anno le trovera' qualcun altro.",
+    "effetti": [
+     {
+      "tipo": "passa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "figlio_delle_miniere",
+   "titolo": "I martelli sotto la montagna",
+   "per": {
+    "origine": [
+     "minatori"
+    ]
+   },
+   "piace": {
+    "esploratore": 1
+   },
+   "png": [
+    "Lucia"
+   ],
+   "luogo": [
+    "Grotta nord"
+   ],
+   "aggancio": "Lucia ti trattiene un momento. \"Tu vieni da un borgo di minatori, vero? Allora tu li senti. I colpi sotto la montagna.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Lucia",
+     "testo": "Lucia ti racconta di Ranieri, Gisella e Cecco, e dei colpi del 309."
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Grotta nord",
+     "testo": "Vai alla grotta del nord di notte e ascolta la roccia."
+    },
+    {
+     "mattone": "parla",
+     "png": "Lucia",
+     "testo": "Torna da Lucia con quello che hai sentito."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Le dici che i colpi hanno un ritmo.",
+     "esito": "Lucia diventa bianca. \"Tre colpi, una pausa. E' il segnale della Gilda.\" Non dice altro. Ma da quel giorno ti saluta come una sorella.",
+     "premio": {
+      "segno": "ColpiDellaGilda",
+      "iscrizione": "Tre colpi e una pausa"
+     },
+     "prossimo": "ranieri_2_la_lanterna"
+    },
+    {
+     "scelta": "Le dici che era solo la montagna.",
+     "esito": "\"Gia'. Solo la montagna.\" Lucia sorride male. Ti paga lo stesso: \"Per il disturbo.\"",
+     "premio": {
+      "segno": "ColpiTaciuti",
+      "monete": 10
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Lucia"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Grotta nord"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Lucia non ti chiedera' piu' dei colpi. Ma li sentira' da sola, di notte.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Lucia",
+      "quanto": -1
+     }
+    ]
+   },
+   "serie": {
+    "id": "ranieri",
+    "capitolo": 1
+   }
+  },
+  {
+   "id": "figlio_della_capitale",
+   "titolo": "L'accento di casa",
+   "per": {
+    "origine": [
+     "capitale"
+    ]
+   },
+   "piace": {
+    "socievole": 1
+   },
+   "png": [
+    "Fulvio"
+   ],
+   "luogo": [
+    "Posto di guardia del passo"
+   ],
+   "aggancio": "Fulvio sente come parli e gli si illumina la faccia. \"Sei della capitale! Di che quartiere? Io della Porta Vecchia.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Fulvio",
+     "testo": "Parla con Fulvio della capitale."
+    },
+    {
+     "mattone": "parla",
+     "png": "Nonna Edda",
+     "testo": "Fulvio vorrebbe scrivere a casa. \"Il velo ferma gli uomini, non i corvi,\" dice Nonna Edda."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Fulvio",
+     "testo": "Il corvo e' pronto. Fulvio ha scritto solo due righe."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Aggiungi due righe tue.",
+     "esito": "Il corvo parte con un messaggio per due quartieri. Fulvio non lo dimentichera'.",
+     "premio": {
+      "segno": "CorvoDiFulvio",
+      "iscrizione": "Due righe per casa"
+     }
+    },
+    {
+     "scelta": "Lasci la lettera a lui solo.",
+     "esito": "\"Grazie,\" dice Fulvio. \"A volte e' meglio che qualcuno sappia solo che sei vivo.\"",
+     "premio": {
+      "segno": "CorvoDiFulvioSolo",
+      "monete": 5
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 1,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Fulvio"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Fulvio scrive a casa da solo, e il corvo parte lo stesso.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "terre_di_confine",
+   "titolo": "Il segno che conosci",
+   "per": {
+    "origine": [
+     "confine"
+    ]
+   },
+   "piace": {
+    "esploratore": 1,
+    "mistico": 1
+   },
+   "png": [
+    "Maestro Elric"
+   ],
+   "luogo": [
+    "Rovine degli Antichi"
+   ],
+   "aggancio": "Maestro Elric ti blocca la strada. \"Tu vieni dal confine. Sai leggere una runa. Quale? No, non dirmelo: mostramela.\"",
+   "passi": [
+    {
+     "mattone": "vai",
+     "luogo": "Rovine degli Antichi",
+     "testo": "Vai alle rovine con Maestro Elric e trova la runa che conosci tra i cinque segni."
+    },
+    {
+     "mattone": "leggi",
+     "luogo": "Rovine degli Antichi",
+     "testo": "Leggi la runa ad alta voce."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Maestro Elric",
+     "testo": "Elric prende appunti in fretta. \"E le altre? Le sai?\""
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Gli dici quello che sai.",
+     "esito": "Elric ti guarda come si guarda un libro raro. \"Torna. Ci sono cose che solo chi viene dal confine puo' leggere.\"",
+     "premio": {
+      "segno": "AllievoDiElric",
+      "monete": 10
+     }
+    },
+    {
+     "scelta": "Tieni per te il resto.",
+     "esito": "\"Prudente,\" dice Elric, offeso e ammirato insieme. Nonna Edda, quando lo sa, ride per un'ora.",
+     "premio": {
+      "segno": "SegretoDelConfine",
+      "iscrizione": "La runa del confine"
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Maestro Elric"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Rovine degli Antichi"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Elric trovera' un altro che sa leggere. O ci provera'.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Maestro Elric",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_soldato",
+   "titolo": "Il turno di notte",
+   "per": {
+    "mestiere": [
+     "soldato"
+    ]
+   },
+   "piace": {
+    "combattente": 1
+   },
+   "png": [
+    "Livia Serra"
+   ],
+   "luogo": [
+    "Posto di guardia del passo"
+   ],
+   "aggancio": "La capitana Livia ti squadra. \"Soldato congedato. Si vede da come tieni le spalle. Ho un ragazzo che ha paura del bosco di notte. Mi serve qualcuno che gli stia accanto.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Livia Serra",
+     "testo": "Accetta di stare accanto a Fulvio per un turno."
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Posto di guardia del passo",
+     "testo": "Presentati al passo di notte."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Posto di guardia del passo",
+     "testo": "Fai il turno con Fulvio, senza allontanarti."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Gli insegni a contare i rumori.",
+     "esito": "All'alba Fulvio dorme in piedi, ma sorride. Livia ti stringe l'avambraccio come si fa tra soldati.",
+     "premio": {
+      "segno": "TurnoConFulvio",
+      "monete": 12
+     }
+    },
+    {
+     "scelta": "Lo lasci dormire e fai il turno da sol{o}.",
+     "esito": "Livia lo scopre e non dice niente a nessuno. \"Lo rifarei anch'io,\" ammette.",
+     "premio": {
+      "segno": "TurnoDaSolo",
+      "oggetti": [
+       "Pane_Nero"
+      ],
+      "monete": 6
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Livia Serra"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Posto di guardia del passo"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Fulvio fa il turno da solo. Torna all'alba bianco come un lenzuolo.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Livia Serra",
+      "quanto": -1
+     },
+     {
+      "tipo": "fiducia",
+      "png": "Fulvio",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_cacciatore",
+   "titolo": "Solo cio' che serve",
+   "per": {},
+   "piace": {
+    "cacciatore": 3
+   },
+   "png": [
+    "Gaspare"
+   ],
+   "luogo": [
+    "Pascoli"
+   ],
+   "aggancio": "Gaspare ti ha visto cacciare. \"Hai la mano buona. Vediamo se hai anche la testa. Un {animale}. Uno solo. E quello che ne resta non va sprecato.\"",
+   "passi": [
+    {
+     "mattone": "caccia",
+     "animale": "{animale}",
+     "testo": "Caccia un {animale}. Uno."
+    },
+    {
+     "mattone": "porta",
+     "png": "Gaspare",
+     "oggetto": "{pelle}",
+     "testo": "Porta a Gaspare la pelle."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Gaspare",
+     "testo": "\"E la carne? A chi va la carne?\""
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "A Nonna Edda, che non va a caccia.",
+     "esito": "Gaspare annuisce lento. \"Lei ti saluta, adesso. E' piu' di quanto faccia con me.\"",
+     "premio": {
+      "segno": "CacciaGiusta",
+      "monete": 8
+     }
+    },
+    {
+     "scelta": "Alla locanda, per chi ha fame.",
+     "esito": "\"Bruno ne fara' uno stufato che si ricordano,\" dice Gaspare. \"Va bene. Va bene anche cosi'.\"",
+     "premio": {
+      "segno": "CacciaPerTutti",
+      "oggetti": [
+       "Stufato"
+      ]
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Gaspare"
+    },
+    {
+     "tipo": "evento",
+     "evento": "Animale"
+    }
+   ],
+   "rifiuto": {
+    "testo": "\"Allora caccia per divertimento,\" dice Gaspare, e ti volta le spalle.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Gaspare",
+      "quanto": -2
+     }
+    ]
+   }
+  },
+  {
+   "id": "orfano_del_tempio",
+   "titolo": "La scopa di Tobia",
+   "per": {
+    "mestiere": [
+     "orfano"
+    ]
+   },
+   "piace": {
+    "mistico": 1
+   },
+   "png": [
+    "Tobia"
+   ],
+   "luogo": [
+    "Tempio del Cuore"
+   ],
+   "aggancio": "Tobia ti guarda spazzare un angolo del tempio senza che nessuno te l'abbia chiesto. \"Anche tu sei cresciut{o} in un tempio! Si vede. Lo fai storto come me.\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Tobia",
+     "testo": "Tobia vuole sapere com'era il tuo tempio."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Tempio del Cuore",
+     "testo": "La mattina presto, spazzate insieme il tempio."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Tobia",
+     "testo": "Tobia ha una domanda che non ha mai fatto a nessuno: \"Ma da grandi, gli orfani, cosa diventano?\""
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "\"Quello che vogliono.\"",
+     "esito": "Tobia ci pensa un giorno intero. Poi annuncia a tutti che da grande sara' cacciatore d'orsi. Gaspare quasi si strozza.",
+     "premio": {
+      "segno": "FratelloDiTobia",
+      "monete": 5
+     }
+    },
+    {
+     "scelta": "\"Qualcuno che non lascia solo nessuno.\"",
+     "esito": "Tobia non risponde. Ma la sera ti porta il suo sasso piu' bello.",
+     "premio": {
+      "segno": "SassoDiTobiaPerTe",
+      "iscrizione": "Il sasso piu' bello"
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 1,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Tobia"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Tempio del Cuore"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Tobia spazza da solo, e canta per farsi compagnia.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "il_mercante",
+   "titolo": "La bilancia giusta",
+   "per": {
+    "mestiere": [
+     "mercante"
+    ]
+   },
+   "piace": {
+    "socievole": 1
+   },
+   "png": [
+    "Sibilla"
+   ],
+   "luogo": [
+    "Piazza del villaggio"
+   ],
+   "aggancio": "Sibilla ti riconosce al primo sguardo. \"Mercante in rovina, eh? Lo eravamo tutti, una volta. Ho un affare piccolo: vediamo se hai ancora il naso.\"",
+   "passi": [
+    {
+     "mattone": "porta",
+     "png": "Sibilla",
+     "oggetto": "{oggetto}",
+     "testo": "Sibilla vuole {oggetto}: \"Nella capitale vale il doppio.\""
+    },
+    {
+     "mattone": "parla",
+     "png": "Agnese",
+     "testo": "Agnese ti avverte: \"Quella li' compra a un soldo e vende a dieci. Fatti pagare bene.\""
+    },
+    {
+     "mattone": "scegli",
+     "png": "Sibilla",
+     "testo": "Sibilla ti offre il prezzo. E' basso, ma non troppo."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Tratti sul prezzo.",
+     "esito": "Sibilla ride forte. \"Hai ancora il naso!\" Paga, e ti mette da parte il primo sale della prossima carovana.",
+     "premio": {
+      "segno": "NasoDaMercante",
+      "monete": 12
+     }
+    },
+    {
+     "scelta": "Accetti e le chiedi notizie, invece.",
+     "esito": "Sibilla ti racconta della capitale piu' di quanto volesse. Le notizie, a volte, valgono di piu' delle monete.",
+     "premio": {
+      "segno": "NotizieDiSibilla",
+      "monete": 6,
+      "iscrizione": "Le notizie di Sibilla"
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Sibilla"
+    },
+    {
+     "tipo": "evento",
+     "evento": "Carovana"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Sibilla trova un altro naso.",
+    "effetti": [
+     {
+      "tipo": "passa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_devoto",
+   "titolo": "La veglia chiesta",
+   "per": {},
+   "non_per": {
+    "fede": [
+     "nessuna",
+     ""
+    ]
+   },
+   "piace": {
+    "devoto": 2,
+    "mistico": 1
+   },
+   "png": [
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Tempio del Cuore"
+   ],
+   "aggancio": "Padre Anselmo ha l'aria di chi non dorme da giorni. \"{fede}... Allora tu capirai. Il frammento ha saltato un battito, stanotte. Non posso vegliare da solo.\"",
+   "passi": [
+    {
+     "mattone": "notte",
+     "luogo": "Tempio del Cuore",
+     "testo": "Torna al tempio di notte."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Tempio del Cuore",
+     "testo": "Veglia accanto al frammento con Padre Anselmo."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Padre Anselmo",
+     "testo": "All'alba Padre Anselmo ti chiede: \"L'hai sentito anche tu?\""
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Si', il battito che mancava e' tornato.",
+     "esito": "Padre Anselmo piange senza vergogna. \"Allora non sono pazzo.\" Ti mette al collo la medaglietta del tempio.",
+     "premio": {
+      "segno": "VegliaCondivisa",
+      "oggetti": [
+       "Medaglietta"
+      ]
+     }
+    },
+    {
+     "scelta": "No, ma sono rimast{o}.",
+     "esito": "\"E' la stessa cosa,\" dice lui. \"Quasi.\"",
+     "premio": {
+      "segno": "VegliaOnesta",
+      "monete": 6
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Padre Anselmo"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Tempio del Cuore",
+     "ora": "notte"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Padre Anselmo veglia da solo. La mattina dopo e' piu' vecchio di un anno.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Padre Anselmo",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "lo_scettico",
+   "titolo": "La scommessa di Dino",
+   "per": {},
+   "piace": {
+    "scettico": 2,
+    "socievole": 1
+   },
+   "png": [
+    "Bruno"
+   ],
+   "luogo": [
+    "Cimitero"
+   ],
+   "aggancio": "Alla locanda il caporale Dino scommette che nessuno ha il coraggio di passare la notte al cimitero. Bruno ti guarda: \"Tu non credi ai fantasmi, vero?\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Bruno",
+     "testo": "Fatti spiegare la scommessa da Bruno."
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Cimitero",
+     "testo": "Vai al cimitero di notte."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Cimitero",
+     "testo": "Resta li' finche' non si spegne la luna."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Torni a riscuotere.",
+     "esito": "Dino paga con una smorfia. Ma non racconti a nessuno del fiore fresco che hai visto sulla lapide senza nome.",
+     "premio": {
+      "segno": "ScommessaVinta",
+      "monete": 12
+     }
+    },
+    {
+     "scelta": "Racconti del fiore fresco.",
+     "esito": "La locanda tace. Bruno versa da bere a tutti. \"Alla salute di chi porta i fiori.\"",
+     "premio": {
+      "segno": "FioreRaccontato",
+      "oggetti": [
+       "Zuppa_Bruno"
+      ],
+      "monete": 6
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Bruno"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Locanda di Bruno",
+     "ora": "notte"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Dino si vanta per una settimana che nessuno ha avuto il coraggio.",
+    "effetti": [
+     {
+      "tipo": "voce",
+      "testo": "Alla locanda nessuno ha accettato la scommessa del cimitero."
+     }
+    ]
+   }
+  },
+  {
+   "id": "l_esploratore",
+   "titolo": "Le cinque luci",
+   "per": {},
+   "piace": {
+    "esploratore": 3
+   },
+   "png": [
+    "Maestro Elric",
+    "Tobia"
+   ],
+   "luogo": [
+    "Rovine degli Antichi",
+    "Collina dell'Orso",
+    "Grotta est"
+   ],
+   "aggancio": "{png} ha contato le luci che si accendono la notte nella valle. \"Cinque. Sempre cinque. Tu che vai dappertutto: dimmi dov'e' la quinta.\"",
+   "passi": [
+    {
+     "mattone": "notte",
+     "luogo": "{luogo}",
+     "testo": "Di notte raggiungi questo posto: {luogo}. Da li' guarda verso la valle."
+    },
+    {
+     "mattone": "leggi",
+     "luogo": "{luogo}",
+     "testo": "Annota nel taccuino da dove vengono le luci."
+    },
+    {
+     "mattone": "parla",
+     "png": "{png}",
+     "testo": "Torna da {png} con i tuoi appunti."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Gli dai i tuoi appunti.",
+     "esito": "{png} unisce i punti con un dito: viene una stella. La stessa delle rovine.",
+     "premio": {
+      "segno": "CinqueLuci",
+      "iscrizione": "La stella delle luci",
+      "monete": 5
+     }
+    },
+    {
+     "scelta": "Dici che le luci erano quattro.",
+     "esito": "{png} si gratta la testa. La quinta, adesso, la cerchi tu.",
+     "premio": {
+      "segno": "QuintaLuceTua"
+     }
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 3,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Maestro Elric"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Tobia"
+    },
+    {
+     "tipo": "evento",
+     "evento": "ScopreLuogo"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Le cinque luci continuano ad accendersi. Qualcun altro le contera'.",
+    "effetti": [
+     {
+      "tipo": "passa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "l_ombroso",
+   "titolo": "Chi prova le porte",
+   "per": {},
+   "piace": {
+    "ombroso": 3
+   },
+   "png": [
+    "Bruno"
+   ],
+   "luogo": [
+    "Locanda di Bruno"
+   ],
+   "aggancio": "Bruno ti posa davanti un boccale che non hai ordinato. Sotto c'e' un biglietto: 'Chi prova le porte chiuse dovrebbe imparare quali si aprono. - V.'",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Bruno",
+     "testo": "Chiedi a Bruno chi e' 'V'. (Bruno, ovviamente, non ha detto Vera.)"
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Piazza del villaggio",
+     "testo": "Il biglietto dice: 'in piazza, a mezzanotte, sotto la bacheca'."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Bruno",
+     "testo": "Sotto la bacheca c'e' un secondo biglietto, e una chiave piccola."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Tieni la chiave.",
+     "esito": "La chiave non apre niente che tu conosca. Ancora.",
+     "premio": {
+      "segno": "ChiaveDiV",
+      "iscrizione": "Il biglietto di V."
+     },
+     "prossimo": "vera_2_la_chiave"
+    },
+    {
+     "scelta": "La riporti a Bruno.",
+     "esito": "Bruno la fa sparire nel grembiule. \"Bravo. Lei voleva sapere proprio questo: se restituisci.\"",
+     "premio": {
+      "segno": "ChiaveRestituita",
+      "monete": 10
+     },
+     "prossimo": "vera_2_la_chiave"
+    }
+   ],
+   "rarita": "rara",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "evento",
+     "evento": "PortaChiusa"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Locanda di Bruno",
+     "ora": "notte"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il biglietto di V. finisce nel fuoco. Le porte chiuse, da oggi, restano piu' chiuse.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   },
+   "serie": {
+    "id": "vera",
+    "capitolo": 1
+   }
+  },
+  {
+   "id": "il_socievole",
+   "titolo": "Le voci del pozzo",
+   "per": {},
+   "piace": {
+    "socievole": 3
+   },
+   "png": [
+    "Agnese"
+   ],
+   "luogo": [
+    "Pozzo"
+   ],
+   "aggancio": "Agnese ti chiama al pozzo. \"Tu parli con tutti. Allora dimmi: e' vero che {voce}?\"",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Teodoro",
+     "testo": "Teodoro giura di averlo saputo per primo. Senti la sua versione."
+    },
+    {
+     "mattone": "parla",
+     "png": "Bruno",
+     "testo": "Bruno ne sa sempre una in piu'."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Agnese",
+     "testo": "Torna da Agnese: cosa le racconti?"
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "La verita', per quello che sai.",
+     "esito": "Agnese e' quasi delusa. \"Tutto qui?\" Ma da oggi, quando le voci girano, lei chiede prima a te.",
+     "premio": {
+      "segno": "VoceVera",
+      "monete": 5
+     }
+    },
+    {
+     "scelta": "Una versione piu' bella.",
+     "esito": "Entro sera lo sa tutta la valle, e ogni volta e' piu' bella. Bruno ti guarda storto, ma la locanda e' piena.",
+     "premio": {
+      "segno": "VoceAbbellita",
+      "oggetti": [
+       "Zuppa_Bruno"
+      ]
+     }
+    }
+   ],
+   "rarita": "comune",
+   "difficolta": 1,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Agnese"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Pozzo"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Agnese chiede a qualcun altro. La voce gira lo stesso.",
+    "effetti": [
+     {
+      "tipo": "voce",
+      "testo": "Al pozzo si dice che {voce}."
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_gatto",
+   "titolo": "Dove dorme il gatto",
+   "per": {},
+   "piace": {
+    "curioso": 1
+   },
+   "png": [
+    "Bruno",
+    "Tobia"
+   ],
+   "luogo": [
+    "Locanda di Bruno"
+   ],
+   "aggancio": "{png}: \"Il gatto della locanda passa le sere sempre nello stesso angolo. E la mattina ha le zampe sporche di una terra che qui non c'e'.\"",
+   "passi": [
+    {
+     "mattone": "siedi",
+     "luogo": "Locanda di Bruno",
+     "testo": "Siediti alla locanda la sera e tieni d'occhio il gatto."
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Locanda di Bruno",
+     "testo": "Quando tutti dormono, il gatto sparisce dietro le botti."
+    },
+    {
+     "mattone": "scegli",
+     "png": "{png}",
+     "testo": "Dietro le botti c'e' una fessura nel muro. Fresca, come una cantina."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Lo racconti a {png}.",
+     "esito": "\"Una cantina sotto la locanda?\" {png} si fa pensieroso. \"Bruno non l'ha mai detto a nessuno.\"",
+     "premio": {
+      "segno": "FessuraDelGatto",
+      "iscrizione": "La fessura dietro le botti"
+     }
+    },
+    {
+     "scelta": "Tieni il segreto del gatto.",
+     "esito": "Il gatto, da quella sera, dorme sul tuo letto. I gatti sanno chi tiene un segreto.",
+     "premio": {
+      "segno": "AmicoDelGatto"
+     }
+    }
+   ],
+   "rarita": "insolita",
+   "difficolta": 2,
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Bruno"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Tobia"
+    },
+    {
+     "tipo": "evento",
+     "evento": "Gatto"
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il gatto continua a sparire dietro le botti. Nessuno lo segue.",
+    "effetti": []
+   }
+  }
+ ],
+ "voci": [
+  "di notte, sulle rovine degli Antichi, le rune si accendano da sole",
+  "il frammento del tempio abbia saltato un battito",
+  "qualcuno abbia sentito martellare sotto la frana della grotta del nord",
+  "la carovana di Sibilla porti piu' segreti che merci",
+  "un'ombra grande come un orso salga verso la collina, al tramonto",
+  "il Balivo aspetti una lettera dalla capitale che non arriva mai"
+ ]
+}

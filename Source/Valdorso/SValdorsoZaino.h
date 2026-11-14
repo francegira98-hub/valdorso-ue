@@ -11,6 +11,8 @@
 //                       - col mouse sopra un oggetto: i numeri 1-8 lo mettono in quel tasto; Canc due volte lo getta.
 // Il server decide tutto (UValdorsoZainoComponent): qui si chiede e si mostra quello che arriva.
 // ValdorsoDisegnoOggetti::Disegna disegna un oggetto (lo usa anche la barra delle azioni, SValdorsoBarre).
+// (13/11) Con l'icona ad acquerello (/Game/UI/Icone/T_Icona_<Id>, fatte da Tools/Generatori/icone/icone.py) disegna
+// quella; se manca, le linee a penna di prima. Valdorso.Icone.Acquerello 0 torna alle linee (per confrontare).
 
 #pragma once
 
@@ -27,7 +29,9 @@ class FSlateWindowElementList;
 
 namespace ValdorsoDisegnoOggetti
 {
-	/** Disegna l'oggetto Id a penna dentro un quadrato di lato Lato (pixel) centrato in Centro. */
+	/** Disegna l'oggetto Id dentro un quadrato di lato Lato (pixel) centrato in Centro: l'icona ad acquerello, che
+	 *  sporge un poco (il suo riquadro di pergamena è 1,39 volte il disegno), o le linee a penna se l'icona non c'è.
+	 *  Dell'icona si usa solo l'opacità di Colore. */
 	VALDORSO_API void Disegna(FSlateWindowElementList& Elementi, int32 Strato, const FGeometry& Geometria, FName Id,
 		const FVector2f& Centro, float Lato, const FLinearColor& Colore, float Spessore);
 

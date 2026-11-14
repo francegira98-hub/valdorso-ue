@@ -24,6 +24,13 @@ COMANDO_BOSCO = (
     "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'DENSITA_BOSCO': %s})"
 )
 
+# (14/11) rifai_capelli_uomo.py con le teste e "torna indietro"
+COMANDO_CAPELLI = (
+    "import os, unreal; "
+    "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'rifai_capelli_uomo.py'); "
+    "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'SOLO_TESTE': %s, 'TORNA_INDIETRO': %s})"
+)
+
 # (07/11) un altro script di Content/Python/nuovi, lanciato così com'è
 COMANDO_SCRIPT = (
     "import os, unreal; "
@@ -192,6 +199,22 @@ def crea_menu_valdorso():
     voce.set_label("Pacchetto: sistema i materiali (oggetti ripetuti)")
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "sistema_materiali.py")
     valdorso.add_menu_entry("Strumenti", voce)
+
+    # (13/11) le icone ad acquerello degli oggetti (nuovi/importa_icone.py; le fa Tools/Generatori/icone/icone.py)
+    voce = unreal.ToolMenuEntry(name="ImportaIcone", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Icone: importa le icone ad acquerello")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "importa_icone.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
+    # (14/11) i capelli da uomo rifatti dalla testa modello Legacy01 (nuovi/rifai_capelli_uomo.py)
+    for nome, etichetta, teste, indietro in (
+            ("CapelliProva", "Capelli da uomo: prova su Padre Anselmo", "['Walter']", "False"),
+            ("CapelliTutti", "Capelli da uomo: rifai tutti", "[]", "False"),
+            ("CapelliIndietro", "Capelli da uomo: torna come prima", "[]", "True")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_CAPELLI % (teste, indietro))
+        valdorso.add_menu_entry("Strumenti", voce)
 
     voce = unreal.ToolMenuEntry(name="AggiornaSuoni", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Suoni: reimporta i suoni rifatti da Claude")

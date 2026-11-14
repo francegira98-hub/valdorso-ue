@@ -215,6 +215,11 @@ struct FValdorsoProclama
 
 	UPROPERTY()
 	int64 ValeDal = 0;
+
+	/** (13/11) Chi lo proclama: vuoto = il Balivo ("Per ordine del Balivo"); altrimenti per esempio "Il Banditore della
+	 *  Corona" (la Gazzetta del passo e gli annunci dello staff, ValdorsoBanditore.h). */
+	UPROPERTY()
+	FString Ente;
 };
 
 /** Le bacheche della valle, come stanno nel file del server (Saved/Server/Bacheche.json). */
@@ -375,7 +380,8 @@ namespace ValdorsoGilda
 	VALDORSO_API bool Metti(FValdorsoBachecheSalvate& Bacheche, FValdorsoIncarico Incarico, int64 Adesso);
 
 	/** Un proclama nuovo (una legge vale dal giorno dopo); il piu' vecchio se ne va oltre MassimoProclami. */
-	VALDORSO_API const FValdorsoProclama& Proclama(FValdorsoBachecheSalvate& Bacheche, const FString& Testo, const FString& Autore, bool bLegge, int64 Adesso);
+	VALDORSO_API const FValdorsoProclama& Proclama(FValdorsoBachecheSalvate& Bacheche, const FString& Testo, const FString& Autore, bool bLegge, int64 Adesso,
+		const FString& Ente = FString());
 
 	/** Le righe della bacheca del Balivo, il piu' nuovo per primo ("12 novembre 312 - Per ordine del Balivo: ..."). */
 	VALDORSO_API TArray<FString> RigheProclami(const FValdorsoBachecheSalvate& Bacheche, int64 Adesso);

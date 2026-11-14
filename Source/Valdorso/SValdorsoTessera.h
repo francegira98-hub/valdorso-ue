@@ -85,6 +85,10 @@ private:
 	FSimpleDelegate OnChiudi;
 	TSharedPtr<FValdorsoStileAccesso> Stile;
 	FSlateBrush Carta;
+	/** (13/11) La carta vera e la coccarda di ceralacca (/Game/UI/Icone): se mancano, il foglio liscio di prima. */
+	TStrongObjectPtr<UTexture2D> TextureCarta;
+	TStrongObjectPtr<UTexture2D> TextureCeralacca;
+	FSlateBrush Ceralacca;
 	FSlateBrush Velo;
 	FSlateBrush Cornice;
 	FSlateBrush Foto;

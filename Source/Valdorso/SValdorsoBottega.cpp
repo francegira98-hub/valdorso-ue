@@ -45,7 +45,7 @@ namespace
 		{
 			const FVector2f Misura = FVector2f(AllottedGeometry.GetLocalSize());
 			const FVector2f Centro = Misura * 0.5f;
-			const float Lato = FMath::Min(Misura.X, Misura.Y) * 0.85f;
+			const float Lato = FMath::Min(Misura.X, Misura.Y) * 0.7f;   // (13/11) 0,7: l'icona ad acquerello (x1,39) sta nel riquadro
 			if (Id.IsNone())
 			{
 				ValdorsoDisegnoOggetti::DisegnaMoneta(OutDrawElements, LayerId, AllottedGeometry, Centro, Lato, ValdorsoTema::OroScuro(), 2.f);

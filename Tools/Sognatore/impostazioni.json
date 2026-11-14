@@ -1,0 +1,7 @@
+{
+ "_come": "Le impostazioni del Sognatore. 'ia': false = scrive solo dai semi (gratis, senza internet). 'ia': true = per ogni colono chiede anche storie NUOVE all'intelligenza artificiale (costa un poco per storia; la chiave la mette lo staff nella variabile ANTHROPIC_API_KEY o nel file Saved/Server/Sognatore/chiave_api.txt). 'modello' si puo' cambiare con un altro modello Claude. 'future_per_colono' = quante storie 'in attesa' (che usano mattoni o zone non ancora nel gioco) proporre al massimo per colono, per farle leggere allo staff in anticipo.",
+ "ia": false,
+ "modello": "claude-sonnet-4-5",
+ "storie_nuove_per_colono": 1,
+ "future_per_colono": 1
+}

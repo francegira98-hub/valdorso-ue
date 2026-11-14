@@ -1,0 +1,865 @@
+{
+ "_come": "Le storie del folklore (13/11/2026, scritte da Claude): creature e usanze delle valli di montagna (anguane, salvanel, fuochi fatui, la processione dei morti, la caccia selvaggia, il folletto di casa, le streghe del noce, il basilisco), portate dentro la valle dell'Orso e la sua lore. Stesse regole di semi.json.",
+ "semi": [
+  {
+   "id": "fuochi_fatui",
+   "titolo": "Le lucine della palude",
+   "rarita": "insolita",
+   "difficolta": 2,
+   "per": {},
+   "piace": {
+    "esploratore": 2,
+    "curioso": 1
+   },
+   "innesco": [
+    {
+     "tipo": "luogo",
+     "luogo": "Palude",
+     "ora": "notte"
+    }
+   ],
+   "png": [
+    "Nonna Edda"
+   ],
+   "luogo": [
+    "Palude"
+   ],
+   "aggancio": "Sulla palude, a pelo d'acqua, danzano tre lucine azzurre. Nonna Edda, dalla capanna: «Non seguirle. O seguile, ma conta i passi. Chi perde il conto, perde la strada.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Nonna Edda",
+     "testo": "Chiedi a Nonna Edda cosa sono le lucine."
+    },
+    {
+     "mattone": "segui",
+     "luogo": "Palude",
+     "testo": "Segui le lucine contando i passi, senza mai fermarti sull'acqua."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Nonna Edda",
+     "testo": "Le lucine si fermano su un ciuffo d'erba dove nessuno ha mai camminato."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Raccogli l'erba dove si sono fermate.",
+     "esito": "E' un'erba che Nonna Edda non vedeva da vent'anni. Ti guarda come si guarda una figlia. «Le anime perse ti hanno fatto un regalo. Restituiscilo, un giorno.»",
+     "premio": {
+      "oggetti": [
+       "Erbe_Palude"
+      ],
+      "monete": 10,
+      "segno": "ErbaDeiFuochi"
+     }
+    },
+    {
+     "scelta": "Saluti le lucine e torni indietro.",
+     "esito": "Le lucine si spengono una alla volta, come chi chiude le finestre. La strada di casa e' piu' corta di come la ricordavi.",
+     "premio": {
+      "segno": "SalutoAiFuochi",
+      "iscrizione": "Le tre lucine"
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Le lucine danzano ancora un poco, poi si spostano verso qualcun altro.",
+    "effetti": [
+     {
+      "tipo": "passa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "anguana_del_lago",
+   "titolo": "La lavandaia del lago",
+   "rarita": "rara",
+   "difficolta": 3,
+   "per": {},
+   "piace": {
+    "mistico": 2,
+    "gentile": 2
+   },
+   "innesco": [
+    {
+     "tipo": "luogo",
+     "luogo": "Lago",
+     "ora": "notte"
+    },
+    {
+     "tipo": "registro",
+     "campo": "paura",
+     "valori": [
+      "acqua"
+     ]
+    }
+   ],
+   "png": [
+    "Nonna Edda"
+   ],
+   "luogo": [
+    "Lago"
+   ],
+   "aggancio": "A mezzanotte, sulla riva, una donna lava panni bianchi che non finiscono mai. Ha i piedi nell'acqua e non si volta. «Ho perso il pettine,» dice. «Me lo riporti? Le anguane non dimenticano chi le aiuta.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Nonna Edda",
+     "testo": "Racconta a Nonna Edda della lavandaia. Lei diventa seria: «Un'anguana. Non le si dice mai di no. E non le si chiede mai il nome.»"
+    },
+    {
+     "mattone": "raccogli",
+     "luogo": "Lago",
+     "oggetto": "Cozze",
+     "testo": "Il pettine e' tra le cozze, dove l'acqua e' bassa. Cercalo con le mani."
+    },
+    {
+     "mattone": "fantasma",
+     "luogo": "Lago",
+     "testo": "Torna sulla riva a mezzanotte, con il pettine."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Nonna Edda",
+     "testo": "L'anguana tende la mano bagnata."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Le dai il pettine senza dire niente.",
+     "esito": "L'anguana si pettina, e i capelli le diventano acqua. «Quando l'acqua ti fara' paura, chiama. Una volta sola.» Poi non c'e' piu', e i panni bianchi sono nebbia.",
+     "premio": {
+      "segno": "AmicoDellAnguana",
+      "iscrizione": "Una volta sola",
+      "oggetti": [
+       "Perla"
+      ],
+      "monete": 20
+     }
+    },
+    {
+     "scelta": "Le chiedi il suo nome.",
+     "esito": "L'anguana si ferma. Per un momento l'acqua del lago sta zitta. «Questo no,» dice, e sparisce. Il pettine ti resta in mano, freddo per sempre.",
+     "premio": {
+      "segno": "NomeChiestoAllAnguana",
+      "monete": 10
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "La lavandaia smette di lavare. Per una settimana, di notte, il lago e' piu' freddo per tutti.",
+    "effetti": [
+     {
+      "tipo": "mondo",
+      "testo": "Il lago e' gelido di notte per sette giorni."
+     },
+     {
+      "tipo": "chiusa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_salvanel",
+   "titolo": "Il latte che sparisce",
+   "rarita": "comune",
+   "difficolta": 2,
+   "per": {},
+   "piace": {
+    "cacciatore": 1,
+    "gentile": 1
+   },
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Agnese"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Teodoro"
+    }
+   ],
+   "png": [
+    "Agnese",
+    "Teodoro"
+   ],
+   "luogo": [
+    "Mulino"
+   ],
+   "aggancio": "{png} e' furioso: «Ogni notte qualcuno ci beve il latte e lascia il secchio lucidato. Lucidato! Chi ruba e poi pulisce?»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Gaspare",
+     "testo": "Gaspare ride per la prima volta da anni. «Il salvanel. L'uomo selvatico. Sa fare il formaggio meglio di tutti voi.»"
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Mulino",
+     "testo": "Aspetta al mulino, di notte, senza lanterna."
+    },
+    {
+     "mattone": "scegli",
+     "png": "{png}",
+     "testo": "Lo vedi: piccolo, peloso, con una barba di muschio. Sta bevendo, e ti guarda."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Gli lasci il latte e gli chiedi il segreto del formaggio.",
+     "esito": "Il salvanel ci pensa. Poi ti sussurra tre parole che non capisci. Il giorno dopo il formaggio del mulino e' il piu' buono della valle, e {png} non sa perche'.",
+     "premio": {
+      "segno": "SegretoDelSalvanel",
+      "oggetti": [
+       "Formaggio"
+      ],
+      "monete": 8
+     }
+    },
+    {
+     "scelta": "Gli fai capire che deve smettere.",
+     "esito": "Il salvanel sbuffa e se ne va. Non ruba piu'. Ma da quella notte il secchio non e' piu' lucido, e il latte va a male prima.",
+     "premio": {
+      "segno": "SalvanelCacciato",
+      "monete": 12
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "{png} mette una trappola. Il salvanel non ci casca, ma si offende.",
+    "effetti": [
+     {
+      "tipo": "voce",
+      "testo": "Al mulino qualcuno ruba il latte e lascia i secchi lucidati."
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_folletto_della_locanda",
+   "titolo": "Chi sposta i boccali",
+   "rarita": "comune",
+   "difficolta": 1,
+   "per": {},
+   "piace": {
+    "socievole": 1,
+    "curioso": 1
+   },
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Bruno"
+    },
+    {
+     "tipo": "evento",
+     "evento": "Dorme"
+    }
+   ],
+   "png": [
+    "Bruno"
+   ],
+   "luogo": [
+    "Locanda di Bruno"
+   ],
+   "aggancio": "Bruno conta i boccali per la terza volta. «Ogni mattina sono in ordine di grandezza. Io non li metto mai in ordine. Mai.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Bruno",
+     "testo": "Bruno ammette che sua nonna lasciava una scodella di latte per il folletto di casa."
+    },
+    {
+     "mattone": "porta",
+     "png": "Bruno",
+     "oggetto": "Formaggio",
+     "testo": "Porta a Bruno un pezzo di formaggio: «Il latte l'ha bevuto il salvanel. Proviamo col formaggio.»"
+    },
+    {
+     "mattone": "siedi",
+     "luogo": "Locanda di Bruno",
+     "testo": "Resta alla locanda fino a tardi, seduto, a fare finta di dormire."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Lasci il folletto in pace.",
+     "esito": "La mattina i boccali sono in ordine, e accanto al tuo c'e' una ghianda. Bruno la mette sopra la porta. «Porta bene,» dice. «Credo.»",
+     "premio": {
+      "segno": "AmicoDelFolletto",
+      "oggetti": [
+       "Zuppa_Bruno"
+      ]
+     }
+    },
+    {
+     "scelta": "Provi ad acchiapparlo.",
+     "esito": "Acchiappi solo uno sgabello. Per una settimana, alla locanda, il tuo boccale e' sempre quello col manico rotto.",
+     "premio": {
+      "segno": "BoccaleRotto",
+      "monete": 5
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Bruno conta i boccali per la quarta volta.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "la_processione",
+   "titolo": "Chi cammina il primo novembre",
+   "rarita": "rara",
+   "difficolta": 3,
+   "per": {},
+   "piace": {
+    "mistico": 2,
+    "coraggioso": 1
+   },
+   "innesco": [
+    {
+     "tipo": "luogo",
+     "luogo": "Cimitero",
+     "ora": "notte"
+    },
+    {
+     "tipo": "tempo",
+     "quando": "notte dei morti"
+    }
+   ],
+   "png": [
+    "Padre Anselmo"
+   ],
+   "luogo": [
+    "Cimitero"
+   ],
+   "aggancio": "Padre Anselmo chiude il tempio presto. «Stanotte non uscire. E se esci, e vedi passare la processione, non parlare. Chi parla con loro, cammina con loro.»",
+   "passi": [
+    {
+     "mattone": "notte",
+     "luogo": "Cimitero",
+     "testo": "Esci lo stesso. Al cimitero, di notte."
+    },
+    {
+     "mattone": "fantasma",
+     "luogo": "Cimitero",
+     "testo": "Una fila di lumi passa tra le lapidi. Facce che non conosci. Una, forse, si'."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Padre Anselmo",
+     "testo": "L'ultimo della fila si ferma davanti a te, e aspetta."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Resti in silenzio e abbassi gli occhi.",
+     "esito": "Il lume passa. Il mattino dopo trovi un mozzicone di candela sulla soglia. Padre Anselmo lo benedice e te lo lascia: «Ti hanno salutato. Capita a pochi.»",
+     "premio": {
+      "segno": "SalutoDeiMorti",
+      "oggetti": [
+       "Candeliere"
+      ],
+      "monete": 15
+     }
+    },
+    {
+     "scelta": "Gli chiedi chi e'.",
+     "esito": "Il morto sorride, e risponde. Non ricorderai mai le parole, solo che erano gentili. Per tre notti dormi male, e sogni di camminare.",
+     "premio": {
+      "segno": "HaParlatoConLaProcessione",
+      "iscrizione": "Parole gentili dimenticate"
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Resti in casa. Senti passare i passi, e nessuno bussa.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "la_caccia_selvaggia",
+   "titolo": "I cavalieri nel temporale",
+   "rarita": "epica",
+   "difficolta": 4,
+   "per": {},
+   "piace": {
+    "cacciatore": 3,
+    "coraggioso": 2
+   },
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Gaspare"
+    },
+    {
+     "tipo": "tempo",
+     "quando": "notte di temporale"
+    }
+   ],
+   "png": [
+    "Gaspare"
+   ],
+   "luogo": [
+    "Collina dell'Orso"
+   ],
+   "aggancio": "Gaspare ha la faccia grigia. «Stanotte passa la Caccia. Cavalieri che non sono piu' vivi, con cani che non sono mai stati vivi. Cercano un cacciatore che ha cacciato per niente. Io ho paura che stavolta cerchino uno vero.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Gaspare",
+     "testo": "Gaspare ti dice cosa fare: un ramo di quercia in mano, e non correre mai."
+    },
+    {
+     "mattone": "raccogli",
+     "luogo": "Collina dell'Orso",
+     "oggetto": "Rami_Secchi",
+     "testo": "Prendi un ramo dalla quercia della collina."
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Collina dell'Orso",
+     "testo": "Sali sulla collina nella notte di temporale."
+    },
+    {
+     "mattone": "fantasma",
+     "luogo": "Collina dell'Orso",
+     "testo": "La Caccia passa sopra gli alberi. Il capocaccia abbassa la lancia verso di te."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Gaspare",
+     "testo": "«Chi caccia per niente?» chiede una voce che e' tuono."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Alzi il ramo e rispondi: «Qui nessuno.»",
+     "esito": "Il capocaccia ti guarda a lungo. Poi la Caccia volta verso le montagne, e il temporale va con lei. Gaspare, all'alba, ti regala la sua pelle d'orso. «Era per il giorno che arrivava uno come te.»",
+     "premio": {
+      "segno": "HaFermatoLaCaccia",
+      "titolo": "Chi ha guardato la Caccia",
+      "oggetti": [
+       "Pelle_Orso"
+      ],
+      "monete": 60
+     }
+    },
+    {
+     "scelta": "Fai il nome di chi caccia per divertimento.",
+     "esito": "La Caccia ride e va. Quel nome, per un mese, non trovera' una preda. Non saprai mai se hai fatto giustizia o se hai venduto qualcuno.",
+     "premio": {
+      "segno": "HaDatoUnNome",
+      "monete": 40,
+      "oggetti": [
+       "Zanne_Lupo"
+      ]
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "La Caccia passa lo stesso. All'alba Gaspare e' vivo, ma ha i capelli bianchi del tutto.",
+    "effetti": [
+     {
+      "tipo": "mondo",
+      "testo": "Per tre notti nessun animale si fa vedere sulla collina."
+     },
+     {
+      "tipo": "fiducia",
+      "png": "Gaspare",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "le_streghe_del_noce",
+   "titolo": "Il noce sulla collina",
+   "rarita": "rara",
+   "difficolta": 3,
+   "per": {},
+   "piace": {
+    "mistico": 2,
+    "curioso": 2
+   },
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Maestro Elric"
+    },
+    {
+     "tipo": "registro",
+     "campo": "richiamoMagia",
+     "valori": [
+      "si"
+     ]
+    }
+   ],
+   "png": [
+    "Maestro Elric"
+   ],
+   "luogo": [
+    "Collina dell'Orso"
+   ],
+   "aggancio": "Maestro Elric ti prende da parte, ed e' la prima volta che lo vedi agitato. «Le notti di luna piena, sotto il grande noce, qualcuno si riunisce. Canta in una lingua che e' quasi la lingua delle rune. Voglio sapere chi.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Nonna Edda",
+     "testo": "Nonna Edda nega tutto, troppo in fretta. «Streghe? Sotto il noce? Ci vanno le civette.»"
+    },
+    {
+     "mattone": "notte",
+     "luogo": "Collina dell'Orso",
+     "testo": "Sali alla collina nella notte di luna piena."
+    },
+    {
+     "mattone": "ascolta",
+     "luogo": "Collina dell'Orso",
+     "testo": "Nascosto tra i rovi, ascolta il canto sotto il noce."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Maestro Elric",
+     "testo": "Torni da Elric. Una delle voci era quella di Nonna Edda. Un'altra era giovane."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Dici a Elric che erano solo civette.",
+     "esito": "Elric capisce che menti, e che hai deciso da che parte stare. Nonna Edda, la sera dopo, ti lascia sulla porta un sacchetto di erbe con un nodo strano. Un nodo che protegge.",
+     "premio": {
+      "segno": "SegretoDelNoce",
+      "oggetti": [
+       "Erbe_Palude"
+      ],
+      "monete": 20
+     }
+    },
+    {
+     "scelta": "Gli ripeti le parole che hai sentito.",
+     "esito": "Elric le scrive tremando. «E' una parola che non esiste. Lume-Ur.» Poi ti guarda: «Non dirlo a nessuno. Nemmeno a me.»",
+     "premio": {
+      "segno": "LeParoleDelNoce",
+      "iscrizione": "Lume-Ur",
+      "monete": 30
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Elric ci va da solo. Torna con un graffio sulla guancia e non ne parla.",
+    "effetti": [
+     {
+      "tipo": "fiducia",
+      "png": "Maestro Elric",
+      "quanto": -1
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_basilisco_del_pozzo",
+   "titolo": "L'uovo del gallo",
+   "rarita": "comune",
+   "difficolta": 1,
+   "per": {},
+   "piace": {
+    "scettico": 2,
+    "socievole": 1
+   },
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Agnese"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Pozzo"
+    }
+   ],
+   "png": [
+    "Agnese"
+   ],
+   "luogo": [
+    "Pozzo"
+   ],
+   "aggancio": "Agnese ha la voce bassa e gli occhi grandi. «Il gallo di Teodoro ha fatto un uovo. Un gallo! E l'uovo e' rotolato nel pozzo. Lo sai cosa nasce dall'uovo di un gallo? Il basilisco. Chi lo guarda, diventa pietra.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Teodoro",
+     "testo": "Teodoro giura che il gallo e' un gallo normalissimo. Poi aggiunge: «Quasi sempre.»"
+    },
+    {
+     "mattone": "porta",
+     "png": "Agnese",
+     "oggetto": "Corda",
+     "testo": "Porta una corda ad Agnese: qualcuno deve calarsi a vedere."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Agnese",
+     "testo": "In fondo al pozzo, sul secchio, c'e' un rospo enorme con gli occhi gialli. Ti guarda. Non diventi pietra."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Dici ad Agnese che era solo un rospo.",
+     "esito": "Agnese e' quasi delusa. Teodoro e' sollevato. Il rospo, liberato nell'orto, mangia tutte le lumache dell'anno.",
+     "premio": {
+      "segno": "RospoDelPozzo",
+      "monete": 8
+     }
+    },
+    {
+     "scelta": "Dici che il basilisco c'era, e l'hai cacciato tu.",
+     "esito": "Entro sera lo sa tutta la valle. Per una settimana nessuno beve dal pozzo senza guardarti con rispetto. Bruno ti offre da bere: «All'ammazzabasilischi!»",
+     "premio": {
+      "segno": "AmmazzaBasilischi",
+      "oggetti": [
+       "Zuppa_Bruno"
+      ],
+      "monete": 5
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Nessuno beve dal pozzo per due giorni. Poi la sete vince la paura.",
+    "effetti": [
+     {
+      "tipo": "voce",
+      "testo": "Nel pozzo della piazza, dicono, vive un basilisco."
+     }
+    ]
+   }
+  },
+  {
+   "id": "la_campana_sommersa",
+   "titolo": "Le campane sotto l'acqua",
+   "rarita": "insolita",
+   "difficolta": 2,
+   "per": {},
+   "piace": {
+    "curioso": 2,
+    "mistico": 1
+   },
+   "innesco": [
+    {
+     "tipo": "luogo",
+     "luogo": "Lago",
+     "ora": "notte"
+    },
+    {
+     "tipo": "dialogo",
+     "png": "Bruno"
+    }
+   ],
+   "png": [
+    "Bruno",
+    "Teodoro"
+   ],
+   "luogo": [
+    "Lago"
+   ],
+   "aggancio": "{png} abbassa la voce: «Le notti di vento, dal lago, si sentono campane. Ma nella valle non c'e' mai stato un campanile. Mai.»",
+   "passi": [
+    {
+     "mattone": "notte",
+     "luogo": "Lago",
+     "testo": "Vai al lago in una notte di vento."
+    },
+    {
+     "mattone": "ascolta",
+     "luogo": "Lago",
+     "testo": "Ascolta. Conta i rintocchi."
+    },
+    {
+     "mattone": "parla",
+     "png": "Padre Anselmo",
+     "testo": "Racconta a Padre Anselmo quanti rintocchi hai sentito."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Gli dici: cinque rintocchi, come i Cinque.",
+     "esito": "Padre Anselmo apre un libro vecchissimo. «Prima del Crepuscolo, qui c'era un tempio dei Cinque. L'acqua l'ha preso.» Non dice altro. Chiude il libro, e lo chiude a chiave.",
+     "premio": {
+      "segno": "CinqueRintocchi",
+      "iscrizione": "Il tempio sotto l'acqua",
+      "monete": 10
+     }
+    },
+    {
+     "scelta": "Gli dici che era solo il vento.",
+     "esito": "«Meglio cosi',» dice lui, sollevato. Ma da quel giorno, quando c'e' vento, lo vedi pregare guardando il lago.",
+     "premio": {
+      "segno": "SoloIlVento",
+      "monete": 6
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Le campane suonano lo stesso. Nessuno le conta.",
+    "effetti": []
+   }
+  },
+  {
+   "id": "il_lupo_di_confine",
+   "titolo": "Il lupo che non attacca",
+   "rarita": "rara",
+   "difficolta": 3,
+   "per": {},
+   "piace": {
+    "cacciatore": 2,
+    "gentile": 2,
+    "esploratore": 1
+   },
+   "innesco": [
+    {
+     "tipo": "evento",
+     "evento": "Animale"
+    },
+    {
+     "tipo": "luogo",
+     "luogo": "Pascoli"
+    }
+   ],
+   "png": [
+    "Gaspare"
+   ],
+   "luogo": [
+    "Pascoli"
+   ],
+   "aggancio": "Da tre giorni un lupo grigio ti segue a distanza. Non ringhia. Non attacca. Si siede quando ti siedi. Gaspare, quando lo sa, smette di masticare: «Un lupo di confine. Cammina tra questo mondo e l'altro. Non toccarlo.»",
+   "passi": [
+    {
+     "mattone": "parla",
+     "png": "Gaspare",
+     "testo": "Chiedi a Gaspare cosa vuole il lupo."
+    },
+    {
+     "mattone": "segui",
+     "luogo": "Pascoli",
+     "testo": "Lascia che sia il lupo a guidarti."
+    },
+    {
+     "mattone": "scegli",
+     "png": "Gaspare",
+     "testo": "Il lupo si ferma davanti a una tana. Dentro, due cuccioli, e la madre morta in una trappola a laccio."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Porti i cuccioli da Gaspare.",
+     "esito": "Gaspare li prende come si prende il pane. «Li tiro su io. Lupi che sanno chi li ha salvati.» Il lupo grigio ti guarda un'ultima volta, e sparisce verso la collina.",
+     "premio": {
+      "segno": "IlLupoRingrazia",
+      "monete": 25,
+      "iscrizione": "Il lupo di confine"
+     }
+    },
+    {
+     "scelta": "Cerchi chi ha messo la trappola.",
+     "esito": "La trappola e' nuova, i nodi sono da capitale. Qualcuno nella valle caccia di nascosto. Lo dici a Gaspare; lui annuisce e prende la balestra.",
+     "premio": {
+      "segno": "TrappolaTrovata",
+      "oggetti": [
+       "Corda"
+      ],
+      "monete": 30
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il lupo grigio smette di seguirti. Una notte, dai pascoli, lo senti ululare a lungo.",
+    "effetti": [
+     {
+      "tipo": "chiusa"
+     },
+     {
+      "tipo": "mondo",
+      "testo": "I lupi dei pascoli sono piu' nervosi per una settimana."
+     }
+    ]
+   }
+  },
+  {
+   "id": "il_pane_dei_morti",
+   "titolo": "Il pane sulla lapide",
+   "rarita": "comune",
+   "difficolta": 1,
+   "per": {},
+   "piace": {
+    "devoto": 2,
+    "gentile": 1
+   },
+   "innesco": [
+    {
+     "tipo": "dialogo",
+     "png": "Padre Anselmo"
+    },
+    {
+     "tipo": "tempo",
+     "quando": "notte dei morti"
+    }
+   ],
+   "png": [
+    "Padre Anselmo",
+    "Agnese"
+   ],
+   "luogo": [
+    "Cimitero"
+   ],
+   "aggancio": "{png}: «Nella valle si usa cosi': la notte dei morti si lascia un pane sulla lapide di chi non ha piu' nessuno. Quest'anno ce n'e' una in piu'.»",
+   "passi": [
+    {
+     "mattone": "porta",
+     "png": "{png}",
+     "oggetto": "Pane_Nero",
+     "testo": "Porta un pane nero a {png}."
+    },
+    {
+     "mattone": "offerta",
+     "luogo": "Cimitero",
+     "oggetto": "Pane_Nero",
+     "testo": "Lascialo sulla lapide senza nome, la sera."
+    },
+    {
+     "mattone": "veglia",
+     "luogo": "Cimitero",
+     "testo": "Resta un momento. E' l'usanza."
+    }
+   ],
+   "finali": [
+    {
+     "scelta": "Dici una preghiera.",
+     "esito": "Il mattino dopo il pane non c'e' piu', e al suo posto c'e' una moneta vecchissima, con un orso.",
+     "premio": {
+      "segno": "PaneDato",
+      "monete": 5,
+      "iscrizione": "La moneta con l'orso"
+     }
+    },
+    {
+     "scelta": "Resti in silenzio.",
+     "esito": "Il silenzio e' una preghiera anche lui. Il vento, tornando, ti sembra meno freddo.",
+     "premio": {
+      "segno": "PaneDatoInSilenzio",
+      "oggetti": [
+       "Pane_Nero"
+      ]
+     }
+    }
+   ],
+   "rifiuto": {
+    "testo": "Il pane lo porta qualcun altro.",
+    "effetti": [
+     {
+      "tipo": "passa"
+     }
+    ]
+   }
+  }
+ ]
+}

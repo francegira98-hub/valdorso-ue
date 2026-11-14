@@ -1,0 +1,384 @@
+{
+ "_come": "I mattoni: le sole cose che una storia del Sognatore puo' chiedere al colono. 'oggi' = il gioco lo sa gia' fare (la storia si puo' giocare subito); 'dopo' = arrivera' con la roadmap (la storia resta in attesa finche' il mattone non c'e'). 13/11/2026, Claude.",
+ "passi": {
+  "parla": {
+   "oggi": true,
+   "cosa": "Parlare con un PNG (dialogo).",
+   "serve": [
+    "png"
+   ]
+  },
+  "vai": {
+   "oggi": true,
+   "cosa": "Raggiungere un luogo della valle (il taccuino lo segna).",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "porta": {
+   "oggi": true,
+   "cosa": "Portare un oggetto a un PNG (dallo zaino).",
+   "serve": [
+    "png",
+    "oggetto"
+   ]
+  },
+  "raccogli": {
+   "oggi": true,
+   "cosa": "Raccogliere qualcosa che cresce o si trova (funghi, rami, erbe, pietra).",
+   "serve": [
+    "oggetto",
+    "luogo"
+   ]
+  },
+  "caccia": {
+   "oggi": true,
+   "cosa": "Cacciare un animale (lupo, cinghiale, cervo, lepre, volpe).",
+   "serve": [
+    "animale"
+   ]
+  },
+  "notte": {
+   "oggi": true,
+   "cosa": "Esserci di notte (dalle 21 alle 5 della valle).",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "veglia": {
+   "oggi": true,
+   "cosa": "Restare fermi in un posto per qualche minuto vero.",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "siedi": {
+   "oggi": true,
+   "cosa": "Sedersi su una panca e aspettare.",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "dormi": {
+   "oggi": true,
+   "cosa": "Dormire in un letto (e magari sognare).",
+   "serve": []
+  },
+  "leggi": {
+   "oggi": true,
+   "cosa": "Leggere un'iscrizione (finisce nel taccuino).",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "incidi": {
+   "oggi": true,
+   "cosa": "Incidere il proprio segno sulla pietra dei segni.",
+   "serve": []
+  },
+  "scegli": {
+   "oggi": true,
+   "cosa": "Una scelta in un dialogo: la risposta del colono cambia il finale.",
+   "serve": [
+    "png"
+   ]
+  },
+  "rovista": {
+   "oggi": true,
+   "cosa": "Rovistare tra le ossa o in un forziere.",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "scrivi": {
+   "oggi": false,
+   "cosa": "Scrivere una lettera e sigillarla (Lettere e sigilli).",
+   "serve": [
+    "png"
+   ]
+  },
+  "stagione": {
+   "oggi": false,
+   "cosa": "Aspettare una stagione (Le stagioni).",
+   "serve": []
+  },
+  "tasca": {
+   "oggi": false,
+   "cosa": "Entrare in una zona tasca creata dal Battito solo per te (una cantina, una grotta, una radura nella nebbia).",
+   "serve": [
+    "zona"
+   ]
+  },
+  "proteggi": {
+   "oggi": false,
+   "cosa": "Difendere un PNG per un tratto di strada (PNG veri).",
+   "serve": [
+    "png"
+   ]
+  },
+  "ascolta": {
+   "oggi": true,
+   "cosa": "Restare in un luogo e ascoltare (di solito di notte): come la veglia, ma per sentire qualcosa.",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "offerta": {
+   "oggi": false,
+   "cosa": "Lasciare un oggetto in un luogo, come dono (a uno spirito, a un morto, a un folletto).",
+   "serve": [
+    "luogo",
+    "oggetto"
+   ]
+  },
+  "segui": {
+   "oggi": false,
+   "cosa": "Seguire qualcosa che si muove (una luce, un animale, un'ombra) senza perderla.",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "fantasma": {
+   "oggi": false,
+   "cosa": "Incontrare uno spirito del passato che vede e sente solo il colono (un PNG del Battito, a tempo).",
+   "serve": [
+    "luogo"
+   ]
+  },
+  "eco": {
+   "oggi": false,
+   "cosa": "Entrare in un'Eco: una zona dove si rivive un fatto delle Cronache com'era allora.",
+   "serve": [
+    "zona"
+   ]
+  },
+  "png_nuovo": {
+   "oggi": false,
+   "cosa": "Un PNG creato dal Battito entra nella valle (livello 3: serve il via dello staff).",
+   "serve": [
+    "png"
+   ]
+  }
+ },
+ "png_nel_gioco": {
+  "Gaspare": "Gaspare",
+  "Tebaldo": "GuardiaCorrado",
+  "Fulvio": "GuardiaOttone",
+  "Nonna Edda": "NonnaEdda",
+  "Bruno": "Bruno",
+  "Padre Anselmo": "PadreAnselmo",
+  "Lucia": "Lucia",
+  "Mastro Ettore": "CapoGilda",
+  "Marta": "Marta",
+  "Livia Serra": "Livia",
+  "Tobia": "Tobia",
+  "Teodoro": "Teodoro",
+  "Agnese": "Agnese",
+  "Maestro Elric": "Elric",
+  "Sibilla": "Sibilla"
+ },
+ "animali": [
+  "Lupo",
+  "Cinghiale",
+  "Cervo",
+  "Lepre",
+  "Volpe"
+ ],
+ "oggetti_comuni": [
+  "Pane_Nero",
+  "Formaggio",
+  "Mela",
+  "Erbe_Palude",
+  "Rami_Secchi",
+  "Funghi",
+  "Corda",
+  "Candeliere",
+  "Quaderno",
+  "Medaglietta",
+  "Pelle_Lupo",
+  "Zanne_Lupo",
+  "Cozze",
+  "Perla",
+  "Carne_Cotta",
+  "Funghi_Arrosto",
+  "Stufato",
+  "Zuppa_Bruno",
+  "Cuoio",
+  "Sale",
+  "Spezie",
+  "Legna",
+  "Pietra_Grezza",
+  "Chiodi",
+  "Secchio_Acqua_Chiara",
+  "Secchio_Acqua_Torbida",
+  "Pelle_Volpe",
+  "Pelle_Lepre"
+ ],
+ "premi": {
+  "_come": "Sostituito da 'rarita'' (13/11): il budget dei premi dipende dalla rarita' della storia."
+ },
+ "rarita": {
+  "_come": "Le rarita' delle storie (idea di Fra del 13/11, come in Overgeared). 'patente' = di che livello e' il potere che serve; 'ogni_giorni' = al massimo una storia di questa rarita' (o piu' alta) ogni tanti giorni per colono; 'valle_ogni_giorni' = al massimo una in tutta la valle ogni tanti giorni; 'colore' per la finestra nel gioco. 'finite_min' = quante storie il colono deve aver gia' finito (le Epiche e le Leggendarie non arrivano al primo giorno).",
+  "comune": {
+   "ordine": 1,
+   "patente": 1,
+   "colore": "#9a8f7a",
+   "monete_max": 15,
+   "oggetti_max": 2,
+   "rari": false,
+   "titolo": false,
+   "ogni_giorni": 0,
+   "valle_ogni_giorni": 0,
+   "scadenza_giorni": 7,
+   "finite_min": 0
+  },
+  "insolita": {
+   "ordine": 2,
+   "patente": 1,
+   "colore": "#5f8a5a",
+   "monete_max": 30,
+   "oggetti_max": 2,
+   "rari": false,
+   "titolo": false,
+   "ogni_giorni": 2,
+   "valle_ogni_giorni": 0,
+   "scadenza_giorni": 7,
+   "finite_min": 0
+  },
+  "rara": {
+   "ordine": 3,
+   "patente": 2,
+   "colore": "#4a6fa5",
+   "monete_max": 60,
+   "oggetti_max": 3,
+   "rari": true,
+   "titolo": false,
+   "ogni_giorni": 7,
+   "valle_ogni_giorni": 0,
+   "scadenza_giorni": 5,
+   "finite_min": 0
+  },
+  "epica": {
+   "ordine": 4,
+   "patente": 3,
+   "colore": "#7d4a9e",
+   "monete_max": 120,
+   "oggetti_max": 4,
+   "rari": true,
+   "titolo": true,
+   "ogni_giorni": 21,
+   "valle_ogni_giorni": 7,
+   "scadenza_giorni": 3,
+   "finite_min": 2
+  },
+  "leggendaria": {
+   "ordine": 5,
+   "patente": 3,
+   "colore": "#c8962e",
+   "monete_max": 250,
+   "oggetti_max": 5,
+   "rari": true,
+   "titolo": true,
+   "ogni_giorni": 60,
+   "valle_ogni_giorni": 30,
+   "scadenza_giorni": 3,
+   "unica_al_mondo": true,
+   "finite_min": 4
+  }
+ },
+ "oggetti_rari": [
+  "Moneta_Nani",
+  "Pugnale_Nani",
+  "Martello_Nani",
+  "Pelle_Orso",
+  "Mantello_Orso",
+  "Artigli_Orso",
+  "Stoffa_Fine",
+  "Spezie",
+  "Lingotto_Ferro",
+  "Mantello_Lupo",
+  "Cappuccio_Volpe",
+  "Guanti_Lepre",
+  "Palchi_Cervo",
+  "Cuore_di_Pietra",
+  "Piccone"
+ ],
+ "inneschi": {
+  "_come": "Cosa fa nascere una storia (sempre un perche' nel mondo). Il gioco li riconosce dal registro eventi: tra parentesi il tipo di evento.",
+  "dialogo": "Una risposta in un dialogo con un PNG (Dialogo).",
+  "luogo": "Arrivare in un luogo, anche solo di notte o di giorno (ScopreLuogo / Entra).",
+  "evento": "Un fatto del registro eventi (Animale, Sogno, Storia, Rovista, PortaChiusa, Siede, Dorme, Segno, GuardaPietra...).",
+  "oggetto": "Avere o raccogliere un oggetto.",
+  "sogno": "Dopo aver dormito (Sogno).",
+  "storia": "Dopo aver finito un'altra storia con un certo finale (le serie).",
+  "registro": "Le risposte del Registro (sempre vere: la storia aspetta solo il momento giusto).",
+  "tempo": "Un'ora della valle (notte, alba), o un giorno speciale (la notte dei morti, la luna piena)."
+ },
+ "effetti": {
+  "_come": "Cosa succede se il colono rifiuta, fallisce o lascia scadere una storia (e anche dopo un finale). Mai punizioni cattive: la valle si ricorda.",
+  "fiducia": "Un PNG si fida di piu' o di meno di quel colono (quanto: da -2 a +2).",
+  "passa": "La storia passa a un altro colono adatto.",
+  "chiusa": "Quella storia (e il suo filo) non tornera' mai piu' per quel colono.",
+  "mondo": "Il fatto succede lo stesso senza di lui (un evento di zona, una voce sulla bacheca): livello 2.",
+  "voce": "Una voce gira alla locanda e nella Gazzetta (senza nome, o con il nome se il colono lo merita).",
+  "segno": "Il colono riceve un segno (lo ricordano i dialoghi e le storie dopo)."
+ },
+ "zone": {
+  "_come": "Le zone che il Battito crea: 'tasca' (solo per un colono o un piccolo gruppo, montate dai kit) ed 'eco' (si rivive un fatto delle Cronache com'era allora: tempo, persone, luce). Nessuna e' ancora nel gioco: le storie che le usano restano 'in attesa'.",
+  "cantina": {
+   "tipo": "tasca",
+   "kit": "villaggio (muri, botti, scale)",
+   "dove": "sotto una casa del villaggio"
+  },
+  "grotta_piccola": {
+   "tipo": "tasca",
+   "kit": "generatore della grotta",
+   "dove": "dietro una roccia del bosco o della collina"
+  },
+  "radura_nebbia": {
+   "tipo": "tasca",
+   "kit": "alberi e nebbia del bosco",
+   "dove": "nel bosco, solo di notte"
+  },
+  "rovina_sepolta": {
+   "tipo": "tasca",
+   "kit": "pietre degli Antichi",
+   "dove": "vicino alle rovine o alla grotta est"
+  },
+  "passaggio_torre": {
+   "tipo": "tasca",
+   "kit": "gallerie della grotta + muri del villaggio",
+   "dove": "sotto la torre del villaggio"
+  },
+  "eco_sette_giorni": {
+   "tipo": "eco",
+   "kit": "collina e bosco di notte, fuochi, ombre di eserciti",
+   "cronaca": "La leggenda dell'Orso: i sette giorni e le sette notti"
+  },
+  "eco_rito": {
+   "tipo": "eco",
+   "kit": "rovine degli Antichi intere, luce dorata",
+   "cronaca": "Gli Antichi: il rito compiuto mentre l'Orso teneva la valle"
+  },
+  "eco_autunno_309": {
+   "tipo": "eco",
+   "kit": "grotta del nord prima della frana, lanterne",
+   "cronaca": "La compagnia di Ranieri entra sotto la montagna (autunno 309)"
+  },
+  "eco_battito": {
+   "tipo": "eco",
+   "kit": "tempio del Cuore di notte, candele",
+   "cronaca": "La notte in cui il frammento salto' un battito"
+  },
+  "eco_carovana": {
+   "tipo": "eco",
+   "kit": "piazza in festa, carri, primavera",
+   "cronaca": "La valle riaperta: la prima carovana del 312"
+  },
+  "eco_gesta": {
+   "tipo": "eco",
+   "kit": "il luogo dell'impresa, com'era quel giorno",
+   "cronaca": "L'impresa di un colono (le gesta diventano Eco)"
+  }
+ }
+}

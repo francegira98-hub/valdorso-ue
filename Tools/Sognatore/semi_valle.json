@@ -1,0 +1,57 @@
+{
+ "_come": "Le storie della valle intera (idea 6, approvata da Fra il 13/11): un fatto che riguarda tutti. Ogni colono puo' aiutare con i passi; il finale non lo sceglie uno solo, dipende da quanti hanno aiutato ('soglia' = quanti coloni servono almeno per quel finale; vale il finale con la soglia piu' alta raggiunta). Il Battito ne propone al massimo una alla volta (potere 'evento_zona', livello 2). Com'e' finita va nella Gazzetta. Scritti da Claude il 13/11/2026.",
+ "semi": [
+  {
+   "id": "valle_inverno_della_fame", "titolo": "L'inverno della fame", "rarita": "rara", "difficolta": 3, "per_tutti": true,
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "evento", "evento": "FaseVillaggio"}, {"tipo": "tempo", "quando": "quando le scorte del villaggio sono basse"}],
+   "png": ["Agnese", "Teodoro"], "luogo": ["Mulino"],
+   "aggancio": "Il Balivo legge in piazza: le scorte non bastano fino a primavera. Agnese conta i sacchi due volte e tace. Teodoro guarda il pavimento del mulino come se ci fosse qualcosa sotto.",
+   "passi": [
+    {"mattone": "caccia", "animale": "Cervo", "testo": "Chi sa cacciare porti carne al mulino."},
+    {"mattone": "raccogli", "luogo": "Collina dell'Orso", "oggetto": "Funghi", "testo": "Chi conosce il bosco porti funghi e radici."},
+    {"mattone": "porta", "png": "Agnese", "oggetto": "Carne_Cotta", "testo": "Porta da mangiare ad Agnese: lei tiene il conto."},
+    {"mattone": "parla", "png": "Teodoro", "testo": "Qualcuno chieda a Teodoro cosa c'e' sotto il pavimento del mulino."}
+   ],
+   "finali": [
+    {"soglia": 1, "scelta": "Pochi aiutano.", "esito": "L'inverno passa, ma magro. Teodoro apre il grano nascosto per i bambini, e il Balivo fa finta di non vedere. In primavera, la valle ricorda chi c'era.", "premio": {"segno": "InvernoMagro", "monete": 15}},
+    {"soglia": 4, "scelta": "Molti aiutano.", "esito": "Il mulino si riempie. A meta' inverno Bruno fa una cena per tutti, e Padre Anselmo benedice i sacchi. Nessuno ha fame. Il grano nascosto resta nascosto.", "premio": {"segno": "InvernoPieno", "monete": 30, "oggetti": ["Stufato"]}}
+   ],
+   "rifiuto": {"testo": "Se nessuno aiuta, l'inverno e' duro: la locanda chiude due giorni, e la Gazzetta lo scrive.", "effetti": [{"tipo": "mondo", "testo": "La locanda resta chiusa per due giorni."}, {"tipo": "voce", "testo": "Quest'inverno, nella valle, si e' fatta la fame."}]}
+  },
+  {
+   "id": "valle_i_lupi_scendono", "titolo": "I lupi scendono", "rarita": "insolita", "difficolta": 3, "per_tutti": true,
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "evento", "evento": "Animale"}, {"tipo": "tempo", "quando": "dopo tre notti di neve"}],
+   "png": ["Lucia", "Gaspare"], "luogo": ["Pascoli"],
+   "aggancio": "Dai pascoli arriva un pastore senza bastone. «Sono scesi. Un branco intero. Non hanno paura del fuoco.» Lucia appende un foglio della Gilda in piazza; Gaspare prende la balestra senza dire niente.",
+   "passi": [
+    {"mattone": "parla", "png": "Lucia", "testo": "Prendi il foglio della Gilda da Lucia."},
+    {"mattone": "caccia", "animale": "Lupo", "testo": "Ai pascoli: fermate il branco."},
+    {"mattone": "notte", "luogo": "Pascoli", "testo": "Di notte, qualcuno deve restare con le pecore."}
+   ],
+   "finali": [
+    {"soglia": 1, "scelta": "Pochi difendono i pascoli.", "esito": "Il branco se ne va, ma porta via meta' del gregge. Gaspare trova il capobranco ferito e lo lascia andare: «Torneranno. Ma piu' prudenti.»", "premio": {"segno": "PascoliFeriti", "monete": 10}},
+    {"soglia": 3, "scelta": "Molti difendono i pascoli.", "esito": "Il branco torna sulla montagna. La Gilda paga tutti, e Lucia scrive i nomi sul registro degli incarichi con la penna buona.", "premio": {"segno": "PascoliDifesi", "monete": 25, "oggetti": ["Pelle_Lupo"]}}
+   ],
+   "rifiuto": {"testo": "Se nessuno va, i lupi arrivano fino al cimitero, e per una settimana di notte non esce nessuno.", "effetti": [{"tipo": "mondo", "testo": "Per una settimana i lupi girano vicino al villaggio di notte."}]}
+  },
+  {
+   "id": "valle_la_nebbia", "titolo": "La nebbia che non se ne va", "rarita": "rara", "difficolta": 3, "per_tutti": true,
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "luogo", "luogo": "Palude"}, {"tipo": "tempo", "quando": "una mattina d'autunno"}],
+   "png": ["Nonna Edda", "Padre Anselmo"], "luogo": ["Palude"],
+   "aggancio": "Una mattina la nebbia sale dalla palude e non se ne va piu'. Copre il lago, poi i campi, poi la piazza. Nonna Edda dice che e' il lago che respira. Padre Anselmo dice che e' una prova. Maestro Elric dice che sono sciocchezze, e intanto prende appunti.",
+   "passi": [
+    {"mattone": "parla", "png": "Nonna Edda", "testo": "Nonna Edda ha bisogno di erbe secche da bruciare ai quattro angoli della valle."},
+    {"mattone": "raccogli", "luogo": "Palude", "oggetto": "Erbe_Palude", "testo": "Raccogli erbe della palude."},
+    {"mattone": "veglia", "luogo": "Tempio del Cuore", "testo": "Qualcuno vegli il frammento: nella nebbia, il battito si sente piu' piano."}
+   ],
+   "finali": [
+    {"soglia": 1, "scelta": "Pochi aiutano.", "esito": "La nebbia se ne va dopo nove giorni, da sola. Lascia sulla riva del lago una fila di impronte di piedi nudi, che entrano nell'acqua e non escono.", "premio": {"segno": "NebbiaPassata", "monete": 10}},
+    {"soglia": 3, "scelta": "Molti aiutano.", "esito": "I fuochi di erbe bruciano ai quattro angoli, il frammento batte forte, e la nebbia torna nel lago in una notte sola. Nonna Edda e Padre Anselmo si guardano, e per una volta sono d'accordo.", "premio": {"segno": "NebbiaCacciata", "monete": 30, "iscrizione": "I quattro fuochi"}}
+   ],
+   "rifiuto": {"testo": "Se nessuno aiuta, la nebbia resta due settimane; la carovana non trova la strada e salta un viaggio.", "effetti": [{"tipo": "mondo", "testo": "Nebbia fitta in tutta la valle per due settimane."}, {"tipo": "voce", "testo": "La carovana di Sibilla si e' persa nella nebbia."}]}
+  }
+ ]
+}

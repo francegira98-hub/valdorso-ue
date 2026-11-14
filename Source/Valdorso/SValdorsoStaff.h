@@ -79,6 +79,8 @@ private:
 	/** (11/11) "Lame 40": l'abilita' e i punti. */
 	FString TestoAbilita;
 	FString TestoProclama;
+	/** (13/11) L'annuncio dello staff (il Banditore della Corona). */
+	FString TestoAnnuncio;
 	FString TestoIncarico;
 	FString TestoCassa;
 	FString TestoOra;

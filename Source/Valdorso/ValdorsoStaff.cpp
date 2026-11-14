@@ -16,6 +16,12 @@
 #include "ValdorsoTaccuinoDati.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoZainoDati.h"
+#include "ValdorsoInterazione.h"
+#include "ValdorsoBanditore.h"
+#include "EngineUtils.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "ValdorsoAttributeSet.h"
@@ -461,6 +467,23 @@ FString UValdorsoStaffComponent::Fai(const FString& Azione, const FString& Chi, 
 		return FString::Printf(TEXT("%s: %s a %.0f punti."), *Nome, *Id.ToString(), Punti);
 	}
 
+	// --- (13/11) Il Banditore della Corona: un annuncio dello staff a tutta la valle (e sul sito) ----------------
+	if (Azione == TEXT("annuncio"))
+	{
+		if (!Puo(ValdorsoPermessi::Bacheche))
+		{
+			return NonPuoi;
+		}
+		UValdorsoBanditore* Banditore = UValdorsoBanditore::Di(this);
+		if (!Banditore)
+		{
+			return TEXT("Il Banditore c'e' solo nella valle.");
+		}
+		const FString Risposta = Banditore->Annuncia(Valore, Me);
+		Annota(Valore.Left(80));
+		return Risposta;
+	}
+
 	// --- Bacheche --------------------------------------------------------------------------------------
 	if (Azione == TEXT("proclama") || Azione == TEXT("legge") || Azione == TEXT("incarico") || Azione == TEXT("togliincarico")
 		|| Azione == TEXT("togliproclama") || Azione == TEXT("genera") || Azione == TEXT("cassa"))
@@ -634,6 +657,157 @@ void UValdorsoStaffComponent::ClientVista_Implementation(const FValdorsoStaffVis
 		bApertura = false;
 		ValdorsoStaffSchermo::Apri(Controllore);
 	}
+}
+
+// ------------------------------------------------------------------------------------------------- (13/11) il collaudo
+
+namespace
+{
+	/** Quante cose per ogni messaggio al server (un messaggio troppo grande la rete lo rifiuta). */
+	constexpr int32 CollaudoGruppo = 60;
+
+	FAutoConsoleCommandWithWorld ComandoCollaudo(
+		TEXT("Valdorso.Collaudo"),
+		TEXT("Il collaudo della valle: il server riconosce tutte le cose che si usano con la E? Resoconto in Saved/Claude/collaudo.txt."),
+		FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* Mondo)
+		{
+			APlayerController* Controllore = Mondo ? Mondo->GetFirstPlayerController() : nullptr;
+			if (UValdorsoStaffComponent* Staff = UValdorsoStaffComponent::Di(Controllore))
+			{
+				Staff->Collauda();
+			}
+		}));
+
+	FString CollaudoFile()
+	{
+		return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Claude"), TEXT("collaudo.txt"));
+	}
+}
+
+void UValdorsoStaffComponent::Collauda()
+{
+	UWorld* Mondo = GetWorld();
+	APlayerController* Io = Cast<APlayerController>(GetOwner());
+	if (!Mondo || !Io || !Io->IsLocalController())
+	{
+		return;
+	}
+	if (bCollaudoInCorso && FPlatformTime::Seconds() - CollaudoUltimaRisposta < 15.0)
+	{
+		return;
+	}
+	CollaudoUltimaRisposta = FPlatformTime::Seconds();
+	CollaudoDaMandare.Reset();
+	CollaudoNomiDaMandare.Reset();
+	for (TActorIterator<AActor> It(Mondo); It; ++It)
+	{
+		AActor* Attore = *It;
+		if (Attore && Attore->Implements<UValdorsoInterattivo>() && !Attore->IsPendingKillPending())
+		{
+			CollaudoDaMandare.Add(Attore);
+			CollaudoNomiDaMandare.Add(FString::Printf(TEXT("%s (%s) in %s"), *Attore->GetName(), *Attore->GetClass()->GetName(),
+				*Attore->GetActorLocation().ToCompactString()).Left(160));
+		}
+	}
+	CollaudoRighe.Reset();
+	CollaudoRiconosciute = 0;
+	CollaudoPerse = 0;
+	CollaudoRighe.Add(FString::Printf(TEXT("COLLAUDO DELLA VALLE - %s, %s"), *FDateTime::Now().ToString(TEXT("%d/%m/%Y %H:%M")),
+		Io->GetNetMode() == NM_Client ? TEXT("PC collegato a un server") : TEXT("server e PC insieme (editor o gioco da solo)")));
+	CollaudoRighe.Add(FString::Printf(TEXT("Il PC vede %d cose che si usano con la E. Per ognuna: il server la riconosce? e che cosa direbbe."),
+		CollaudoDaMandare.Num()));
+	CollaudoRighe.Add(FString());
+	bCollaudoInCorso = true;
+	if (CollaudoDaMandare.Num() == 0)
+	{
+		ClientCollaudo_Implementation({ TEXT("Nessuna cosa da usare con la E qui intorno: sei nella valle?") }, 0, 0, true);
+		return;
+	}
+	if (AValdorsoPlayerController* Controllore = Cast<AValdorsoPlayerController>(Io))
+	{
+		Controllore->ClientAvviso(FText::Format(LOCTEXT("CollaudoVia", "Collaudo: chiedo al server {0} cose..."),
+			FText::AsNumber(CollaudoDaMandare.Num())), 3.f, 0.f);
+	}
+	CollaudoProssimo();
+}
+
+void UValdorsoStaffComponent::CollaudoProssimo()
+{
+	const int32 Quanti = FMath::Min(CollaudoGruppo, CollaudoDaMandare.Num());
+	TArray<AActor*> Gruppo;
+	TArray<FString> NomiGruppo;
+	for (int32 i = 0; i < Quanti; ++i)
+	{
+		// (se nel frattempo è sparito, il server lo conterà come perso: si vede nel nome)
+		Gruppo.Add(CollaudoDaMandare[i].Get());
+		NomiGruppo.Add(CollaudoNomiDaMandare[i]);
+	}
+	CollaudoDaMandare.RemoveAt(0, Quanti);
+	CollaudoNomiDaMandare.RemoveAt(0, Quanti);
+	ServerCollaudo(Gruppo, NomiGruppo, CollaudoDaMandare.Num() == 0);
+}
+
+void UValdorsoStaffComponent::ServerCollaudo_Implementation(const TArray<AActor*>& Attori, const TArray<FString>& Nomi, bool bUltimo)
+{
+	APlayerController* Io = Cast<APlayerController>(GetOwner());
+	if (!Io || (PermessiDi(Io) & ValdorsoPermessi::Mondo) == 0)
+	{
+		// una risposta sola che chiude il collaudo (il PC smette di mandare)
+		ClientCollaudo({ TEXT("Il collaudo serve il permesso Mondo dello staff.") }, 0, 0, true);
+		return;
+	}
+	TArray<FString> Righe;
+	int32 Riconosciute = 0;
+	int32 Perse = 0;
+	const APawn* Corpo = Io->GetPawn();
+	for (int32 i = 0; i < FMath::Min(Nomi.Num(), CollaudoGruppo); ++i)
+	{
+		const AActor* Attore = Attori.IsValidIndex(i) ? Attori[i] : nullptr;
+		const IValdorsoInterattivo* Cosa = Attore ? Cast<IValdorsoInterattivo>(Attore) : nullptr;
+		if (!Cosa)
+		{
+			++Perse;
+			Righe.Add(FString::Printf(TEXT("PERSA  %s  -> il server non la riconosce: la E qui non funziona"), *Nomi[i].Left(160)));
+			continue;
+		}
+		++Riconosciute;
+		const FText Testo = Corpo ? Cosa->TestoInterazione(Corpo) : FText::GetEmpty();
+		Righe.Add(FString::Printf(TEXT("ok     %s  -> \"%s\""), *Nomi[i].Left(160), *Testo.ToString().Left(80)));
+	}
+	if (bUltimo)
+	{
+		ValdorsoRegistroEventi::Annota(TEXT("Staff"), Io, nullptr, Corpo ? Corpo->GetActorLocation() : FVector::ZeroVector,
+			TEXT("collaudo della valle"));
+	}
+	ClientCollaudo(Righe, Riconosciute, Perse, bUltimo);
+}
+
+void UValdorsoStaffComponent::ClientCollaudo_Implementation(const TArray<FString>& Righe, int32 Riconosciute, int32 Perse, bool bUltimo)
+{
+	if (!bCollaudoInCorso)
+	{
+		return;
+	}
+	CollaudoUltimaRisposta = FPlatformTime::Seconds();
+	CollaudoRighe.Append(Righe);
+	CollaudoRiconosciute += Riconosciute;
+	CollaudoPerse += Perse;
+	if (!bUltimo)
+	{
+		CollaudoProssimo();
+		return;
+	}
+	bCollaudoInCorso = false;
+	CollaudoDaMandare.Reset();
+	CollaudoNomiDaMandare.Reset();
+	CollaudoRighe.Add(FString());
+	CollaudoRighe.Add(FString::Printf(TEXT("FATTO: %d riconosciute, %d perse.%s"), CollaudoRiconosciute, CollaudoPerse,
+		CollaudoPerse > 0 ? TEXT(" Le perse non rispondono alla E: mandare questo file a Claude.") : TEXT(" Tutto a posto.")));
+	FFileHelper::SaveStringArrayToFile(CollaudoRighe, *CollaudoFile(), FFileHelper::EEncodingOptions::ForceUTF8);
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Collaudo: %d riconosciute, %d perse (%s)"), CollaudoRiconosciute, CollaudoPerse, *CollaudoFile());
+	const FString Esito = FString::Printf(TEXT("Collaudo: %d cose riconosciute dal server, %d perse. Resoconto in Saved/Claude/collaudo.txt"),
+		CollaudoRiconosciute, CollaudoPerse);
+	ClientEsito_Implementation(Esito);
 }
 
 void UValdorsoStaffComponent::ClientEsito_Implementation(const FString& Testo)

@@ -1,0 +1,57 @@
+{
+ "_come": "Le storie intrecciate (idea 2, approvata da Fra il 13/11): una storia sola per due coloni che il Battito vede vicini (gli stessi PNG, lo stesso filo, gli stessi luoghi). {colono} e' chi la riceve, {altro} l'altro: la stessa storia arriva a tutti e due, ognuno dal suo lato. Per andare avanti devono incontrarsi. Scritti da Claude il 13/11/2026.",
+ "semi": [
+  {
+   "id": "intreccio_lo_stesso_pegno", "titolo": "Lo stesso pegno", "rarita": "insolita", "difficolta": 2, "intreccio": true,
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "dialogo", "png": "Sibilla"}, {"tipo": "evento", "evento": "Carovana"}],
+   "png": ["Sibilla"], "luogo": ["Piazza del villaggio"],
+   "aggancio": "Sibilla ha un pugnale dei nani sul banco. «E' per chi mi porta tre pelli di volpe prima di domani sera. Ne ho parlato anche a {altro}. Vediamo chi corre di piu'.»",
+   "passi": [
+    {"mattone": "caccia", "animale": "Volpe", "testo": "Caccia le volpi. Anche {altro} le sta cercando."},
+    {"mattone": "parla", "png": "Sibilla", "testo": "Torna da Sibilla."},
+    {"mattone": "scegli", "png": "Sibilla", "testo": "Al banco di Sibilla c'e' anche {altro}, con le sue pelli."}
+   ],
+   "finali": [
+    {"scelta": "Proponi a {altro} di mettere insieme le pelli e dividere.", "esito": "Sibilla ride: «Due che dividono. Nella capitale non si e' mai visto.» Vi da' il pugnale e una moneta d'argento a testa. Il pugnale lo terrete a turno.", "premio": {"segno": "PegnoDiviso", "monete": 15}},
+    {"scelta": "Corri a consegnare per prim{o}.", "esito": "Arrivi un respiro prima di {altro}. Il pugnale e' tuo. {altro} non dice niente, ma alla locanda, stasera, si siede lontano.", "premio": {"segno": "PegnoVinto", "monete": 25}}
+   ],
+   "rifiuto": {"testo": "Il pugnale va a {altro}.", "effetti": []}
+  },
+  {
+   "id": "intreccio_due_promesse", "titolo": "Due promesse", "rarita": "rara", "difficolta": 3, "intreccio": true,
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "dialogo", "png": "Bruno"}, {"tipo": "dialogo", "png": "Agnese"}],
+   "png": ["Bruno"], "luogo": ["Locanda di Bruno"],
+   "aggancio": "Bruno ti confida un segreto e ti fa promettere di non dirlo a nessuno: sa chi lascia il pane sulla lapide senza nome. Il giorno dopo scopri che Agnese ha chiesto proprio a {altro} di scoprirlo, e {altro} ha promesso di farlo.",
+   "passi": [
+    {"mattone": "parla", "png": "Bruno", "testo": "Ascolta il segreto di Bruno."},
+    {"mattone": "siedi", "luogo": "Locanda di Bruno", "testo": "Alla locanda, la sera, {altro} si siede al tuo tavolo. Fa domande."},
+    {"mattone": "scegli", "png": "Bruno", "testo": "Due promesse non stanno insieme. Una delle due si rompe."}
+   ],
+   "finali": [
+    {"scelta": "Tieni la tua promessa.", "esito": "{altro} non scopre niente da te. Agnese resta curiosa, Bruno ti versa da bere in silenzio. Tra te e {altro}, adesso, c'e' una cosa non detta.", "premio": {"segno": "PromessaTenuta", "monete": 20}},
+    {"scelta": "Racconti tutto a {altro}, e insieme andate da Bruno.", "esito": "Bruno vi guarda tutti e due, sospira, e decide di dirlo lui ad Agnese. Il segreto diventa una storia della valle, e nessuno ci rimette.", "premio": {"segno": "PromesseSciolte", "monete": 15, "oggetti": ["Zuppa_Bruno"]}}
+   ],
+   "rifiuto": {"testo": "Bruno tiene il segreto per se'. Agnese lo scopre lo stesso, da {altro}.", "effetti": [{"tipo": "fiducia", "png": "Bruno", "quanto": -1}]}
+  },
+  {
+   "id": "intreccio_la_strada_in_due", "titolo": "La strada in due", "rarita": "rara", "difficolta": 3, "intreccio": true,
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "luogo", "luogo": "Rovine degli Antichi", "ora": "notte"}],
+   "zona": "rovina_sepolta",
+   "png": ["Maestro Elric", "Nonna Edda"], "luogo": ["Rovine degli Antichi"],
+   "aggancio": "{png} ha trovato una scala che scende sotto le rovine. «Sotto, una porta si apre solo se qualcuno tiene la luce e qualcun altro legge. Uno solo non basta. Ho pensato a te e a {altro}.»",
+   "passi": [
+    {"mattone": "parla", "png": "{png}", "testo": "Fatti spiegare da {png} chi tiene la luce e chi legge."},
+    {"mattone": "tasca", "luogo": "Rovine degli Antichi", "testo": "Scendete insieme, tu e {altro}, nella rovina sepolta."},
+    {"mattone": "scegli", "png": "{png}", "testo": "Davanti alla porta: uno tiene la lanterna, l'altro legge le rune. Chi fa cosa?"}
+   ],
+   "finali": [
+    {"scelta": "Tieni la luce tu.", "esito": "{altro} legge, e la porta si apre su una stanza piena di polvere d'oro e di silenzio. Ognuno di voi due porta fuori qualcosa che l'altro non ha visto.", "premio": {"segno": "HaTenutoLaLuce", "monete": 35, "oggetti": ["Moneta_Nani"]}},
+    {"scelta": "Leggi tu.", "esito": "Le rune ti escono di bocca da sole. La porta si apre, e la voce che senti dentro dice due nomi: il tuo, e quello di {altro}.", "premio": {"segno": "HaLettoLaPorta", "monete": 30, "iscrizione": "Due nomi sotto le rovine"}}
+   ],
+   "rifiuto": {"testo": "{altro} aspetta in fondo alla scala tutta la notte. La porta resta chiusa.", "effetti": [{"tipo": "chiusa"}]}
+  }
+ ]
+}

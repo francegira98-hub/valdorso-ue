@@ -132,6 +132,24 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientEsito(const FString& Testo);
 
+	// --- (13/11) Il collaudo della valle --------------------------------------------------------------------
+	// Alla grande prova del 12/11 la E non funzionava: il server non riconosceva le porte e i PNG che il gioco gli
+	// indicava (nomi diversi tra server dall'editor e gioco pacchettizzato). Il collaudo lo scopre in pochi secondi,
+	// senza andare in giro: il PC manda al server, a gruppi, tutte le cose che si usano con la E che vede; il server
+	// risponde per ognuna se l'ha riconosciuta e che cosa direbbe (la scritta della E). Il resoconto va in
+	// Saved/Claude/collaudo.txt del gioco. Si lancia dalla finestra dello staff (F9, scheda Mondo) o con Valdorso.Collaudo.
+
+	/** PC: comincia il collaudo (solo chi ha il permesso Mondo; il server ricontrolla). */
+	void Collauda();
+
+	/** Un gruppo di cose da riconoscere: gli attori (come li vede il PC) e i loro nomi, per il resoconto. */
+	UFUNCTION(Server, Reliable)
+	void ServerCollaudo(const TArray<AActor*>& Attori, const TArray<FString>& Nomi, bool bUltimo);
+
+	/** La risposta del server, una riga per cosa; Riconosciute e Perse contano questo gruppo. */
+	UFUNCTION(Client, Reliable)
+	void ClientCollaudo(const TArray<FString>& Righe, int32 Riconosciute, int32 Perse, bool bUltimo);
+
 	const FValdorsoStaffVista& Vista() const { return VistaArrivata; }
 	const FString& Esito() const { return UltimoEsito; }
 	int32 Cambiamenti() const { return NumeroCambiamenti; }
@@ -158,6 +176,20 @@ private:
 	FString NomeMio() const;
 
 	FValdorsoStaffVista VistaArrivata;
+
+	/** (13/11) PC: il collaudo in corso: le cose ancora da mandare (un gruppo alla volta, il prossimo quando arriva la
+	 *  risposta, così la rete non si intasa), le righe arrivate e i conti. */
+	TArray<TWeakObjectPtr<AActor>> CollaudoDaMandare;
+	TArray<FString> CollaudoNomiDaMandare;
+	TArray<FString> CollaudoRighe;
+	int32 CollaudoRiconosciute = 0;
+	int32 CollaudoPerse = 0;
+	bool bCollaudoInCorso = false;
+	/** Quando è arrivata l'ultima risposta (se il server non risponde più, dopo 15 secondi si può ricominciare). */
+	double CollaudoUltimaRisposta = 0.0;
+
+	/** PC: manda al server il prossimo gruppo del collaudo. */
+	void CollaudoProssimo();
 	FString UltimoEsito;
 	int32 NumeroCambiamenti = 0;
 	double UltimaRichiesta = 0.0;

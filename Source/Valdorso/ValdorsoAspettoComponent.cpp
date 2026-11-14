@@ -8,6 +8,7 @@
 #include "GroomComponent.h"
 #include "GroomAsset.h"
 #include "GroomBindingAsset.h"
+#include "Misc/PackageName.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -893,8 +894,16 @@ void UValdorsoAspettoComponent::MettiPelo(FName Componente, const TCHAR* Pelo)
 
 	const FString Nome(Pelo);
 	UGroomAsset* Groom = LoadObject<UGroomAsset>(nullptr, *PercorsoPelo(Nome));
-	const FString PercorsoLegame = FString::Printf(TEXT("/Game/Peli/%s/%s.%s"), *NomeTesta, *Nome, *Nome);
-	UGroomBindingAsset* Legame = Groom ? LoadObject<UGroomBindingAsset>(nullptr, *PercorsoLegame) : nullptr;
+	// (14/11) prima i legami rifatti (/Game/Peli/Nuovi/<Testa>, rifai_capelli_uomo.py: l'editor non riesce a
+	// sovrascrivere quelli vecchi mentre sono caricati, e li creava con un "1" in fondo), poi quelli di sempre
+	FString PercorsoLegame = FString::Printf(TEXT("/Game/Peli/Nuovi/%s/%s.%s"), *NomeTesta, *Nome, *Nome);
+	UGroomBindingAsset* Legame = Groom && FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(PercorsoLegame))
+		? LoadObject<UGroomBindingAsset>(nullptr, *PercorsoLegame) : nullptr;
+	if (!Legame)
+	{
+		PercorsoLegame = FString::Printf(TEXT("/Game/Peli/%s/%s.%s"), *NomeTesta, *Nome, *Nome);
+		Legame = Groom ? LoadObject<UGroomBindingAsset>(nullptr, *PercorsoLegame) : nullptr;
+	}
 	if (!Groom || !Legame)
 	{
 		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] Aspetto: manca %s per %s (lancia crea_legami_peli.py)."),

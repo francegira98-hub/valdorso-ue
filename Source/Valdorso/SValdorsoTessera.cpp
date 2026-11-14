@@ -191,6 +191,24 @@ void SValdorsoTessera::Construct(const FArguments& InArgs)
 	Stile = MakeShared<FValdorsoStileAccesso>();
 
 	Carta = FSlateRoundedBoxBrush(ValdorsoTema::Pergamena(), 6.f, ValdorsoTema::OroScuro(), 2.f);
+	// (13/11, chiesto da Fra) la carta vera: pesante, con le fibre, piegata in tre, gli angoli consumati; e il sigillo di
+	// ceralacca della capitana al posto del timbro (Tools/Generatori/icone/tessera.py, importate da importa_icone.py).
+	// Se mancano, il foglio liscio e il timbro d'inchiostro di prima.
+	TextureCarta.Reset(ValdorsoCaricaTextureUI(TEXT("/Game/UI/Icone/T_Tessera_Carta.T_Tessera_Carta")));
+	if (TextureCarta.IsValid())
+	{
+		Carta = FSlateBrush();
+		Carta.SetResourceObject(TextureCarta.Get());
+		Carta.ImageSize = FVector2D(1024.f, 720.f);
+		Carta.DrawAs = ESlateBrushDrawType::Image;
+	}
+	TextureCeralacca.Reset(ValdorsoCaricaTextureUI(TEXT("/Game/UI/Icone/T_Ceralacca.T_Ceralacca")));
+	if (TextureCeralacca.IsValid())
+	{
+		Ceralacca.SetResourceObject(TextureCeralacca.Get());
+		Ceralacca.ImageSize = FVector2D(256.f, 320.f);
+		Ceralacca.DrawAs = ESlateBrushDrawType::Image;
+	}
 	Velo = FSlateColorBrush(FLinearColor(0.f, 0.f, 0.f, 0.62f));
 	Cornice = FSlateRoundedBoxBrush(FLinearColor(0.f, 0.f, 0.f, 0.f), 2.f, ValdorsoTema::Inchiostro(), 2.f);
 
@@ -269,7 +287,7 @@ void SValdorsoTessera::Construct(const FArguments& InArgs)
 						+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 2.f, 0.f, 0.f))
 						[
 							SNew(STextBlock)
-							.Text(LOCTEXT("Titolo", "Tessera del colono · Valle dell'Orso"))
+							.Text(LOCTEXT("Titolo", "Tessera del colono"))
 							.Font(Stile->Caratteri->Titolo(24.f))
 							.ColorAndOpacity(ValdorsoTema::Rubrica())
 						]
@@ -362,14 +380,25 @@ void SValdorsoTessera::Construct(const FArguments& InArgs)
 								.RenderTransform(TransformCast<FSlateRenderTransform>(FQuat2D(FMath::DegreesToRadians(-14.f))))
 								.RenderTransformPivot(FVector2D(0.5f, 0.5f))
 								[
-									SNew(SValdorsoTimbro).Testo(TEXT("VISTO\nL. SERRA\ncapitana"))
+									// (13/11, chiesto da Fra) il timbro della capitana in ceralacca, con il suo segno (la serra e la stella):
+									// così si vede che la tessera è vera. Senza l'immagine, il timbro d'inchiostro di prima.
+									TextureCeralacca.IsValid()
+									? StaticCastSharedRef<SWidget>(SNew(SBox)
+										.WidthOverride(124.f)
+										.HeightOverride(155.f)
+										.RenderTransform(FSlateRenderTransform(FVector2f(0.f, 46.f)))
+										[
+											SNew(SImage).Image(&Ceralacca)
+										])
+									: StaticCastSharedRef<SWidget>(SNew(SValdorsoTimbro).Testo(TEXT("VISTO\nL. SERRA\ncapitana")))
 								]
 							]
 						]
 					]
 				]
 			]
-			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 18.f, 0.f, 0.f))
+			// (13/11) un po' più di spazio sotto la tessera quando c'è il sigillo di cera, che pende fuori dal foglio
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, TextureCeralacca.IsValid() ? 40.f : 18.f, 0.f, 0.f))
 			[
 				Fondo
 			]

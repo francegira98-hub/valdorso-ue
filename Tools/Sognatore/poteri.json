@@ -1,0 +1,121 @@
+{
+ "_come": "I poteri del Battito e la sua patente (13/11/2026, Claude; Fra: \"anche in termini di liberta' e poteri, su alcune cose persino sopra lo staff\"). Ogni potere ha un livello: 1 = lo fa da solo; 2 = lo fa da solo, lo staff lo vede (finestra F9, Gazzetta) e lo puo' annullare; 3 = propone, e serve il si' dello staff. 'livello' e' quello di oggi; 'puo_scendere_a' e' il piu' libero che potra' avere. La patente cresce cosi': quando un potere arriva a 'approvazioni_per_salire' storie approvate di fila senza una sola annullata, \"sognatore.py patente\" propone allo staff di farlo scendere di un livello (lo decide lo staff cambiando 'livello' qui). Una storia annullata dallo staff azzera il conto di quel potere.",
+ "approvazioni_per_salire": 20,
+ "poteri": {
+  "storia_comune": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Dare a un colono una storia Comune o Insolita, scritta su di lui."
+  },
+  "storia_rara": {
+   "livello": 2,
+   "puo_scendere_a": 1,
+   "cosa": "Dare una storia Rara."
+  },
+  "storia_epica": {
+   "livello": 3,
+   "puo_scendere_a": 2,
+   "cosa": "Dare una storia Epica (titoli, oggetti rari)."
+  },
+  "storia_leggendaria": {
+   "livello": 3,
+   "puo_scendere_a": 3,
+   "cosa": "Dare una storia Leggendaria: una sola al mondo, per un solo colono. Sempre con lo staff."
+  },
+  "fiducia_png": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Cambiare quanto un PNG si fida di un colono (da -2 a +2), dopo una storia o un rifiuto."
+  },
+  "sogno_personale": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Mandare un sogno scritto per un colono."
+  },
+  "fantasma": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Far apparire uno spirito del passato che vede solo quel colono."
+  },
+  "zona_tasca": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Aprire una zona tasca per un colono o un piccolo gruppo (cantina, grotta piccola, radura nella nebbia, rovina sepolta)."
+  },
+  "eco": {
+   "livello": 2,
+   "puo_scendere_a": 1,
+   "cosa": "Aprire un'Eco: una zona dove si rivive un fatto delle Cronache."
+  },
+  "voce": {
+   "livello": 2,
+   "puo_scendere_a": 1,
+   "cosa": "Far girare una voce alla locanda, sulla bacheca e nella Gazzetta (\"Le voci della valle\")."
+  },
+  "evento_zona": {
+   "livello": 2,
+   "puo_scendere_a": 2,
+   "cosa": "Un fatto di zona a tempo per tutti: i lupi scendono ai pascoli, la nebbia sulla palude, le luci alle rovine."
+  },
+  "passa_storia": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Far passare una storia rifiutata a un altro colono adatto."
+  },
+  "titolo": {
+   "livello": 3,
+   "puo_scendere_a": 2,
+   "cosa": "Dare un titolo (\"Chi ha ascoltato l'Anguana\") che si vede sulla tessera."
+  },
+  "png_nuovo": {
+   "livello": 3,
+   "puo_scendere_a": 3,
+   "cosa": "Far entrare nella valle un PNG nuovo creato dal Battito."
+  },
+  "cambia_valle": {
+   "livello": 3,
+   "puo_scendere_a": 3,
+   "cosa": "Cambiare la valle per tutti: aprire un luogo nuovo stabile, chiuderne uno."
+  },
+  "morte_png": {
+   "livello": 3,
+   "puo_scendere_a": 3,
+   "cosa": "La morte o la scomparsa di un PNG con nome. Sempre con lo staff, e sempre con un senso."
+  },
+  "sopra_lo_staff": {
+   "livello": 2,
+   "puo_scendere_a": 2,
+   "cosa": "Le storie gia' date e accettate da un colono non si tolgono piu' (lo staff puo' fermare solo quelle non ancora date): la parola del Battito vale."
+  },
+  "gesta_eco": {
+   "livello": 2,
+   "puo_scendere_a": 1,
+   "cosa": "Fare dell'impresa Epica o Leggendaria di un colono un'Eco che gli altri possono rivivere (idea 1)."
+  },
+  "intreccio": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Intrecciare la storia di due coloni vicini (idea 2)."
+  },
+  "ritorno": {
+   "livello": 1,
+   "puo_scendere_a": 1,
+   "cosa": "Far tornare una scelta settimane dopo (idea 3)."
+  },
+  "storia_valle": {
+   "livello": 2,
+   "puo_scendere_a": 2,
+   "cosa": "Una storia per tutta la valle, con l'esito che dipende da quanti aiutano (idea 6)."
+  }
+ },
+ "custode": {
+  "_come": "Il custode dei custodi (idea 8, approvata da Fra il 13/11): guarda quanto il Battito ha dato e cambiato nel mondo e lo frena da solo se esagera, come il secondo nucleo di Cardinal. Se un limite e' superato, il Sognatore non propone storie Rare o piu' alte finche' si rientra, e il rapporto Custode.txt lo dice allo staff. I conti sono sul massimo che ogni storia approvata puo' dare.",
+  "giorni": 7,
+  "monete_valle": 1500,
+  "monete_colono": 250,
+  "oggetti_rari_valle": 12,
+  "titoli_valle": 3,
+  "fatti_nel_mondo": 4,
+  "fiducia_bassa": -4
+ }
+}

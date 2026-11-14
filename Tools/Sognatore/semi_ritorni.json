@@ -1,0 +1,110 @@
+{
+ "_come": "Le conseguenze che tornano (idea 3, approvata da Fra il 13/11): una scelta fatta oggi torna settimane dopo. Questi semi non si danno mai da soli: arrivano solo a chi ha finito la storia 'di' con il finale 'finale', e solo dopo 'dopo_giorni' giorni ('ritorno'). Scritti da Claude il 13/11/2026.",
+ "semi": [
+  {
+   "id": "ritorno_salvanel", "titolo": "L'inverno del salvanel", "rarita": "insolita", "difficolta": 2,
+   "ritorno": {"di": "il_salvanel", "finale": 2, "dopo_giorni": 14},
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "luogo", "luogo": "Mulino"}, {"tipo": "dialogo", "png": "Agnese"}],
+   "png": ["Agnese", "Teodoro"], "luogo": ["Mulino"],
+   "aggancio": "{png} ti aspetta sulla porta del mulino, con il secchio in mano. «Da quando l'hai cacciato, il latte va a male in un giorno. E stanotte qualcuno ha annodato la coda a tutte le mucche. Una per una.»",
+   "passi": [
+    {"mattone": "parla", "png": "Gaspare", "testo": "Gaspare non ride piu'. «Il salvanel non perdona. Ma si puo' comprare. Con il formaggio buono e una parola gentile.»"},
+    {"mattone": "porta", "png": "{png}", "oggetto": "Formaggio", "testo": "Porta del formaggio al mulino."},
+    {"mattone": "notte", "luogo": "Mulino", "testo": "Aspetta il salvanel al mulino, di notte. Stavolta senza scacciarlo."}
+   ],
+   "finali": [
+    {"scelta": "Gli chiedi scusa.", "esito": "Il salvanel ti guarda a lungo, poi prende il formaggio e se ne va. Il giorno dopo le code delle mucche sono sciolte, e il latte non va piu' a male.", "premio": {"segno": "PaceColSalvanel", "monete": 10}},
+    {"scelta": "Gli lasci il formaggio e te ne vai.", "esito": "Le code restano annodate per un'altra settimana, poi tornano libere. Il salvanel non ruba piu', ma non ti perdona del tutto.", "premio": {"segno": "TreguaColSalvanel", "monete": 6}}
+   ],
+   "rifiuto": {"testo": "Per tutto l'inverno il latte del mulino va a male. Al pozzo si sa di chi e' la colpa.", "effetti": [{"tipo": "fiducia", "png": "Agnese", "quanto": -1}, {"tipo": "voce", "testo": "Al mulino il latte va a male da quando qualcuno ha cacciato il salvanel."}]}
+  },
+  {
+   "id": "ritorno_sposa_va", "titolo": "Un fiore sulla sbarra", "rarita": "comune", "difficolta": 1,
+   "ritorno": {"di": "la_sposa_del_passo", "finale": 1, "dopo_giorni": 10},
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "luogo", "luogo": "Posto di guardia del passo"}],
+   "png": ["Tebaldo"], "luogo": ["Posto di guardia del passo"],
+   "aggancio": "Tebaldo ti ferma alla sbarra e ti mostra un fiore bianco, fresco, legato al legno con un nastro. «Ogni mattina, da quando sei passato tu. Nessuno lo mette. Lo trovo e basta.»",
+   "passi": [
+    {"mattone": "veglia", "luogo": "Posto di guardia del passo", "testo": "Resta alla sbarra all'alba, quando arriva il fiore."},
+    {"mattone": "scegli", "png": "Tebaldo", "testo": "All'alba non arriva nessuno. Ma il fiore c'e', e stavolta il nastro porta il tuo nome."}
+   ],
+   "finali": [
+    {"scelta": "Tieni il nastro.", "esito": "Tebaldo annuisce. «Ti ringrazia. Lei, intendo.» E' la frase piu' lunga che gli hai mai sentito dire.", "premio": {"segno": "IlNastroDiAda", "iscrizione": "Un nastro bianco"}},
+    {"scelta": "Lo lasci sulla sbarra.", "esito": "Il giorno dopo non ci sono piu' fiori. Ma Tebaldo, da quel giorno, ti offre il suo posto vicino al fuoco.", "premio": {"segno": "PostoAlFuoco", "monete": 5}}
+   ],
+   "rifiuto": {"testo": "I fiori continuano ad arrivare. Tebaldo li mette in un vaso, in silenzio.", "effetti": []}
+  },
+  {
+   "id": "ritorno_sposa_aspetta", "titolo": "Ada chiede di nuovo", "rarita": "insolita", "difficolta": 2,
+   "ritorno": {"di": "la_sposa_del_passo", "finale": 2, "dopo_giorni": 21},
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "luogo", "luogo": "Posto di guardia del passo", "ora": "notte"}],
+   "png": ["Fulvio"], "luogo": ["Posto di guardia del passo"],
+   "aggancio": "Fulvio ha il fiato corto. «La sposa ha parlato. A me! Ha chiesto di te. Dice che le hai detto la verita', e che adesso vuole sapere un'altra cosa.»",
+   "passi": [
+    {"mattone": "notte", "luogo": "Posto di guardia del passo", "testo": "Vai alla sbarra di notte."},
+    {"mattone": "fantasma", "luogo": "Posto di guardia del passo", "testo": "Ada ti guarda. «Tu che dici la verita'. Lui mi ha dimenticata?»"}
+   ],
+   "finali": [
+    {"scelta": "«Non lo so. Ma io non ti dimentico.»", "esito": "Ada sorride, e per la prima volta si siede sulla sbarra, come una ragazza. All'alba non c'e' piu'. E la sbarra, da quel giorno, non cigola.", "premio": {"segno": "AdaRiposa", "monete": 15, "iscrizione": "Ada si e' seduta"}},
+    {"scelta": "«Il sigillo un giorno si aprira'. Lo saprai allora.»", "esito": "«Allora aspetto ancora,» dice Ada. Ma adesso, quando passa una lettera di Sibilla, la sbarra trema un poco.", "premio": {"segno": "AdaAspettaLaLettera", "monete": 12}}
+   ],
+   "rifiuto": {"testo": "Ada chiede a Fulvio. Fulvio non sa cosa rispondere, e da quella notte non fa piu' i turni.", "effetti": [{"tipo": "fiducia", "png": "Fulvio", "quanto": -1}]}
+  },
+  {
+   "id": "ritorno_debito", "titolo": "La cera nera torna", "rarita": "rara", "difficolta": 3,
+   "ritorno": {"di": "il_debito", "finale": 2, "dopo_giorni": 21},
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "evento", "evento": "Carovana"}, {"tipo": "dialogo", "png": "Sibilla"}],
+   "png": ["Sibilla"], "luogo": ["Piazza del villaggio"],
+   "aggancio": "Sibilla non sorride. «Ricordi la bugia buona? Non hanno creduto. Mandano qualcuno con la prossima carovana. Uno che sa riconoscere le facce.»",
+   "passi": [
+    {"mattone": "parla", "png": "Bruno", "testo": "Bruno sa chi presta a chi scappa. «Sono pazienti. Ma si possono stancare.»"},
+    {"mattone": "parla", "png": "Livia Serra", "testo": "La capitana Livia ascolta. «Al passo, chi entra con la carovana lo guardo io.»"},
+    {"mattone": "scegli", "png": "Sibilla", "testo": "La carovana arriva domani. Sibilla aspetta di sapere cosa fare."}
+   ],
+   "finali": [
+    {"scelta": "Paghi tutto quello che hai.", "esito": "Sibilla porta le monete. L'uomo della carovana non scende nemmeno dal carro. Il debito e' chiuso. Per sempre, dice la cera nera.", "premio": {"segno": "DebitoChiuso"}},
+    {"scelta": "Chiedi a Livia di fermarlo al passo.", "esito": "L'uomo arriva e Livia lo rimanda indietro con un pretesto. Hai guadagnato tempo, e un debito con la milizia.", "premio": {"segno": "DebitoConLaMilizia", "monete": 20}}
+   ],
+   "rifiuto": {"testo": "L'uomo della carovana arriva. Ti guarda in piazza, a lungo, e se ne va senza dire niente.", "effetti": [{"tipo": "voce", "testo": "Con la carovana e' arrivato un uomo che cercava una faccia."}]}
+  },
+  {
+   "id": "ritorno_basilisco", "titolo": "L'ammazzabasilischi", "rarita": "comune", "difficolta": 2,
+   "ritorno": {"di": "il_basilisco_del_pozzo", "finale": 2, "dopo_giorni": 7},
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "dialogo", "png": "Tobia"}],
+   "png": ["Tobia"], "luogo": ["Mulino"],
+   "aggancio": "Tobia corre da te senza fiato. «Ammazzabasilischi! Ce n'e' un altro! Nel mulino! Teodoro dice di no ma io l'ho visto! Tu sai come si fa!»",
+   "passi": [
+    {"mattone": "vai", "luogo": "Mulino", "testo": "Vai al mulino con Tobia."},
+    {"mattone": "scegli", "png": "Tobia", "testo": "Dietro le macine c'e' solo un gatto con un topo. Tobia ti guarda con gli occhi pieni di fiducia."}
+   ],
+   "finali": [
+    {"scelta": "Gli dici la verita': il basilisco non c'era nemmeno al pozzo.", "esito": "Tobia ci rimane male per un'ora. Poi dice: «Pero' hai fatto ridere tutta la valle.» E ride anche lui.", "premio": {"segno": "VeritaATobia", "monete": 5}},
+    {"scelta": "«Questo e' piccolo. Lo lascio a te.»", "esito": "Tobia caccia il gatto con la scopa, fiero come un guerriero. Da quel giorno lo chiamano tutti l'ammazzabasilischi piccolo.", "premio": {"segno": "TobiaEroe", "oggetti": ["Mela"]}}
+   ],
+   "rifiuto": {"testo": "Tobia va a cercare il basilisco da solo. Torna con un graffio e un topo morto.", "effetti": [{"tipo": "fiducia", "png": "Tobia", "quanto": -1}]}
+  },
+  {
+   "id": "ritorno_foglio", "titolo": "Il Balivo chiede del foglio", "rarita": "rara", "difficolta": 3,
+   "ritorno": {"di": "chi_fugge", "finale": 2, "dopo_giorni": 14},
+   "per": {}, "piace": {},
+   "innesco": [{"tipo": "dialogo", "png": "Fulvio"}, {"tipo": "luogo", "luogo": "Piazza del villaggio"}],
+   "png": ["Fulvio"], "luogo": ["Piazza del villaggio"],
+   "aggancio": "Fulvio e' pallido. «Il Balivo ha chiesto del foglio dalla capitale. Quello che e' finito nel fuoco. Ha chiesto chi c'era quella sera alla locanda.»",
+   "passi": [
+    {"mattone": "parla", "png": "Bruno", "testo": "Bruno giura che quella sera la locanda era vuota. «Vuota. Lo giurerei sulla zuppa.»"},
+    {"mattone": "parla", "png": "Livia Serra", "testo": "Livia sa tutto, e ti guarda fisso. «Il ragazzo rischia la divisa. Tu cosa rischi?»"},
+    {"mattone": "scegli", "png": "Fulvio", "testo": "Domani Fulvio deve rispondere al Balivo."}
+   ],
+   "finali": [
+    {"scelta": "Vai tu dal Balivo, al posto di Fulvio.", "esito": "Il Balivo ti ascolta senza battere ciglio. «Un colono onesto. Che rarita'.» Ti segna in un libro. Fulvio tiene la divisa, e non lo dimentichera'.", "premio": {"segno": "SegnatoDalBalivo", "monete": 20}},
+    {"scelta": "Lasci che Fulvio dica che il foglio si e' perso.", "esito": "Fulvio mente male, ma Livia lo copre. Il Balivo fa finta di crederci. Al passo, adesso, siete in tre a sapere.", "premio": {"segno": "InTreASapere", "monete": 15}}
+   ],
+   "rifiuto": {"testo": "Fulvio va dal Balivo da solo. Torna senza i gradi da caporale che non aveva ancora.", "effetti": [{"tipo": "fiducia", "png": "Fulvio", "quanto": -2}, {"tipo": "fiducia", "png": "Livia Serra", "quanto": -1}]}
+  }
+ ]
+}

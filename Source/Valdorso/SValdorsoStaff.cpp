@@ -477,6 +477,7 @@ TSharedRef<SWidget> SValdorsoStaff::Bacheche()
 		];
 	}
 	const FString* Proclama = &TestoProclama;
+	const FString* Annuncio = &TestoAnnuncio;
 	const FString* Incarico = &TestoIncarico;
 	const FString* Cassa = &TestoCassa;
 	TSharedRef<SVerticalBox> Destra = SNew(SVerticalBox)
@@ -487,6 +488,14 @@ TSharedRef<SWidget> SValdorsoStaff::Bacheche()
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot().AutoWidth()[Pulsante(LOCTEXT("Appendi", "Appendi il proclama"), TEXT("proclama"), nullptr, [Proclama]() { return *Proclama; })]
 			+ SHorizontalBox::Slot().AutoWidth()[Pulsante(LOCTEXT("Legge", "Appendi come legge (da domani)"), TEXT("legge"), nullptr, [Proclama]() { return *Proclama; })]
+		]
+		// (13/11) gli annunci dello staff: li proclama il Banditore della Corona, a tutti i coloni nella valle, sulla bacheca
+		// e (con Pubblica, scelta 2) sul sito e nel launcher. La Gazzetta del passo si compone fuori: Tools\Gazzetta.
+		+ SVerticalBox::Slot().AutoHeight()[Titoletto(LOCTEXT("NuovoAnnuncio", "Un annuncio del Banditore (a tutti, e sul sito)"))]
+		+ SVerticalBox::Slot().AutoHeight()[Casella(TestoAnnuncio, LOCTEXT("AnnuncioHint", "Stasera alle 21 la grande prova..."), 380.f)]
+		+ SVerticalBox::Slot().AutoHeight()
+		[
+			Pulsante(LOCTEXT("Annuncia", "Fai proclamare l'annuncio"), TEXT("annuncio"), nullptr, [Annuncio]() { return *Annuncio; })
 		]
 		+ SVerticalBox::Slot().AutoHeight()[Titoletto(LOCTEXT("NuovoIncarico", "Un incarico dello staff"))]
 		+ SVerticalBox::Slot().AutoHeight()[Riga(TEXT("tipo obiettivo quanti grado monete posti giorni titolo | testo\nes. caccia Lupo 3 bronzo 40 2 5 I lupi del boschetto | Tre lupi, prima della luna nuova."), ValdorsoTema::TestoSecondario())]
@@ -560,6 +569,30 @@ TSharedRef<SWidget> SValdorsoStaff::Mondo()
 			// (11/11, v0.1.6) l'Atto I: il battito del frammento salta (e resta debole, anche dopo un riavvio)
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("AttoUno", "Atto I: il battito salta"), TEXT("atto"), nullptr, Fisso(TEXT("1")))]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("AttoZero", "come prima (prove)"), TEXT("atto"), nullptr, Fisso(TEXT("0")))]
+		]
+		// (13/11) il collaudo della valle: il server riconosce tutte le cose che si usano con la E? (ValdorsoStaff.h)
+		+ SScrollBox::Slot()[Titoletto(LOCTEXT("Collaudo", "Il collaudo (prima di ogni grande prova)"))]
+		+ SScrollBox::Slot()
+		[
+			SNew(SBox)
+			.Padding(FMargin(0.f, 0.f, 6.f, 4.f))
+			.HAlign(HAlign_Left)
+			[
+				SNew(SButton)
+				.OnClicked_Lambda([DeboleStaff = Staff]()
+				{
+					if (UValdorsoStaffComponent* S = DeboleStaff.Get())
+					{
+						S->Collauda();
+					}
+					return FReply::Handled();
+				})
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("CollaudoVia", "La E su tutto: il server riconosce porte, PNG, pozzo...? (Saved/Claude/collaudo.txt)"))
+					.Font(Caratteri->Testo(13.f))
+				]
+			]
 		];
 }
 

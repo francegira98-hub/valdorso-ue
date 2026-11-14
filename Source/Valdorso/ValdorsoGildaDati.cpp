@@ -723,9 +723,11 @@ namespace ValdorsoGilda
 		return true;
 	}
 
-	const FValdorsoProclama& Proclama(FValdorsoBachecheSalvate& Bacheche, const FString& Testo, const FString& Autore, bool bLegge, int64 Adesso)
+	const FValdorsoProclama& Proclama(FValdorsoBachecheSalvate& Bacheche, const FString& Testo, const FString& Autore, bool bLegge, int64 Adesso,
+		const FString& Ente)
 	{
 		FValdorsoProclama P;
+		P.Ente = Ente.Left(60);
 		P.Numero = Bacheche.ProssimoProclama++;
 		P.Testo = Testo.TrimStartAndEnd().Left(LettereProclama);
 		P.Autore = Autore;
@@ -745,7 +747,10 @@ namespace ValdorsoGilda
 		for (int32 i = Bacheche.Proclami.Num() - 1; i >= 0; --i)
 		{
 			const FValdorsoProclama& P = Bacheche.Proclami[i];
-			FString Riga = FString::Printf(TEXT("%s - Per ordine del Balivo: %s"), *GildaData(P.Scritto), *P.Testo);
+			// (13/11) chi lo proclama: il Balivo, oppure un altro ente (il Banditore della Corona)
+			FString Riga = P.Ente.IsEmpty()
+				? FString::Printf(TEXT("%s - Per ordine del Balivo: %s"), *GildaData(P.Scritto), *P.Testo)
+				: FString::Printf(TEXT("%s - %s: %s"), *GildaData(P.Scritto), *P.Ente, *P.Testo);
 			if (P.bLegge)
 			{
 				Riga += P.ValeDal > Adesso ? FString::Printf(TEXT(" (Legge: vale dal %s.)"), *GildaData(P.ValeDal)) : FString(TEXT(" (Legge della valle.)"));
