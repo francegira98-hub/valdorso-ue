@@ -1,8 +1,16 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-12",
+ "aggiornato": "2026-11-14",
  "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
  "notizie": [
+  {
+   "data": "2026-11-14",
+   "etichetta": "Patch",
+   "titolo": "Rifiniture: v0.2.2",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Icone dipinte ad acquerello, la tessera del colono con il sigillo di ceralacca, il Banditore della Corona che proclama la Gazzetta, porte che cigolano e chiavi che girano. E i capelli, finalmente, al loro posto."
+  },
   {
    "data": "2026-11-12",
    "etichetta": "Patch",

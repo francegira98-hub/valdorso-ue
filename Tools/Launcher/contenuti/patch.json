@@ -1,12 +1,72 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-12",
+ "aggiornato": "2026-11-14",
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
   {
+   "versione": "0.2.2",
+   "nome": "Rifiniture",
+   "data": "2026-11-14",
+   "sommario": "Dopo la grande prova: la valle si rifinisce. Icone dipinte ad acquerello, la tessera del colono con il sigillo di ceralacca, il Banditore della Corona che proclama la Gazzetta, porte che cigolano e chiavi che girano, e i capelli finalmente al loro posto.",
+   "gruppi": [
+    {
+     "titolo": "Novità: le cose che porti",
+     "voci": [
+      "Tutti gli oggetti hanno un'icona nuova, dipinta ad acquerello: nello zaino, nella barra delle azioni, nel baule e nelle botteghe.",
+      "La tessera del colono, su carta vera, con il sigillo di ceralacca della capitana: un segno suo, perché si capisca che è autentica."
+     ]
+    },
+    {
+     "titolo": "Novità: le voci della Corona",
+     "voci": [
+      "Il Banditore della Corona: in piazza proclama la Gazzetta del passo, il foglio della settimana con i fatti della valle, e la grida a tutti i coloni.",
+      "Gli annunci dello staff arrivano allo stesso modo: sulla bacheca della piazza e a voce, a tutta la valle.",
+      "La Gazzetta finisce anche qui, tra le notizie del launcher."
+     ]
+    },
+    {
+     "titolo": "Novità: la valle che si sente",
+     "voci": [
+      "Le porte cigolano quando si aprono e si chiudono; quelle chiuse a chiave fanno sentire la serratura.",
+      "Gli uccelli sono più calmi: meno canti, più lontani.",
+      "Nel pozzo della piazza, adesso, si vede l'acqua.",
+      "Nelle strade del villaggio le scope stanno appoggiate ai muri, come si deve."
+     ]
+    },
+    {
+     "titolo": "Corretto",
+     "voci": [
+      "I capelli degli uomini non stanno più bassi della testa (Padre Anselmo ringrazia).",
+      "Ci si siede sulla panca anche arrivando da dietro, dal lato giusto.",
+      "Il nome della guardia si vede solo in combattimento, o appena cambi arma.",
+      "Niente più pugni per sbaglio mentre è aperto lo zaino o un'altra finestra.",
+      "Corretto un crash con più giocatori quando il gatto della locanda miagolava.",
+      "Volti, occhi e materiali completi anche nel gioco scaricato."
+     ]
+    }
+   ]
+  },
+  {
+   "versione": "0.2.1",
+   "nome": "Dopo la prova",
+   "data": "2026-11-13",
+   "sommario": "Le correzioni della grande prova dell'Alpha 3: la E funziona su tutto, i volti e i gesti ci sono anche nel gioco scaricato, e il gioco arriva a parti.",
+   "gruppi": [
+    {
+     "titolo": "Corretto",
+     "voci": [
+      "La E funziona su porte, panche, letti, PNG e bauli anche quando sono lontani dal server.",
+      "I volti dei PNG e i gesti ci sono anche nel gioco scaricato.",
+      "Il gioco si scarica a parti, e gli aggiornamenti successivi portano solo quello che cambia.",
+      "Il server della prova è raggiungibile dalla rete degli amici (Tailscale)."
+     ]
+    }
+   ]
+  },
+  {
    "versione": "0.2.0",
    "nome": "Mani e materiali",
-   "data": "",
+   "data": "2026-11-12",
    "sommario": "Si lavora: l'acqua, la legna, la pietra e il ferro, i banchi per farne qualcosa, e il villaggio che ha bisogno di tutto. E, ogni tre giorni, la carovana di Sibilla.",
    "gruppi": [
     {

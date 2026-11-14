@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-12",
+ "aggiornato": "2026-11-14",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
  "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0: sei alpha, quattro beta e il regno. Ogni tappa è una versione che si può giocare.",
  "tappe": [
@@ -155,7 +155,7 @@
   {
    "versione": "0.2.0",
    "nome": "Mani e materiali",
-   "stato": "in_corso",
+   "stato": "fatta",
    "sommario": "Alpha 3 «Mani e materiali». Le scorte del villaggio e la carovana; poi la grande prova, anche in due.",
    "voci": [
     "Le scorte del villaggio e il magazzino",
@@ -163,12 +163,47 @@
     "La carovana di Sibilla, con il lasciapassare della Corona",
     "Il baule del colono",
     "La grande prova: tutto, anche con un amico"
+   ],
+   "data": "2026-11-12"
+  },
+  {
+   "versione": "0.2.1",
+   "nome": "Dopo la prova",
+   "stato": "fatta",
+   "data": "2026-11-13",
+   "voci": [
+    "La E su tutto, anche lontano dal server",
+    "Volti e gesti nel gioco scaricato",
+    "Il gioco a parti e gli aggiornamenti leggeri"
+   ]
+  },
+  {
+   "versione": "0.2.2",
+   "nome": "Rifiniture",
+   "stato": "fatta",
+   "data": "2026-11-14",
+   "voci": [
+    "Le icone ad acquerello",
+    "La tessera con il sigillo di ceralacca",
+    "Il Banditore della Corona e la Gazzetta del passo",
+    "Porte, chiavi e uccelli più calmi",
+    "I capelli al loro posto"
+   ]
+  },
+  {
+   "versione": "0.2.3",
+   "nome": "Armi vere",
+   "stato": "prossima",
+   "voci": [
+    "Le armi e gli scudi veri, con il loro peso",
+    "La qualità degli oggetti: comune, buona, rara, epica, leggendaria",
+    "Da dove viene ogni cosa: la bottega, i ritrovamenti, le storie"
    ]
   },
   {
    "versione": "0.3",
    "nome": "Arcano",
-   "stato": "prossima",
+   "stato": "futura",
    "sommario": "Alpha 4: il test chiuso con 5-10 amici.",
    "voci": [
     "La magia e le rune",
