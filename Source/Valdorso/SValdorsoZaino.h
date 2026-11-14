@@ -111,6 +111,8 @@ private:
 	FText TestoPeso() const;
 	FSlateColor ColorePeso() const;
 	FText NomeMostrato() const;
+	/** (14/11, v0.2.3) Il colore del nome: quello del grado dell'oggetto (ValdorsoQualita.h). */
+	FSlateColor ColoreNome() const;
 	FText DescrizioneMostrata() const;
 	FText DettagliMostrati() const;
 	FText Suggerimento() const;

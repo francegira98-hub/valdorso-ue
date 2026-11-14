@@ -16,6 +16,8 @@
 #include "ValdorsoModoFoto.h"
 #include "ValdorsoMovementComponent.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoQualita.h"
+#include "ValdorsoCrescita.h"
 #include "ValdorsoPericoli.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistro.h"
@@ -119,6 +121,41 @@ namespace
 			const FString Nome = Argomenti.Num() > 2 ? Argomenti[2] : FString();
 			ZainoEsito(ZainoPerOgniGiocatore(Mondo, Nome, [Id, Quanti](UValdorsoZainoComponent& Zaino) { Zaino.Dai(Id, Quanti); }),
 				FString::Printf(TEXT("dati %d %s"), Quanti, *Id.ToString()));
+		}));
+
+	// (14/11, v0.2.3) Per le prove: un oggetto di un grado (0 Comune .. 4 Leggendaria)
+	FAutoConsoleCommandWithWorldAndArgs ComandoZainoDaiGrado(
+		TEXT("Valdorso.Zaino.DaiGrado"),
+		TEXT("Per le prove: Valdorso.Zaino.DaiGrado <Id> <grado 0-4> [nome] (0 Comune, 1 Buona, 2 Rara, 3 Epica, 4 Leggendaria)."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
+		{
+			if (Argomenti.Num() < 2 || !ValdorsoOggetti::Trova(FName(*Argomenti[0])))
+			{
+				UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Zaino: Valdorso.Zaino.DaiGrado <Id> <grado 0-4> [nome], per esempio Valdorso.Zaino.DaiGrado Spada_Corta 3"));
+				return;
+			}
+			const FName Id(*Argomenti[0]);
+			const uint8 Grado = static_cast<uint8>(FMath::Clamp(FCString::Atoi(*Argomenti[1]), 0, static_cast<int32>(ValdorsoQualita::Massima)));
+			const FString Nome = Argomenti.Num() > 2 ? Argomenti[2] : FString();
+			ZainoEsito(ZainoPerOgniGiocatore(Mondo, Nome, [Id, Grado](UValdorsoZainoComponent& Zaino)
+			{
+				Zaino.Dai(Id, 1, true, Grado, TEXT("Dallo staff, per le prove"));
+			}), FString::Printf(TEXT("dato %s (%s)"), *Id.ToString(), ValdorsoQualita::Nome(Grado)));
+		}));
+
+	// (14/11, v0.2.3) Per le prove: consuma l'arma in mano (per provare la riparazione senza mille colpi)
+	FAutoConsoleCommandWithWorldAndArgs ComandoZainoConsuma(
+		TEXT("Valdorso.Zaino.Consuma"),
+		TEXT("Per le prove: Valdorso.Zaino.Consuma <colpi> [sinistra] [nome]: consuma l'arma (o con 'sinistra' lo scudo) in mano."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
+		{
+			const int32 Colpi = Argomenti.Num() > 0 ? FMath::Max(1, FCString::Atoi(*Argomenti[0])) : 1000;
+			const bool bSinistra = Argomenti.Num() > 1 && Argomenti[1].StartsWith(TEXT("sin"), ESearchCase::IgnoreCase);
+			const FString Nome = Argomenti.Num() > (bSinistra ? 2 : 1) ? Argomenti[bSinistra ? 2 : 1] : FString();
+			ZainoEsito(ZainoPerOgniGiocatore(Mondo, Nome, [Colpi, bSinistra](UValdorsoZainoComponent& Zaino)
+			{
+				Zaino.ConsumaInMano(bSinistra, Colpi);
+			}), FString::Printf(TEXT("consumati %d colpi"), Colpi));
 		}));
 
 	// (10/11) Per le prove: tutte le armi e gli scudi che si impugnano (quelli che entrano nello zaino)
@@ -318,14 +355,15 @@ void UValdorsoZainoComponent::Carica(const FValdorsoZaino& Salvato, const FValdo
 	++NumeroCambiamenti;
 }
 
-int32 UValdorsoZainoComponent::Dai(FName Id, int32 Quantita, bool bAvvisa)
+int32 UValdorsoZainoComponent::Dai(FName Id, int32 Quantita, bool bAvvisa, uint8 Qualita, const FString& Provenienza)
 {
 	const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
 	if (!GetOwner() || !GetOwner()->HasAuthority() || !Tipo || Quantita <= 0)
 	{
 		return 0;
 	}
-	const int32 Entrati = ValdorsoZaino::Aggiungi(Zaino, Id, Quantita);
+	const int32 Entrati = Qualita > 0 || !Provenienza.IsEmpty() ? ValdorsoZaino::AggiungiCon(Zaino, Id, Quantita, Qualita, Provenienza)
+		: ValdorsoZaino::Aggiungi(Zaino, Id, Quantita);
 	if (Entrati > 0)
 	{
 		Cambiato();
@@ -335,6 +373,12 @@ int32 UValdorsoZainoComponent::Dai(FName Id, int32 Quantita, bool bAvvisa)
 		if (Entrati <= 0)
 		{
 			Avvisa(FText::Format(LOCTEXT("Pieno", "Lo zaino è pieno: {0} resta dov'è."), FText::FromString(Tipo->Nome)), 3.f);
+		}
+		else if (Entrati == 1 && Qualita > 0)
+		{
+			// (14/11, v0.2.3) un oggetto di un grado: si dice quale
+			Avvisa(FText::Format(LOCTEXT("RiceviGrado", "Ricevi: {0} ({1})"), FText::FromString(Tipo->Nome),
+				FText::FromString(FString(ValdorsoQualita::Nome(Qualita)).ToLower())), 3.5f);
 		}
 		else if (Entrati == 1)
 		{
@@ -346,6 +390,50 @@ int32 UValdorsoZainoComponent::Dai(FName Id, int32 Quantita, bool bAvvisa)
 		}
 	}
 	return Entrati;
+}
+
+UValdorsoZainoComponent* UValdorsoZainoComponent::DelCorpo(const AActor* Corpo)
+{
+	const APawn* Pedina = Cast<APawn>(Corpo);
+	return Pedina ? Di(Cast<APlayerController>(Pedina->GetController())) : nullptr;
+}
+
+float UValdorsoZainoComponent::ForzaInMano(bool bSinistra, bool bParata) const
+{
+	const int32 Posto = ValdorsoZaino::PostoInMano(Zaino, bSinistra ? Zaino.Sinistra : Zaino.Destra);
+	return Zaino.Posti.IsValidIndex(Posto) ? ValdorsoQualita::ForzaDelPosto(Zaino.Posti[Posto], bParata) : 1.f;
+}
+
+uint8 UValdorsoZainoComponent::QualitaInMano(bool bSinistra) const
+{
+	const int32 Posto = ValdorsoZaino::PostoInMano(Zaino, bSinistra ? Zaino.Sinistra : Zaino.Destra);
+	return Zaino.Posti.IsValidIndex(Posto) ? Zaino.Posti[Posto].Qualita : ValdorsoQualita::Comune;
+}
+
+void UValdorsoZainoComponent::ConsumaInMano(bool bSinistra, int32 Quanto)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	const FName Id = bSinistra ? Zaino.Sinistra : Zaino.Destra;
+	const int32 Posto = ValdorsoZaino::PostoInMano(Zaino, Id);
+	if (!Zaino.Posti.IsValidIndex(Posto) || ValdorsoQualita::DurataMassima(Id, Zaino.Posti[Posto].Qualita) <= 0
+		|| ValdorsoQualita::Rovinata(Zaino.Posti[Posto]))
+	{
+		return;
+	}
+	const bool bRovinata = ValdorsoZaino::Consuma(Zaino, bSinistra, Quanto);
+	// l'usura cambia lo zaino (si salva e arriva al PC: nel riquadro si vede quanto resta)
+	Cambiato();
+	if (bRovinata)
+	{
+		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
+		Avvisa(FText::Format(ValdorsoQualita::DiLegno(Id)
+			? LOCTEXT("RovinataLegno", "{0} si e' rovinato: colpisce la meta'. Il falegname lo rimette a posto.")
+			: LOCTEXT("RovinataFerro", "{0} si e' rovinato: colpisce la meta'. Marta, alla fucina, lo rimette a posto."),
+			FText::FromString(Tipo ? Tipo->Nome : TEXT("?"))), 4.f);
+	}
 }
 
 void UValdorsoZainoComponent::ImpostaMonete(int32 Monete)
@@ -472,12 +560,41 @@ void UValdorsoZainoComponent::ServerRicetta_Implementation(FName Ricetta)
 		return;
 	}
 	const FText Perche = ValdorsoBotteghe::Manca(Zaino, *R);
-	if (!Perche.IsEmpty() || !ValdorsoBotteghe::Fai(Zaino, *R))
+	// (14/11, v0.2.3) quello che forgia (o fa) il colono: il grado dalla sua mano (l'abilita' "Bottega") e dalla fortuna,
+	// e porta il suo nome; quello che si compra ha il grado e la provenienza della bottega
+	uint8 Qualita = R->Qualita;
+	FString Provenienza = R->Provenienza ? FString(R->Provenienza) : FString();
+	UValdorsoCrescitaComponent* Crescita = UValdorsoCrescitaComponent::Di(Controllore);
+	if (R->bForgia && Perche.IsEmpty())
+	{
+		const float Punti = Crescita ? ValdorsoCrescere::Punti(Crescita->Contenuto(), FName(TEXT("Bottega"))) : 0.f;
+		Qualita = ValdorsoQualita::Forgiata(Punti, FMath::FRand());
+		TesseraDiProva();
+		Provenienza = Tessera.Nome.IsEmpty() ? FString(TEXT("Forgiata da un colono")) : FString::Printf(TEXT("Forgiata da %s"), *Tessera.Nome);
+	}
+	if (!Perche.IsEmpty() || !ValdorsoBotteghe::FaiCon(Zaino, *R, Qualita, Provenienza))
 	{
 		Avvisa(Perche.IsEmpty() ? LOCTEXT("NonRiesce", "Non si può fare.") : Perche, 2.5f);
 		return;
 	}
+	if (R->bForgia && Crescita)
+	{
+		// forgiare fa salire la mano (piu' l'arma e' difficile, piu' si impara)
+		Crescita->Usa(FName(TEXT("Bottega")), 1.f);
+	}
 	Cambiato();
+	if (R->bForgia && R->Risultato)
+	{
+		const FValdorsoTipoOggetto* Fatto = ValdorsoOggetti::Trova(R->Risultato);
+		Avvisa(FText::Format(LOCTEXT("Forgiato", "{0}: {1}, {2}."), FText::FromString(R->Verbo),
+			FText::FromString(Fatto ? Fatto->Nome : R->Risultato), FText::FromString(FString(ValdorsoQualita::Nome(Qualita)).ToLower())), 3.f);
+		return;
+	}
+	if (R->Ripara != 0)
+	{
+		Avvisa(LOCTEXT("Riparata", "Rimessa a posto: torna come nuova."), 2.5f);
+		return;
+	}
 	Avvisa(FText::Format(LOCTEXT("Fatto", "{0}: {1}"), FText::FromString(R->Verbo), R->Guadagno > 0 && !R->Risultato
 		? ValdorsoBotteghe::TestoServe(*R) : ValdorsoBotteghe::TestoDa(*R)), 2.f);
 }
@@ -669,6 +786,8 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 		return;
 	}
 	const FText Nome = FText::FromString(Tipo->Nome);
+	// (14/11, v0.2.3) il cibo (e l'acqua) di un grado migliore ristora di piu'
+	const float Ristoro = ValdorsoQualita::Ristoro(Dove.Qualita);
 	// anche gli avvisi aspettano il secondo: un PC che preme di continuo non riempie lo schermo
 	ProssimoUso = Adesso + ZainoSecondiUso;
 	UAbilitySystemComponent* Abilita = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Corpo);
@@ -681,9 +800,9 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 		}
 		return FMath::Min(Quanto, FMath::Max(0.f, Abilita->GetNumericAttribute(Massimo) - Abilita->GetNumericAttributeBase(Attributo)));
 	};
-	const float Guadagno = Manca(UValdorsoAttributeSet::GetSaluteAttribute(), UValdorsoAttributeSet::GetSaluteMaxAttribute(), Tipo->Salute)
-		+ Manca(UValdorsoAttributeSet::GetStaminaAttribute(), UValdorsoAttributeSet::GetStaminaMaxAttribute(), Tipo->Stamina)
-		+ Manca(UValdorsoAttributeSet::GetEquilibrioAttribute(), UValdorsoAttributeSet::GetEquilibrioMaxAttribute(), Tipo->Equilibrio);
+	const float Guadagno = Manca(UValdorsoAttributeSet::GetSaluteAttribute(), UValdorsoAttributeSet::GetSaluteMaxAttribute(), Tipo->Salute * Ristoro)
+		+ Manca(UValdorsoAttributeSet::GetStaminaAttribute(), UValdorsoAttributeSet::GetStaminaMaxAttribute(), Tipo->Stamina * Ristoro)
+		+ Manca(UValdorsoAttributeSet::GetEquilibrioAttribute(), UValdorsoAttributeSet::GetEquilibrioMaxAttribute(), Tipo->Equilibrio * Ristoro);
 	const bool bSiConsuma = Tipo->Uso == EValdorsoUso::Mangia || Tipo->Uso == EValdorsoUso::Bevi || Tipo->Uso == EValdorsoUso::Cura;
 	if (bSiConsuma && Guadagno < 0.5f && !(Tipo->Uso == EValdorsoUso::Bevi && Dove.Cariche <= 0))
 	{
@@ -834,9 +953,10 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 				Abilita->SetNumericAttributeBase(Attributo, FMath::Clamp(Prima + Quanto, 0.f, Tetto));
 			}
 		};
-		AggiungiA(UValdorsoAttributeSet::GetSaluteAttribute(), UValdorsoAttributeSet::GetSaluteMaxAttribute(), Tipo->Salute);
-		AggiungiA(UValdorsoAttributeSet::GetStaminaAttribute(), UValdorsoAttributeSet::GetStaminaMaxAttribute(), Tipo->Stamina);
-		AggiungiA(UValdorsoAttributeSet::GetEquilibrioAttribute(), UValdorsoAttributeSet::GetEquilibrioMaxAttribute(), Tipo->Equilibrio);
+		// (il cibo cattivo resta cattivo: il grado moltiplica solo quello che fa bene)
+		AggiungiA(UValdorsoAttributeSet::GetSaluteAttribute(), UValdorsoAttributeSet::GetSaluteMaxAttribute(), Tipo->Salute > 0.f ? Tipo->Salute * Ristoro : Tipo->Salute);
+		AggiungiA(UValdorsoAttributeSet::GetStaminaAttribute(), UValdorsoAttributeSet::GetStaminaMaxAttribute(), Tipo->Stamina > 0.f ? Tipo->Stamina * Ristoro : Tipo->Stamina);
+		AggiungiA(UValdorsoAttributeSet::GetEquilibrioAttribute(), UValdorsoAttributeSet::GetEquilibrioMaxAttribute(), Tipo->Equilibrio > 0.f ? Tipo->Equilibrio * Ristoro : Tipo->Equilibrio);
 	}
 	Cambiato();
 	switch (Tipo->Uso)

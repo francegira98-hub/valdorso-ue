@@ -11,6 +11,7 @@
 #include "ValdorsoArmi.h"
 #include "ValdorsoAttributeSet.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoZaino.h"
 #include "ValdorsoEffetti.h"
 #include "ValdorsoEtichette.h"
 #include "ValdorsoLupi.h"
@@ -305,7 +306,17 @@ namespace ValdorsoCombattimento
 				&& FVector::DotProduct(AvantiScudo, VersoScudo) > Scherma.AngoloScudo;
 			if (Scudo && Scudo->Parata > 0.f && bNelloScudo && Scherma.ScudoConta > 0.f)
 			{
-				Danno *= 1.f - FMath::Clamp(Scudo->Parata * Scherma.ScudoConta, 0.f, 1.f);
+				// (14/11, v0.2.3) il grado dello scudo para di piu' (fino al 95%), e uno scudo rovinato la meta'; ogni parata
+				// lo consuma
+				UValdorsoZainoComponent* ZainoScudo = UValdorsoZainoComponent::DelCorpo(A);
+				const float PerGrado = ZainoScudo ? ZainoScudo->ForzaInMano(true, true) : 1.f;
+				const float ParataBase = Scudo->Parata * Scherma.ScudoConta;
+				const float ParataVera = PerGrado > 1.f ? FMath::Min(ParataBase * PerGrado, FMath::Max(ParataBase, 0.95f)) : ParataBase * PerGrado;
+				Danno *= 1.f - FMath::Clamp(ParataVera, 0.f, 1.f);
+				if (ZainoScudo)
+				{
+					ZainoScudo->ConsumaInMano(true, 1);
+				}
 				Equilibrio *= 0.5f;
 				Tipo = EValdorsoTipoColpo::Scudo;
 				bParato = true;

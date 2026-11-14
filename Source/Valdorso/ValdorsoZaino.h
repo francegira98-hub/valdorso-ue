@@ -63,8 +63,22 @@ public:
 	/** Lo zaino com'è adesso, da salvare nel file del personaggio. */
 	FValdorsoZaino Dati() const { return Zaino; }
 
-	/** Dà oggetti al colono (con l'avviso "Ricevi: ..."); restituisce quanti ne sono entrati. */
-	int32 Dai(FName Id, int32 Quantita, bool bAvvisa = true);
+	/** Dà oggetti al colono (con l'avviso "Ricevi: ..."); restituisce quanti ne sono entrati. (14/11, v0.2.3) Con il grado
+	 *  (ValdorsoQualita.h) e la provenienza ("Trovata nella grotta del nord"), se ce l'hanno. */
+	int32 Dai(FName Id, int32 Quantita, bool bAvvisa = true, uint8 Qualita = 0, const FString& Provenienza = FString());
+
+	/** (14/11, v0.2.3) Lo zaino di chi comanda quel corpo (nullptr per i lupi, i PNG, i manichini). */
+	static UValdorsoZainoComponent* DelCorpo(const AActor* Corpo);
+
+	/** (14/11, v0.2.3) Quanto colpisce (falso: la destra) o para (vero: la sinistra) quello che ha in mano: il grado, e la
+	 *  meta' se e' rovinato. 1 se non ha niente. */
+	float ForzaInMano(bool bSinistra, bool bParata) const;
+
+	/** (14/11, v0.2.3) L'arma (o lo scudo) in mano si consuma; se si rovina, il colono lo legge. */
+	void ConsumaInMano(bool bSinistra, int32 Quanto = 1);
+
+	/** (14/11, v0.2.3) Il grado di quello che ha in mano (per le frecce: l'arco). */
+	uint8 QualitaInMano(bool bSinistra) const;
 
 	/** (10/11) Cambia lo zaino da fuori (la Gilda: il foglio, la paga, la consegna). Cosa restituisce vero se ha cambiato
 	 *  qualcosa: allora lo zaino arriva al PC e si salva. */

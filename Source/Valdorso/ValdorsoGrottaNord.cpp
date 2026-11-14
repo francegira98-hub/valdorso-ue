@@ -807,7 +807,8 @@ void AValdorsoForziere::Interagisci(APawn* Chi)
 	});
 	if (Caso.FRand() < 0.15f * static_cast<float>(Ricchezza))
 	{
-		Zaino->Dai(TEXT("Pugnale_Nani"), 1);
+		// (14/11, v0.2.3) un ritrovamento dei nani: raro, e lo dice da dove viene
+		Zaino->Dai(TEXT("Pugnale_Nani"), 1, true, 2, TEXT("Trovato nella grotta del nord"));
 	}
 	Giocatore->ClientAvviso(FText::Format(LOCTEXT("Aperto", "Nel forziere: {0} monete dei nani e {1} Aureus."), FText::AsNumber(Monete),
 		FText::AsNumber(Aureus)), 4.f, 0.f);

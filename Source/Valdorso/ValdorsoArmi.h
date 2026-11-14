@@ -18,6 +18,13 @@
 //   registro (da mandare a Claude, che li scrive qui come valori di serie). Per trovare il verso: Valdorso.Arma.Prova
 //   destra <1-6> [giro 0-3]. (09/11) Le armi stanno nelle mani del corpo MetaHuman (non del manichino nascosto).
 
+// - (14/11, v0.2.3 "Armi vere") Le animazioni dei colpi per famiglia d'arma (ValdorsoQualita.h): quelle di Greystone
+//   (Paragon, gratis su Fab) riadattate al colono da Content/Python/nuovi/porta_armi_greystone.py in /Game/Fab/Armi/Spada.
+//   Pugnali: il colpo rapido; spade: rapido e medio a turno; asce: il colpo pesante; mazze: dall'alto; aste: il medio;
+//   lo scudo da solo: la spinta della parata. Se l'animazione non c'e' (o Valdorso.Armi.Animazioni 0) si usa il pugno.
+// - (14/11, v0.2.3) L'arco si tiene con due mani (ValdorsoOggetti.h, bDueMani): sta nella sinistra (il posto "arco", da
+//   sistemare con Valdorso.Arma.Presa arco ...); il colpo tira una freccia (ValdorsoFreccia.h).
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -25,6 +32,7 @@
 #include "ValdorsoArmi.generated.h"
 
 class UStaticMeshComponent;
+class UAnimSequenceBase;
 class USkeletalMeshComponent;
 struct FValdorsoTipoOggetto;
 
@@ -38,6 +46,21 @@ namespace ValdorsoArmi
 	inline constexpr int32 PostoSinistra = 1;
 	inline constexpr int32 PostoFianco = 2;
 	inline constexpr int32 PostoSchiena = 3;
+	/** (14/11, v0.2.3) L'arco, nella mano sinistra. */
+	inline constexpr int32 PostoArco = 4;
+	inline constexpr int32 NumeroPosti = 5;
+
+	/** (14/11, v0.2.3) Quanto si tende l'arco prima che parta la freccia (secondi). */
+	inline constexpr float SecondiTendere = 0.45f;
+
+	/** (14/11, v0.2.3) Quanto va veloce una freccia (cm/s). */
+	inline constexpr float VelocitaFreccia = 5200.f;
+
+	/**
+	 * (14/11, v0.2.3) L'animazione del colpo di un'arma (Numero: quante volte ha gia' colpito, per alternare), con l'istante
+	 * del colpo (0..1 della sua durata) e la velocita'. nullptr se quell'arma usa il pugno (o l'animazione non c'e').
+	 */
+	VALDORSO_API UAnimSequenceBase* AnimazioneColpo(FName IdArma, int32 Numero, float& OutIstante, float& OutVelocita);
 
 	/** Come sta un'arma in quel posto (rispetto al suo osso). */
 	VALDORSO_API FTransform Presa(int32 Posto);

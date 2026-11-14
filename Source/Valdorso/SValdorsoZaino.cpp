@@ -4,6 +4,7 @@
 #include "ValdorsoGilda.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoQualita.h"
 #include "ValdorsoScherma.h"
 #include "ValdorsoTemaUI.h"
 #include "Brushes/SlateColorBrush.h"
@@ -380,28 +381,32 @@ int32 SValdorsoGrigliaZaino::OnPaint(const FPaintArgs& Args, const FGeometry& Al
 	const FSlateFontInfo FontTasto = Caratteri->Titolo(11.f, TEXT("Bold"));
 	const FSlateFontInfo FontEtichetta = Caratteri->Testo(15.f, TEXT("Italic"));
 
-	// (09/11) quello che si impugna: il primo posto con quell'oggetto ha il segno della mano
-	int32 PostoDestra = INDEX_NONE;
-	int32 PostoSinistra = INDEX_NONE;
-	for (int32 i = 0; i < Contenuto.Posti.Num(); ++i)
-	{
-		if (PostoDestra == INDEX_NONE && !Contenuto.Destra.IsNone() && Contenuto.Posti[i].Id == Contenuto.Destra)
-		{
-			PostoDestra = i;
-		}
-		if (PostoSinistra == INDEX_NONE && !Contenuto.Sinistra.IsNone() && Contenuto.Posti[i].Id == Contenuto.Sinistra)
-		{
-			PostoSinistra = i;
-		}
-	}
+	// (09/11) quello che si impugna ha il segno della mano; (14/11, v0.2.3) se ce n'e' piu' d'uno, quello che si usa
+	// davvero (il migliore non rovinato: ValdorsoZaino::PostoInMano)
+	const int32 PostoDestra = ValdorsoZaino::PostoInMano(Contenuto, Contenuto.Destra);
+	const int32 PostoSinistra = ValdorsoZaino::PostoInMano(Contenuto, Contenuto.Sinistra);
 
 	// --- la griglia
 	for (int32 i = 0; i < ValdorsoZaino::NumeroPosti; ++i)
 	{
 		const FVector2f A = AngoloPosto(i);
-		const FLinearColor Fondo = i == InMano ? FondoMano : (i == Sotto ? FondoSopra : FondoPosto);
+		FLinearColor Fondo = i == InMano ? FondoMano : (i == Sotto ? FondoSopra : FondoPosto);
+		// (14/11, v0.2.3) la qualita': lo sfondo della casella prende il colore del grado, con un bordo sottile
+		const bool bColorata = Contenuto.Posti.IsValidIndex(i) && !Contenuto.Posti[i].Vuoto() && ValdorsoQualita::Colorata(Contenuto.Posti[i].Qualita);
+		const FLinearColor ColoreGrado = bColorata ? ValdorsoQualita::Colore(Contenuto.Posti[i].Qualita) : FLinearColor::Transparent;
+		if (bColorata)
+		{
+			Fondo = FLinearColor::LerpUsingHSV(Fondo, ColoreGrado, 0.32f);
+		}
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId, AllottedGeometry.ToPaintGeometry(FVector2f(LatoPosto, LatoPosto), FSlateLayoutTransform(A)),
 			&Casella, ESlateDrawEffect::None, Fondo);
+		if (bColorata)
+		{
+			const FVector2f B[5] = { A + FVector2f(4.f, 4.f), A + FVector2f(LatoPosto - 4.f, 4.f), A + FVector2f(LatoPosto - 4.f, LatoPosto - 4.f),
+				A + FVector2f(4.f, LatoPosto - 4.f), A + FVector2f(4.f, 4.f) };
+			FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(), TArray<FVector2f>(B, 5),
+				ESlateDrawEffect::None, ColoreGrado.CopyWithNewOpacity(0.9f), true, 1.5f);
+		}
 		if (!Contenuto.Posti.IsValidIndex(i) || Contenuto.Posti[i].Vuoto())
 		{
 			continue;
@@ -447,6 +452,14 @@ int32 SValdorsoGrigliaZaino::OnPaint(const FPaintArgs& Args, const FGeometry& Al
 				ESlateDrawEffect::None, ValdorsoTema::OroScuro().CopyWithNewOpacity(Alfa), true, 2.f);
 			ZainoScrivi(OutDrawElements, LayerId + 2, AllottedGeometry, i == PostoDestra ? TEXT("D") : TEXT("S"), FontTasto,
 				A + FVector2f(6.f, 3.f), ValdorsoTema::OroScuro().CopyWithNewOpacity(Alfa));
+		}
+		if (ValdorsoQualita::Rovinata(Posto))
+		{
+			// (14/11, v0.2.3) un'arma rovinata: una crepa rossa in basso a sinistra
+			const FVector2f C = A + FVector2f(8.f, LatoPosto - 8.f);
+			FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(),
+				TArray<FVector2f>{ C + FVector2f(0.f, 0.f), C + FVector2f(5.f, -4.f), C + FVector2f(3.f, -8.f), C + FVector2f(9.f, -13.f) },
+				ESlateDrawEffect::None, ValdorsoTema::Rubrica().CopyWithNewOpacity(Alfa), true, 2.f);
 		}
 		if (Tipo->bRicordo)
 		{
@@ -590,7 +603,7 @@ void SValdorsoZaino::Construct(const FArguments& InArgs)
 								SNew(STextBlock)
 								.Text(this, &SValdorsoZaino::NomeMostrato)
 								.Font(Caratteri->Titolo(19.f, TEXT("Bold")))
-								.ColorAndOpacity(ValdorsoTema::Inchiostro())
+								.ColorAndOpacity(this, &SValdorsoZaino::ColoreNome)
 								.AutoWrapText(true)
 							]
 							+ SVerticalBox::Slot()
@@ -668,6 +681,19 @@ FText SValdorsoZaino::NomeMostrato() const
 	return Tipo ? FText::FromString(Tipo->Nome) : FText::GetEmpty();
 }
 
+FSlateColor SValdorsoZaino::ColoreNome() const
+{
+	// (14/11, v0.2.3) il nome ha il colore del grado (dalla Buona in su)
+	const UValdorsoZainoComponent* Il = Zaino.Get();
+	const int32 Posto = Griglia.IsValid() ? Griglia->PostoMostrato() : INDEX_NONE;
+	if (Il && Il->Contenuto().Posti.IsValidIndex(Posto) && !Il->Contenuto().Posti[Posto].Vuoto()
+		&& ValdorsoQualita::Colorata(Il->Contenuto().Posti[Posto].Qualita))
+	{
+		return FSlateColor(ValdorsoQualita::Colore(Il->Contenuto().Posti[Posto].Qualita));
+	}
+	return FSlateColor(ValdorsoTema::Inchiostro());
+}
+
 FText SValdorsoZaino::DescrizioneMostrata() const
 {
 	const UValdorsoZainoComponent* Il = Zaino.Get();
@@ -695,6 +721,17 @@ FText SValdorsoZaino::DettagliMostrati() const
 		return FText::GetEmpty();
 	}
 	TArray<FString> Righe;
+	// (14/11, v0.2.3) il grado, da dove viene e quanto e' consumata
+	const FString Grado = ValdorsoQualita::TestoQualita(Dove);
+	if (!Grado.IsEmpty())
+	{
+		Righe.Add(Grado);
+	}
+	const FString Stato = ValdorsoQualita::TestoStato(Dove);
+	if (!Stato.IsEmpty())
+	{
+		Righe.Add(Stato);
+	}
 	if (Dove.Quantita > 1)
 	{
 		Righe.Add(FString::Printf(TEXT("Peso: %s ciascuno, %s in tutto"), *ValdorsoOggetti::TestoPeso(Tipo->Peso),

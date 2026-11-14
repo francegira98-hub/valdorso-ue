@@ -1,6 +1,7 @@
 // Valdorso - La schermata di una bottega (v0.1.4, 10/11/2026). Scritto da Claude. Vedi SValdorsoBottega.h.
 
 #include "SValdorsoBottega.h"
+#include "ValdorsoQualita.h"
 #include "SValdorsoZaino.h"
 #include "ValdorsoBotteghe.h"
 #include "ValdorsoPlayerController.h"
@@ -146,7 +147,8 @@ void SValdorsoBottega::Construct(const FArguments& InArgs)
 TSharedRef<SWidget> SValdorsoBottega::Riga(const FValdorsoRicetta* Ricetta)
 {
 	const FName IdRicetta(Ricetta->Id);
-	const FName Disegno = Ricetta->Risultato ? FName(Ricetta->Risultato) : NAME_None;
+	// (14/11, v0.2.3) la riparazione ha il martello di Marta (o del falegname)
+	const FName Disegno = Ricetta->Risultato ? FName(Ricetta->Risultato) : (Ricetta->Ripara != 0 ? FName(TEXT("Martello")) : NAME_None);
 	TWeakObjectPtr<UValdorsoZainoComponent> Debole = Zaino;
 	// (la tabella delle ricette e' fissa: il puntatore resta buono)
 	auto Manca = [this, Ricetta]() -> FText { return MancaDi(Ricetta); };
@@ -179,7 +181,8 @@ TSharedRef<SWidget> SValdorsoBottega::Riga(const FValdorsoRicetta* Ricetta)
 					SNew(STextBlock)
 					.Text(bVendita ? ValdorsoBotteghe::TestoServe(*Ricetta) : ValdorsoBotteghe::TestoDa(*Ricetta))
 					.Font(Caratteri->Titolo(15.f, TEXT("Bold")))
-					.ColorAndOpacity(ValdorsoTema::Inchiostro())
+					// (14/11, v0.2.3) le cose di un grado hanno il suo colore
+					.ColorAndOpacity(!bVendita && ValdorsoQualita::Colorata(Ricetta->Qualita) ? ValdorsoQualita::Colore(Ricetta->Qualita) : ValdorsoTema::Inchiostro())
 				]
 				+ SVerticalBox::Slot()
 				.AutoHeight()

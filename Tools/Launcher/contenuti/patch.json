@@ -4,6 +4,43 @@
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
   {
+   "versione": "0.2.3",
+   "nome": "Armi vere",
+   "data": "",
+   "sommario": "Le armi diventano vere: ogni famiglia si muove a modo suo, le cose hanno un grado (dal comune al leggendario) e una storia, le lame si consumano e Marta le rimette a posto. E dal falegname, finalmente, l'arco e le frecce.",
+   "gruppi": [
+    {
+     "titolo": "Novità: la qualità delle cose",
+     "voci": [
+      "Cinque gradi, con gli stessi colori delle storie del Battito: comune, buona (verde), rara (blu), epica (viola) e leggendaria (oro).",
+      "Nello zaino, nel baule e nelle botteghe la casella prende il colore del grado; il riquadro dice da dove viene ogni cosa: «Fattura di Marta», «Forgiata da…», «Trovato nella grotta del nord».",
+      "Un'arma migliore colpisce più forte e dura di più; uno scudo migliore para di più; il cibo migliore ristora di più."
+     ]
+    },
+    {
+     "titolo": "Novità: le armi vere",
+     "voci": [
+      "Ogni famiglia d'arma ha il suo colpo: i pugnali rapidi, le spade a due tempi, le asce pesanti, le mazze dall'alto, le lance di punta, lo scudo che spinge.",
+      "Le armi e gli scudi si consumano a ogni colpo e a ogni parata. Un'arma rovinata colpisce la metà: Marta ripara il ferro, il falegname il legno.",
+      "Alla fucina si forgiano da sé coltelli, pugnali, lance, spade, mazze, asce e brocchieri: il grado dipende dalla tua mano (l'abilità di bottega) e da un po' di fortuna. Marta vende anche armi buone."
+     ]
+    },
+    {
+     "titolo": "Novità: l'arco",
+     "voci": [
+      "L'arco di tasso e le frecce, dal falegname (o fatti da te). L'arco si tiene con due mani: niente scudo insieme.",
+      "Le frecce volano dove guardi e scendono un poco con la distanza. Una nuova abilità: il tiro con l'arco."
+     ]
+    },
+    {
+     "titolo": "Corretto",
+     "voci": [
+      "Le sopracciglia di sette volti erano rimaste quelle vecchie, a volte fuori posto: ora stanno tutte al loro posto."
+     ]
+    }
+   ]
+  },
+  {
    "versione": "0.2.2",
    "nome": "Rifiniture",
    "data": "2026-11-14",
@@ -112,7 +149,7 @@
   {
    "versione": "0.1.8",
    "nome": "Le storie della valle",
-   "data": "",
+   "data": "2026-11-11",
    "sommario": "La valle si riempie di volti, di riti e di storie: ognuno con la sua giornata, e quattro segreti da scoprire.",
    "gruppi": [
     {
@@ -153,7 +190,7 @@
   {
    "versione": "0.1.7",
    "nome": "La grotta del nord",
-   "data": "",
+   "data": "2026-11-11",
    "sommario": "Dietro la frana, le gallerie dei nani: e i nani non volevano visite.",
    "gruppi": [
     {
@@ -171,7 +208,7 @@
   {
    "versione": "0.1.6",
    "nome": "La valle che vive",
-   "data": "",
+   "data": "2026-11-11",
    "sommario": "La valle si muove anche quando nessuno guarda.",
    "gruppi": [
     {
@@ -188,7 +225,7 @@
   {
    "versione": "0.1.5",
    "nome": "Crescere",
-   "data": "",
+   "data": "2026-11-11",
    "sommario": "Si diventa bravi facendo.",
    "gruppi": [
     {
@@ -204,7 +241,7 @@
   {
    "versione": "0.1.4",
    "nome": "Pericoli",
-   "data": "",
+   "data": "2026-11-10",
    "sommario": "La valle morde.",
    "gruppi": [
     {
@@ -221,7 +258,7 @@
   {
    "versione": "0.1.3",
    "nome": "La valle",
-   "data": "",
+   "data": "2026-11-08",
    "sommario": "La valle vera, da esplorare a piedi: tre chilometri per tre di fiume, lago, bosco e montagne, con il villaggio nel mezzo. Il giorno e la notte, la pioggia e la nebbia, i suoni e le campane del tempio, le rune degli Antichi e le prime persone che parlano. Ed è la prima versione che si scarica con il launcher.",
    "gruppi": [
     {

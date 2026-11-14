@@ -5,6 +5,7 @@
 #include "ValdorsoBaule.h"
 #include "ValdorsoGildaDati.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoQualita.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoTemaUI.h"
 #include "ValdorsoZaino.h"
@@ -251,6 +252,16 @@ TSharedRef<SWidget> SValdorsoBaule::Riga(const FValdorsoPostoZaino& Posto, int32
 	{
 		Nome += FString::Printf(TEXT("  (%d/%d)"), Posto.Cariche, Tipo->Cariche);
 	}
+	// (14/11, v0.2.3) il grado: nel nome, e il nome del suo colore
+	if (ValdorsoQualita::Colorata(Posto.Qualita))
+	{
+		Nome += FString::Printf(TEXT("  · %s"), ValdorsoQualita::Nome(Posto.Qualita));
+	}
+	if (ValdorsoQualita::Rovinata(Posto))
+	{
+		Nome += TEXT("  · rovinata");
+	}
+	const FLinearColor ColoreNome = ValdorsoQualita::Colorata(Posto.Qualita) ? ValdorsoQualita::Colore(Posto.Qualita) : ValdorsoTema::Inchiostro();
 	const bool bSiPuo = bNelBaule || (Posto.Id != FName(TEXT("Tessera")) && Posto.Id != ValdorsoGilda::IdFoglio && Posto.Numero == 0);
 	TWeakObjectPtr<UValdorsoZainoComponent> Debole = Zaino;
 	return SNew(SBorder)
@@ -272,7 +283,7 @@ TSharedRef<SWidget> SValdorsoBaule::Riga(const FValdorsoPostoZaino& Posto, int32
 				SNew(STextBlock)
 				.Text(FText::FromString(Nome))
 				.Font(Caratteri->Titolo(14.f, TEXT("Bold")))
-				.ColorAndOpacity(ValdorsoTema::Inchiostro())
+				.ColorAndOpacity(ColoreNome)
 			]
 			+ SHorizontalBox::Slot()
 			.AutoWidth()

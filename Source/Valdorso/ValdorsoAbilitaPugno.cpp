@@ -8,6 +8,14 @@
 #include "ValdorsoEffetti.h"
 #include "ValdorsoEtichette.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoQualita.h"
+#include "ValdorsoZaino.h"
+#include "ValdorsoZainoDati.h"
+#include "ValdorsoFreccia.h"
+#include "ValdorsoPlayerController.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
+#include "Animation/AnimMontage.h"
+#include "Animation/AnimSequenceBase.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoScherma.h"
 #include "CombatDamageable.h"
@@ -50,6 +58,28 @@ bool UValdorsoAbilitaPugno::CanActivateAbility(const FGameplayAbilitySpecHandle 
 void UValdorsoAbilitaPugno::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+	// (14/11, v0.2.3) l'arco: senza frecce nello zaino non si tende (lo zaino lo sanno il server e il PC di chi gioca)
+	const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
+	const UValdorsoArmiComponent* ArmiInMano = UValdorsoArmiComponent::Di(Avatar);
+	const FValdorsoTipoOggetto* ArmaInMano = ArmiInMano ? ArmiInMano->Arma() : nullptr;
+	const bool bArco = ArmaInMano && ArmaInMano->bDueMani;
+	if (bArco)
+	{
+		const UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::DelCorpo(Avatar);
+		if (Zaino && ValdorsoZaino::Conta(Zaino->Contenuto(), ValdorsoOggetti::IdFrecce) <= 0)
+		{
+			if (ActorInfo->IsNetAuthority())
+			{
+				if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(Zaino->GetOwner()))
+				{
+					Giocatore->ClientAvviso(FText::FromString(TEXT("Non hai frecce: il falegname le vende a dieci.")), 2.5f, 0.f);
+				}
+			}
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
+		}
+	}
+
 	// Paga il costo; se non si può, l'abilità finisce subito.
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
@@ -67,15 +97,58 @@ void UValdorsoAbilitaPugno::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		return;
 	}
 
-	// Aspetta la notifica "Valdorso: Colpo" del montaggio (una volta sola).
-	UAbilityTask_WaitGameplayEvent* Attesa = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this, ValdorsoEtichette::Evento_Colpo, nullptr, true, true);
-	Attesa->EventReceived.AddDynamic(this, &UValdorsoAbilitaPugno::QuandoColpisce);
-	Attesa->ReadyForActivation();
+	// (14/11, v0.2.3) l'arco: si tende, poi parte la freccia (niente animazione del pugno)
+	if (bArco)
+	{
+		UAbilityTask_WaitDelay* Tendi = UAbilityTask_WaitDelay::WaitDelay(this, ValdorsoArmi::SecondiTendere);
+		Tendi->OnFinish.AddDynamic(this, &UValdorsoAbilitaPugno::QuandoTira);
+		Tendi->ReadyForActivation();
+		return;
+	}
 
-	// L'animazione: AM_Pugno, sulla corsia della parte alta del corpo.
+	// (14/11, v0.2.3) con un'arma in mano: l'animazione della sua famiglia, sulla stessa corsia del pugno
+	UAnimMontage* Montaggio = Valdorso->MontaggioPugno;
+	float Velocita = 1.f;
+	float VelocitaGioco = 1.f;
+	float AttesaColpo = -1.f;
+	const FValdorsoTipoOggetto* ConCosa = ArmaInMano ? ArmaInMano : (ArmiInMano ? ArmiInMano->Scudo() : nullptr);
+	MontaggioArma = nullptr;
+	if (ConCosa)
+	{
+		float Istante = 0.5f;
+		if (UAnimSequenceBase* Colpo = ValdorsoArmi::AnimazioneColpo(ConCosa->Id, NumeroColpo++, Istante, Velocita))
+		{
+			const FName Corsia = Valdorso->MontaggioPugno->SlotAnimTracks.Num() > 0
+				? Valdorso->MontaggioPugno->SlotAnimTracks[0].SlotName : FName(TEXT("DefaultSlot"));
+			MontaggioArma = UAnimMontage::CreateSlotAnimationAsDynamicMontage(Colpo, Corsia, 0.1f, 0.2f, 1.f);
+			if (MontaggioArma)
+			{
+				Montaggio = MontaggioArma;
+				VelocitaGioco = FMath::Max(0.1f, Velocita);
+				AttesaColpo = Colpo->GetPlayLength() * Istante / FMath::Max(0.1f, Velocita);
+			}
+		}
+	}
+
+	if (AttesaColpo >= 0.f)
+	{
+		// l'animazione dell'arma non ha la notifica del colpo: il colpo arriva dopo un tempo fisso
+		UAbilityTask_WaitDelay* Attesa = UAbilityTask_WaitDelay::WaitDelay(this, AttesaColpo);
+		Attesa->OnFinish.AddDynamic(this, &UValdorsoAbilitaPugno::QuandoArrivaIlColpo);
+		Attesa->ReadyForActivation();
+	}
+	else
+	{
+		// Aspetta la notifica "Valdorso: Colpo" del montaggio (una volta sola).
+		UAbilityTask_WaitGameplayEvent* Attesa = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this, ValdorsoEtichette::Evento_Colpo, nullptr, true, true);
+		Attesa->EventReceived.AddDynamic(this, &UValdorsoAbilitaPugno::QuandoColpisce);
+		Attesa->ReadyForActivation();
+	}
+
+	// L'animazione: AM_Pugno (o quella dell'arma), sulla corsia della parte alta del corpo.
 	UAbilityTask_PlayMontageAndWait* Animazione = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-		this, NAME_None, Valdorso->MontaggioPugno, 1.f);
+		this, NAME_None, Montaggio, VelocitaGioco);
 	Animazione->OnBlendOut.AddDynamic(this, &UValdorsoAbilitaPugno::QuandoFinisce);
 	Animazione->OnCompleted.AddDynamic(this, &UValdorsoAbilitaPugno::QuandoFinisce);
 	Animazione->OnInterrupted.AddDynamic(this, &UValdorsoAbilitaPugno::QuandoFinisce);
@@ -106,6 +179,53 @@ void UValdorsoAbilitaPugno::QuandoColpisce(FGameplayEventData Dati)
 	}
 }
 
+void UValdorsoAbilitaPugno::QuandoArrivaIlColpo()
+{
+	QuandoColpisce(FGameplayEventData());
+}
+
+void UValdorsoAbilitaPugno::QuandoTira()
+{
+	APawn* Personaggio = Cast<APawn>(GetAvatarActorFromActorInfo());
+	if (Personaggio && CurrentActorInfo && CurrentActorInfo->IsNetAuthority())
+	{
+		UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::DelCorpo(Personaggio);
+		const UValdorsoArmiComponent* Armi = UValdorsoArmiComponent::Di(Personaggio);
+		const FValdorsoTipoOggetto* Arco = Armi ? Armi->Arma() : nullptr;
+		if (Zaino && Arco && Arco->bDueMani && ValdorsoZaino::Conta(Zaino->Contenuto(), ValdorsoOggetti::IdFrecce) > 0)
+		{
+			// dove guarda la telecamera; parte davanti al petto, un poco a sinistra (la mano dell'arco)
+			const FRotator Mira = Personaggio->GetControlRotation();
+			const FVector Avanti = Mira.Vector();
+			const FVector Da = Personaggio->GetActorLocation() + FVector(0.f, 0.f, 55.f) + Personaggio->GetActorForwardVector() * 45.f
+				- Personaggio->GetActorRightVector() * 12.f;
+			const float DannoFreccia = Arco->DannoArma * Zaino->ForzaInMano(false, false);
+			if (AValdorsoFreccia::Scocca(Personaggio, Da, Avanti, DannoFreccia, Arco->EquilibrioArma))
+			{
+				// la freccia esce dallo zaino solo se e' partita davvero
+				Zaino->Cambia([](FValdorsoZaino& Z) { return ValdorsoZaino::TogliOggetto(Z, ValdorsoOggetti::IdFrecce, 1); });
+				// l'arco si consuma a ogni tiro, e stanca un poco
+				Zaino->ConsumaInMano(false, 1);
+				if (UAbilitySystemComponent* MioContenitore = GetAbilitySystemComponentFromActorInfo(); MioContenitore && Arco->StaminaArma > 0.f)
+				{
+					FGameplayEffectSpecHandle Fatica = MioContenitore->MakeOutgoingSpec(UValdorsoGE_Fatica::StaticClass(), 1.f, MioContenitore->MakeEffectContext());
+					if (Fatica.IsValid())
+					{
+						Fatica.Data->SetSetByCallerMagnitude(ValdorsoEtichette::Dato_Stamina, -Arco->StaminaArma);
+						MioContenitore->ApplyGameplayEffectSpecToSelf(*Fatica.Data.Get());
+					}
+				}
+				ValdorsoCombattimento::Suona(Personaggio->GetWorld(), ValdorsoCombattimento::SuonoPericoli(TEXT("S_Fodero_Sfodera")),
+					Da, 1500.f, 0.6f, 1.6f);
+			}
+		}
+	}
+	if (IsActive())
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	}
+}
+
 void UValdorsoAbilitaPugno::EseguiColpo()
 {
 	ACharacter* Personaggio = Cast<ACharacter>(GetAvatarActorFromActorInfo());
@@ -126,7 +246,11 @@ void UValdorsoAbilitaPugno::EseguiColpo()
 	}
 	// solo lo scudo (niente nella destra): si colpisce con lo scudo
 	const FValdorsoTipoOggetto* ConCosa = Arma ? Arma : Scudo;
-	const float DannoColpo = ConCosa ? ConCosa->DannoArma : Danno;
+	// (14/11, v0.2.3) il grado dell'arma (e la meta' se e' rovinata)
+	UValdorsoZainoComponent* MioZaino = UValdorsoZainoComponent::DelCorpo(Personaggio);
+	const bool bConLoScudo = !Arma && Scudo;
+	const float PerGrado = (ConCosa && MioZaino) ? MioZaino->ForzaInMano(bConLoScudo, false) : 1.f;
+	const float DannoColpo = ConCosa ? ConCosa->DannoArma * PerGrado : Danno;
 	// (11/11, v0.1.5) la guardia: la lunga arriva piu' lontano, l'alta stanca di piu' (ValdorsoScherma.h)
 	float PerGuardiaPortata = 1.f;
 	float PerGuardiaFatica = 1.f;
@@ -188,5 +312,10 @@ void UValdorsoAbilitaPugno::EseguiColpo()
 	if (!bColpitoQualcuno)
 	{
 		UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Pugno: a vuoto"));
+	}
+	else if (ConCosa && MioZaino)
+	{
+		// (14/11, v0.2.3) un colpo andato a segno consuma l'arma (una volta per colpo, anche se ne prende due)
+		MioZaino->ConsumaInMano(bConLoScudo, 1);
 	}
 }

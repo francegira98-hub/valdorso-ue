@@ -426,7 +426,8 @@ bool FValdorsoTestBotteghe::RunTest(const FString& Parameters)
 	{
 		TestFalse(FString::Printf(TEXT("%s: non doppia"), R.Id), Visti.Contains(FName(R.Id)));
 		Visti.Add(FName(R.Id));
-		TestTrue(FString::Printf(TEXT("%s: da' qualcosa"), R.Id), (R.Risultato && R.QuantiRisultato > 0) || R.Guadagno > 0);
+		// (14/11, v0.2.3) le riparazioni non danno niente di nuovo: rimettono a posto l'arma in mano
+		TestTrue(FString::Printf(TEXT("%s: da' qualcosa"), R.Id), (R.Risultato && R.QuantiRisultato > 0) || R.Guadagno > 0 || R.Ripara != 0);
 		if (R.Risultato)
 		{
 			TestNotNull(R.Risultato, ValdorsoOggetti::Trova(R.Risultato));

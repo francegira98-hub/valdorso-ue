@@ -5,6 +5,7 @@
 #include "Valdorso.h"
 #include "ValdorsoFalo.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoQualita.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoZainoDati.h"
 #include "Components/SphereComponent.h"
@@ -40,6 +41,30 @@ namespace
 	FValdorsoRicetta BottegaCompra(const TCHAR* Id, EValdorsoTipoBanco Banco, const TCHAR* Oggetto, int32 Prezzo)
 	{
 		FValdorsoRicetta R = BottegaRicetta(Id, Banco, TEXT("Compra"), Oggetto);
+		R.Costo = Prezzo;
+		return R;
+	}
+
+	/** (14/11, v0.2.3) Una cosa fatta da una bottega: con il grado e la provenienza. */
+	FValdorsoRicetta BottegaDi(FValdorsoRicetta R, const TCHAR* Provenienza, uint8 Qualita = 0)
+	{
+		R.Provenienza = Provenienza;
+		R.Qualita = Qualita;
+		return R;
+	}
+
+	/** (14/11, v0.2.3) Il colono forgia (o fa) da se': il grado lo decide la sua mano. */
+	FValdorsoRicetta BottegaForgia(FValdorsoRicetta R)
+	{
+		R.bForgia = true;
+		return R;
+	}
+
+	/** (14/11, v0.2.3) La riparazione dell'arma in mano (1 ferro, 2 legno), per tanti Aureus. */
+	FValdorsoRicetta BottegaRipara(const TCHAR* Id, EValdorsoTipoBanco Banco, uint8 Materiale, int32 Prezzo)
+	{
+		FValdorsoRicetta R = BottegaRicetta(Id, Banco, TEXT("Ripara"), nullptr, 0);
+		R.Ripara = Materiale;
 		R.Costo = Prezzo;
 		return R;
 	}
@@ -86,30 +111,30 @@ namespace
 		T.Add(BottegaVendi(TEXT("Vendi_Pelle_Volpe"), B::Conceria, TEXT("Pelle_Volpe"), 12));
 		T.Add(BottegaVendi(TEXT("Vendi_Pelle_Lepre"), B::Conceria, TEXT("Pelle_Lepre"), 2));
 		// --- la fucina di Marta: armi e scudi di ferro; compra zanne, artigli e palchi (per i manici e i ciondoli)
-		T.Add(BottegaCompra(TEXT("Compra_Coltello"), B::Fucina, TEXT("Coltello"), 5));
-		T.Add(BottegaCompra(TEXT("Compra_Pugnale"), B::Fucina, TEXT("Pugnale"), 15));
-		T.Add(BottegaCompra(TEXT("Compra_Accetta"), B::Fucina, TEXT("Accetta"), 18));
-		T.Add(BottegaCompra(TEXT("Compra_Martello"), B::Fucina, TEXT("Martello"), 12));
-		T.Add(BottegaCompra(TEXT("Compra_Falcetto"), B::Fucina, TEXT("Falcetto"), 10));
-		T.Add(BottegaCompra(TEXT("Compra_Lancia"), B::Fucina, TEXT("Lancia"), 25));
-		T.Add(BottegaCompra(TEXT("Compra_Spada_Corta"), B::Fucina, TEXT("Spada_Corta"), 35));
-		T.Add(BottegaCompra(TEXT("Compra_Mazza"), B::Fucina, TEXT("Mazza"), 40));
-		T.Add(BottegaCompra(TEXT("Compra_Gladio"), B::Fucina, TEXT("Gladio"), 60));
-		T.Add(BottegaCompra(TEXT("Compra_Ascia_Guerra"), B::Fucina, TEXT("Ascia_Guerra"), 70));
-		T.Add(BottegaCompra(TEXT("Compra_Spada_Lunga"), B::Fucina, TEXT("Spada_Lunga"), 85));
-		T.Add(BottegaCompra(TEXT("Compra_Brocchiere"), B::Fucina, TEXT("Brocchiere"), 20));
-		T.Add(BottegaCompra(TEXT("Compra_Scudo_Aquilone"), B::Fucina, TEXT("Scudo_Aquilone"), 55));
-		T.Add(BottegaCompra(TEXT("Compra_Scudo_Legione"), B::Fucina, TEXT("Scudo_Legione"), 90));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Coltello"), B::Fucina, TEXT("Coltello"), 5), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Pugnale"), B::Fucina, TEXT("Pugnale"), 15), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Accetta"), B::Fucina, TEXT("Accetta"), 18), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Martello"), B::Fucina, TEXT("Martello"), 12), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Falcetto"), B::Fucina, TEXT("Falcetto"), 10), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Lancia"), B::Fucina, TEXT("Lancia"), 25), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Spada_Corta"), B::Fucina, TEXT("Spada_Corta"), 35), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Mazza"), B::Fucina, TEXT("Mazza"), 40), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Gladio"), B::Fucina, TEXT("Gladio"), 60), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Ascia_Guerra"), B::Fucina, TEXT("Ascia_Guerra"), 70), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Spada_Lunga"), B::Fucina, TEXT("Spada_Lunga"), 85), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Brocchiere"), B::Fucina, TEXT("Brocchiere"), 20), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Scudo_Aquilone"), B::Fucina, TEXT("Scudo_Aquilone"), 55), TEXT("Fattura di Marta")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Scudo_Legione"), B::Fucina, TEXT("Scudo_Legione"), 90), TEXT("Fattura di Marta")));
 		T.Add(BottegaVendi(TEXT("Vendi_Zanne_Lupo"), B::Fucina, TEXT("Zanne_Lupo"), 3));
 		T.Add(BottegaVendi(TEXT("Vendi_Zanne_Cinghiale"), B::Fucina, TEXT("Zanne_Cinghiale"), 4));
 		T.Add(BottegaVendi(TEXT("Vendi_Artigli_Orso"), B::Fucina, TEXT("Artigli_Orso"), 15));
 		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana; le monete dei nani si vendono per il metallo
-		T.Add(BottegaCompra(TEXT("Compra_Piccone"), B::Fucina, TEXT("Piccone"), 14));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Piccone"), B::Fucina, TEXT("Piccone"), 14), TEXT("Fattura di Marta")));
 		T.Add(BottegaVendi(TEXT("Vendi_Moneta_Nani"), B::Fucina, TEXT("Moneta_Nani"), 6));
 		// (11/11) il cuore del guardiano della forgia: Marta lo paga bene (e non dice per farci cosa)
 		T.Add(BottegaVendi(TEXT("Vendi_Cuore_di_Pietra"), B::Fucina, TEXT("Cuore_di_Pietra"), 45));
 		// --- il falegname: legno
-		T.Add(BottegaCompra(TEXT("Compra_Clava"), B::Falegname, TEXT("Clava"), 6));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Clava"), B::Falegname, TEXT("Clava"), 6), TEXT("Fattura del falegname")));
 		// (12/11, v0.2.0) la carovana di Sibilla: sale, spezie, stoffa e una lanterna; compra perle, ferro e pelli fini
 		T.Add(BottegaCompra(TEXT("Carovana_Sale"), B::Carovana, TEXT("Sale"), 3));
 		T.Add(BottegaCompra(TEXT("Carovana_Spezie"), B::Carovana, TEXT("Spezie"), 14));
@@ -124,8 +149,8 @@ namespace
 		T.Add(BottegaVendi(TEXT("Vendi_Asse"), B::Falegname, TEXT("Asse"), 2));
 		T.Add(BottegaServe(BottegaRicetta(TEXT("Fondi_Ferro"), B::Fucina, TEXT("Fondi"), TEXT("Lingotto_Ferro")), TEXT("Ferro_Grezzo"), 2, TEXT("Legna"), 1));
 		T.Add(BottegaServe(BottegaRicetta(TEXT("Batti_Chiodi"), B::Fucina, TEXT("Batti"), TEXT("Chiodi"), 12), TEXT("Lingotto_Ferro"), 1));
-		T.Add(BottegaServe(BottegaRicetta(TEXT("Forgia_Accetta"), B::Fucina, TEXT("Forgia"), TEXT("Accetta")), TEXT("Lingotto_Ferro"), 1, TEXT("Asse"), 1));
-		T.Add(BottegaServe(BottegaRicetta(TEXT("Forgia_Piccone"), B::Fucina, TEXT("Forgia"), TEXT("Piccone")), TEXT("Lingotto_Ferro"), 2, TEXT("Asse"), 1));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Accetta"), B::Fucina, TEXT("Forgia"), TEXT("Accetta")), TEXT("Lingotto_Ferro"), 1, TEXT("Asse"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Piccone"), B::Fucina, TEXT("Forgia"), TEXT("Piccone")), TEXT("Lingotto_Ferro"), 2, TEXT("Asse"), 1)));
 		T.Add(BottegaServe(BottegaRicetta(TEXT("Squadra_Pietra"), B::Fucina, TEXT("Squadra"), TEXT("Pietra_Squadrata")), TEXT("Pietra_Grezza"), 2));
 		T.Add(BottegaVendi(TEXT("Vendi_Ferro_Grezzo"), B::Fucina, TEXT("Ferro_Grezzo"), 3));
 		T.Add(BottegaVendi(TEXT("Vendi_Lingotto"), B::Fucina, TEXT("Lingotto_Ferro"), 9));
@@ -138,13 +163,40 @@ namespace
 			Acqua.Guadagno = 4;
 			T.Add(Acqua);
 		}
-		T.Add(BottegaCompra(TEXT("Compra_Bastone_Pastore"), B::Falegname, TEXT("Bastone_Pastore"), 6));
-		T.Add(BottegaCompra(TEXT("Compra_Bastone_Ferrato"), B::Falegname, TEXT("Bastone_Ferrato"), 12));
-		T.Add(BottegaCompra(TEXT("Compra_Forcone"), B::Falegname, TEXT("Forcone"), 10));
-		T.Add(BottegaCompra(TEXT("Compra_Scudo_Legno"), B::Falegname, TEXT("Scudo_Legno"), 15));
-		T.Add(BottegaCompra(TEXT("Compra_Scudo_Rotondo"), B::Falegname, TEXT("Scudo_Rotondo"), 30));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Bastone_Pastore"), B::Falegname, TEXT("Bastone_Pastore"), 6), TEXT("Fattura del falegname")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Bastone_Ferrato"), B::Falegname, TEXT("Bastone_Ferrato"), 12), TEXT("Fattura del falegname")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Forcone"), B::Falegname, TEXT("Forcone"), 10), TEXT("Fattura del falegname")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Scudo_Legno"), B::Falegname, TEXT("Scudo_Legno"), 15), TEXT("Fattura del falegname")));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Scudo_Rotondo"), B::Falegname, TEXT("Scudo_Rotondo"), 30), TEXT("Fattura del falegname")));
 		T.Add(BottegaVendi(TEXT("Vendi_Palchi_Cervo"), B::Falegname, TEXT("Palchi_Cervo"), 8));
 		T.Add(BottegaVendi(TEXT("Vendi_Rami"), B::Falegname, TEXT("Rami_Secchi"), 1));
+		// (14/11, v0.2.3 "Armi vere") Marta vende anche armi buone (verdi) e ripara il ferro; il colono forgia da se' le armi
+		// (il grado lo decide la sua abilita' "Bottega"); il falegname vende l'arco e le frecce, ripara il legno, e insegna a
+		// farli
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Spada_Corta_Buona"), B::Fucina, TEXT("Spada_Corta"), 75), TEXT("Fattura di Marta"), 1));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Pugnale_Buono"), B::Fucina, TEXT("Pugnale"), 35), TEXT("Fattura di Marta"), 1));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Mazza_Buona"), B::Fucina, TEXT("Mazza"), 85), TEXT("Fattura di Marta"), 1));
+		T.Add(BottegaRipara(TEXT("Ripara_Ferro"), B::Fucina, 1, 6));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Coltello"), B::Fucina, TEXT("Forgia"), TEXT("Coltello")), TEXT("Lingotto_Ferro"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Pugnale"), B::Fucina, TEXT("Forgia"), TEXT("Pugnale")), TEXT("Lingotto_Ferro"), 1, TEXT("Cuoio"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Lancia"), B::Fucina, TEXT("Forgia"), TEXT("Lancia")), TEXT("Lingotto_Ferro"), 1, TEXT("Asse"), 2)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Spada_Corta"), B::Fucina, TEXT("Forgia"), TEXT("Spada_Corta")), TEXT("Lingotto_Ferro"), 2, TEXT("Cuoio"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Mazza"), B::Fucina, TEXT("Forgia"), TEXT("Mazza")), TEXT("Lingotto_Ferro"), 2, TEXT("Asse"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Gladio"), B::Fucina, TEXT("Forgia"), TEXT("Gladio")), TEXT("Lingotto_Ferro"), 3, TEXT("Cuoio"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Ascia_Guerra"), B::Fucina, TEXT("Forgia"), TEXT("Ascia_Guerra")), TEXT("Lingotto_Ferro"), 3, TEXT("Asse"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Spada_Lunga"), B::Fucina, TEXT("Forgia"), TEXT("Spada_Lunga")), TEXT("Lingotto_Ferro"), 4, TEXT("Cuoio"), 1)));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Forgia_Brocchiere"), B::Fucina, TEXT("Forgia"), TEXT("Brocchiere")), TEXT("Lingotto_Ferro"), 2)));
+		T.Add(BottegaDi(BottegaCompra(TEXT("Compra_Arco"), B::Falegname, TEXT("Arco"), 28), TEXT("Fattura del falegname")));
+		{
+			// le frecce si comprano a dieci
+			FValdorsoRicetta Mazzo = BottegaCompra(TEXT("Compra_Frecce_10"), B::Falegname, TEXT("Frecce"), 9);
+			Mazzo.QuantiRisultato = 10;
+			T.Add(Mazzo);
+		}
+		T.Add(BottegaRipara(TEXT("Ripara_Legno"), B::Falegname, 2, 3));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Fai_Arco"), B::Falegname, TEXT("Fai"), TEXT("Arco")), TEXT("Asse"), 2, TEXT("Corda"), 1)));
+		T.Add(BottegaServe(BottegaRicetta(TEXT("Fai_Frecce"), B::Falegname, TEXT("Fai"), TEXT("Frecce"), 10), TEXT("Asse"), 1, TEXT("Chiodi"), 2));
+		T.Add(BottegaForgia(BottegaServe(BottegaRicetta(TEXT("Fai_Scudo_Legno"), B::Falegname, TEXT("Fai"), TEXT("Scudo_Legno")), TEXT("Asse"), 3, TEXT("Chiodi"), 4)));
 		// --- la locanda di Bruno: da mangiare (e il suo fuoco); compra la carne e i funghi
 		T.Add(BottegaCompra(TEXT("Compra_Zuppa"), B::Locanda, TEXT("Zuppa_Bruno"), 3));
 		T.Add(BottegaCompra(TEXT("Compra_Pane"), B::Locanda, TEXT("Pane_Nero"), 2));
@@ -200,8 +252,44 @@ namespace ValdorsoBotteghe
 		return Lista;
 	}
 
+	bool ManoDaRiparare(const FValdorsoZaino& Zaino, const FValdorsoRicetta& Ricetta, bool& bOutSinistra)
+	{
+		bOutSinistra = false;
+		if (Ricetta.Ripara == 0)
+		{
+			return false;
+		}
+		const bool bLegno = Ricetta.Ripara == 2;
+		for (const bool bSinistra : { false, true })
+		{
+			const FName Id = bSinistra ? Zaino.Sinistra : Zaino.Destra;
+			const int32 Posto = ValdorsoZaino::PostoDaRiparare(Zaino, Id);
+			if (Zaino.Posti.IsValidIndex(Posto) && ValdorsoQualita::DiLegno(Id) == bLegno)
+			{
+				bOutSinistra = bSinistra;
+				return true;
+			}
+		}
+		return false;
+	}
+
 	FText Manca(const FValdorsoZaino& Zaino, const FValdorsoRicetta& Ricetta)
 	{
+		// (14/11, v0.2.3) la riparazione: serve l'arma (o lo scudo) in mano, consumata, del materiale giusto
+		if (Ricetta.Ripara != 0)
+		{
+			bool bSinistra = false;
+			if (!ManoDaRiparare(Zaino, Ricetta, bSinistra))
+			{
+				return Ricetta.Ripara == 2 ? LOCTEXT("NienteLegno", "Impugna l'arma di legno (o lo scudo) da riparare")
+					: LOCTEXT("NienteFerro", "Impugna l'arma di ferro (o lo scudo) da riparare");
+			}
+			if (Zaino.Monete < Ricetta.Costo)
+			{
+				return FText::Format(LOCTEXT("ServeMoneteRipara", "Ti servono {0} Aureus"), FText::AsNumber(Ricetta.Costo));
+			}
+			return FText::GetEmpty();
+		}
 		for (const FValdorsoIngrediente& Ingrediente : Ricetta.Serve)
 		{
 			if (Ingrediente.Id && Ingrediente.Quanti > 0 && ValdorsoZaino::Conta(Zaino, Ingrediente.Id) < Ingrediente.Quanti)
@@ -224,7 +312,8 @@ namespace ValdorsoBotteghe
 					ValdorsoZaino::TogliOggetto(Prova, Ingrediente.Id, Ingrediente.Quanti);
 				}
 			}
-			if (ValdorsoZaino::Aggiungi(Prova, Ricetta.Risultato, Ricetta.QuantiRisultato) < Ricetta.QuantiRisultato)
+			if (ValdorsoZaino::AggiungiCon(Prova, Ricetta.Risultato, Ricetta.QuantiRisultato, Ricetta.Qualita,
+				Ricetta.Provenienza ? FString(Ricetta.Provenienza) : FString()) < Ricetta.QuantiRisultato)
 			{
 				return LOCTEXT("ZainoPieno", "Lo zaino è pieno");
 			}
@@ -234,9 +323,25 @@ namespace ValdorsoBotteghe
 
 	bool Fai(FValdorsoZaino& Zaino, const FValdorsoRicetta& Ricetta)
 	{
+		return FaiCon(Zaino, Ricetta, Ricetta.Qualita, Ricetta.Provenienza ? FString(Ricetta.Provenienza) : FString());
+	}
+
+	bool FaiCon(FValdorsoZaino& Zaino, const FValdorsoRicetta& Ricetta, uint8 Qualita, const FString& Provenienza)
+	{
 		if (!Manca(Zaino, Ricetta).IsEmpty())
 		{
 			return false;
+		}
+		// (14/11, v0.2.3) la riparazione: l'arma in mano torna nuova
+		if (Ricetta.Ripara != 0)
+		{
+			bool bSinistra = false;
+			if (!ManoDaRiparare(Zaino, Ricetta, bSinistra) || !ValdorsoZaino::Ripara(Zaino, bSinistra))
+			{
+				return false;
+			}
+			Zaino.Monete = FMath::Max(0, Zaino.Monete - Ricetta.Costo);
+			return true;
 		}
 		for (const FValdorsoIngrediente& Ingrediente : Ricetta.Serve)
 		{
@@ -248,7 +353,7 @@ namespace ValdorsoBotteghe
 		Zaino.Monete = FMath::Max(0, Zaino.Monete - Ricetta.Costo) + FMath::Max(0, Ricetta.Guadagno);
 		if (Ricetta.Risultato)
 		{
-			ValdorsoZaino::Aggiungi(Zaino, Ricetta.Risultato, Ricetta.QuantiRisultato);
+			ValdorsoZaino::AggiungiCon(Zaino, Ricetta.Risultato, Ricetta.QuantiRisultato, Qualita, Provenienza);
 		}
 		return true;
 	}
@@ -299,6 +404,17 @@ namespace ValdorsoBotteghe
 
 	FText TestoDa(const FValdorsoRicetta& Ricetta)
 	{
+		// (14/11, v0.2.3) la riparazione e le cose di un grado
+		if (Ricetta.Ripara != 0)
+		{
+			return Ricetta.Ripara == 2 ? LOCTEXT("RiparaLegno", "Riparare l'arma (o lo scudo) di legno che hai in mano")
+				: LOCTEXT("RiparaFerro", "Riparare l'arma (o lo scudo) di ferro che hai in mano");
+		}
+		if (Ricetta.Risultato && Ricetta.Qualita > 0 && Ricetta.Guadagno <= 0)
+		{
+			return FText::FromString(FString::Printf(TEXT("%s (%s)"), *BottegaNome(Ricetta.Risultato).ToString(),
+				*FString(ValdorsoQualita::Nome(Ricetta.Qualita)).ToLower()));
+		}
 		// (11/11, v0.2) Aureus e qualcosa indietro (l'acqua venduta: torna il secchio vuoto)
 		if (Ricetta.Risultato && Ricetta.Guadagno > 0)
 		{

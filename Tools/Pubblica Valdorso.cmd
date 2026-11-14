@@ -59,10 +59,27 @@ set /p VERSIONE=Che versione e'? (Invio = quella scritta nel gioco, ValdorsoVers
 if "%VERSIONE%"=="" set VERSIONE=auto
 "%PY%" Tools\Launcher\prepara_aggiornamento.py V:\Pacchetti\Windows %VERSIONE% %RILASCI%/v{versione}/ %SERVERARG%
 if errorlevel 1 goto ERRORE
-start "" explorer Build\Aggiornamento
+rem (14/11) le parti vanno su GitHub da sole: si lancia "Carica su GitHub.cmd" della versione appena preparata
+set CARICA=
+for /f "usebackq delims=" %%P in (`%PY% -c "import glob,os;c=glob.glob(r'Build\Aggiornamento\*\Carica su GitHub.cmd');print(max(c,key=os.path.getmtime) if c else '')"`) do set CARICA=%%P
 start "" explorer Build\Altervista
+if "%CARICA%"=="" goto MANO
 echo.
-echo PRONTO. Adesso: 1) carica le parti su GitHub ("Carica su GitHub.cmd" nella cartella della versione)
+set SU=
+set /p SU=Carico adesso le parti su GitHub? (S = si, Invio = no): 
+if /i not "%SU%"=="S" goto MANO
+call "%CARICA%"
+if errorlevel 1 goto MANO
+echo.
+echo PRONTO. Adesso con FileZilla trascina Build\Altervista\launcher nella cartella /launcher/ del sito.
+pause
+exit /b 0
+
+:MANO
+start "" explorer Build\Aggiornamento
+echo.
+echo PRONTO. Adesso: 1) carica le parti su GitHub ("Carica su GitHub.cmd" nella cartella della versione;
+echo                    la prima volta serve "Tools\Installa GitHub CLI.cmd")
 echo                 2) con FileZilla trascina Build\Altervista\launcher nella cartella /launcher/ del sito.
 pause
 exit /b 0

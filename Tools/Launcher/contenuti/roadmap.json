@@ -48,7 +48,7 @@
    "versione": "0.1.3",
    "nome": "La valle",
    "stato": "fatta",
-   "data": "",
+   "data": "2026-11-08",
    "sommario": "La valle vera, da esplorare.",
    "voci": [
     "La valle di 3 x 3 km: fiume, lago, cascata, monti, bosco",
@@ -193,12 +193,15 @@
   {
    "versione": "0.2.3",
    "nome": "Armi vere",
-   "stato": "prossima",
+   "stato": "fatta",
    "voci": [
-    "Le armi e gli scudi veri, con il loro peso",
+    "Le armi e gli scudi veri: ogni famiglia con il suo colpo",
     "La qualità degli oggetti: comune, buona, rara, epica, leggendaria",
-    "Da dove viene ogni cosa: la bottega, i ritrovamenti, le storie"
-   ]
+    "Da dove viene ogni cosa: la bottega, i ritrovamenti, le storie",
+    "Le armi si consumano e si riparano; si forgiano da sé",
+    "L'arco e le frecce"
+   ],
+   "data": ""
   },
   {
    "versione": "0.3",

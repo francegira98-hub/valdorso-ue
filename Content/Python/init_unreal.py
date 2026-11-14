@@ -24,10 +24,11 @@ COMANDO_BOSCO = (
     "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'DENSITA_BOSCO': %s})"
 )
 
-# (14/11) rifai_capelli_uomo.py con le teste e "torna indietro"
-COMANDO_CAPELLI = (
+# (14/11, v0.2.3) rifai_sopracciglia_nuove.py con le teste e "torna indietro" (i capelli da uomo sono fatti: lo script
+# rifai_capelli_uomo.py e' in usati/)
+COMANDO_SOPRACCIGLIA = (
     "import os, unreal; "
-    "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'rifai_capelli_uomo.py'); "
+    "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'rifai_sopracciglia_nuove.py'); "
     "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'SOLO_TESTE': %s, 'TORNA_INDIETRO': %s})"
 )
 
@@ -206,15 +207,22 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "importa_icone.py")
     valdorso.add_menu_entry("Strumenti", voce)
 
-    # (14/11) i capelli da uomo rifatti dalla testa modello Legacy01 (nuovi/rifai_capelli_uomo.py)
+    # (14/11, v0.2.3) le sopracciglia rifatte dalla testa modello Legacy01, e le pulizie dei doppioni con l'"1"
+    # (nuovi/rifai_sopracciglia_nuove.py)
     for nome, etichetta, teste, indietro in (
-            ("CapelliProva", "Capelli da uomo: prova su Padre Anselmo", "['Walter']", "False"),
-            ("CapelliTutti", "Capelli da uomo: rifai tutti", "[]", "False"),
-            ("CapelliIndietro", "Capelli da uomo: torna come prima", "[]", "True")):
+            ("SopraccigliaProva", "Sopracciglia: prova su Padre Anselmo", "['Walter']", "False"),
+            ("SopraccigliaTutte", "Sopracciglia: rifai tutte (e togli i doppioni)", "[]", "False"),
+            ("SopraccigliaIndietro", "Sopracciglia: torna come prima", "[]", "True")):
         voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
         voce.set_label(etichetta)
-        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_CAPELLI % (teste, indietro))
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SOPRACCIGLIA % (teste, indietro))
         valdorso.add_menu_entry("Strumenti", voce)
+
+    # (14/11, v0.2.3 "Armi vere") per controllare le animazioni dei colpi (nuovi/controlla_animazioni.py)
+    voce = unreal.ToolMenuEntry(name="ControllaAnimazioniArmi", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Armi: controlla le animazioni dei colpi")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "controlla_animazioni.py")
+    valdorso.add_menu_entry("Strumenti", voce)
 
     voce = unreal.ToolMenuEntry(name="AggiornaSuoni", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Suoni: reimporta i suoni rifatti da Claude")

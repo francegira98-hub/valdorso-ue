@@ -33,11 +33,30 @@ struct FValdorsoPostoZaino
 	UPROPERTY()
 	int32 Numero = 0;
 
+	/** (14/11, v0.2.3) Il grado (ValdorsoQualita.h): 0 Comune, 1 Buona, 2 Rara, 3 Epica, 4 Leggendaria. */
+	UPROPERTY()
+	uint8 Qualita = 0;
+
+	/** (14/11, v0.2.3) Da dove viene ("Fattura di Marta", "Forgiata da Fra"); vuoto = niente di speciale. */
+	UPROPERTY()
+	FString Provenienza;
+
+	/** (14/11, v0.2.3) Le armi e gli scudi: quanti colpi (o parate) hanno gia' preso (ValdorsoQualita::DurataMassima). */
+	UPROPERTY()
+	int32 Usura = 0;
+
 	bool Vuoto() const { return Id.IsNone() || Quantita <= 0; }
+
+	/** (14/11) Due posti con lo stesso oggetto si impilano solo se sono uguali anche nel grado e nella provenienza. */
+	bool StessaFattura(const FValdorsoPostoZaino& Altro) const
+	{
+		return Qualita == Altro.Qualita && Provenienza == Altro.Provenienza && Usura == Altro.Usura;
+	}
 
 	bool operator==(const FValdorsoPostoZaino& Altro) const
 	{
-		return Id == Altro.Id && Quantita == Altro.Quantita && Cariche == Altro.Cariche && Numero == Altro.Numero;
+		return Id == Altro.Id && Quantita == Altro.Quantita && Cariche == Altro.Cariche && Numero == Altro.Numero
+			&& Qualita == Altro.Qualita && Provenienza == Altro.Provenienza && Usura == Altro.Usura;
 	}
 };
 
@@ -99,6 +118,23 @@ namespace ValdorsoZaino
 	/** Aggiunge Quantita oggetti (prima sulle pile che ci sono, poi nei posti liberi). Cariche < 0 = piene.
 	 *  Restituisce quanti ne sono entrati (meno di Quantita se lo zaino è pieno; 0 se l'oggetto non esiste). */
 	VALDORSO_API int32 Aggiungi(FValdorsoZaino& Zaino, FName Id, int32 Quantita, int32 Cariche = -1);
+
+	/** (14/11, v0.2.3) Come Aggiungi, con il grado e la provenienza (ValdorsoQualita.h): si impila solo con quelli uguali. */
+	VALDORSO_API int32 AggiungiCon(FValdorsoZaino& Zaino, FName Id, int32 Quantita, uint8 Qualita, const FString& Provenienza);
+
+	/** (14/11, v0.2.3) Il posto dell'arma che si ha in mano con quell'Id: se ce n'e' piu' d'una, la migliore non rovinata
+	 *  (poi la prima). INDEX_NONE se non c'e'. Lo zaino, la barra e il combattimento usano tutti questa. */
+	VALDORSO_API int32 PostoInMano(const FValdorsoZaino& Zaino, FName Id);
+
+	/** (14/11, v0.2.3) L'arma (o lo scudo) in mano si consuma di Quanto colpi. Vero se in quel momento si e' rovinata. */
+	VALDORSO_API bool Consuma(FValdorsoZaino& Zaino, bool bSinistra, int32 Quanto = 1);
+
+	/** (14/11, v0.2.3) Quale copia dell'arma con quell'Id si ripara: la consumata di grado piu' alto (e piu' consumata).
+	 *  INDEX_NONE se nessuna e' consumata. (Puo' non essere quella in mano: una rovinata lascia il posto a una intera.) */
+	VALDORSO_API int32 PostoDaRiparare(const FValdorsoZaino& Zaino, FName Id);
+
+	/** (14/11, v0.2.3) Ripara l'arma (o lo scudo) della mano: la copia di PostoDaRiparare torna nuova. Falso se niente. */
+	VALDORSO_API bool Ripara(FValdorsoZaino& Zaino, bool bSinistra);
 
 	/** (10/11) Mette un oggetto con un numero (il foglio di un incarico) nel primo posto libero: il posto, o INDEX_NONE
 	 *  se lo zaino e' pieno (o l'oggetto non esiste). Non si impila mai. */

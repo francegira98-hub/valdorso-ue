@@ -87,6 +87,8 @@ struct FValdorsoTipoOggetto
 	float Parata = 0.f;
 	/** (09/11) Il mantello di pelle di lupo: quanti gradi in piu' si sentono finche' lo si porta nello zaino. */
 	float Calore = 0.f;
+	/** (14/11, v0.2.3) Si tiene con due mani (l'arco): niente scudo insieme. */
+	bool bDueMani = false;
 };
 
 namespace ValdorsoOggetti
@@ -102,6 +104,9 @@ namespace ValdorsoOggetti
 	inline constexpr int32 MoneteDebito = 40;
 	/** (08/11) Quanti rami secchi brucia un falò. */
 	inline constexpr int32 RamiPerFalo = 2;
+	/** (14/11, v0.2.3) L'arco e le sue frecce (ValdorsoFreccia.h). */
+	inline const TCHAR* const IdArco = TEXT("Arco");
+	inline const TCHAR* const IdFrecce = TEXT("Frecce");
 
 	/** Tutti gli oggetti, nell'ordine del catalogo. */
 	VALDORSO_API TArrayView<const FValdorsoTipoOggetto> Catalogo();

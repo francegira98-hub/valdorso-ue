@@ -190,6 +190,15 @@ namespace
 			TEXT("Lungo, stretto in basso: copre dalla spalla al ginocchio. Lo portano i cavalieri della Corona."), 5.0f));
 		C.Add(OggSemplice(TEXT("Scudo_Legione"), TEXT("Scudo della legione"),
 			TEXT("Lo scudo ricurvo delle legioni dell'Impero, con l'umbone di bronzo. Ferma quasi tutto, ma pesa come un bambino."), 7.0f));
+		// (14/11, v0.2.3 "Armi vere") l'arco e le frecce: si tira con il tasto del colpo, una freccia per volta
+		{
+			FValdorsoTipoOggetto Arco = OggSemplice(TEXT("Arco"), TEXT("Arco di tasso"),
+				TEXT("Un arco lungo di tasso, con la corda di canapa cerata. Si tiene con due mani: con l'arco in mano niente scudo. Servono le frecce."), 1.0f);
+			Arco.bDueMani = true;
+			C.Add(Arco);
+		}
+		C.Add(OggSemplice(TEXT("Frecce"), TEXT("Frecce"),
+			TEXT("Aste di frassino, punta di ferro e tre penne d'oca. Se non si spezzano, si possono raccogliere."), 0.05f, 20));
 
 		// --- (10/11) Quello che danno gli animali (si scuoiano col coltello: E sull'animale a terra) ----------------
 		C.Add(OggCibo(TEXT("Carne_Cruda"), TEXT("Carne cruda"),
@@ -379,6 +388,8 @@ namespace
 			{ TEXT("Pugnale_Nani"), EValdorsoPosto::ManoDestra, 19.f, 22.f, 3.f, 115.f, 1, 0.f },
 			// (11/11) il martello dei nani: la botta piu' forte della valle, lento e pesante
 			{ TEXT("Martello_Nani"), EValdorsoPosto::ManoDestra, 32.f, 65.f, 11.f, 135.f, 2, 0.f },
+			// (14/11, v0.2.3) l'arco: il danno e' quello di una freccia; la portata (cm) e' quanto lontano va dritta
+			{ TEXT("Arco"), EValdorsoPosto::ManoDestra, 24.f, 20.f, 4.f, 4500.f, 1, 0.f },
 		};
 		for (const FArmaDati& A : Armi)
 		{
@@ -1068,6 +1079,25 @@ namespace
 			L.Add(OggLinea({ { -0.3f, 0.5f }, { -0.35f, -0.55f }, { 0.35f, -0.55f }, { 0.3f, 0.5f } }));
 			L.Add(OggRett(-0.42f, -0.72f, 0.42f, -0.55f));
 			L.Add(OggLinea({ { -0.1f, 0.2f }, { 0.15f, -0.05f }, { -0.05f, -0.25f } }));
+		}
+		else if (N == TEXT("Arco"))
+		{
+			// (14/11) l'arco in piedi, la corda a sinistra
+			L.Add(OggArco(-0.55f, 0.f, 0.95f, 0.88f, -68.f, 68.f, 18));
+			L.Add(OggLinea({ { -0.2f, -0.82f }, { -0.2f, 0.82f } }));
+			L.Add(OggRett(0.28f, -0.14f, 0.44f, 0.14f));
+		}
+		else if (N == TEXT("Frecce"))
+		{
+			// (14/11) tre frecce di traverso, le punte in alto a destra
+			for (int32 k = 0; k < 3; ++k)
+			{
+				const float D = (k - 1) * 0.15f;
+				L.Add(OggLinea({ { -0.75f + D, -0.85f - D * 0.2f }, { 0.55f + D, 0.45f - D * 0.2f } }));
+				L.Add(OggLinea({ { 0.45f + D, 0.5f - D * 0.2f }, { 0.75f + D, 0.65f - D * 0.2f }, { 0.6f + D, 0.35f - D * 0.2f } }));
+				L.Add(OggLinea({ { -0.75f + D, -0.85f - D * 0.2f }, { -0.85f + D, -0.6f - D * 0.2f } }));
+				L.Add(OggLinea({ { -0.75f + D, -0.85f - D * 0.2f }, { -0.5f + D, -0.95f - D * 0.2f } }));
+			}
 		}
 		else if (N == TEXT("Anello_Ranieri"))
 		{

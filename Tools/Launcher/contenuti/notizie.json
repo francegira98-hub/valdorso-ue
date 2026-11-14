@@ -6,6 +6,14 @@
   {
    "data": "2026-11-14",
    "etichetta": "Patch",
+   "titolo": "Armi vere: v0.2.3",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Ogni arma ha il suo colpo, ogni cosa il suo grado: comune, buona, rara, epica, leggendaria. Le lame si consumano e Marta le rimette a posto, alla fucina si forgia da sé, e dal falegname arrivano finalmente l'arco e le frecce."
+  },
+  {
+   "data": "2026-11-14",
+   "etichetta": "Patch",
    "titolo": "Rifiniture: v0.2.2",
    "immagine": "valle.jpg",
    "link": "#patch",

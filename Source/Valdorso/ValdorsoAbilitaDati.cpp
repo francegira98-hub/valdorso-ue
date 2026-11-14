@@ -86,6 +86,11 @@ namespace
 			{ TEXT("Scudo"), TEXT("Braccio fermo"), TEXT("Muro di legno"), TEXT("Scudo della legione"), TEXT("La rocca") },
 			TEXT("Parare con lo scudo. Sale fermando i colpi che arrivano davanti."),
 			{ TEXT("La spinta con lo scudo (tecnica)"), TEXT("La parata che toglie l'equilibrio"), TEXT("Il muro: si para anche di lato"), TEXT("La rocca (tecnica)") }));
+		// (14/11, v0.2.3 "Armi vere") l'arco
+		C.Add(CrescereTipo(TEXT("Arco"), F::Armi,
+			{ TEXT("Tiro con l'arco"), TEXT("Occhio fermo"), TEXT("Arciere"), TEXT("Freccia del bosco"), TEXT("Chi non sbaglia") },
+			TEXT("L'arco e le frecce. Sale colpendo da lontano."),
+			{ TEXT("La mano ferma: la freccia va piu' dritta"), TEXT("Il tiro lungo: la freccia arriva piu' lontano"), TEXT("Due frecce in fretta"), TEXT("Chi non sbaglia: le frecce fanno di piu'") }));
 		// --- il mondo
 		C.Add(CrescereTipo(TEXT("Caccia"), F::Mondo,
 			{ TEXT("Caccia"), TEXT("Occhio del cacciatore"), TEXT("Sulla pista del lupo"), TEXT("Cacciatore della valle"), TEXT("Il signore del bosco") },
@@ -167,6 +172,8 @@ namespace ValdorsoCrescere
 			{ TEXT("Bastone_Ferrato"), TEXT("Aste") },
 			// (11/11, v0.1.7) il piccone e il pugnale dei nani della grotta del nord
 			{ TEXT("Piccone"), TEXT("Mazze") }, { TEXT("Pugnale_Nani"), TEXT("Pugnali") }, { TEXT("Martello_Nani"), TEXT("Mazze") },
+			// (14/11, v0.2.3) l'arco
+			{ TEXT("Arco"), TEXT("Arco") },
 		};
 		if (!IdOggetto.IsNone())
 		{

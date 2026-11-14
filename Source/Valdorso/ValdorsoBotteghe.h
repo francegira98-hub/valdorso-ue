@@ -58,6 +58,14 @@ struct FValdorsoRicetta
 	const TCHAR* Risultato = nullptr;
 	int32 QuantiRisultato = 1;
 	int32 Guadagno = 0;
+	/** (14/11, v0.2.3) Il grado di quello che si ottiene (ValdorsoQualita.h) e da dove viene ("Fattura di Marta"). */
+	uint8 Qualita = 0;
+	const TCHAR* Provenienza = nullptr;
+	/** (14/11, v0.2.3) Lo forgia il colono: il grado viene dalla sua abilita' "Bottega" e da un po' di fortuna, e la
+	 *  provenienza e' "Forgiata da <nome>" (UValdorsoZainoComponent::ServerRicetta). */
+	bool bForgia = false;
+	/** (14/11, v0.2.3) Una riparazione dell'arma (o dello scudo) in mano: 1 il ferro (Marta), 2 il legno (il falegname). */
+	uint8 Ripara = 0;
 };
 
 namespace ValdorsoBotteghe
@@ -73,6 +81,12 @@ namespace ValdorsoBotteghe
 
 	/** La fa: toglie gli ingredienti e gli Aureus, da' il risultato. Falso (e non cambia niente) se non si puo'. */
 	VALDORSO_API bool Fai(FValdorsoZaino& Zaino, const FValdorsoRicetta& Ricetta);
+
+	/** (14/11, v0.2.3) Come Fai, ma il risultato ha questo grado e questa provenienza (le armi forgiate dal colono). */
+	VALDORSO_API bool FaiCon(FValdorsoZaino& Zaino, const FValdorsoRicetta& Ricetta, uint8 Qualita, const FString& Provenienza);
+
+	/** (14/11, v0.2.3) Per una riparazione: quale mano ripara (falso = la destra), o falso se non c'e' niente da riparare. */
+	VALDORSO_API bool ManoDaRiparare(const FValdorsoZaino& Zaino, const FValdorsoRicetta& Ricetta, bool& bOutSinistra);
 
 	/** Il nome del banco ("La fucina di Marta") e il testo vicino ("Compra da Marta"). */
 	VALDORSO_API FText Titolo(EValdorsoTipoBanco Banco);

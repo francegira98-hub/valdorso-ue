@@ -5,6 +5,8 @@
 #include "ValdorsoAspettoComponent.h"
 #include "ValdorsoCombattimento.h"
 #include "ValdorsoOggetti.h"
+#include "ValdorsoQualita.h"
+#include "Animation/AnimSequenceBase.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -18,8 +20,9 @@ namespace
 {
 	// I quattro posti: le due mani, il fianco (la spada nel fodero) e la schiena (lo scudo). Valori di serie: provati da Fra
 	// il 09/11 (destra: prova 5 giro 1; sinistra: prova 5); si sistemano in gioco con Valdorso.Arma.Prova / Sposta / Presa.
-	const TCHAR* const ArmiNomiPosti[4] = { TEXT("destra"), TEXT("sinistra"), TEXT("fianco"), TEXT("schiena") };
-	const TCHAR* const ArmiOssi[4] = { TEXT("hand_r"), TEXT("hand_l"), TEXT("pelvis"), TEXT("spine_05") };
+	// (14/11, v0.2.3) il quinto: l'arco, nella sinistra
+	const TCHAR* const ArmiNomiPosti[5] = { TEXT("destra"), TEXT("sinistra"), TEXT("fianco"), TEXT("schiena"), TEXT("arco") };
+	const TCHAR* const ArmiOssi[5] = { TEXT("hand_r"), TEXT("hand_l"), TEXT("pelvis"), TEXT("spine_05"), TEXT("hand_l") };
 
 	FRotator ArmiDirezione(int32 Quale, int32 Giro)
 	{
@@ -29,8 +32,9 @@ namespace
 		return (FQuat(Direzioni[FMath::Clamp(Quale, 1, 6) - 1]) * FQuat(FRotator(0.f, 0.f, 90.f * FMath::Clamp(Giro, 0, 3)))).Rotator();
 	}
 
-	FVector ArmiPos[4] = { FVector(9.f, 3.f, -1.f), FVector(-8.f, -4.f, 1.f), FVector(0.f, -18.f, 12.f), FVector(-5.f, 20.f, 0.f) };
-	FRotator ArmiRot[4] = { ArmiDirezione(5, 1), ArmiDirezione(5, 0), ArmiDirezione(6, 0), ArmiDirezione(3, 0) };
+	// (14/11) l'arco: in piedi nella sinistra (da provare in gioco con Valdorso.Arma.Prova arco <1-6> [giro])
+	FVector ArmiPos[5] = { FVector(9.f, 3.f, -1.f), FVector(-8.f, -4.f, 1.f), FVector(0.f, -18.f, 12.f), FVector(-5.f, 20.f, 0.f), FVector(-8.f, -3.f, 0.f) };
+	FRotator ArmiRot[5] = { ArmiDirezione(5, 1), ArmiDirezione(5, 0), ArmiDirezione(6, 0), ArmiDirezione(3, 0), ArmiDirezione(5, 1) };
 
 	/** Il posto dal suo nome ("destra", "s", "fianco"...); -1 se non c'e'. */
 	int32 ArmiPosto(const TArray<FString>& Argomenti)
@@ -39,7 +43,7 @@ namespace
 		{
 			return -1;
 		}
-		for (int32 i = 0; i < 4; ++i)
+		for (int32 i = 0; i < ValdorsoArmi::NumeroPosti; ++i)
 		{
 			if (FString(ArmiNomiPosti[i]).StartsWith(Argomenti[0], ESearchCase::IgnoreCase))
 			{
@@ -72,7 +76,13 @@ namespace
 		}
 	}
 
-	const TCHAR* ArmiSpiega = TEXT(" (posti: destra, sinistra, fianco, schiena)");
+	const TCHAR* ArmiSpiega = TEXT(" (posti: destra, sinistra, fianco, schiena, arco)");
+
+	// (14/11, v0.2.3) le animazioni dei colpi per famiglia: 0 = sempre il pugno (se qualcosa si vede storto)
+	TAutoConsoleVariable<int32> CVarArmiAnimazioni(
+		TEXT("Valdorso.Armi.Animazioni"),
+		1,
+		TEXT("1 = ogni famiglia d'arma colpisce con la sua animazione (Greystone); 0 = tutte con il gesto del pugno."));
 
 	FAutoConsoleCommandWithWorldAndArgs ComandoArmaPresa(
 		TEXT("Valdorso.Arma.Presa"),
@@ -141,13 +151,41 @@ namespace ValdorsoArmi
 
 	FTransform Presa(int32 Posto)
 	{
-		const int32 Quale = FMath::Clamp(Posto, 0, 3);
+		const int32 Quale = FMath::Clamp(Posto, 0, NumeroPosti - 1);
 		return FTransform(ArmiRot[Quale], ArmiPos[Quale]);
 	}
 
 	FName Osso(int32 Posto)
 	{
-		return FName(ArmiOssi[FMath::Clamp(Posto, 0, 3)]);
+		return FName(ArmiOssi[FMath::Clamp(Posto, 0, NumeroPosti - 1)]);
+	}
+
+	UAnimSequenceBase* AnimazioneColpo(FName IdArma, int32 Numero, float& OutIstante, float& OutVelocita)
+	{
+		OutIstante = 0.5f;
+		OutVelocita = 1.f;
+		if (CVarArmiAnimazioni.GetValueOnGameThread() == 0)
+		{
+			return nullptr;
+		}
+		// quale animazione, quando arriva il colpo (frazione della durata) e quanto in fretta
+		const TCHAR* Nome = nullptr;
+		switch (ValdorsoQualita::Famiglia(IdArma))
+		{
+		case EValdorsoFamigliaArma::Pugnali: Nome = TEXT("Spada_Rapido"); OutIstante = 0.45f; OutVelocita = 1.2f; break;
+		case EValdorsoFamigliaArma::Spade:
+			Nome = (Numero % 2) == 0 ? TEXT("Spada_Rapido") : TEXT("Spada_Medio");
+			OutIstante = (Numero % 2) == 0 ? 0.45f : 0.42f;
+			OutVelocita = (Numero % 2) == 0 ? 1.05f : 1.15f;
+			break;
+		case EValdorsoFamigliaArma::Asce: Nome = TEXT("Spada_Pesante"); OutIstante = 0.55f; OutVelocita = 0.95f; break;
+		case EValdorsoFamigliaArma::Mazze: Nome = TEXT("Spada_Dall_Alto"); OutIstante = 0.55f; OutVelocita = 0.9f; break;
+		case EValdorsoFamigliaArma::Aste: Nome = TEXT("Spada_Medio"); OutIstante = 0.42f; OutVelocita = 1.1f; break;
+		case EValdorsoFamigliaArma::Scudo: Nome = TEXT("Spada_Parata"); OutIstante = 0.35f; OutVelocita = 1.3f; break;
+		default: return nullptr;
+		}
+		const FString Percorso = FString::Printf(TEXT("/Game/Fab/Armi/Spada/%s.%s"), Nome, Nome);
+		return LoadObject<UAnimSequenceBase>(nullptr, *Percorso, nullptr, LOAD_NoWarn | LOAD_Quiet);
 	}
 }
 
@@ -297,8 +335,11 @@ void UValdorsoArmiComponent::Mostra()
 	{
 		return;
 	}
-	// riposte: la spada nel fodero al fianco, lo scudo dietro la schiena
-	InDestra = Pezzo(InDestra, ArmaPortata() ? Destra : NAME_None, bRiposte ? ValdorsoArmi::PostoFianco : ValdorsoArmi::PostoDestra);
+	// riposte: la spada nel fodero al fianco, lo scudo dietro la schiena; (14/11) l'arco nella sinistra, riposto sulla schiena
+	const FValdorsoTipoOggetto* Portata = ArmaPortata();
+	const bool bArco = Portata && Portata->bDueMani;
+	InDestra = Pezzo(InDestra, Portata ? Destra : NAME_None, bArco ? (bRiposte ? ValdorsoArmi::PostoSchiena : ValdorsoArmi::PostoArco)
+		: (bRiposte ? ValdorsoArmi::PostoFianco : ValdorsoArmi::PostoDestra));
 	InSinistra = Pezzo(InSinistra, ScudoPortato() ? Sinistra : NAME_None, bRiposte ? ValdorsoArmi::PostoSchiena : ValdorsoArmi::PostoSinistra);
 }
 

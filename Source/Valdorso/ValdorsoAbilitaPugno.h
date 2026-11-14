@@ -4,12 +4,17 @@
 // chi ha le statistiche perde salute con un effetto GAS; i manichini di Variant_Combat ricevono il colpo
 // con la loro interfaccia. Ogni colpo passa dal registro eventi.
 // Non parte in aria, durante uno scavalcamento (il personaggio non è a terra) o durante la schivata.
+// (14/11, v0.2.3 "Armi vere") Con un'arma in mano: l'animazione della sua famiglia (ValdorsoArmi::AnimazioneColpo; il colpo
+// arriva a un istante fisso dell'animazione), il danno per il suo grado (ValdorsoQualita.h), e l'arma si consuma a ogni
+// colpo andato a segno. Con l'arco: si tende e parte una freccia (ValdorsoFreccia.h), se nello zaino ce ne sono.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "ValdorsoAbilitaPugno.generated.h"
+
+class UAnimMontage;
 
 UCLASS()
 class VALDORSO_API UValdorsoAbilitaPugno : public UGameplayAbility
@@ -54,6 +59,21 @@ protected:
 	/** Solo sul server: cerca chi è davanti alla mano e gli dà il colpo. */
 	void EseguiColpo();
 
+	/** (14/11) Con l'animazione di un'arma (che non ha la notifica del colpo): il colpo arriva dopo un tempo fisso. */
+	UFUNCTION()
+	void QuandoArrivaIlColpo();
+
+	/** (14/11) L'arco e' teso: parte la freccia (sul server) e l'abilita' finisce. */
+	UFUNCTION()
+	void QuandoTira();
+
 	/** Un pugno colpisce una volta sola. */
 	bool bColpoFatto = false;
+
+	/** (14/11) Quanti colpi con l'arma (per alternare le animazioni delle spade). */
+	int32 NumeroColpo = 0;
+
+	/** (14/11) L'animazione del colpo con l'arma, fatta al momento (la tiene viva finche' serve). */
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimMontage> MontaggioArma;
 };

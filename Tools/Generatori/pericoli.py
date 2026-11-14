@@ -12,6 +12,7 @@
 # (09/11) anche i suoni del fodero: S_Fodero_Riponi, S_Fodero_Sfodera.
 # (10/11) gli animali (animali.py: sei specie, i colori come materiali), l'armeria (20 armi e scudi), i versi degli
 # animali e lo scuoiare; Colori.json per crea_pericoli.py.
+# (14/11, v0.2.3 "Armi vere") anche l'arco e la freccia.
 # Uso: python pericoli.py <uscita>   (poi pericoli.zip in V:/Texture/valdorso, lo legge crea_pericoli.py)
 
 import math
@@ -347,6 +348,24 @@ def arma(nome):
         _colorato(m, FERRO, lambda t: t.blocco("x", 40, 58, -6.5, 6.5, -9, 9))
         _colorato(m, OTTONE, lambda t: t.blocco("x", 39, 59, -6.8, 6.8, -1, 1))
         _colorato(m, FERRO, lambda t: t.blocco("x", 44, 54, -7.2, 7.2, -10, -8))
+    # --- (14/11, v0.2.3 "Armi vere") l'arco di tasso e la freccia
+    elif nome == "Arco":
+        # l'impugnatura nell'origine, i flettenti lungo X (la punta in alto quando e' in mano), la pancia verso +Z e la
+        # corda dietro (z negativa)
+        manico(m, -6, 6, 1.9, CUOIO)
+        pts = [np.array([x, 0, 9.0 * (1 - (x / 64.0) ** 2) - 9.0]) for x in np.linspace(-64, 64, 17)]
+        for i in range(len(pts) - 1):
+            spessore = 2.4 - 1.4 * abs(pts[i][0] + pts[i + 1][0]) / 128.0
+            _colorato(m, LEGNOSCURO, lambda t, i=i, sp=spessore: t.trave("x", pts[i], pts[i + 1], sp, 1.6, su=(0, 1, 0)))
+        _colorato(m, CORNO, lambda t: t.trave("x", pts[0] + [0, 0, -1.2], pts[-1] + [0, 0, -1.2], 0.25, 0.25, su=(0, 1, 0)))
+    elif nome == "Freccia":
+        # lunga 70 cm, la punta in +X; le penne rosse in fondo
+        manico(m, -35, 30, 0.45, LEGNO, lati=6)
+        lama(m, 30, 37, 1.8, 0.3, punta=0.6, colore=FERRO, base=0.9)
+        for a in (0.0, 2.094, 4.189):
+            d = np.array([0, math.cos(a), math.sin(a)])
+            _colorato(m, ROSSO, lambda t, d=d: t.trave("x", np.array([-33.5, 0, 0]) + d * 0.9, np.array([-26, 0, 0]) + d * 0.9 + d * 1.4,
+                                                        0.15, 1.6, su=tuple(np.cross([1, 0, 0], d))))
     return m
 
 
@@ -354,7 +373,9 @@ ARMI = ["Coltello", "Pugnale", "Falcetto", "Martello", "Bastone_Pastore", "Spada
         "Accetta", "Ascia_Guerra", "Mazza", "Clava", "Lancia", "Forcone", "Bastone_Ferrato", "Spada_Lunga", "Gladio",
         "Brocchiere", "Scudo_Rotondo", "Scudo_Aquilone", "Scudo_Legione",
         # (11/11, v0.1.7) la grotta del nord
-        "Piccone", "Pugnale_Nani", "Martello_Nani"]
+        "Piccone", "Pugnale_Nani", "Martello_Nani",
+        # (14/11, v0.2.3) l'arco e la freccia (la freccia la usa ValdorsoFreccia.cpp: SM_Arma_Freccia)
+        "Arco", "Freccia"]
 
 
 # ------------------------------------------------------------------------------------------------ suoni

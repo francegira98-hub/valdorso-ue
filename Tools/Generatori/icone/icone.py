@@ -81,6 +81,9 @@ COLORI = {
     "Ricordo_Libro": ((96, 52, 40), OTTONE),
     "Spada_Corta": (FERRO, LEGNO),
     "Scudo_Legno": (LEGNO_CHIARO, FERRO_SCURO),
+    # (14/11, v0.2.3) l'arco di tasso e le frecce
+    "Arco": (LEGNO, CUOIO),
+    "Frecce": (LEGNO_CHIARO, FERRO),
     "Pelle_Lupo": ((120, 112, 100), (90, 84, 76)),
     "Zanne_Lupo": (OSSO, (200, 186, 150)),
     "Mantello_Lupo": ((120, 112, 100), LANA),

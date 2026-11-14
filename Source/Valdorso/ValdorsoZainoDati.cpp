@@ -5,6 +5,7 @@
 #include "ValdorsoRegistro.h"
 #include "ValdorsoScherma.h"
 #include "ValdorsoGildaDati.h"
+#include "ValdorsoQualita.h"
 
 namespace
 {
@@ -26,7 +27,7 @@ namespace
 				{
 					break;
 				}
-				if (Posto.Id == Cosa.Id && Posto.Quantita > 0 && Posto.Quantita < Tipo->Pila && Posto.Numero == 0)
+				if (Posto.Id == Cosa.Id && Posto.Quantita > 0 && Posto.Quantita < Tipo->Pila && Posto.Numero == 0 && Posto.StessaFattura(Cosa))
 				{
 					const int32 Entrano = FMath::Min(Restano, Tipo->Pila - Posto.Quantita);
 					Posto.Quantita += Entrano;
@@ -66,6 +67,8 @@ namespace
 			Posto.Quantita = FMath::Clamp(Posto.Quantita, 1, Tipo->Pila);
 			Posto.Cariche = FMath::Clamp(Posto.Cariche, 0, Tipo->Cariche);
 			Posto.Numero = Tipo->Pila == 1 ? FMath::Max(0, Posto.Numero) : 0;
+			Posto.Qualita = FMath::Min<uint8>(Posto.Qualita, ValdorsoQualita::Massima);
+			Posto.Usura = FMath::Clamp(Posto.Usura, 0, FMath::Max(0, ValdorsoQualita::DurataMassima(Posto.Id, Posto.Qualita)));
 		}
 	}
 }
@@ -140,6 +143,8 @@ namespace ValdorsoZaino
 			Posto.Quantita = FMath::Clamp(Posto.Quantita, 1, Tipo->Pila);
 			Posto.Cariche = FMath::Clamp(Posto.Cariche, 0, Tipo->Cariche);
 			Posto.Numero = Tipo->Pila == 1 ? FMath::Max(0, Posto.Numero) : 0;
+			Posto.Qualita = FMath::Min<uint8>(Posto.Qualita, ValdorsoQualita::Massima);
+			Posto.Usura = FMath::Clamp(Posto.Usura, 0, FMath::Max(0, ValdorsoQualita::DurataMassima(Posto.Id, Posto.Qualita)));
 		}
 		Zaino.Monete = FMath::Clamp(Zaino.Monete, 0, MassimoMonete);
 		Zaino.Azioni.SetNum(NumeroAzioni);
@@ -176,6 +181,13 @@ namespace ValdorsoZaino
 		};
 		Controlla(Zaino.Destra, EValdorsoPosto::ManoDestra);
 		Controlla(Zaino.Sinistra, EValdorsoPosto::ManoSinistra);
+		// (14/11, v0.2.3) l'arco si tiene con due mani: niente scudo insieme
+		const FValdorsoTipoOggetto* NellaDestra = Zaino.Destra.IsNone() ? nullptr : ValdorsoOggetti::Trova(Zaino.Destra);
+		if (NellaDestra && NellaDestra->bDueMani && !Zaino.Sinistra.IsNone())
+		{
+			Zaino.Sinistra = NAME_None;
+			bCambiato = true;
+		}
 		return bCambiato;
 	}
 
@@ -193,10 +205,36 @@ namespace ValdorsoZaino
 			return false;
 		}
 		Mano = Id;
+		// (14/11, v0.2.3) l'arco vuole tutte e due le mani: prenderlo rimette via lo scudo, e prendere lo scudo rimette via l'arco
+		if (Tipo->bDueMani)
+		{
+			Zaino.Sinistra = NAME_None;
+		}
+		else if (Tipo->Posto == EValdorsoPosto::ManoSinistra)
+		{
+			const FValdorsoTipoOggetto* NellaDestra = Zaino.Destra.IsNone() ? nullptr : ValdorsoOggetti::Trova(Zaino.Destra);
+			if (NellaDestra && NellaDestra->bDueMani)
+			{
+				Zaino.Destra = NAME_None;
+			}
+		}
 		return true;
 	}
 
+	/** (14/11) Aggiungi e AggiungiCon passano tutti e due da qui (il grado e la provenienza decidono con chi si impila). */
+	int32 AggiungiInterno(FValdorsoZaino& Zaino, FName Id, int32 Quantita, int32 Cariche, uint8 Qualita, const FString& Provenienza);
+
 	int32 Aggiungi(FValdorsoZaino& Zaino, FName Id, int32 Quantita, int32 Cariche)
+	{
+		return AggiungiInterno(Zaino, Id, Quantita, Cariche, ValdorsoQualita::Comune, FString());
+	}
+
+	int32 AggiungiCon(FValdorsoZaino& Zaino, FName Id, int32 Quantita, uint8 Qualita, const FString& Provenienza)
+	{
+		return AggiungiInterno(Zaino, Id, Quantita, -1, FMath::Min<uint8>(Qualita, ValdorsoQualita::Massima), Provenienza);
+	}
+
+	int32 AggiungiInterno(FValdorsoZaino& Zaino, FName Id, int32 Quantita, int32 Cariche, uint8 Qualita, const FString& Provenienza)
 	{
 		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Id);
 		if (!Tipo || Quantita <= 0)
@@ -218,7 +256,8 @@ namespace ValdorsoZaino
 				{
 					break;
 				}
-				if (Posto.Id == Id && Posto.Quantita > 0 && Posto.Quantita < Tipo->Pila)
+				if (Posto.Id == Id && Posto.Quantita > 0 && Posto.Quantita < Tipo->Pila && Posto.Numero == 0
+					&& Posto.Qualita == Qualita && Posto.Provenienza == Provenienza && Posto.Usura == 0)
 				{
 					const int32 Entrano = FMath::Min(Restano, Tipo->Pila - Posto.Quantita);
 					Posto.Quantita += Entrano;
@@ -240,6 +279,9 @@ namespace ValdorsoZaino
 				Posto.Quantita = Entrano;
 				Posto.Cariche = CaricheNuove;
 				Posto.Numero = 0;
+				Posto.Qualita = Qualita;
+				Posto.Provenienza = Provenienza;
+				Posto.Usura = 0;
 				Restano -= Entrano;
 			}
 		}
@@ -363,7 +405,7 @@ namespace ValdorsoZaino
 		FValdorsoPostoZaino& Sorgente = Zaino.Posti[Da];
 		FValdorsoPostoZaino& Arrivo = Zaino.Posti[A];
 		const FValdorsoTipoOggetto* Tipo = ValdorsoOggetti::Trova(Sorgente.Id);
-		if (!Arrivo.Vuoto() && Arrivo.Id == Sorgente.Id && Tipo && Tipo->Pila > 1 && Tipo->Cariche == 0)
+		if (!Arrivo.Vuoto() && Arrivo.Id == Sorgente.Id && Tipo && Tipo->Pila > 1 && Tipo->Cariche == 0 && Arrivo.StessaFattura(Sorgente))
 		{
 			// la stessa pila: si unisce fin dove sta (se è già piena, si scambia: cioè niente)
 			const int32 Entrano = FMath::Min(Sorgente.Quantita, Tipo->Pila - Arrivo.Quantita);
@@ -498,6 +540,83 @@ namespace ValdorsoZaino
 		}
 		Zaino.Aggiornamenti = FMath::Max(Zaino.Aggiornamenti, UltimoAggiornamento);
 		return bDato;
+	}
+
+	int32 PostoInMano(const FValdorsoZaino& Zaino, FName Id)
+	{
+		if (Id.IsNone())
+		{
+			return INDEX_NONE;
+		}
+		int32 Migliore = INDEX_NONE;
+		int32 Punti = -1;
+		for (int32 i = 0; i < Zaino.Posti.Num(); ++i)
+		{
+			const FValdorsoPostoZaino& Posto = Zaino.Posti[i];
+			if (Posto.Vuoto() || Posto.Id != Id)
+			{
+				continue;
+			}
+			// prima le non rovinate, poi il grado piu' alto, poi la prima
+			const int32 Questo = (ValdorsoQualita::Rovinata(Posto) ? 0 : 10) + Posto.Qualita;
+			if (Questo > Punti)
+			{
+				Punti = Questo;
+				Migliore = i;
+			}
+		}
+		return Migliore;
+	}
+
+	bool Consuma(FValdorsoZaino& Zaino, bool bSinistra, int32 Quanto)
+	{
+		const int32 Posto = PostoInMano(Zaino, bSinistra ? Zaino.Sinistra : Zaino.Destra);
+		if (!Zaino.Posti.IsValidIndex(Posto) || Quanto <= 0)
+		{
+			return false;
+		}
+		FValdorsoPostoZaino& Arma = Zaino.Posti[Posto];
+		const int32 Massimo = ValdorsoQualita::DurataMassima(Arma.Id, Arma.Qualita);
+		if (Massimo <= 0 || Arma.Usura >= Massimo)
+		{
+			return false;
+		}
+		Arma.Usura = FMath::Min(Massimo, Arma.Usura + Quanto);
+		return Arma.Usura >= Massimo;
+	}
+
+	int32 PostoDaRiparare(const FValdorsoZaino& Zaino, FName Id)
+	{
+		if (Id.IsNone())
+		{
+			return INDEX_NONE;
+		}
+		int32 Migliore = INDEX_NONE;
+		for (int32 i = 0; i < Zaino.Posti.Num(); ++i)
+		{
+			const FValdorsoPostoZaino& Posto = Zaino.Posti[i];
+			if (Posto.Vuoto() || Posto.Id != Id || !ValdorsoQualita::Consumata(Posto))
+			{
+				continue;
+			}
+			const FValdorsoPostoZaino* Prima = Zaino.Posti.IsValidIndex(Migliore) ? &Zaino.Posti[Migliore] : nullptr;
+			if (!Prima || Posto.Qualita > Prima->Qualita || (Posto.Qualita == Prima->Qualita && Posto.Usura > Prima->Usura))
+			{
+				Migliore = i;
+			}
+		}
+		return Migliore;
+	}
+
+	bool Ripara(FValdorsoZaino& Zaino, bool bSinistra)
+	{
+		const int32 Posto = PostoDaRiparare(Zaino, bSinistra ? Zaino.Sinistra : Zaino.Destra);
+		if (!Zaino.Posti.IsValidIndex(Posto))
+		{
+			return false;
+		}
+		Zaino.Posti[Posto].Usura = 0;
+		return true;
 	}
 
 	bool RiempiBorracce(FValdorsoZaino& Zaino)
