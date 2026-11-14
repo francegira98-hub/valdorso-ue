@@ -4,6 +4,7 @@
 #include "SValdorsoDialogo.h"
 #include "SValdorsoAccesso.h"
 #include "ValdorsoRune.h"
+#include "ValdorsoFiducia.h"
 #include "ValdorsoTemaUI.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -211,6 +212,17 @@ void SValdorsoDialogo::Mostra(const FValdorsoBattuta& Battuta)
 			.ColorAndOpacity(ValdorsoTema::Rubrica())
 			.Justification(ETextJustify::Center)
 			.AutoWrapText(true)
+		]
+		// (14/11, v0.2.4) quanto si fida di te, a parole (niente numeri: ValdorsoFiducia.h)
+		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 2.f, 0.f, 0.f))
+		[
+			SNew(STextBlock)
+			.Visibility(Battuta.Fiducia.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
+			.Text(FText::FromString(Battuta.Fiducia))
+			.Font(Stile->Caratteri->Testo(15.f, TEXT("Italic")))
+			.ColorAndOpacity(ValdorsoFiducia::Colore(static_cast<EValdorsoFiducia>(FMath::Min<uint8>(Battuta.GradoFiducia,
+				static_cast<uint8>(EValdorsoFiducia::DiFamiglia)))))
+			.Justification(ETextJustify::Center)
 		]
 		+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 8.f, 0.f, 16.f))
 		[

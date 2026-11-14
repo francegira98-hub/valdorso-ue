@@ -431,6 +431,8 @@ void SValdorsoTaccuino::Construct(const FArguments& InArgs)
 						+ SHorizontalBox::Slot().AutoWidth() [ Linguetta(1, LOCTEXT("SchedaIscrizioni", "Iscrizioni")) ]
 						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center) [ Stile->Diamante(6.f, FSlateColor(ValdorsoTema::OroScuro())) ]
 						+ SHorizontalBox::Slot().AutoWidth() [ Linguetta(2, LOCTEXT("SchedaRune", "Rune")) ]
+						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center) [ Stile->Diamante(6.f, FSlateColor(ValdorsoTema::OroScuro())) ]
+						+ SHorizontalBox::Slot().AutoWidth() [ Linguetta(3, LOCTEXT("SchedaStorie", "Storie")) ]
 					]
 					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(FMargin(0.f, 6.f, 0.f, 14.f))
 					[
@@ -446,7 +448,7 @@ void SValdorsoTaccuino::Construct(const FArguments& InArgs)
 						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
 						[
 							SNew(STextBlock)
-							.Text(LOCTEXT("Aiuto", "J: chiudi  ·  1, 2, 3: le schede"))
+							.Text(LOCTEXT("Aiuto", "J: chiudi  ·  1, 2, 3, 4: le schede"))
 							.Font(Stile->Caratteri->Testo(15.f, TEXT("Italic")))
 							.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 						]
@@ -506,7 +508,7 @@ TSharedRef<SWidget> SValdorsoTaccuino::Linguetta(int32 Indice, const FText& Test
 
 void SValdorsoTaccuino::MostraScheda(int32 Nuova)
 {
-	Scheda = FMath::Clamp(Nuova, 0, 2);
+	Scheda = FMath::Clamp(Nuova, 0, 3);
 	Rifai();
 }
 
@@ -526,6 +528,10 @@ void SValdorsoTaccuino::Rifai()
 	else if (Scheda == 2)
 	{
 		Contenuto->SetContent(PaginaRune());
+	}
+	else if (Scheda == 3)
+	{
+		Contenuto->SetContent(PaginaStorie());
 	}
 	else
 	{
@@ -752,6 +758,83 @@ TSharedRef<SWidget> SValdorsoTaccuino::PaginaRune()
 		];
 }
 
+TSharedRef<SWidget> SValdorsoTaccuino::PaginaStorie()
+{
+	const UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
+	const TArray<FValdorsoStoriaNelTaccuino> Storie = Diario ? Diario->PagineDelleStorie() : TArray<FValdorsoStoriaNelTaccuino>();
+	if (Storie.Num() == 0)
+	{
+		return SNew(SBox).Padding(FMargin(0.f, 30.f, 0.f, 0.f))
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("NessunaStoria", "Nessuna storia, per ora. Il Battito intreccia storie per chi vive la valle: quando ne nasce una per te, si apre al centro dello schermo, e da quel giorno la ritrovi qui."))
+			.Font(Stile->Caratteri->Testo(20.f, TEXT("Italic")))
+			.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+			.Justification(ETextJustify::Center)
+			.AutoWrapText(true)
+		];
+	}
+	TSharedRef<SVerticalBox> Pagina = SNew(SVerticalBox);
+	int32 GruppoPrima = -1;
+	for (const FValdorsoStoriaNelTaccuino& Storia : Storie)
+	{
+		const EValdorsoStatoStoria Stato = static_cast<EValdorsoStatoStoria>(FMath::Min<uint8>(Storia.Stato, 5));
+		const int32 Gruppo = Stato == EValdorsoStatoStoria::Accettata ? 0 : (Stato == EValdorsoStatoStoria::Offerta ? 1 : (Stato == EValdorsoStatoStoria::Finita ? 2 : 3));
+		if (Gruppo != GruppoPrima)
+		{
+			GruppoPrima = Gruppo;
+			const FText Titoli[] = { LOCTEXT("InCorso", "In corso"), LOCTEXT("DaDecidere", "Da decidere"), LOCTEXT("Finite", "Finite"), LOCTEXT("Lasciate", "Lasciate andare") };
+			Pagina->AddSlot().AutoHeight().Padding(FMargin(0.f, Pagina->NumSlots() > 0 ? 14.f : 0.f, 0.f, 4.f))
+			[
+				SNew(STextBlock)
+				.Text(Titoli[Gruppo])
+				.Font(Stile->Caratteri->Titolo(16.f, TEXT("Bold")))
+				.ColorAndOpacity(ValdorsoTema::Rubrica())
+			];
+		}
+		const FLinearColor Colore = ValdorsoBattito::ColoreRarita(Storia.Rarita, Storia.Colore);
+		const bool bSpenta = Gruppo == 3;
+		const FString Sotto = Gruppo == 0 && Storia.Passi > 0
+			? FString::Printf(TEXT("%s  ·  passo %d di %d"), *ValdorsoBattito::NomeRarita(Storia.Rarita), Storia.Passo, Storia.Passi)
+			: ValdorsoBattito::NomeRarita(Storia.Rarita);
+		Pagina->AddSlot().AutoHeight().Padding(FMargin(0.f, 5.f))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top).Padding(FMargin(4.f, 6.f, 16.f, 0.f))
+			[
+				Stile->Diamante(9.f, FSlateColor(bSpenta ? Colore.CopyWithNewOpacity(0.4f) : Colore))
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Storia.Titolo))
+					.Font(Stile->Caratteri->Titolo(18.f, TEXT("Bold")))
+					.ColorAndOpacity(bSpenta ? ValdorsoTema::InchiostroTenue() : ValdorsoTema::Inchiostro())
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Sotto))
+					.Font(Stile->Caratteri->Testo(14.f, TEXT("Italic")))
+					.ColorAndOpacity(bSpenta ? Colore.CopyWithNewOpacity(0.5f) : Colore)
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0.f, 2.f, 0.f, 0.f))
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(Storia.Testo))
+					.Font(Stile->Caratteri->Testo(17.f, Gruppo == 2 ? TEXT("Italic") : TEXT("Regular")))
+					.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
+					.AutoWrapText(true)
+				]
+			]
+		];
+	}
+	return SNew(SScrollBox) + SScrollBox::Slot() [ Pagina ];
+}
+
 void SValdorsoTaccuino::ScorriIscrizioni(int32 Verso)
 {
 	const UValdorsoTaccuinoComponent* Diario = Taccuino.Get();
@@ -775,14 +858,14 @@ FReply SValdorsoTaccuino::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent
 		OnChiudi.ExecuteIfBound();
 		return FReply::Handled();
 	}
-	if (Tasto == EKeys::One || Tasto == EKeys::Two || Tasto == EKeys::Three)
+	if (Tasto == EKeys::One || Tasto == EKeys::Two || Tasto == EKeys::Three || Tasto == EKeys::Four)
 	{
-		MostraScheda(Tasto == EKeys::One ? 0 : (Tasto == EKeys::Two ? 1 : 2));
+		MostraScheda(Tasto == EKeys::One ? 0 : (Tasto == EKeys::Two ? 1 : (Tasto == EKeys::Three ? 2 : 3)));
 		return FReply::Handled();
 	}
 	if (Tasto == EKeys::Gamepad_LeftShoulder || Tasto == EKeys::Gamepad_RightShoulder)
 	{
-		MostraScheda((Scheda + (Tasto == EKeys::Gamepad_RightShoulder ? 1 : 2)) % 3);
+		MostraScheda((Scheda + (Tasto == EKeys::Gamepad_RightShoulder ? 1 : 3)) % 4);
 		return FReply::Handled();
 	}
 	if (Tasto == EKeys::Down || Tasto == EKeys::Gamepad_DPad_Down || Tasto == EKeys::Up || Tasto == EKeys::Gamepad_DPad_Up)

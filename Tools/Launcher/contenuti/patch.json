@@ -4,9 +4,50 @@
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
   {
+   "versione": "0.2.4",
+   "nome": "PNG veri",
+   "data": "",
+   "sommario": "La valle si ricorda di te. I suoi abitanti ti salutano a modo loro, raccontano quello che hai fatto ieri, si fidano o diffidano; se alzi le mani su di loro cadono e si rialzano, e le guardie della Corona vengono a prenderti. E il Battito comincia a intrecciare storie solo per te.",
+   "gruppi": [
+    {
+     "titolo": "Novità: la valle che ricorda",
+     "voci": [
+      "Quello che fai resta: una caccia, una storia chiusa, una notte in cella. Il giorno dopo gli abitanti te ne parlano, ognuno una volta.",
+      "La fiducia, a parole e non a numeri: sotto il nome di chi ti parla leggi Diffidente, Neutrale, Cordiale, Amico o Di famiglia.",
+      "La fiducia sale parlando ogni giorno e aiutando nelle storie; scende se colpisci qualcuno. Gli amici ti salutano per nome, i diffidenti no."
+     ]
+    },
+    {
+     "titolo": "Novità: la colpa e le guardie",
+     "voci": [
+      "Gli abitanti si possono colpire, ma non muoiono: barcollano, cadono all'indietro e si rialzano.",
+      "Chi colpisce un abitante ha il nome rosso sopra la testa per dieci minuti, e lo vedono tutti. Chi ha visto grida e scappa.",
+      "Le guardie della Corona ti trovano e ti portano al posto di guardia: venti Aureus di multa o una notte in cella. Il Balivo scrive tutto nel suo registro."
+     ]
+    },
+    {
+     "titolo": "Novità: le storie del Battito",
+     "voci": [
+      "Il Battito intreccia storie solo per te. Quando ne nasce una, si apre al centro dello schermo: la rarità con il suo colore, la difficoltà, la trama, i premi, e cosa succede se rifiuti.",
+      "Accetta, Ci penso o Rifiuta: anche rifiutare ha le sue conseguenze.",
+      "Tre cose nuove da fare: lasciare un'offerta, seguire una lucina nella notte, incontrare uno spirito che vedi solo tu.",
+      "I premi delle storie hanno il loro grado, dal comune al leggendario, e una provenienza: «Dono del Battito».",
+      "Nel taccuino (J) la scheda nuova Storie: quelle in corso con il passo di adesso, quelle da decidere, quelle finite."
+     ]
+    },
+    {
+     "titolo": "Sistema",
+     "voci": [
+      "Il custode del Battito guarda l'economia della valle e i trucchi, e avvisa lo staff. Non punisce mai: decide sempre una persona.",
+      "Gli esiti delle storie arrivano da soli al Sognatore, lo strumento dello staff che le scrive."
+     ]
+    }
+   ]
+  },
+  {
    "versione": "0.2.3",
    "nome": "Armi vere",
-   "data": "",
+   "data": "2026-11-14",
    "sommario": "Le armi diventano vere: ogni famiglia si muove a modo suo, le cose hanno un grado (dal comune al leggendario) e una storia, le lame si consumano e Marta le rimette a posto. E dal falegname, finalmente, l'arco e le frecce.",
    "gruppi": [
     {

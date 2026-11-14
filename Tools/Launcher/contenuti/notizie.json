@@ -1,8 +1,16 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-14",
+ "aggiornato": "2026-11-15",
  "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
  "notizie": [
+  {
+   "data": "2026-11-15",
+   "etichetta": "Patch",
+   "titolo": "PNG veri: v0.2.4",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "La valle si ricorda di te: gli abitanti ti raccontano quello che hai fatto ieri, si fidano o diffidano, e se alzi le mani su di loro arrivano le guardie della Corona. E il Battito comincia a intrecciare storie solo per te: si aprono al centro dello schermo, e anche rifiutarle ha un prezzo."
+  },
   {
    "data": "2026-11-14",
    "etichetta": "Patch",

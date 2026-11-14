@@ -1978,6 +1978,62 @@ namespace
 		return D;
 	}
 
+	// (14/11, v0.2.4 "PNG veri") L'arresto: chi ha alzato le mani su un abitante della valle lo prendono le guardie della
+	// Corona (AValdorsoPlayerState, ValdorsoFiducia.h) e lo portano al posto di guardia. La legge del Balivo: una multa
+	// (evento "Multa": senza monete si va a "non_basta") o una notte in cella (evento "Cella"). Lo dice la guardia piu'
+	// vicina, con questo dialogo al posto del suo.
+	FValdorsoDialogo DialoghiArresto()
+	{
+		FValdorsoDialogo D;
+		D.Id = TEXT("Arresto");
+		D.NomeBreve = TEXT("La guardia");
+		D.Titolo = TEXT("La guardia della Corona");
+		D.Inizio = TEXT("arresto");
+		D.Ritorno = TEXT("di_nuovo");
+
+		D.Nodo(TEXT("arresto"), {
+			TEXT("(Una mano pesante ti stringe la spalla.)"),
+			TEXT("Nel nome della Corona. Hai alzato le mani su un abitante di Val d'Orso: il Balivo lo scrive nel suo registro, e io devo chiederti come vuoi pagare."),
+			TEXT("La legge e' semplice: venti Aureus di multa, o una notte in cella. Scegli."),
+			})
+			.Scelta(TEXT("Pago la multa."), TEXT("multa"), TEXT("Multa"))
+			.Scelta(TEXT("Passo la notte in cella."), TEXT("cella"), TEXT("Cella"))
+			.Scelta(TEXT("Non e' stata colpa mia!"), TEXT("scuse"));
+
+		D.Nodo(TEXT("di_nuovo"), {
+			TEXT("(La stessa mano, la stessa spalla.) Ancora tu."),
+			TEXT("Il Balivo ha gia' una pagina col tuo nome, e adesso ne scrive un'altra. Venti Aureus o la cella: la legge non e' cambiata da ieri."),
+			})
+			.Scelta(TEXT("Pago la multa."), TEXT("multa"), TEXT("Multa"))
+			.Scelta(TEXT("Passo la notte in cella."), TEXT("cella"), TEXT("Cella"))
+			.Scelta(TEXT("Non e' stata colpa mia!"), TEXT("scuse"));
+
+		D.Nodo(TEXT("scuse"), {
+			TEXT("Lo dicono tutti. Il registro dice un'altra cosa, e il registro non ha mai bevuto."),
+			})
+			.Scelta(TEXT("Va bene. Pago la multa."), TEXT("multa"), TEXT("Multa"))
+			.Scelta(TEXT("E se non ho le monete?"), TEXT("non_basta"))
+			.Scelta(TEXT("Allora la cella."), TEXT("cella"), TEXT("Cella"));
+
+		D.Nodo(TEXT("non_basta"), {
+			TEXT("(Conta, o fa finta di contare.) Senza monete c'e' la cella. Il Balivo non fa credito, e io nemmeno."),
+			})
+			.Scelta(TEXT("Va bene, la cella."), TEXT("cella"), TEXT("Cella"))
+			.Scelta(TEXT("Aspetta: pago."), TEXT("multa"), TEXT("Multa"));
+
+		D.Nodo(TEXT("multa"), {
+			TEXT("(Le monete spariscono nella borsa della Corona.) Pagato. Il Balivo e' contento; io meno, preferivo la cella."),
+			TEXT("Fila. E tieni le mani dove le vedo."),
+			}).Fine();
+
+		D.Nodo(TEXT("cella"), {
+			TEXT("Paglia, pane duro e una finestra sul passo. Al mattino sei libero."),
+			TEXT("(La porta si chiude. Fuori, qualcuno ride.)"),
+			}).Fine();
+
+		return D;
+	}
+
 	TArray<FValdorsoDialogo> DialoghiScritti()
 	{
 		TArray<FValdorsoDialogo> Tutti;
@@ -2000,6 +2056,8 @@ namespace
 		Tutti.Add(DialoghiElric());
 		// (12/11, v0.2.0) la carovana
 		Tutti.Add(DialoghiSibilla());
+		// (14/11, v0.2.4) l'arresto delle guardie
+		Tutti.Add(DialoghiArresto());
 		return Tutti;
 	}
 
@@ -2060,6 +2118,10 @@ namespace
 		{ TEXT("Sibilla"), 0, TEXT("Sale, spezie, stoffe! E le notizie di fuori, gratis!") },
 		{ TEXT("Sibilla"), 1, TEXT("Si chiude bottega al tramonto: domani la strada, se il sigillo vuole.") },
 		{ TEXT("Sibilla"), 2, TEXT("(scrive alla luce di una candela, e copre il foglio con la mano)") },
+		// (14/11, v0.2.4) l'arresto non e' un PNG (lo dice la guardia piu' vicina), ma tutti i dialoghi hanno i loro saluti
+		{ TEXT("Arresto"), 0, TEXT("Circolare. La Corona ti guarda.") },
+		{ TEXT("Arresto"), 1, TEXT("Tieni le mani a posto, stasera.") },
+		{ TEXT("Arresto"), 2, TEXT("Di notte le guardie hanno il sonno leggero.") },
 	};
 
 }

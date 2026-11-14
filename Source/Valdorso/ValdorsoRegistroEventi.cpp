@@ -4,6 +4,9 @@
 
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoTerritorio.h"
+#include "ValdorsoFiducia.h"
+#include "ValdorsoBattito.h"
+#include "ValdorsoCustode.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
@@ -126,6 +129,12 @@ namespace ValdorsoRegistroEventi
 		{
 			return;
 		}
+		// (14/11, v0.2.4) la valle che ricorda: certi eventi diventano fatti del colono, e domani i PNG ne parlano
+		ValdorsoFiducia::DopoAnnota(Tipo, Chi);
+		// (14/11, v0.2.4) le storie del Battito: gli inneschi e i passi che si fanno con un evento (ValdorsoBattito.h)
+		UValdorsoBattito::DopoAnnota(Tipo, Chi, Bersaglio, Dettagli);
+		// (14/11, v0.2.4) il custode del Battito: colpi, colpe, e chi viene spostato di colpo (ValdorsoCustode.h)
+		UValdorsoCustode::DopoAnnota(Tipo, Chi, Bersaglio);
 		const FDateTime Adesso = FDateTime::UtcNow();
 		static bool bCartellaPronta = false;
 		if (!bCartellaPronta)

@@ -18,6 +18,11 @@
 //   personaggio salvato (accesso libero dell'editor) resta solo in memoria, per nome del personaggio.
 // - Nel livello lo mette Content/Python/nuovi/metti_png.py (Gaspare al margine del bosco, Tebaldo e Fulvio al passo;
 //   (08/11) Nonna Edda alla palude, Bruno alla locanda, Padre Anselmo nel Tempio del Cuore).
+// - (14/11, v0.2.4 "PNG veri", ValdorsoFiducia.h) Ora i colpi lo toccano, ma non muore mai: barcolla, e se lo colpisci forte
+//   (o tante volte) cade all'indietro e dopo un po' si rialza. Chi l'ha colpito diventa colpevole (il nome rosso, le
+//   guardie); lui e chi ha visto gridano, e chi non e' una guardia scappa qualche passo piu' in la' e poi torna. Si
+//   ricorda di te: la fiducia (una parola sotto il nome, sulla pergamena), i saluti che cambiano, e i fatti di ieri
+//   ("Ieri la caccia ti e' andata bene...").
 
 #pragma once
 
@@ -115,6 +120,30 @@ public:
 	/** (12/11) Vero se adesso non c'e' (a casa, o non e' il suo giorno). */
 	bool Via() const { return bVia; }
 
+	/** (14/11, v0.2.4) Il nome breve del suo dialogo ("Bruno"); il nome dell'attore se il dialogo non c'e'. */
+	FString NomeBreve() const;
+
+	/** (14/11) Vero se e' una guardia della Corona (le guardie del passo e la capitana Livia): arrestano i colpevoli. */
+	bool Guardia() const;
+
+	/** (14/11) Vero se e' a terra (l'hanno colpito forte: fra poco si rialza). */
+	bool ATerra() const { return bATerra; }
+
+	/** (14/11) Solo sul server: un colpo (ValdorsoCombattimento::Colpisci). Barcolla o cade; chi l'ha colpito e' colpevole.
+	 *  Vero se il colpo l'ha toccato. */
+	bool Colpito(AActor* Da, float Danno);
+
+	/** (14/11) Solo sul server: ha visto (o subito, bVittima) una colpa di quel colono: grida, si gira, e se non e' una
+	 *  guardia scappa un poco. */
+	void Spaventa(APawn* Colono, bool bVittima);
+
+	/** (14/11) Solo sul server: comincia con quel colono un dialogo che non e' il suo (l'arresto delle guardie). */
+	bool ApriDialogo(APawn* Chi, FName IdDialogo);
+
+	/** (14/11, v0.2.4) Solo sul server: la scelta di una storia del Battito (ValdorsoBattito.h): le righe del passo e i
+	 *  finali come risposte, sulla pergamena di questo PNG. */
+	bool ApriSceltaStoria(APawn* Chi, const FString& IdStoria, const TArray<FString>& Righe, const TArray<FString>& Scelte);
+
 	// IValdorsoInterattivo
 	virtual FText TestoInterazione(const APawn* Chi) const override;
 	virtual void Interagisci(APawn* Chi) override;
@@ -149,8 +178,12 @@ private:
 	/** Il dialogo di questo PNG (nullptr se il nome nei Dettagli è sbagliato). */
 	const FValdorsoDialogo* DatiDialogo() const;
 
-	/** Manda la battuta al PC (e, se è l'ultima, chiude la conversazione sul server). */
-	void Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta);
+	/** Manda la battuta al PC (e, se è l'ultima, chiude la conversazione sul server). (14/11) Con IdFiducia la parola
+	 *  della fiducia di quel dialogo sotto il nome. */
+	void Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta, FName IdFiducia = NAME_None);
+
+	/** (14/11) Comincia una conversazione (il suo dialogo, o quello di IdAltro) e manda la prima battuta. */
+	bool Comincia(APawn* Chi, const FValdorsoDialogo& Dati, FName IdAltro);
 
 	/** Il server chiude la conversazione con quel PC (con bAvvisa dice al PC di togliere la pergamena). */
 	void Chiudi(APlayerController* Chi, bool bAvvisa, const FString& Come);
@@ -167,7 +200,15 @@ private:
 	{
 		FName Nodo;
 		int32 Passo = 0;
+		/** (14/11) Un dialogo che non e' il suo (l'arresto); vuoto = il suo. "Battito" = la scelta di una storia. */
+		FName Altro;
+		/** (14/11) La storia del Battito di quella scelta, e quante risposte ha. */
+		FString Storia;
+		int32 Scelte = 0;
 	};
+
+	/** (14/11) Il dialogo di quella conversazione. */
+	const FValdorsoDialogo* DatiDi(const FConversazione& Conversazione) const;
 	TMap<TWeakObjectPtr<APlayerController>, FConversazione> Conversazioni;
 
 	/** Il numero della prossima battuta (cresce sempre: una risposta vecchia non vale per una battuta nuova). */
@@ -208,6 +249,72 @@ private:
 	void Saluta();
 	FTimerHandle TimerSaluti;
 	TMap<TWeakObjectPtr<APlayerController>, double> Salutati;
+
+	// --- (14/11, v0.2.4) Colpito: barcolla, cade e si rialza, scappa -------------------------------------------
+
+	/** Crescono a ogni barcollata / caduta: su ogni PC il corpo si piega (o cade all'indietro e si rialza). */
+	UPROPERTY(ReplicatedUsing = OnRep_Barcollate)
+	uint8 Barcollate = 0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Cadute)
+	uint8 Cadute = 0;
+
+	UPROPERTY(Replicated)
+	bool bATerra = false;
+
+	/** La fuga: dove sta andando (via da chi ha colpito, o di nuovo al suo posto). */
+	UPROPERTY(ReplicatedUsing = OnRep_Fuga)
+	FVector_NetQuantize DoveFuga;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Fuga)
+	bool bInFuga = false;
+
+	UFUNCTION()
+	void OnRep_Barcollate();
+
+	UFUNCTION()
+	void OnRep_Cadute();
+
+	UFUNCTION()
+	void OnRep_Fuga();
+
+	/** Su ogni PC: il corpo che si piega o cade (vero finche' c'e' da muoversi). */
+	bool AnimaCorpo();
+
+	/** Su ogni PC: un passo della fuga (vero finche' non e' arrivato). */
+	bool MuoviFuga(float DeltaSeconds);
+
+	/** Rimette l'animazione della tappa (o il respiro). */
+	void RimettiMovenza();
+
+	/** Solo sul server: si rialza; torna dalla fuga. */
+	void Rialza();
+	void RitornaDallaFuga();
+	void Fuggi(const AActor* Da);
+
+	/** Solo sul server: una riga nella chat di chi e' vicino. */
+	void Grida(const FString& Frase);
+
+	/** Le ore (di questo PC) in cui sono cominciate la barcollata e la caduta (-1: niente). */
+	double BarcolloDa = -1.0;
+	double CadutaDa = -1.0;
+	/** Su ogni PC: il corpo e' piegato (va rimesso dritto); sta correndo (l'animazione della corsa). */
+	bool bPiegato = false;
+	bool bCorre = false;
+	/** Su ogni PC: ha visto cominciare la fuga (solo allora, alla fine, si rimette dove dice il server). */
+	bool bVistaFuga = false;
+
+	/** Solo sul server. */
+	float DannoRecente = 0.f;
+	double DannoDa = -100.0;
+	double UltimoGrido = -100.0;
+	FVector PostoFuga = FVector::ZeroVector;
+	bool bRitornoFuga = false;
+	FTimerHandle TimerATerra;
+	FTimerHandle TimerFuga;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequence> Corsa;
 
 	UPROPERTY()
 	TObjectPtr<USkeletalMesh> ManichinoUomo;

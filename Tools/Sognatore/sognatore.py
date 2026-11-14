@@ -11,7 +11,14 @@
 #   python sognatore.py sogna [quante]       per ogni colono passato dalla valle negli ultimi 30 giorni scrive fino a [3]
 #                                            storie sue in Saved/Server/Sognatore/Bozza.txt (lo staff la legge)
 #   python sognatore.py approva              le storie con "si" vanno in Approvate/<colono>/, le altre in Scartate
-#   python sognatore.py esito NOME ID COSA   com'e' andata nel gioco (finchè il gioco non lo scrive da solo):
+#   python sognatore.py esiti                legge com'e' andata nel gioco (dalla v0.2.4 il gioco lo scrive da solo in
+#                                            Saved/Server/Sognatore/Esiti_dal_gioco.jsonl; si legge anche da solo,
+#                                            all'inizio di ogni comando)
+#   python sognatore.py prova_gioco NOME     (v0.2.4) tre storie di prova per quel colono, approvate subito e con
+#                                            l'innesco "registro" (si aprono appena entra nella valle): le lucine della
+#                                            palude (segui), il pane dei morti (porta, offerta, veglia), l'anguana del
+#                                            lago (fantasma). Per provare la finestra e i mattoni nuovi.
+#   python sognatore.py esito NOME ID COSA   com'e' andata nel gioco (a mano, per lo staff o le prove):
 #                                            COSA = accettata | rifiutata | scaduta | fallita | finale1 | finale2 ...
 #                                            (un finale con "prossimo" apre il capitolo dopo del filo)
 #   python sognatore.py patente              i poteri del Battito: quanti si' di fila ha preso ognuno, chi puo' salire
@@ -1312,6 +1319,76 @@ def esito(nome, storia_id, cosa):
     return 0
 
 
+def esiti_dal_gioco(zitto=False):
+    """(14/11, v0.2.4) Com'e' andata, scritto dal gioco (ValdorsoBattito.cpp): una riga JSON per esito. Il file si sposta
+    in Esiti_letti/ prima di leggerlo, cosi' il gioco ne comincia uno nuovo e niente si legge due volte."""
+    f = os.path.join(C["sognatore"], "Esiti_dal_gioco.jsonl")
+    if not os.path.exists(f):
+        if not zitto:
+            print("Nessun esito nuovo dal gioco.")
+        return 0
+    letti = os.path.join(C["sognatore"], "Esiti_letti")
+    os.makedirs(letti, exist_ok=True)
+    preso = os.path.join(letti, "Esiti_%s.jsonl" % adesso().strftime("%Y%m%d_%H%M%S"))
+    try:
+        os.replace(f, preso)
+    except OSError as errore:
+        # (il gioco lo sta scrivendo proprio adesso: si leggera' la prossima volta)
+        print("Gli esiti dal gioco non si possono leggere adesso (%s): riprovo la prossima volta." % errore)
+        return 0
+    fatti = 0
+    with open(preso, encoding="utf-8") as testo:
+        for riga in testo:
+            riga = riga.strip()
+            if not riga:
+                continue
+            try:
+                e = json.loads(riga)
+                if esito(str(e["colono"]), str(e["storia"]), str(e["cosa"])) == 0:
+                    fatti += 1
+            except Exception as errore:  # una riga storta non ferma le altre
+                print("Esito dal gioco che non capisco (%s): %s" % (errore, riga[:200]))
+    print("Esiti dal gioco: %d segnati (il file e' in %s)." % (fatti, preso))
+    return 0
+
+
+def prova_gioco(nome):
+    """(14/11, v0.2.4) Tre storie di prova per un colono vero, approvate subito, che si aprono appena entra."""
+    nome = (nome or "").strip()
+    if not nome:
+        print("Serve il nome del colono (come nel gioco).")
+        return 1
+    memoria = leggi_memoria()
+    mie = memoria.setdefault(nome, [])
+    caso = random.Random(nome)
+    colono = {"nome": nome, "registro": {}}
+    fatte = 0
+    for seme_id in ("fuochi_fatui", "il_pane_dei_morti", "anguana_del_lago"):
+        seme = SEMI_PER_ID.get(seme_id)
+        if not seme:
+            print("Manca il seme %s." % seme_id)
+            continue
+        storia = cuci(seme, colono, caso)
+        storia["id"] = "prova_" + storia["id"]
+        storia["innesco"] = [{"tipo": "registro"}]
+        storia["finestra"] = finestra(storia)
+        storia.update({"giudice": "ok", "motivi": [], "approvata_il": oggi().isoformat(), "prova": True})
+        dove = os.path.join(C["approvate"], re.sub(r"[^\w\- ]", "_", nome))
+        os.makedirs(dove, exist_ok=True)
+        with open(os.path.join(dove, storia["id"] + ".json"), "w", encoding="utf-8") as out:
+            json.dump(storia, out, ensure_ascii=False, indent=1)
+        if not any(m.get("id") == storia["id"] for m in mie):
+            mie.append({"id": storia["id"], "seme": storia["seme"], "titolo": storia["titolo"], "rarita": storia["rarita"],
+                        "serie": "", "data": storia["approvata_il"], "png": storia.get("png", ""), "luogo": storia.get("luogo", ""),
+                        "stato": "approvata (prova)"})
+        print("  pronta: \"%s\" (%s) -> %s" % (storia["titolo"], storia["rarita"], storia["id"]))
+        fatte += 1
+    scrivi_json(C["memoria"], memoria)
+    print("Fatte %d storie di prova per %s, in %s. Entra nella valle con quel personaggio: si aprono le finestre." % (fatte, nome, C["approvate"]))
+    print("Nel gioco (console): Valdorso.Battito.Storie le elenca; Valdorso.Battito.Dimentica le fa ripartire da capo.")
+    return 0
+
+
 def nasce_gesta(storia, k):
     """Idea 1: l'impresa Epica o Leggendaria di un colono diventa un'Eco che gli altri possono rivivere."""
     f = os.path.join(C["sognatore"], "semi_gesta.json")
@@ -1533,7 +1610,14 @@ def prova():
 
 if __name__ == "__main__":
     comando = sys.argv[1] if len(sys.argv) > 1 else ""
-    if comando == "vede":
+    # (14/11, v0.2.4) prima di tutto, com'e' andata nel gioco (non nelle prove con i coloni finti)
+    if comando not in ("controlla", "prova", "esiti", ""):
+        esiti_dal_gioco(zitto=True)
+    if comando == "esiti":
+        sys.exit(esiti_dal_gioco())
+    elif comando == "prova_gioco":
+        sys.exit(prova_gioco(" ".join(sys.argv[2:])))
+    elif comando == "vede":
         sys.exit(vede(" ".join(sys.argv[2:]) or None))
     elif comando == "sogna":
         sys.exit(sogna(int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 3))
@@ -1553,5 +1637,5 @@ if __name__ == "__main__":
         sys.exit(controlla())
     elif comando == "prova":
         sys.exit(prova())
-    print("uso: sognatore.py vede [nome] | sogna [quante] | approva | esito NOME ID COSA | custode | ricordi [nome] | libro [nome] | patente | controlla | prova")
+    print("uso: sognatore.py vede [nome] | sogna [quante] | approva | esiti | prova_gioco NOME | esito NOME ID COSA | custode | ricordi [nome] | libro [nome] | patente | controlla | prova")
     sys.exit(1)

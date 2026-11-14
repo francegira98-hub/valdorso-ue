@@ -74,6 +74,73 @@ struct FValdorsoRicordoDialogo
 	/** I segni, senza doppioni (al massimo ValdorsoTaccuino::MassimoSegni). */
 	UPROPERTY()
 	TArray<FString> Segni;
+
+	/** (14/11, v0.2.4) Quanto si fida di lui, da -100 a 100 (ValdorsoFiducia.h: si vede solo a parole). */
+	UPROPERTY()
+	int32 Fiducia = 0;
+
+	/** (14/11) Il giorno (UTC, ValdorsoFiducia::Giorno) dell'ultima chiacchierata che ha alzato la fiducia. */
+	UPROPERTY()
+	int64 UltimoGiorno = 0;
+
+	/** (14/11) Quando era il fatto piu' nuovo di cui questo PNG ha gia' parlato (secondi Unix; 0 = nessuno). */
+	UPROPERTY()
+	int64 UltimoRicordo = 0;
+};
+
+/**
+ * (14/11, v0.2.4) Un fatto del colono che la valle ricorda (ValdorsoFiducia.h): il tipo dell'evento del registro
+ * ("Animale", "Storia", "Colpa"...) e quando. Il giorno dopo i PNG ne parlano.
+ */
+USTRUCT()
+struct FValdorsoFatto
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Tipo;
+
+	/** Secondi Unix (UTC). */
+	UPROPERTY()
+	int64 Quando = 0;
+};
+
+/**
+ * (14/11, v0.2.4) Una storia del Battito per questo colono (ValdorsoBattito.h): offerta (la finestra al centro dello
+ * schermo), accettata (a che passo e'), finita (con quale finale), rifiutata o scaduta. La storia scritta (i testi) resta
+ * nel file del Sognatore: qui solo com'e' andata, per il colono.
+ */
+USTRUCT()
+struct FValdorsoStoriaViva
+{
+	GENERATED_BODY()
+
+	/** L'id della storia (il nome del file in Saved/Server/Sognatore/Approvate/<colono>/). */
+	UPROPERTY()
+	FString Id;
+
+	/** Il seme da cui e' nata (per le serie: "dopo la storia X"). */
+	UPROPERTY()
+	FString Seme;
+
+	/** EValdorsoStatoStoria (ValdorsoBattito.h). */
+	UPROPERTY()
+	uint8 Stato = 0;
+
+	/** Il passo di adesso (da 0). */
+	UPROPERTY()
+	int32 Passo = 0;
+
+	/** Quando e' stata offerta e quando si e' chiusa (secondi Unix). */
+	UPROPERTY()
+	int64 Offerta = 0;
+
+	UPROPERTY()
+	int64 Chiusa = 0;
+
+	/** Il finale (da 1; 0 = nessuno). */
+	UPROPERTY()
+	int32 Finale = 0;
 };
 
 /** Il taccuino di viaggio di un personaggio. */
@@ -97,6 +164,14 @@ struct FValdorsoTaccuino
 	 */
 	UPROPERTY()
 	TArray<FValdorsoRicordoDialogo> Dialoghi;
+
+	/** (14/11, v0.2.4) I fatti che la valle ricorda (al massimo ValdorsoFiducia::MassimoFatti, dal piu' vecchio). */
+	UPROPERTY()
+	TArray<FValdorsoFatto> Fatti;
+
+	/** (14/11, v0.2.4) Le storie del Battito di questo colono (ValdorsoBattito.h). */
+	UPROPERTY()
+	TArray<FValdorsoStoriaViva> Storie;
 };
 
 /** Un luogo della valle. */

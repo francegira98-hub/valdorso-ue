@@ -1,6 +1,8 @@
 // Valdorso - Bussola e taccuino di viaggio (vedi il .h). Scritto da Claude il 07/11/2026.
 
 #include "ValdorsoTaccuino.h"
+#include "ValdorsoFiducia.h"
+#include "SValdorsoFinestraStoria.h"
 #include "ValdorsoInterfaccia.h"
 #include "SValdorsoTaccuino.h"
 #include "Valdorso.h"
@@ -188,6 +190,8 @@ void UValdorsoTaccuinoComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProp
 	DOREPLIFETIME_CONDITION(UValdorsoTaccuinoComponent, Luoghi, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UValdorsoTaccuinoComponent, Titoli, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UValdorsoTaccuinoComponent, Revisione, COND_OwnerOnly);
+	// (14/11, v0.2.4) la scheda Storie
+	DOREPLIFETIME_CONDITION(UValdorsoTaccuinoComponent, PagineStorie, COND_OwnerOnly);
 }
 
 void UValdorsoTaccuinoComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -212,6 +216,27 @@ void UValdorsoTaccuinoComponent::TickComponent(float DeltaTime, ELevelTick TickT
 	if (!Bussola.IsValid() && Controllore->IsLocalController())
 	{
 		MettiBussola();
+	}
+	// (14/11, v0.2.4) la finestra di una storia del Battito, appena non c'e' un'altra schermata aperta
+	if (FinestreInAttesa.Num() > 0 && Controllore->IsLocalController() && Controllore->GetPawn()
+		&& !ValdorsoFinestraStoria::Aperta(Controllore))
+	{
+		const AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(Controllore);
+		if (!Giocatore || !Giocatore->SchermataAperta())
+		{
+			const FValdorsoFinestraStoria Prima = FinestreInAttesa[0];
+			TWeakObjectPtr<UValdorsoTaccuinoComponent> Debole(this);
+			if (ValdorsoFinestraStoria::Apri(Controllore, Prima, [Debole](const FString& Id, uint8 Cosa)
+			{
+				if (UValdorsoTaccuinoComponent* Suo = Debole.Get())
+				{
+					Suo->ServerRispostaStoria(Id, Cosa);
+				}
+			}))
+			{
+				FinestreInAttesa.RemoveAt(0);
+			}
+		}
 	}
 }
 
@@ -245,6 +270,10 @@ void UValdorsoTaccuinoComponent::Carica(const FValdorsoTaccuino& Salvato)
 	Iscrizioni = MoveTemp(Pulito.Iscrizioni);
 	// (08/11) la memoria dei dialoghi: da qui in poi i PNG usano questa (e si salva con il personaggio)
 	Ricordi = MoveTemp(Pulito.Dialoghi);
+	// (14/11, v0.2.4) i fatti che la valle ricorda
+	Fatti = MoveTemp(Pulito.Fatti);
+	// (14/11, v0.2.4) le storie del Battito
+	Storie = MoveTemp(Pulito.Storie);
 	bPersonaggio = true;
 	AggiornaTitoli();
 	// i luoghi dove si trova adesso si guardano subito
@@ -257,7 +286,76 @@ FValdorsoTaccuino UValdorsoTaccuinoComponent::Dati() const
 	Fuori.Luoghi = Luoghi;
 	Fuori.Iscrizioni = Iscrizioni;
 	Fuori.Dialoghi = Ricordi;
+	Fuori.Fatti = Fatti;
+	Fuori.Storie = Storie;
 	return Fuori;
+}
+
+// (14/11, v0.2.4) Le storie del Battito: le regole sono in ValdorsoBattito, qui il salvataggio e la finestra.
+
+void UValdorsoTaccuinoComponent::CambiaStoria(const FValdorsoStoriaViva& Nuova)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || Nuova.Id.IsEmpty())
+	{
+		return;
+	}
+	if (FValdorsoStoriaViva* Gia = Storie.FindByPredicate([&Nuova](const FValdorsoStoriaViva& S) { return S.Id == Nuova.Id; }))
+	{
+		*Gia = Nuova;
+	}
+	else
+	{
+		Storie.Add(Nuova);
+		while (Storie.Num() > 300)
+		{
+			Storie.RemoveAt(0);
+		}
+	}
+	Salva();
+}
+
+void UValdorsoTaccuinoComponent::DimenticaStorie()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || Storie.Num() == 0)
+	{
+		return;
+	}
+	Storie.Reset();
+	Salva();
+}
+
+void UValdorsoTaccuinoComponent::ImpostaPagineStorie(const TArray<FValdorsoStoriaNelTaccuino>& Nuove)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || PagineStorie == Nuove)
+	{
+		return;
+	}
+	PagineStorie = Nuove;
+	// (sul server con lo schermo, chi gioca li' vede subito)
+	++NumeroCambiamenti;
+}
+
+void UValdorsoTaccuinoComponent::OnRep_PagineStorie()
+{
+	++NumeroCambiamenti;
+}
+
+void UValdorsoTaccuinoComponent::ClientFinestraStoria_Implementation(const FValdorsoFinestraStoria& Finestra)
+{
+	if (!FinestreInAttesa.ContainsByPredicate([&Finestra](const FValdorsoFinestraStoria& F) { return F.Id == Finestra.Id; }))
+	{
+		FinestreInAttesa.Add(Finestra);
+	}
+}
+
+void UValdorsoTaccuinoComponent::ServerRispostaStoria_Implementation(const FString& Id, uint8 Cosa)
+{
+	APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	UValdorsoBattito* Battito = UValdorsoBattito::Di(Controllore);
+	if (Battito && Controllore && Cosa <= 2 && Id.Len() <= 128)
+	{
+		Battito->Risposta(Controllore, Id, Cosa);
+	}
 }
 
 // (08/11) La memoria dei dialoghi: le regole sono quelle di ValdorsoTaccuinoDati (le provano i test), qui solo il
@@ -309,6 +407,62 @@ void UValdorsoTaccuinoComponent::MettiSegno(FName IdDialogo, FName Segno)
 	}
 }
 
+// (14/11, v0.2.4) La fiducia e i fatti: le regole sono in ValdorsoFiducia (le provano i test), qui solo il salvataggio.
+
+void UValdorsoTaccuinoComponent::CambiaMemoria(TFunctionRef<bool(FValdorsoTaccuino&)> Cosa)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	FValdorsoTaccuino Lavoro;
+	Lavoro.Dialoghi = MoveTemp(Ricordi);
+	Lavoro.Fatti = MoveTemp(Fatti);
+	const bool bCambiato = Cosa(Lavoro);
+	Ricordi = MoveTemp(Lavoro.Dialoghi);
+	Fatti = MoveTemp(Lavoro.Fatti);
+	if (bCambiato)
+	{
+		Salva();
+	}
+}
+
+int32 UValdorsoTaccuinoComponent::Fiducia(FName IdDialogo) const
+{
+	FValdorsoTaccuino Lettura;
+	Lettura.Dialoghi = Ricordi;
+	return ValdorsoFiducia::Di(Lettura, IdDialogo);
+}
+
+void UValdorsoTaccuinoComponent::CambiaFiducia(FName IdDialogo, int32 Delta)
+{
+	CambiaMemoria([IdDialogo, Delta](FValdorsoTaccuino& T) { return ValdorsoFiducia::Cambia(T, IdDialogo, Delta); });
+}
+
+void UValdorsoTaccuinoComponent::Chiacchiera(FName IdDialogo)
+{
+	const int64 Oggi = ValdorsoFiducia::Giorno(FDateTime::UtcNow().ToUnixTimestamp());
+	CambiaMemoria([IdDialogo, Oggi](FValdorsoTaccuino& T) { return ValdorsoFiducia::Chiacchiera(T, IdDialogo, Oggi); });
+}
+
+void UValdorsoTaccuinoComponent::AnnotaFatto(const FString& Tipo, int64 Quando)
+{
+	CambiaMemoria([&Tipo, Quando](FValdorsoTaccuino& T) { return ValdorsoFiducia::AnnotaFatto(T, Tipo, Quando); });
+}
+
+bool UValdorsoTaccuinoComponent::FattoDaRicordare(FName IdDialogo, int64 Adesso, FValdorsoFatto& OutFatto) const
+{
+	FValdorsoTaccuino Lettura;
+	Lettura.Dialoghi = Ricordi;
+	Lettura.Fatti = Fatti;
+	return ValdorsoFiducia::FattoDaRicordare(Lettura, IdDialogo, Adesso, OutFatto);
+}
+
+void UValdorsoTaccuinoComponent::SegnaRicordato(FName IdDialogo, int64 Quando)
+{
+	CambiaMemoria([IdDialogo, Quando](FValdorsoTaccuino& T) { return ValdorsoFiducia::SegnaRicordato(T, IdDialogo, Quando); });
+}
+
 void UValdorsoTaccuinoComponent::DimenticaDialoghi()
 {
 	if (!GetOwner() || !GetOwner()->HasAuthority() || Ricordi.Num() == 0)
@@ -333,6 +487,12 @@ void UValdorsoTaccuinoComponent::AnnotaIscrizione(const FString& Titolo, const T
 	{
 		AggiornaTitoli();
 		Salva();
+	}
+	// (14/11, v0.2.4) leggere e' un evento (il mattone "leggi" delle storie del Battito)
+	const APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	if (const APawn* Colono = Controllore ? Controllore->GetPawn() : nullptr)
+	{
+		ValdorsoRegistroEventi::Annota(TEXT("Legge"), Colono, nullptr, Colono->GetActorLocation(), Titolo.Left(60));
 	}
 }
 

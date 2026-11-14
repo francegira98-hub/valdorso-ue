@@ -2,6 +2,7 @@
 
 
 #include "ValdorsoPlayerController.h"
+#include "SValdorsoFinestraStoria.h"
 #include "SValdorsoGilda.h"
 #include "SValdorsoScheda.h"
 #include "ValdorsoCrescita.h"
@@ -831,7 +832,9 @@ bool AValdorsoPlayerController::SchermataAperta() const
 	return Pausa.IsValid() || SchermataRegistro.IsValid() || SceltaPersonaggio.IsValid() || Anticamera.IsValid()
 		|| SchermataCodici.IsValid() || SchermataBacheca.IsValid() || SchermataDialogo.IsValid() || SchermataMappa.IsValid()
 		|| SchermataImpostazioni.IsValid() || ValdorsoTaccuino::Aperto(this) || ValdorsoZainoSchermo::Aperto(this) || ValdorsoTesseraSchermo::Aperta(this) || ValdorsoFoto::Aperta(this)
-		|| ValdorsoBottegaSchermo::Aperta(this) || ValdorsoBauleSchermo::Aperto(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || (Chat && Chat->RigaAperta());
+		|| ValdorsoBottegaSchermo::Aperta(this) || ValdorsoBauleSchermo::Aperto(this) || ValdorsoGildaSchermo::Aperta(this) || ValdorsoStaffSchermo::Aperta(this) || ValdorsoSchedaSchermo::Aperta(this) || (Chat && Chat->RigaAperta())
+		// (14/11, v0.2.4) la finestra di una storia del Battito
+		|| ValdorsoFinestraStoria::Aperta(this);
 }
 
 void AValdorsoPlayerController::TastoAggancio()

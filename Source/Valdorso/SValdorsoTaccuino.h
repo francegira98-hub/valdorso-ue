@@ -3,7 +3,8 @@
 // SValdorsoBussola   la striscia in alto al centro: N, NE, E, SE, S, SO, O, NO che scorrono con lo sguardo, una
 //                    tacca ogni 15 gradi e, sotto, i segni dei luoghi già scoperti; il luogo davanti a sé ha il nome e
 //                    la distanza. Compare e sparisce sfumando (nascosta con le schermate aperte e nella modalità foto).
-// SValdorsoTaccuino  la pergamena del taccuino (tasto J): le schede Luoghi, Iscrizioni e Rune.
+// SValdorsoTaccuino  la pergamena del taccuino (tasto J): le schede Luoghi, Iscrizioni e Rune; (14/11, v0.2.4) Storie, le
+//                    storie del Battito (in corso con il passo di adesso, da decidere, finite, lasciate andare).
 // Li apre e li chiude UValdorsoTaccuinoComponent (ValdorsoTaccuino.h).
 
 #pragma once
@@ -73,13 +74,14 @@ public:
 	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 
 private:
-	/** Le schede: 0 Luoghi, 1 Iscrizioni, 2 Rune. */
+	/** Le schede: 0 Luoghi, 1 Iscrizioni, 2 Rune, (14/11) 3 Storie. */
 	void MostraScheda(int32 Nuova);
 	/** Rifà la pagina della scheda aperta (quando si cambia scheda o arriva qualcosa dal server). */
 	void Rifai();
 	TSharedRef<SWidget> PaginaLuoghi();
 	TSharedRef<SWidget> PaginaIscrizioni();
 	TSharedRef<SWidget> PaginaRune();
+	TSharedRef<SWidget> PaginaStorie();
 	TSharedRef<SWidget> Linguetta(int32 Indice, const FText& Testo);
 	/** Su o giù nell'elenco delle iscrizioni (frecce e croce del controller). */
 	void ScorriIscrizioni(int32 Verso);

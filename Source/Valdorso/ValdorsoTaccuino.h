@@ -27,6 +27,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "ValdorsoTaccuinoDati.h"
+#include "ValdorsoBattito.h"
 #include "ValdorsoTaccuino.generated.h"
 
 class APlayerController;
@@ -83,6 +84,53 @@ public:
 
 	/** Per le prove (console Valdorso.Dialoghi.Dimentica): i PNG lo salutano di nuovo come la prima volta. */
 	void DimenticaDialoghi();
+
+	// --- (14/11, v0.2.4) Sul server: la fiducia dei PNG e i fatti che la valle ricorda (ValdorsoFiducia.h) ----------
+	// Stanno nel file del personaggio come la memoria dei dialoghi. Senza un personaggio salvato (l'accesso libero
+	// dell'editor) valgono lo stesso, solo nella memoria del server.
+
+	/** Quanto si fida di lui il PNG di quel dialogo (-100..100). */
+	int32 Fiducia(FName IdDialogo) const;
+
+	/** Cambia la fiducia (e salva, se e' cambiata). */
+	void CambiaFiducia(FName IdDialogo, int32 Delta);
+
+	/** Ha parlato con quel PNG: la prima volta del giorno la fiducia sale un poco. */
+	void Chiacchiera(FName IdDialogo);
+
+	/** Un fatto da ricordare (lo annota il registro eventi: ValdorsoFiducia::DopoAnnota). */
+	void AnnotaFatto(const FString& Tipo, int64 Quando);
+
+	/** Il fatto di cui quel PNG parlerebbe adesso (falso se non ne ha). */
+	bool FattoDaRicordare(FName IdDialogo, int64 Adesso, FValdorsoFatto& OutFatto) const;
+
+	/** Quel PNG ne ha parlato. */
+	void SegnaRicordato(FName IdDialogo, int64 Quando);
+
+	// --- (14/11, v0.2.4) Le storie del Battito (ValdorsoBattito.h): com'e' andata, nel file del personaggio ----------
+
+	/** Sul server: le storie del Battito di questo colono. */
+	const TArray<FValdorsoStoriaViva>& StorieVive() const { return Storie; }
+
+	/** Sul server: una storia nuova o cambiata (e si salva il personaggio). */
+	void CambiaStoria(const FValdorsoStoriaViva& Nuova);
+
+	/** Per le prove (console Valdorso.Battito.Dimentica): le storie ripartono da capo. */
+	void DimenticaStorie();
+
+	/** Sul server: la scheda Storie, come la compone il Battito (va al PC solo se e' cambiata). */
+	void ImpostaPagineStorie(const TArray<FValdorsoStoriaNelTaccuino>& Nuove);
+
+	/** Sul PC: la scheda Storie. */
+	const TArray<FValdorsoStoriaNelTaccuino>& PagineDelleStorie() const { return PagineStorie; }
+
+	/** Dal server: la finestra di una storia, al centro dello schermo (si apre appena non c'e' un'altra schermata). */
+	UFUNCTION(Client, Reliable)
+	void ClientFinestraStoria(const FValdorsoFinestraStoria& Finestra);
+
+	/** La risposta alla finestra: 0 Accetta, 1 Rifiuta, 2 Ci penso. */
+	UFUNCTION(Server, Reliable)
+	void ServerRispostaStoria(const FString& Id, uint8 Cosa);
 
 	// --- Sul PC del giocatore -----------------------------------------------------------------------
 
@@ -144,6 +192,25 @@ private:
 
 	/** (08/11) Solo sul server: la memoria dei dialoghi (non va in rete: il PC non ne ha bisogno). */
 	TArray<FValdorsoRicordoDialogo> Ricordi;
+
+	/** (14/11, v0.2.4) Solo sul server: i fatti che la valle ricorda. */
+	TArray<FValdorsoFatto> Fatti;
+
+	/** (14/11, v0.2.4) Solo sul server: le storie del Battito. */
+	TArray<FValdorsoStoriaViva> Storie;
+
+	/** (14/11) Sul PC: le finestre delle storie arrivate e non ancora mostrate. */
+	TArray<FValdorsoFinestraStoria> FinestreInAttesa;
+
+	/** (14/11) La scheda Storie: solo al giocatore che ne e' il padrone. */
+	UPROPERTY(ReplicatedUsing = OnRep_PagineStorie)
+	TArray<FValdorsoStoriaNelTaccuino> PagineStorie;
+
+	UFUNCTION()
+	void OnRep_PagineStorie();
+
+	/** (14/11) Un lavoro sulla memoria dei dialoghi e sui fatti, con le regole di ValdorsoFiducia: salva se cambia. */
+	void CambiaMemoria(TFunctionRef<bool(FValdorsoTaccuino&)> Cosa);
 
 	/** (08/11) Solo sul server: vero dopo Carica (c'è un personaggio con il suo file). */
 	bool bPersonaggio = false;

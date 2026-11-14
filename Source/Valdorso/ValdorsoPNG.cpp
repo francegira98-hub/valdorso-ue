@@ -7,6 +7,9 @@
 #include "ValdorsoCarovana.h"
 #include "ValdorsoBotteghe.h"
 #include "ValdorsoStorie.h"
+#include "ValdorsoFiducia.h"
+#include "ValdorsoBattito.h"
+#include "ValdorsoStatoColono.h"
 #include "ValdorsoVoci.h"
 #include "ValdorsoGilda.h"
 #include "ValdorsoChat.h"
@@ -22,6 +25,7 @@
 #include "ValdorsoOggetti.h"
 #include "ValdorsoZaino.h"
 #include "Animation/AnimSequence.h"
+#include "CollisionQueryParams.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -72,6 +76,8 @@ namespace
 			Zaino = UValdorsoZainoComponent::Di(Controllore);
 			UValdorsoTaccuinoComponent* Diario = UValdorsoTaccuinoComponent::Di(Controllore);
 			Taccuino = (Diario && Diario->HaPersonaggio()) ? Diario : nullptr;
+			// (14/11, v0.2.4) la fiducia vale anche senza un personaggio salvato (solo nella memoria del server)
+			PerFiducia = Diario;
 		}
 
 		/** Vero se la memoria è quella del file del personaggio. */
@@ -104,9 +110,15 @@ namespace
 			// (08/11) certi segni portano un dono nello zaino (il pane di Bruno, le erbe di Nonna Edda): solo la prima volta
 			FName Dono = NAME_None;
 			int32 Quanti = 0;
-			if (Zaino && !Segno.IsNone() && !HaSegno(IdDialogo, Segno) && ValdorsoOggetti::DonoDelSegno(IdDialogo, Segno, Dono, Quanti))
+			const bool bNuovo = !Segno.IsNone() && !HaSegno(IdDialogo, Segno);
+			if (Zaino && bNuovo && ValdorsoOggetti::DonoDelSegno(IdDialogo, Segno, Dono, Quanti))
 			{
 				Zaino->Dai(Dono, Quanti);
+			}
+			// (14/11, v0.2.4) un passo di una storia, un favore: la fiducia sale
+			if (bNuovo && PerFiducia)
+			{
+				PerFiducia->CambiaFiducia(IdDialogo, ValdorsoFiducia::PerSegno);
 			}
 			if (Taccuino)
 			{
@@ -121,7 +133,29 @@ namespace
 	private:
 		FValdorsoMemoriaPerNome PerNome;
 		UValdorsoTaccuinoComponent* Taccuino = nullptr;
+		UValdorsoTaccuinoComponent* PerFiducia = nullptr;
 		UValdorsoZainoComponent* Zaino = nullptr;
+	};
+
+	/** (14/11, v0.2.4) La riga di un fatto dei giorni passati di cui questo PNG non ha ancora parlato (e da adesso ne ha
+	 *  parlato); vuota se non ce n'e'. */
+	FString PngRicordo(UValdorsoTaccuinoComponent* Taccuino, FName IdDialogo)
+	{
+		FValdorsoFatto Fatto;
+		const int64 Adesso = FDateTime::UtcNow().ToUnixTimestamp();
+		if (!Taccuino || !Taccuino->FattoDaRicordare(IdDialogo, Adesso, Fatto))
+		{
+			return FString();
+		}
+		Taccuino->SegnaRicordato(IdDialogo, Fatto.Quando);
+		return ValdorsoFiducia::RigaDelFatto(Fatto, Adesso, FMath::Rand());
+	}
+
+	/** (14/11) Le animazioni della corsa del manichino (la prima che c'e'). */
+	const TCHAR* const PngCorse[] = {
+		TEXT("/Game/Characters/Mannequins/Anims/Unarmed/Jog/MF_Unarmed_Jog_Fwd.MF_Unarmed_Jog_Fwd"),
+		TEXT("/Game/Characters/Mannequins/Anims/Unarmed/Jog/MM_Jog_Fwd.MM_Jog_Fwd"),
+		TEXT("/Game/Characters/Mannequins/Anims/Unarmed/Walk/MF_Unarmed_Walk_Fwd.MF_Unarmed_Walk_Fwd"),
 	};
 
 	/** (08/11) Chi arriva al nodo Nodo riceve il suo segno, se ne ha uno (vedi ValdorsoDialoghi.h, "I segni"). */
@@ -186,6 +220,11 @@ void AValdorsoPNG::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AValdorsoPNG, Sguardo);
 	DOREPLIFETIME(AValdorsoPNG, Tappa);
 	DOREPLIFETIME(AValdorsoPNG, bVia);
+	DOREPLIFETIME(AValdorsoPNG, Barcollate);
+	DOREPLIFETIME(AValdorsoPNG, Cadute);
+	DOREPLIFETIME(AValdorsoPNG, bATerra);
+	DOREPLIFETIME(AValdorsoPNG, DoveFuga);
+	DOREPLIFETIME(AValdorsoPNG, bInFuga);
 }
 
 void AValdorsoPNG::BeginPlay()
@@ -253,6 +292,11 @@ void AValdorsoPNG::BeginPlay()
 	{
 		OnRep_Tappa();
 	}
+	// (14/11) arrivato mentre scappa: corre anche qui
+	if (!HasAuthority() && bInFuga)
+	{
+		OnRep_Fuga();
+	}
 }
 
 void AValdorsoPNG::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -262,6 +306,8 @@ void AValdorsoPNG::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		Mondo->GetTimerManager().ClearTimer(TimerRitorno);
 		Mondo->GetTimerManager().ClearTimer(TimerSaluti);
 		Mondo->GetTimerManager().ClearTimer(TimerGiornata);
+		Mondo->GetTimerManager().ClearTimer(TimerATerra);
+		Mondo->GetTimerManager().ClearTimer(TimerFuga);
 	}
 	Conversazioni.Reset();
 	Super::EndPlay(EndPlayReason);
@@ -272,9 +318,28 @@ const FValdorsoDialogo* AValdorsoPNG::DatiDialogo() const
 	return ValdorsoDialoghi::Trova(Dialogo);
 }
 
+const FValdorsoDialogo* AValdorsoPNG::DatiDi(const FConversazione& Conversazione) const
+{
+	// (la scelta di una storia del Battito si fa con il suo dialogo: il nome e il titolo)
+	return (Conversazione.Altro.IsNone() || Conversazione.Altro == FName(TEXT("Battito"))) ? DatiDialogo() : ValdorsoDialoghi::Trova(Conversazione.Altro);
+}
+
+FString AValdorsoPNG::NomeBreve() const
+{
+	const FValdorsoDialogo* Dati = DatiDialogo();
+	return Dati ? Dati->NomeBreve : GetName();
+}
+
+bool AValdorsoPNG::Guardia() const
+{
+	const FString Id = Dialogo.ToString();
+	return Id.StartsWith(TEXT("Guardia")) || Id.Equals(TEXT("Livia"), ESearchCase::IgnoreCase);
+}
+
 FText AValdorsoPNG::TestoInterazione(const APawn* Chi) const
 {
-	if (bVia)
+	// (14/11) a terra o in fuga non si parla
+	if (bVia || bATerra || bInFuga)
 	{
 		return FText::GetEmpty();
 	}
@@ -290,15 +355,72 @@ FVector AValdorsoPNG::PuntoInterazione() const
 
 void AValdorsoPNG::Interagisci(APawn* Chi)
 {
-	if (!HasAuthority() || !Chi || bVia)
+	if (!HasAuthority() || !Chi || bVia || bATerra || bInFuga)
 	{
 		return;
 	}
-	const FValdorsoDialogo* Dati = DatiDialogo();
-	APlayerController* Controllore = Cast<APlayerController>(Chi->GetController());
-	if (!Dati || !Controllore)
+	// (14/11, v0.2.4) una storia del Battito aspetta la scelta da lui: quella, al posto del dialogo
+	if (UValdorsoBattito* Battito = UValdorsoBattito::Di(this); Battito && Battito->ApriScelta(this, Chi))
 	{
 		return;
+	}
+	if (const FValdorsoDialogo* Dati = DatiDialogo())
+	{
+		Comincia(Chi, *Dati, NAME_None);
+	}
+}
+
+bool AValdorsoPNG::ApriSceltaStoria(APawn* Chi, const FString& IdStoria, const TArray<FString>& Righe, const TArray<FString>& Scelte)
+{
+	APlayerController* Controllore = Chi ? Cast<APlayerController>(Chi->GetController()) : nullptr;
+	const FValdorsoDialogo* Dati = DatiDialogo();
+	if (!HasAuthority() || !Controllore || Scelte.Num() == 0)
+	{
+		return false;
+	}
+	Chiudi(Controllore, false, FString());
+	FConversazione Nuova;
+	Nuova.Altro = FName(TEXT("Battito"));
+	Nuova.Storia = IdStoria;
+	Nuova.Scelte = FMath::Min(Scelte.Num(), ValdorsoDialoghi::MassimoScelte);
+	Nuova.Passo = ProssimoPasso++;
+	Conversazioni.Add(TWeakObjectPtr<APlayerController>(Controllore), Nuova);
+	if (UWorld* Mondo = GetWorld())
+	{
+		Mondo->GetTimerManager().ClearTimer(TimerRitorno);
+	}
+	GuardaVerso(Chi);
+	FValdorsoBattuta Battuta;
+	Battuta.Chi = Dati ? Dati->Titolo : NomeBreve();
+	Battuta.Passo = Nuova.Passo;
+	for (const FString& Riga : Righe)
+	{
+		Battuta.Righe.Add(Riga.Left(ValdorsoDialoghi::MassimoLettere));
+	}
+	for (int32 i = 0; i < Nuova.Scelte; ++i)
+	{
+		Battuta.Scelte.Add(Scelte[i].Left(ValdorsoDialoghi::MassimoLettere));
+	}
+	Manda(Controllore, Battuta, Dati ? Dati->Id : FName(NAME_None));
+	return true;
+}
+
+bool AValdorsoPNG::ApriDialogo(APawn* Chi, FName IdDialogo)
+{
+	const FValdorsoDialogo* Dati = ValdorsoDialoghi::Trova(IdDialogo);
+	if (!HasAuthority() || !Chi || !Dati)
+	{
+		return false;
+	}
+	return Comincia(Chi, *Dati, IdDialogo);
+}
+
+bool AValdorsoPNG::Comincia(APawn* Chi, const FValdorsoDialogo& Dati, FName IdAltro)
+{
+	APlayerController* Controllore = Cast<APlayerController>(Chi->GetController());
+	if (!Controllore)
+	{
+		return false;
 	}
 	// Via le conversazioni di chi se n'è andato dal server.
 	for (auto It = Conversazioni.CreateIterator(); It; ++It)
@@ -308,20 +430,23 @@ void AValdorsoPNG::Interagisci(APawn* Chi)
 			It.RemoveCurrent();
 		}
 	}
+	// (14/11) una conversazione gia' aperta con lui si chiude prima (cosi' anche l'arresto lasciato a meta' si sa)
+	Chiudi(Controllore, false, FString());
 
 	// (08/11) La memoria di questo colono: nel file del suo personaggio (o, senza, per nome).
 	FPngMemoriaColono Memoria(Chi);
-	const bool bGiaParlato = Memoria.GiaParlato(Dati->Id);
-	Memoria.SegnaParlato(Dati->Id);
+	const bool bGiaParlato = Memoria.GiaParlato(Dati.Id);
+	Memoria.SegnaParlato(Dati.Id);
 
 	FConversazione Nuova;
-	Nuova.Nodo = ValdorsoDialoghi::NodoIniziale(*Dati, bGiaParlato);
+	Nuova.Nodo = ValdorsoDialoghi::NodoIniziale(Dati, bGiaParlato);
 	Nuova.Passo = ProssimoPasso++;
+	Nuova.Altro = IdAltro;
 	Conversazioni.Add(TWeakObjectPtr<APlayerController>(Controllore), Nuova);
-	PngSegnaNodo(*Dati, Nuova.Nodo, Memoria);
+	PngSegnaNodo(Dati, Nuova.Nodo, Memoria);
 
 	ValdorsoRegistroEventi::Annota(TEXT("Dialogo"), Chi, this, GetActorLocation(),
-		FString::Printf(TEXT("parla con %s (%s%s)"), *Dati->NomeBreve, bGiaParlato ? TEXT("di nuovo") : TEXT("la prima volta"),
+		FString::Printf(TEXT("parla con %s (%s%s)"), *Dati.NomeBreve, bGiaParlato ? TEXT("di nuovo") : TEXT("la prima volta"),
 			Memoria.NelFile() ? TEXT("") : TEXT(", senza personaggio salvato")));
 
 	if (UWorld* Mondo = GetWorld())
@@ -329,7 +454,32 @@ void AValdorsoPNG::Interagisci(APawn* Chi)
 		Mondo->GetTimerManager().ClearTimer(TimerRitorno);
 	}
 	GuardaVerso(Chi);
-	Manda(Controllore, ValdorsoDialoghi::Battuta(*Dati, Nuova.Nodo, Nuova.Passo, Memoria));
+	FValdorsoBattuta Prima = ValdorsoDialoghi::Battuta(Dati, Nuova.Nodo, Nuova.Passo, Memoria);
+	// (14/11, v0.2.4) il suo dialogo: la chiacchierata del giorno (la fiducia sale un poco), e in cima i fatti di ieri o
+	// lo sguardo di chi non si fida
+	if (IdAltro.IsNone())
+	{
+		UValdorsoTaccuinoComponent* Taccuino = UValdorsoTaccuinoComponent::Di(Controllore);
+		if (Taccuino)
+		{
+			Taccuino->Chiacchiera(Dati.Id);
+		}
+		const FString Ricordo = PngRicordo(Taccuino, Dati.Id);
+		if (!Ricordo.IsEmpty())
+		{
+			Prima.Righe.Insert(Ricordo, 0);
+		}
+		else if (AValdorsoPlayerState::ColpevoleDi(Chi))
+		{
+			Prima.Righe.Insert(TEXT("(Fa un passo indietro, e ti guarda le mani.)"), 0);
+		}
+		else if (Taccuino && ValdorsoFiducia::Livello(Taccuino->Fiducia(Dati.Id)) == EValdorsoFiducia::Diffidente)
+		{
+			Prima.Righe.Insert(TEXT("(Ti squadra senza un sorriso.)"), 0);
+		}
+	}
+	Manda(Controllore, Prima, IdAltro.IsNone() ? Dati.Id : FName(NAME_None));
+	return true;
 }
 
 void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
@@ -345,7 +495,9 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 		return;
 	}
 	APawn* Colono = Chi->GetPawn();
-	const FValdorsoDialogo* Dati = DatiDialogo();
+	// (14/11) il dialogo di questa conversazione (il suo, o quello dell'arresto)
+	const FValdorsoDialogo* Dati = DatiDi(*Aperta);
+	const FName IdFiducia = Aperta->Altro.IsNone() ? (Dati ? Dati->Id : FName(NAME_None)) : FName(NAME_None);
 	if (!Colono || !Dati)
 	{
 		Chiudi(Chi, true, TEXT("senza colono"));
@@ -360,6 +512,26 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	if (FVector::Dist(Colono->GetActorLocation(), PuntoInterazionePer(Colono)) > RaggioDialogo)
 	{
 		Chiudi(Chi, true, TEXT("si è allontanato"));
+		return;
+	}
+	// (14/11, v0.2.4) la scelta di una storia del Battito: il finale, e com'e' andata
+	if (Aperta->Altro == FName(TEXT("Battito")))
+	{
+		const FString IdStoria = Aperta->Storia;
+		const int32 PassoStoria = ProssimoPasso++;
+		FString Esito;
+		UValdorsoBattito* Battito = UValdorsoBattito::Di(this);
+		if (Scelta < 0 || Scelta >= Aperta->Scelte || !Battito || !Battito->Scegli(Chi, IdStoria, Scelta, Esito))
+		{
+			Chiudi(Chi, true, FString());
+			return;
+		}
+		FValdorsoBattuta Fine;
+		Fine.Chi = Dati->Titolo;
+		Fine.Passo = PassoStoria;
+		Fine.Righe.Add(Esito.IsEmpty() ? FString(TEXT("(Annuisce, in silenzio.)")) : Esito.Left(ValdorsoDialoghi::MassimoLettere));
+		Fine.bFine = true;
+		Manda(Chi, Fine, Dati->Id);
 		return;
 	}
 
@@ -391,6 +563,11 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	}
 	// (11/11, v0.1.8) le storie dei volti (ValdorsoStorie.h): il sasso di Tobia, l'incudine di Marta, la veglia
 	if (ValdorsoStorie::EventoDialogo(Evento, Chi, this, Prossimo))
+	{
+		Evento = NAME_None;
+	}
+	// (14/11, v0.2.4) l'arresto: la multa (senza monete si va a "non_basta") o la cella (ValdorsoFiducia.h)
+	if (ValdorsoFiducia::EventoDialogo(Evento, Chi, this, Prossimo))
 	{
 		Evento = NAME_None;
 	}
@@ -436,20 +613,27 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	Aperta->Nodo = Prossimo;
 	Aperta->Passo = ProssimoPasso++;
 	GuardaVerso(Colono);
-	Manda(Chi, ValdorsoDialoghi::Battuta(*Dati, Aperta->Nodo, Aperta->Passo, Memoria));
+	Manda(Chi, ValdorsoDialoghi::Battuta(*Dati, Aperta->Nodo, Aperta->Passo, Memoria), IdFiducia);
 	if (Bancone)
 	{
 		Bancone->ApriBancone(this);
 	}
 }
 
-void AValdorsoPNG::Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta)
+void AValdorsoPNG::Manda(APlayerController* Chi, const FValdorsoBattuta& Battuta, FName IdFiducia)
 {
 	if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(Chi))
 	{
 		// (11/11, v0.1.6) i segnaposto: le voci vere della locanda ({voci}) e le righe dell'Atto I (ValdorsoVoci.h)
 		FValdorsoBattuta Piena = Battuta;
 		ValdorsoVoci::Riempi(GetWorld(), Piena.Righe);
+		// (14/11, v0.2.4) quanto si fida di te, a parole, sotto il nome
+		if (!IdFiducia.IsNone() && !Piena.bChiudi)
+		{
+			const EValdorsoFiducia Livello = ValdorsoFiducia::Livello(ValdorsoFiducia::DiColono(Chi, IdFiducia));
+			Piena.Fiducia = ValdorsoFiducia::Parola(Livello);
+			Piena.GradoFiducia = static_cast<uint8>(Livello);
+		}
 		Giocatore->ClientMostraDialogo(this, Piena);
 	}
 	// L'ultima battuta: sul server la conversazione è finita (il PC la legge e si congeda da solo).
@@ -468,7 +652,16 @@ void AValdorsoPNG::Chiudi(APlayerController* Chi, bool bAvvisa, const FString& C
 		return;
 	}
 	const int32 Passo = Aperta->Passo;
+	const bool bArresto = Aperta->Altro == FName(ValdorsoFiducia::DialogoArresto);
 	Conversazioni.Remove(Chiave);
+	// (14/11, v0.2.4) l'arresto chiuso: se la colpa c'e' ancora (e' scappato dal dialogo), lo riprendono fra poco
+	if (bArresto && Chi)
+	{
+		if (AValdorsoPlayerState* Stato = Chi->GetPlayerState<AValdorsoPlayerState>())
+		{
+			Stato->ArrestoChiuso();
+		}
+	}
 	if (APawn* Colono = Chi ? Chi->GetPawn() : nullptr; Colono && !Come.IsEmpty())
 	{
 		ValdorsoRegistroEventi::Annota(TEXT("Dialogo"), Colono, this, GetActorLocation(), Come);
@@ -536,21 +729,37 @@ void AValdorsoPNG::OnRep_Sguardo()
 void AValdorsoPNG::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (!bSguardoValido)
+	bool bAncora = false;
+	// (14/11) in fuga guarda dove corre; altrimenti si gira piano verso lo sguardo voluto
+	if (bInFuga)
+	{
+		// (alla fine della fuga, un giro in piu': lo sguardo torna al suo posto)
+		bAncora = MuoviFuga(DeltaSeconds) || !bInFuga;
+	}
+	else if (bSguardoValido)
+	{
+		const float Adesso = static_cast<float>(GetActorRotation().Yaw);
+		const float Manca = FMath::FindDeltaAngleDegrees(Adesso, Sguardo);
+		const float Passo = VelocitaGiro * DeltaSeconds;
+		if (FMath::Abs(Manca) <= Passo)
+		{
+			SetActorRotation(FRotator(0.f, Sguardo, 0.f));
+		}
+		else
+		{
+			SetActorRotation(FRotator(0.f, Adesso + FMath::Sign(Manca) * Passo, 0.f));
+			bAncora = true;
+		}
+	}
+	// (14/11) il corpo che barcolla o cade e si rialza
+	if (AnimaCorpo())
+	{
+		bAncora = true;
+	}
+	if (!bAncora)
 	{
 		SetActorTickEnabled(false);
-		return;
 	}
-	const float Adesso = static_cast<float>(GetActorRotation().Yaw);
-	const float Manca = FMath::FindDeltaAngleDegrees(Adesso, Sguardo);
-	const float Passo = VelocitaGiro * DeltaSeconds;
-	if (FMath::Abs(Manca) <= Passo)
-	{
-		SetActorRotation(FRotator(0.f, Sguardo, 0.f));
-		SetActorTickEnabled(false);
-		return;
-	}
-	SetActorRotation(FRotator(0.f, Adesso + FMath::Sign(Manca) * Passo, 0.f));
 }
 
 // --- (10/11) I saluti a chi passa ----------------------------------------------------------------------------------
@@ -559,7 +768,7 @@ void AValdorsoPNG::Saluta()
 {
 	UWorld* Mondo = GetWorld();
 	const FValdorsoDialogo* Dati = DatiDialogo();
-	if (!HasAuthority() || !Mondo || !Dati || bVia)
+	if (!HasAuthority() || !Mondo || !Dati || bVia || bATerra || bInFuga)
 	{
 		return;
 	}
@@ -584,11 +793,37 @@ void AValdorsoPNG::Saluta()
 		{
 			continue;
 		}
-		const FString Frase = ValdorsoDialoghi::Saluto(Dati->Id, Ora, FMath::Rand());
+		FString Frase = ValdorsoDialoghi::Saluto(Dati->Id, Ora, FMath::Rand());
 		Salutati.Add(TWeakObjectPtr<APlayerController>(Giocatore), Adesso);
 		if (Frase.IsEmpty())
 		{
 			continue;
+		}
+		// (14/11, v0.2.4) chi e' colpevole, i fatti di ieri, la fiducia (i freddi e gli amici)
+		if (AValdorsoPlayerState::ColpevoleDi(Colono))
+		{
+			Frase = ValdorsoFiducia::SalutoAlColpevole(FMath::Rand());
+		}
+		else
+		{
+			UValdorsoTaccuinoComponent* Taccuino = UValdorsoTaccuinoComponent::Di(Giocatore);
+			const FString Ricordo = PngRicordo(Taccuino, Dati->Id);
+			if (!Ricordo.IsEmpty())
+			{
+				Frase = Ricordo;
+			}
+			else if (Taccuino)
+			{
+				const EValdorsoFiducia Livello = ValdorsoFiducia::Livello(Taccuino->Fiducia(Dati->Id));
+				const bool bCambia = Livello == EValdorsoFiducia::Diffidente
+					|| ((Livello == EValdorsoFiducia::Amico || Livello == EValdorsoFiducia::DiFamiglia) && FMath::RandBool());
+				const APlayerState* SuoStato = Giocatore->PlayerState.Get();
+				const FString Suo = bCambia ? ValdorsoFiducia::SalutoDellaFiducia(Livello, SuoStato ? SuoStato->GetPlayerName() : FString(), FMath::Rand()) : FString();
+				if (!Suo.IsEmpty())
+				{
+					Frase = Suo;
+				}
+			}
 		}
 		if (UValdorsoChatComponent* Chat = UValdorsoChatComponent::Di(Giocatore))
 		{
@@ -645,7 +880,7 @@ namespace ValdorsoGiornata
 void AValdorsoPNG::GiroGiornata()
 {
 	UWorld* Mondo = GetWorld();
-	if (!HasAuthority() || !Mondo || Conversazioni.Num() > 0)
+	if (!HasAuthority() || !Mondo || Conversazioni.Num() > 0 || bInFuga || bATerra)
 	{
 		return;
 	}
@@ -727,18 +962,361 @@ void AValdorsoPNG::OnRep_Tappa()
 			Sguardo = Ora.Gradi;
 		}
 	}
-	if (Corpo && GetNetMode() != NM_DedicatedServer)
+	RimettiMovenza();
+}
+
+void AValdorsoPNG::RimettiMovenza()
+{
+	bCorre = false;
+	if (!Corpo || GetNetMode() == NM_DedicatedServer)
 	{
-		UAnimSequence* Movenza = nullptr;
-		if (!Ora.Movenza.IsNone())
+		return;
+	}
+	UAnimSequence* Movenza = nullptr;
+	if (Giornata.IsValidIndex(Tappa) && !Giornata[Tappa].Movenza.IsNone())
+	{
+		const FString Nome = Giornata[Tappa].Movenza.ToString();
+		Movenza = LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("/Game/Mixamo/Gesti/%s.%s"), *Nome, *Nome), nullptr,
+			LOAD_NoWarn | LOAD_Quiet);
+	}
+	if (Movenza || Riposo)
+	{
+		Corpo->PlayAnimation(Movenza ? Movenza : Riposo.Get(), true);
+	}
+}
+
+// ------------------------------------------------------------------------- (14/11, v0.2.4) colpito, a terra, in fuga
+
+bool AValdorsoPNG::Colpito(AActor* Da, float Danno)
+{
+	UWorld* Mondo = GetWorld();
+	if (!HasAuthority() || !Mondo || bVia)
+	{
+		return false;
+	}
+	const double Adesso = Mondo->GetTimeSeconds();
+	APawn* Colono = Cast<APawn>(Da);
+	APlayerController* Giocatore = Colono ? Cast<APlayerController>(Colono->GetController()) : nullptr;
+	// chi gli stava parlando e lo colpisce: il dialogo si chiude
+	if (Giocatore && Conversazioni.Contains(TWeakObjectPtr<APlayerController>(Giocatore)))
+	{
+		Chiudi(Giocatore, true, TEXT("lo ha colpito"));
+	}
+	if (Adesso - DannoDa > ValdorsoFiducia::SecondiAccumulo)
+	{
+		DannoRecente = 0.f;
+	}
+	DannoRecente += FMath::Max(0.f, Danno);
+	DannoDa = Adesso;
+	if (!bATerra)
+	{
+		if (ValdorsoFiducia::Cade(DannoRecente, Danno))
 		{
-			const FString Nome = Ora.Movenza.ToString();
-			Movenza = LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("/Game/Mixamo/Gesti/%s.%s"), *Nome, *Nome), nullptr,
-				LOAD_NoWarn | LOAD_Quiet);
+			// (se stava scappando, cade li' dov'e')
+			if (bInFuga)
+			{
+				DoveFuga = GetActorLocation();
+			}
+			bATerra = true;
+			++Cadute;
+			DannoRecente = 0.f;
+			GetWorldTimerManager().SetTimer(TimerATerra, this, &AValdorsoPNG::Rialza, ValdorsoFiducia::SecondiATerra + 1.25f, false);
+			OnRep_Cadute();
 		}
-		if (Movenza || Riposo)
+		else
 		{
-			Corpo->PlayAnimation(Movenza ? Movenza : Riposo.Get(), true);
+			++Barcollate;
+			OnRep_Barcollate();
+		}
+		ForceNetUpdate();
+	}
+	if (Colono && Giocatore)
+	{
+		ValdorsoFiducia::Crimine(Colono, this);
+	}
+	else if (Da)
+	{
+		GuardaVerso(Da);
+		ForseTornaAlPosto();
+	}
+	return true;
+}
+
+void AValdorsoPNG::Rialza()
+{
+	bATerra = false;
+	ForceNetUpdate();
+}
+
+void AValdorsoPNG::Spaventa(APawn* Colono, bool bVittima)
+{
+	UWorld* Mondo = GetWorld();
+	if (!HasAuthority() || !Mondo || bVia)
+	{
+		return;
+	}
+	const double Adesso = Mondo->GetTimeSeconds();
+	if (Adesso - UltimoGrido >= 6.0)
+	{
+		UltimoGrido = Adesso;
+		Grida(ValdorsoFiducia::Grido(bVittima, Guardia(), FMath::Rand()));
+	}
+	if (!bVittima && !Guardia() && !bATerra && Conversazioni.Num() == 0 && Colono
+		&& FVector::Dist(Colono->GetActorLocation(), GetActorLocation()) <= ValdorsoFiducia::RaggioFuga)
+	{
+		Fuggi(Colono);
+		return;
+	}
+	if (!bInFuga && Colono)
+	{
+		GuardaVerso(Colono);
+		ForseTornaAlPosto();
+	}
+}
+
+void AValdorsoPNG::Grida(const FString& Frase)
+{
+	UWorld* Mondo = GetWorld();
+	if (!Mondo || Frase.IsEmpty())
+	{
+		return;
+	}
+	const FString Nome = NomeBreve();
+	for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* Giocatore = It->Get();
+		const APawn* Suo = Giocatore ? Giocatore->GetPawn() : nullptr;
+		if (!Suo || FVector::Dist(Suo->GetActorLocation(), GetActorLocation()) > ValdorsoFiducia::RaggioGrida)
+		{
+			continue;
+		}
+		if (UValdorsoChatComponent* Chat = UValdorsoChatComponent::Di(Giocatore))
+		{
+			Chat->ClientSenti(Nome, Frase, false);
 		}
 	}
+}
+
+void AValdorsoPNG::Fuggi(const AActor* Da)
+{
+	UWorld* Mondo = GetWorld();
+	if (!HasAuthority() || !Mondo || !Da || bInFuga)
+	{
+		return;
+	}
+	const FVector Qui = GetActorLocation();
+	FVector Lontano = (Qui - Da->GetActorLocation()).GetSafeNormal2D();
+	if (Lontano.IsNearlyZero())
+	{
+		Lontano = -GetActorForwardVector().GetSafeNormal2D();
+	}
+	FVector Meta = Qui + Lontano * ValdorsoFiducia::DistanzaFuga;
+	FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoPngFuga), false, this);
+	Parametri.AddIgnoredActor(Da);
+	// un muro (o un altro) in mezzo: si ferma prima
+	FHitResult Muro;
+	const FVector Su(0.f, 0.f, 25.f);
+	if (Mondo->SweepSingleByChannel(Muro, Qui + Su, Meta + Su, FQuat::Identity, ECC_Pawn,
+		FCollisionShape::MakeCapsule(PngRaggio, PngMezzaAltezza * 0.75f), Parametri))
+	{
+		Meta = Muro.Location - Su;
+	}
+	// i piedi sul terreno
+	FHitResult Terra;
+	if (Mondo->LineTraceSingleByChannel(Terra, Meta + FVector(0.f, 0.f, 200.f), Meta - FVector(0.f, 0.f, 500.f), ECC_Visibility, Parametri))
+	{
+		Meta.Z = Terra.ImpactPoint.Z + PngMezzaAltezza;
+	}
+	if (FVector::Dist2D(Meta, Qui) < 100.f)
+	{
+		GuardaVerso(Da);
+		ForseTornaAlPosto();
+		return;
+	}
+	PostoFuga = Qui;
+	bRitornoFuga = false;
+	DoveFuga = Meta;
+	bInFuga = true;
+	ForceNetUpdate();
+	OnRep_Fuga();
+	GetWorldTimerManager().SetTimer(TimerFuga, this, &AValdorsoPNG::RitornaDallaFuga, ValdorsoFiducia::SecondiFuga, false);
+}
+
+void AValdorsoPNG::RitornaDallaFuga()
+{
+	if (!HasAuthority() || !bInFuga)
+	{
+		return;
+	}
+	bRitornoFuga = true;
+	DoveFuga = PostoFuga;
+	ForceNetUpdate();
+	OnRep_Fuga();
+}
+
+bool AValdorsoPNG::MuoviFuga(float DeltaSeconds)
+{
+	const FVector Qui = GetActorLocation();
+	const FVector Verso = FVector(DoveFuga) - Qui;
+	const float Distanza = static_cast<float>(Verso.Size());
+	if (Distanza < 5.f)
+	{
+		SetActorLocation(DoveFuga);
+		if (bCorre)
+		{
+			RimettiMovenza();
+		}
+		// al suo posto: la fuga e' finita (lo decide il server)
+		if (HasAuthority() && bRitornoFuga)
+		{
+			bRitornoFuga = false;
+			bInFuga = false;
+			Sguardo = SguardoIniziale;
+			ForceNetUpdate();
+			OnRep_Fuga();
+			OnRep_Sguardo();
+		}
+		return false;
+	}
+	const float Passo = FMath::Min(ValdorsoFiducia::VelocitaFuga * DeltaSeconds, Distanza);
+	SetActorLocation(Qui + Verso / Distanza * Passo);
+	if (Verso.SizeSquared2D() > 1.f)
+	{
+		SetActorRotation(FRotator(0.f, static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Verso.Y, Verso.X))), 0.f));
+	}
+	return true;
+}
+
+void AValdorsoPNG::OnRep_Fuga()
+{
+	if (!HasActorBegunPlay())
+	{
+		return;
+	}
+	SetActorTickEnabled(true);
+	if (!bInFuga)
+	{
+		// arrivato al suo posto (sul PC: dove l'ha messo il server, se la fuga l'ha vista; chi arriva dopo no)
+		if (bVistaFuga || HasAuthority())
+		{
+			SetActorLocation(DoveFuga);
+			RimettiMovenza();
+		}
+		bVistaFuga = false;
+		bSguardoValido = true;
+		return;
+	}
+	bVistaFuga = true;
+	if (!Corpo || GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	if (!Corsa)
+	{
+		for (const TCHAR* Percorso : PngCorse)
+		{
+			Corsa = LoadObject<UAnimSequence>(nullptr, Percorso, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			if (Corsa)
+			{
+				break;
+			}
+		}
+	}
+	if (Corsa)
+	{
+		Corpo->PlayAnimation(Corsa, true);
+		bCorre = true;
+	}
+}
+
+void AValdorsoPNG::OnRep_Barcollate()
+{
+	if (!HasActorBegunPlay() || !GetWorld())
+	{
+		return;
+	}
+	if (CadutaDa < 0.0)
+	{
+		BarcolloDa = GetWorld()->GetTimeSeconds();
+	}
+	SetActorTickEnabled(true);
+}
+
+void AValdorsoPNG::OnRep_Cadute()
+{
+	if (!HasActorBegunPlay() || !GetWorld())
+	{
+		return;
+	}
+	CadutaDa = GetWorld()->GetTimeSeconds();
+	BarcolloDa = -1.0;
+	SetActorTickEnabled(true);
+}
+
+bool AValdorsoPNG::AnimaCorpo()
+{
+	UWorld* Mondo = GetWorld();
+	if (!Corpo || !Mondo || GetNetMode() == NM_DedicatedServer)
+	{
+		CadutaDa = -1.0;
+		BarcolloDa = -1.0;
+		return false;
+	}
+	const double Adesso = Mondo->GetTimeSeconds();
+	float Angolo = 0.f;
+	bool bAncora = false;
+	if (CadutaDa >= 0.0)
+	{
+		// all'indietro in un attimo, giu' per un po', poi su piano (i gradi attorno ai piedi)
+		constexpr float Giu = 0.35f;
+		constexpr float Su = 0.9f;
+		constexpr float Steso = -85.f;
+		const float T = static_cast<float>(Adesso - CadutaDa);
+		if (T < Giu)
+		{
+			Angolo = Steso * FMath::InterpEaseIn(0.f, 1.f, T / Giu, 2.f);
+			bAncora = true;
+		}
+		else if (T < Giu + ValdorsoFiducia::SecondiATerra)
+		{
+			Angolo = Steso;
+			bAncora = true;
+		}
+		else if (T < Giu + ValdorsoFiducia::SecondiATerra + Su)
+		{
+			Angolo = Steso * (1.f - FMath::InterpEaseInOut(0.f, 1.f, (T - Giu - ValdorsoFiducia::SecondiATerra) / Su, 2.f));
+			bAncora = true;
+		}
+		else
+		{
+			CadutaDa = -1.0;
+		}
+	}
+	else if (BarcolloDa >= 0.0)
+	{
+		const float T = static_cast<float>(Adesso - BarcolloDa);
+		if (T < 0.12f)
+		{
+			Angolo = -12.f * (T / 0.12f);
+			bAncora = true;
+		}
+		else if (T < 0.45f)
+		{
+			Angolo = -12.f * (1.f - (T - 0.12f) / 0.33f);
+			bAncora = true;
+		}
+		else
+		{
+			BarcolloDa = -1.0;
+		}
+	}
+	if (!bAncora && !bPiegato)
+	{
+		return false;
+	}
+	// il manichino guarda la X dell'attore con -90 di imbardata (vedi il costruttore): la piega e' attorno alla Y
+	const FQuat Base = FRotator(0.f, -90.f, 0.f).Quaternion();
+	Corpo->SetRelativeRotation(FQuat(FVector::YAxisVector, FMath::DegreesToRadians(Angolo)) * Base);
+	bPiegato = bAncora;
+	return bAncora;
 }

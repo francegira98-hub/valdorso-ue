@@ -15,6 +15,11 @@
 #include "ValdorsoEffetti.h"
 #include "ValdorsoEtichette.h"
 #include "ValdorsoLupi.h"
+#include "ValdorsoPNG.h"
+#include "ValdorsoFiducia.h"
+#include "ValdorsoStatoColono.h"
+#include "GameFramework/GameStateBase.h"
+#include "GameFramework/PlayerState.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoTemaUI.h"
@@ -248,6 +253,21 @@ namespace ValdorsoCombattimento
 		if (const AValdorsoScheletro* Ossa = Cast<AValdorsoScheletro>(A); Ossa && !Ossa->Vivo())
 		{
 			return false;
+		}
+		// (14/11, v0.2.4 "PNG veri") un PNG: non muore mai (barcolla, o cade e si rialza), ma chi lo colpisce e' colpevole
+		// (ValdorsoFiducia.h). Niente scherma, niente crescita (non si cresce picchiando i paesani).
+		if (AValdorsoPNG* Paesano = Cast<AValdorsoPNG>(A))
+		{
+			if (!Paesano->Colpito(Da, Danno))
+			{
+				return false;
+			}
+			ValdorsoRegistroEventi::Annota(TEXT("Colpo"), Da, A, Punto, FString::Printf(TEXT("%s, a un PNG, danno %.0f"), NomeSuono(Tipo) + 8, Danno));
+			if (UValdorsoReazioniComponent* Reazioni = UValdorsoReazioniComponent::Di(Da))
+			{
+				Reazioni->MulticastColpito(Da, A, Punto, static_cast<uint8>(Tipo));
+			}
+			return true;
 		}
 		UWorld* Mondo = A->GetWorld();
 		UAbilitySystemComponent* SuoContenitore = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(A);
@@ -647,6 +667,38 @@ int32 SValdorsoBersaglio::OnPaint(const FPaintArgs& Args, const FGeometry& Allot
 					FSlateLayoutTransform(1.f, FVector2D(DoveGuardia))), Posta, CarattereGuardia, ESlateDrawEffect::None,
 					ValdorsoTema::OroChiaro());
 			}
+		}
+	}
+	// (14/11, v0.2.4) i colpevoli: il nome rosso sopra la testa, per tutti (come il cursore arancione di SAO)
+	const UWorld* MondoQui = Chi->GetWorld();
+	const AGameStateBase* Stato = MondoQui ? MondoQui->GetGameState() : nullptr;
+	const APawn* Mio = Chi->GetPawn();
+	if (Stato && Mio && FSlateApplication::IsInitialized())
+	{
+		const FSlateFontInfo CarattereNome = FCoreStyle::GetDefaultFontStyle("Bold", 12);
+		for (const APlayerState* Altro : Stato->PlayerArray)
+		{
+			const AValdorsoPlayerState* Suo = Cast<AValdorsoPlayerState>(Altro);
+			const APawn* SuoCorpo = Suo ? Suo->GetPawn() : nullptr;
+			if (!Suo || !Suo->Colpevole() || !SuoCorpo
+				|| FVector::Dist(SuoCorpo->GetActorLocation(), Mio->GetActorLocation()) > ValdorsoFiducia::RaggioNomeRosso)
+			{
+				continue;
+			}
+			FVector2f P;
+			if (!SulloSchermo(SuoCorpo, 140.f, P))
+			{
+				continue;
+			}
+			const FText Nome = FText::FromString(Suo->GetPlayerName());
+			const FVector2D Misura = FSlateApplication::Get().GetRenderer()->GetFontMeasureService()->Measure(Nome, CarattereNome);
+			const FVector2f Dove = P + FVector2f(-static_cast<float>(Misura.X) * 0.5f, -static_cast<float>(Misura.Y));
+			// un'ombra scura sotto, perche' si legga anche sul cielo
+			FSlateDrawElement::MakeText(OutDrawElements, LayerId, AllottedGeometry.ToPaintGeometry(Misura,
+				FSlateLayoutTransform(1.f, FVector2D(Dove + FVector2f(1.f, 1.f)))), Nome, CarattereNome, ESlateDrawEffect::None,
+				FLinearColor(0.f, 0.f, 0.f, 0.75f));
+			FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(Misura,
+				FSlateLayoutTransform(1.f, FVector2D(Dove))), Nome, CarattereNome, ESlateDrawEffect::None, FLinearColor(FColor(0xe0, 0x44, 0x2e)));
 		}
 	}
 	// la barra di chi hai colpito: senza numeri, solo quanto gli resta

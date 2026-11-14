@@ -188,6 +188,14 @@ struct FValdorsoBattuta
 	/** Il server ha chiuso la conversazione (il colono si è allontanato, o ha scelto di andarsene): via la pergamena. */
 	UPROPERTY()
 	bool bChiudi = false;
+
+	/** (14/11, v0.2.4) Quanto si fida di te, a parole ("Cordiale"), sotto il nome; vuoto = niente (ValdorsoFiducia.h). */
+	UPROPERTY()
+	FString Fiducia;
+
+	/** (14/11) Il livello della fiducia (EValdorsoFiducia), per il colore della parola. */
+	UPROPERTY()
+	uint8 GradoFiducia = 1;
 };
 
 /**

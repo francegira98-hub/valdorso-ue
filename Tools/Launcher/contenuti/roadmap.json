@@ -201,7 +201,67 @@
     "Le armi si consumano e si riparano; si forgiano da sé",
     "L'arco e le frecce"
    ],
-   "data": ""
+   "data": "2026-11-14"
+  },
+  {
+   "versione": "0.2.4",
+   "nome": "PNG veri",
+   "stato": "fatta",
+   "data": "",
+   "voci": [
+    "La valle che ricorda e la fiducia a parole",
+    "Gli abitanti si colpiscono ma non muoiono",
+    "La colpa, le guardie, la multa e la cella",
+    "Le storie del Battito: la finestra, Accetta, Ci penso o Rifiuta",
+    "Il custode del Battito, per lo staff"
+   ]
+  },
+  {
+   "versione": "0.2.5",
+   "nome": "La valle più bella",
+   "stato": "prossima",
+   "voci": [
+    "Il villaggio con i pezzi nuovi di Fab",
+    "Case, tavole, sacchi e oggetti",
+    "Il bosco e le valli antiche"
+   ]
+  },
+  {
+   "versione": "0.2.6",
+   "nome": "L'armaiolo e la Loggia",
+   "stato": "futura",
+   "voci": [
+    "Le armature",
+    "L'armaiolo",
+    "La Loggia degli artigiani"
+   ]
+  },
+  {
+   "versione": "0.2.7",
+   "nome": "Lettere e sigilli",
+   "stato": "futura",
+   "voci": [
+    "Le lettere e la posta",
+    "I sigilli di ceralacca",
+    "Contratti, debiti e prestiti"
+   ]
+  },
+  {
+   "versione": "0.2.8",
+   "nome": "Le stagioni",
+   "stato": "futura",
+   "voci": [
+    "Le quattro stagioni, con il tempo che conta"
+   ]
+  },
+  {
+   "versione": "0.2.9",
+   "nome": "Zone del Battito e lapidi",
+   "stato": "futura",
+   "voci": [
+    "Le zone tasca e le Eco",
+    "Le lapidi e la morte sensata degli abitanti"
+   ]
   },
   {
    "versione": "0.3",

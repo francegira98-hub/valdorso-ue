@@ -1,6 +1,7 @@
 // Valdorso - Bussola e taccuino di viaggio: i dati e i conti (vedi il .h). Scritto da Claude il 07/11/2026.
 
 #include "ValdorsoTaccuinoDati.h"
+#include "ValdorsoFiducia.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoTaccuino"
 
@@ -297,8 +298,40 @@ namespace ValdorsoTaccuino
 			{
 				TaccuinoAggiungiSegno(*Unito, TaccuinoNomeRicordo(Segno));
 			}
+			// (14/11, v0.2.4) la fiducia: dei doppioni vale quella piu' lontana da zero (di solito il piu' recente non
+			// esiste: e' solo prudenza), e le date piu' nuove
+			const int32 Letta = FMath::Clamp(Letto.Fiducia, ValdorsoFiducia::Minima, ValdorsoFiducia::Massima);
+			if (FMath::Abs(Letta) > FMath::Abs(Unito->Fiducia))
+			{
+				Unito->Fiducia = Letta;
+			}
+			Unito->UltimoGiorno = FMath::Max(Unito->UltimoGiorno, Letto.UltimoGiorno);
+			Unito->UltimoRicordo = FMath::Max(Unito->UltimoRicordo, Letto.UltimoRicordo);
 		}
 		Taccuino.Dialoghi = MoveTemp(Ricordi);
+		// (14/11, v0.2.4) i fatti che la valle ricorda
+		ValdorsoFiducia::SistemaFatti(Taccuino.Fatti);
+		// (14/11, v0.2.4) le storie del Battito: via quelle senza id e i doppioni (vale la prima), al massimo 300
+		TArray<FValdorsoStoriaViva> Storie;
+		for (const FValdorsoStoriaViva& Letta : Taccuino.Storie)
+		{
+			const FString Id = Letta.Id.TrimStartAndEnd().Left(128);
+			if (Id.IsEmpty() || Storie.ContainsByPredicate([&Id](const FValdorsoStoriaViva& S) { return S.Id.Equals(Id, ESearchCase::IgnoreCase); }))
+			{
+				continue;
+			}
+			FValdorsoStoriaViva& Pulita = Storie.Add_GetRef(Letta);
+			Pulita.Id = Id;
+			Pulita.Seme = Letta.Seme.Left(128);
+			Pulita.Stato = FMath::Min<uint8>(Letta.Stato, 5);
+			Pulita.Passo = FMath::Clamp(Letta.Passo, 0, 64);
+			Pulita.Finale = FMath::Clamp(Letta.Finale, 0, 16);
+		}
+		while (Storie.Num() > 300)
+		{
+			Storie.RemoveAt(0);
+		}
+		Taccuino.Storie = MoveTemp(Storie);
 	}
 
 	bool HaParlato(const FValdorsoTaccuino& Taccuino, FName IdDialogo)
