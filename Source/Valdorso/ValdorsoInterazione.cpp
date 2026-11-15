@@ -10,6 +10,9 @@
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoGilda.h"
 #include "ValdorsoCombattimento.h"
+#include "ValdorsoStaff.h"
+#include "ValdorsoZaino.h"
+#include "ValdorsoPermessi.h"
 #include "Sound/SoundBase.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/OverlapResult.h"
@@ -22,6 +25,29 @@
 #include "UObject/ConstructorHelpers.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoInterazione"
+
+namespace ValdorsoChiavi
+{
+	bool Ha(const APawn* Chi, FName Chiave)
+	{
+		if (!Chi || Chiave.IsNone())
+		{
+			return false;
+		}
+		const UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::DelCorpo(Chi);
+		return Zaino && ValdorsoZaino::Conta(Zaino->Contenuto(), Chiave) > 0;
+	}
+
+	bool PuoAprire(const APawn* Chi, FName Chiave)
+	{
+		if (Ha(Chi, Chiave))
+		{
+			return true;
+		}
+		const APlayerController* Controllore = Chi ? Cast<APlayerController>(Chi->GetController()) : nullptr;
+		return Controllore && (UValdorsoStaffComponent::PermessiDi(Controllore) & ValdorsoPermessi::Mondo) != 0;
+	}
+}
 
 namespace ValdorsoInterazione
 {
@@ -201,6 +227,7 @@ void AValdorsoPorta::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 FText AValdorsoPorta::TestoApri() const { return LOCTEXT("Apri", "Apri la porta"); }
 FText AValdorsoPorta::TestoChiudi() const { return LOCTEXT("Chiudi", "Chiudi la porta"); }
 FText AValdorsoPorta::TestoAChiave() const { return LOCTEXT("AChiave", "La porta è chiusa a chiave"); }
+FText AValdorsoPorta::TestoConChiave() const { return LOCTEXT("ConChiave", "Apri con la chiave"); }
 
 FText AValdorsoPorta::TestoInterazione(const APawn* Chi) const
 {
@@ -208,7 +235,12 @@ FText AValdorsoPorta::TestoInterazione(const APawn* Chi) const
 	{
 		return TestoChiudi();
 	}
-	return bChiusaAChiave ? TestoAChiave() : TestoApri();
+	if (!bChiusaAChiave)
+	{
+		return TestoApri();
+	}
+	// (16/11) chi ha la chiave giusta nello zaino lo legge subito
+	return ValdorsoChiavi::Ha(Chi, Chiave) ? TestoConChiave() : TestoAChiave();
 }
 
 FVector AValdorsoPorta::PuntoInterazione() const
@@ -225,9 +257,15 @@ void AValdorsoPorta::Interagisci(APawn* Chi)
 	}
 	if (Verso == 0 && bChiusaAChiave)
 	{
-		ValdorsoRegistroEventi::Annota(TEXT("PortaChiusa"), Chi, this, GetActorLocation(), TEXT("ha provato ad aprire"));
+		// (16/11, v0.2.6) con la chiave giusta (o per lo staff) si apre: la serratura scatta e poi la porta gira
+		if (!ValdorsoChiavi::PuoAprire(Chi, Chiave))
+		{
+			ValdorsoRegistroEventi::Annota(TEXT("PortaChiusa"), Chi, this, GetActorLocation(), TEXT("ha provato ad aprire"));
+			MulticastAChiave();
+			return;
+		}
+		ValdorsoRegistroEventi::Annota(TEXT("PortaChiave"), Chi, this, GetActorLocation(), Chiave.ToString());
 		MulticastAChiave();
-		return;
 	}
 	if (Verso != 0)
 	{

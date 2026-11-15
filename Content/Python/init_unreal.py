@@ -186,6 +186,17 @@ def crea_menu_valdorso():
             "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'CASE_MODO': '%s'})") % modo)
         valdorso.add_menu_entry("Villaggio", voce)
 
+    # (16/11, v0.2.6 "Le mura") la grata di prova con la leva e una porta chiusa a chiave (nuovi/metti_grata_prova.py)
+    for nome, etichetta, modo in (("GrataProva", "Mura: metti una grata di prova davanti alla telecamera", "metti"),
+                                  ("GrataProvaVia", "Mura: togli la grata di prova", "togli")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", (
+            "import os, unreal; "
+            "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'metti_grata_prova.py'); "
+            "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'GRATA_MODO': '%s'})") % modo)
+        valdorso.add_menu_entry("Villaggio", voce)
+
     # (15/11, v0.2.5) la pelle nuova delle case, primo passo: solo guardare i materiali (nuovi/guarda_case.py)
     voce = unreal.ToolMenuEntry(name="GuardaCase", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Case: guarda i materiali (non cambia niente)")

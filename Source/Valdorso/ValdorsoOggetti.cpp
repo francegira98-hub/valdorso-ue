@@ -266,6 +266,16 @@ namespace
 			TEXT("Una tavoletta di legno con il tuo numero inciso e il segno della Corona bruciato a fuoco. Mastro Ilario te l'ha data con il registro; al passo la capitana Livia l'ha confrontata con la lista."),
 			0.05f), TEXT("La tessera della carovana: il tuo numero, inciso nel legno, e la corona bruciata a fuoco. Il ricordo del viaggio.")));
 
+		// (16/11, v0.2.6 "Le mura") le chiavi: aprono le porte chiuse a chiave che le chiedono (AValdorsoPorta::Chiave) e
+		// la leva della grata (AValdorsoLeva::Chiave). Non si perdono morendo (sono ricordi): chi le ha, le tiene; si
+		// danno con Valdorso.Zaino.Dai (staff) e, piu' avanti, le consegnano Livia e il Balivo
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Torri"), TEXT("Chiave delle torri"),
+			TEXT("Ferro nero, lunga una spanna, con l'anello consumato. Apre le porticine delle torri e del camminamento."), 0.15f),
+			TEXT("La chiave delle torri: le porticine delle mura si aprono per te.")));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Porta"), TEXT("Chiave della porta grande"),
+			TEXT("Pesante, con i denti larghi e la corona incisa sull'impugnatura. Toglie il lucchetto alla leva della grata."), 0.3f),
+			TEXT("La chiave della porta grande: la leva della grata risponde alla tua mano.")));
+
 		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana, le monete e il pugnale dei nani, la storia di Lucia
 		C.Add(OggSemplice(TEXT("Piccone"), TEXT("Piccone"),
 			TEXT("Ferro di Marta su un manico di frassino. Per la roccia, per la frana del nord e, se serve, per chi ti viene addosso."), 3.f));
@@ -934,6 +944,19 @@ namespace
 			L.Add(OggLinea({ { -0.4f, -0.05f }, { -0.4f, 0.22f }, { -0.25f, 0.08f }, { -0.1f, 0.28f }, { 0.05f, 0.08f }, { 0.2f, 0.22f },
 				{ 0.2f, -0.05f }, { -0.4f, -0.05f } }));
 			L.Add(OggLinea({ { -0.45f, -0.25f }, { 0.55f, -0.25f } }));
+		}
+		// (16/11, v0.2.6) le chiavi: l'anello, il fusto e i denti (quella della porta grande con la corona)
+		else if (N == TEXT("Chiave_Torri") || N == TEXT("Chiave_Porta"))
+		{
+			L.Add(OggCerchio(-0.5f, 0.f, 0.28f, 14));
+			L.Add(OggLinea({ { -0.22f, 0.f }, { 0.8f, 0.f } }));
+			L.Add(OggLinea({ { 0.55f, 0.f }, { 0.55f, -0.3f }, { 0.68f, -0.3f }, { 0.68f, 0.f } }));
+			L.Add(OggLinea({ { 0.8f, 0.f }, { 0.8f, -0.22f } }));
+			if (N == TEXT("Chiave_Porta"))
+			{
+				L.Add(OggLinea({ { -0.65f, 0.08f }, { -0.65f, -0.08f }, { -0.35f, -0.08f }, { -0.35f, 0.08f }, { -0.43f, 0.f },
+					{ -0.5f, 0.1f }, { -0.57f, 0.f }, { -0.65f, 0.08f } }));
+			}
 		}
 		else if (N == TEXT("Piccone"))
 		{

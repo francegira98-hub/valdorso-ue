@@ -48,6 +48,17 @@ public:
 	virtual FVector PuntoInterazionePer(const APawn* Chi) const { return PuntoInterazione(); }
 };
 
+namespace ValdorsoChiavi
+{
+	/** (16/11, v0.2.6) Vero se quel colono ha la chiave nello zaino (sul server lo zaino vero, sul PC quello arrivato).
+	 *  Chiave vuota = falso. */
+	VALDORSO_API bool Ha(const APawn* Chi, FName Chiave);
+
+	/** (16/11, v0.2.6) Solo sul server: vero se puo' aprire una cosa chiusa da quella chiave (la chiave, o lo staff con
+	 *  il permesso Mondo). */
+	VALDORSO_API bool PuoAprire(const APawn* Chi, FName Chiave);
+}
+
 namespace ValdorsoInterazione
 {
 	/** Fin dove il PC mostra il suggerimento (cm). */
@@ -82,9 +93,15 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Porta", meta = (ClampMin = "0.1"))
 	float Durata = 0.6f;
 
-	/** Chiusa a chiave: non si apre (le chiavi arriveranno con l'inventario, v0.1.4). */
+	/** Chiusa a chiave: non si apre, se non con la chiave giusta (Chiave) o per lo staff con il permesso Mondo. */
 	UPROPERTY(EditAnywhere, Replicated, Category = "Porta")
 	bool bChiusaAChiave = false;
+
+	/** (16/11, v0.2.6) Quale chiave la apre (l'Id dell'oggetto nello zaino: Chiave_Torri, Chiave_Porta...). Vuoto = nessuna
+	 *  chiave: chiusa a chiave resta chiusa per tutti (tranne lo staff). Chi ha la chiave la apre e la chiude come una
+	 *  porta qualsiasi; chiusa, torna chiusa a chiave per gli altri. */
+	UPROPERTY(EditAnywhere, Category = "Porta")
+	FName Chiave;
 
 	/** 0 = si apre dalla parte opposta a chi spinge; 1 o -1 = sempre dalla stessa parte (le imposte, verso fuori). */
 	UPROPERTY(EditAnywhere, Category = "Porta", meta = (ClampMin = "-1", ClampMax = "1"))
@@ -112,6 +129,7 @@ protected:
 	virtual FText TestoApri() const;
 	virtual FText TestoChiudi() const;
 	virtual FText TestoAChiave() const;
+	virtual FText TestoConChiave() const;
 
 	/** La cerniera: l'anta gira intorno a lei. */
 	UPROPERTY(VisibleAnywhere, Category = "Porta")
