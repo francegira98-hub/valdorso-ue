@@ -95,6 +95,13 @@ public:
 	virtual void Interagisci(APawn* Chi) override;
 	virtual FVector PuntoInterazione() const override;
 
+	/** (14/11) Solo sul server: la apre (dalla parte opposta a DaDove) o la chiude, senza un colono che spinge (i PNG
+	 *  che aprono la bottega la mattina e la chiudono la sera). Chiusa a chiave non si apre. */
+	void MettiAperta(bool bAperta, const FVector& DaDove);
+
+	/** (14/11) Vero se e' aperta. */
+	bool Aperta() const { return Verso != 0; }
+
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

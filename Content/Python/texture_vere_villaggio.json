@@ -1,0 +1,20 @@
+{
+  "Pietra": {
+    "colore": "/Game/Fab/Casa_Camino/Texture/MI_Mossy_Stone_Wall_ujyjbehqx_2K_BaseColor",
+    "rilievo": "/Game/Fab/Casa_Camino/Texture/MI_Mossy_Stone_Wall_ujyjbehqx_2K_Normal",
+    "scala": 1.0,
+    "nota": "15/11 prova di Claude"
+  },
+  "Trave": {
+    "colore": "/Game/Fab/Casa_Camino/Texture/MI_Old_Wooden_Beam_vkbhafj_2K_BaseColor",
+    "rilievo": "/Game/Fab/Casa_Camino/Texture/MI_Old_Wooden_Beam_vkbhafj_2K_Normal",
+    "scala": 1.0,
+    "nota": "15/11 prova di Claude"
+  },
+  "Assi": {
+    "colore": "/Game/Scene_Banquet/Assets/Megascans/Surfaces/Ceiling_Wood_Stained_01/T_Ceiling_Wood_Stained_01_D",
+    "rilievo": "/Game/Scene_Banquet/Assets/Megascans/Surfaces/Ceiling_Wood_Stained_01/T_Ceiling_Wood_Stained_01_N",
+    "scala": 1.0,
+    "nota": "15/11 prova di Claude"
+  }
+}

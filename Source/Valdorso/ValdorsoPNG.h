@@ -42,9 +42,29 @@ class USkeletalMeshComponent;
 class UValdorsoAspettoComponent;
 
 /**
+ * (14/11, "PNG che camminano") Una strada a piedi: i punti (il primo e' dove stava, l'ultimo dove arriva; per "a casa":
+ * dentro la porta di casa) e quali punti sono sulla soglia di una porta (li' si ferma, la apre e passa; poco dopo la
+ * porta si richiude).
+ */
+USTRUCT(BlueprintType)
+struct FValdorsoStrada
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	TArray<FVector> Punti;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	TArray<int32> Porte;
+};
+
+/**
  * (11/11, v0.1.6 "I volti e le giornate") Una tappa della giornata di un PNG: da che ora, dove sta, verso dove guarda,
  * cosa fa (l'animazione in /Game/Mixamo/Gesti: "Martellare", "Spazzare"...; vuoto = sta fermo e respira), o se e'
  * a casa (non si vede: dorme, o e' via).
+ * (14/11, "PNG che vivono") Due movenze speciali: "Panca" = si siede sul posto della panca piu' vicina a Dove (con lo
+ * stesso seduto dei coloni), "Letto" = dorme nel letto piu' vicino a Dove (lo stesso sonno dei coloni). Se non c'e' una
+ * panca o un letto vicino, resta in piedi. E una porta (Porta: dove sta; zero = nessuna) che apre o chiude arrivando.
  */
 USTRUCT(BlueprintType)
 struct FValdorsoTappa
@@ -65,6 +85,22 @@ struct FValdorsoTappa
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
 	bool bAssente = false;
+
+	/** (14/11) Dove sta la porta da aprire (o chiudere) quando comincia questa tappa: la mattina Bruno apre la locanda,
+	 *  la sera la chiude. Zero = nessuna porta. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	FVector Porta = FVector::ZeroVector;
+
+	/** (14/11) Vero = la apre, falso = la chiude. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	bool bApriPorta = true;
+
+	/** (14/11, "PNG che camminano") Le strade per arrivare a questa tappa dalla tappa prima, una per ogni fase del
+	 *  villaggio (0 = fase 1, 1 = fase 2, 2 = fase 3: le case, le palizzate e i muri cambiano). Le calcola
+	 *  giornate_vive.py sulla pianta del villaggio. Senza la strada della fase di adesso: come prima, cambia posto
+	 *  quando nessuno lo vede. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	TArray<FValdorsoStrada> Strade;
 };
 
 namespace ValdorsoGiornata
@@ -128,6 +164,15 @@ public:
 
 	/** (14/11) Vero se e' a terra (l'hanno colpito forte: fra poco si rialza). */
 	bool ATerra() const { return bATerra; }
+
+	/** (14/11) Vero se sta dormendo nel suo letto (non parla, non saluta, non vede le colpe). */
+	bool Dorme() const { return Posa == 2; }
+
+	/** (14/11) Vero se e' seduto su una panca. */
+	bool Seduto() const { return Posa == 1; }
+
+	/** (14/11) Vero se sta camminando verso la tappa (anche se si e' fermato a parlare). */
+	bool Cammina() const { return bCammina; }
 
 	/** (14/11) Solo sul server: un colpo (ValdorsoCombattimento::Colpisci). Barcolla o cade; chi l'ha colpito e' colpevole.
 	 *  Vero se il colpo l'ha toccato. */
@@ -324,4 +369,96 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UAnimSequence> Riposo;
+
+	// --- (14/11, "PNG che vivono") seduti sulle panche, a letto, le porte ---------------------------------------
+
+	/** Il server l'ha fatto alzare (colpito, spaventato) prima della fine della tappa: resta in piedi accanto alla panca o
+	 *  al letto fino alla tappa dopo. */
+	UPROPERTY(ReplicatedUsing = OnRep_Alzato)
+	bool bAlzato = false;
+
+	UFUNCTION()
+	void OnRep_Alzato();
+
+	/** Su ogni PC (e sul server): si siede, si corica o resta in piedi, come vuole la tappa (e bAlzato). */
+	void MettiPosa();
+
+	/** Solo sul server: se e' seduto o dorme, si alza. */
+	void Alzati();
+
+	/** Lascia libero il posto della panca o del letto (sul server toglie la prenotazione). */
+	void LiberaMobile();
+
+	/** Solo sul server: apre o chiude la porta della tappa. */
+	void UsaPorta(const FValdorsoTappa& Arrivo);
+
+	/** 0 in piedi, 1 seduto, 2 dorme. */
+	uint8 Posa = 0;
+
+	/** La panca o il letto di adesso, e il posto. */
+	TWeakObjectPtr<AActor> Mobile;
+	int32 PostoMobile = INDEX_NONE;
+
+	// --- (14/11, "PNG che camminano") da una tappa all'altra a piedi --------------------------------------------
+	// Il server decide quando parte (CamminoInizio, ora del server) e se si e' fermato (CamminoFermo: a che punto del
+	// cammino, in secondi); ogni PC rifa' gli stessi conti sul Percorso della tappa, quindi tutti lo vedono nello
+	// stesso punto senza mandare la posizione in rete.
+
+	UPROPERTY(ReplicatedUsing = OnRep_Cammino)
+	bool bCammina = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Cammino)
+	double CamminoInizio = 0.0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Cammino)
+	float CamminoFermo = -1.f;
+
+	/** Quale strada della tappa (la fase del villaggio quando e' partito, meno uno). */
+	UPROPERTY(ReplicatedUsing = OnRep_Cammino)
+	uint8 StradaUsata = 0;
+
+	/** La strada del cammino di adesso (nullptr se non c'e'). */
+	const FValdorsoStrada* StradaDiAdesso() const;
+
+	UFUNCTION()
+	void OnRep_Cammino();
+
+	/** L'ora del server (uguale su tutti i PC). */
+	double OraServer() const;
+
+	/** Da quanti secondi cammina (fermo: dove si e' fermato). */
+	float TempoDelCammino() const;
+
+	/** Dove sta dopo Tempo secondi di cammino, verso dove va, se e' fermo a una porta (e quale punto). Falso = arrivato. */
+	bool PuntoDelCammino(float Tempo, FVector& Dove, float& Gradi, int32& PortaSulPercorso) const;
+
+	/** Su ogni PC: un passo del cammino (vero finche' cammina). */
+	bool MuoviCammino(float DeltaSeconds);
+
+	/** Solo sul server, ogni quarto di secondo mentre cammina: si ferma e riparte, apre e chiude le porte, arriva. */
+	void ControllaCammino();
+	void FinisciCammino();
+	FTimerHandle TimerCammino;
+
+	/** Solo sul server: se all'arrivo sparisce (la tappa "a casa"). */
+	bool bViaAllArrivo = false;
+	int32 UltimaPortaAperta = INDEX_NONE;
+	struct FPortaDaChiudere
+	{
+		TWeakObjectPtr<AValdorsoPorta> Porta;
+		double Alle = 0.0;
+	};
+	TArray<FPortaDaChiudere> PorteDaChiudere;
+
+	/** Su ogni PC: quale animazione del cammino sta suonando (0 nessuna, 1 cammina, 2 apre la porta, 3 fermo), e la
+	 *  quota dei piedi dell'ultimo passo. */
+	uint8 AnimCammino = 0;
+	double CamminoZ = 0.0;
+	bool bCamminoZ = false;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequence> Passeggio;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequence> ApreLaPorta;
 };

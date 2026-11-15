@@ -290,6 +290,16 @@ def principale():
         scrivi("sempre caricati: fatto (Saved/Claude/sempre_caricati.txt)")
     except Exception as e:  # noqa: BLE001
         avviso("sempre caricati non fatto (%s): lanciare Valdorso -> Strumenti -> Rete" % e)
+    # (14/11) i PNG che si siedono, dormono e aprono le porte (nuovi/giornate_vive.py): i PNG sono rifatti da capo, quindi
+    # le loro giornate (panca, letto, porta) si rimettono
+    _gv = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()),
+                       "Python", "nuovi", "giornate_vive.py")
+    try:
+        with open(_gv, "r", encoding="utf-8") as _f:
+            exec(compile(_f.read(), _gv, "exec"), {"__name__": "__main__"})
+        scrivi("panche, letti e porte dei PNG: fatto (Saved/Claude/giornate_vive.txt)")
+    except Exception as e:  # noqa: BLE001
+        avviso("panche, letti e porte non fatti (%s): lanciare Valdorso -> Villaggio -> PNG: panche, letti e porte" % e)
     scrivi("FATTO. In Play: Gaspare sulla strada per le rovine, dove comincia il bosco; Tebaldo e Fulvio davanti alla "
            "porta del passo; Nonna Edda al fuoco della palude; Bruno al bancone della locanda; Padre Anselmo davanti "
            "all'altare del Tempio del Cuore. Avvicinati e premi E.")

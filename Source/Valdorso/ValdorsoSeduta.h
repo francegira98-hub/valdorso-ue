@@ -186,6 +186,9 @@ public:
 	/** Il colono seduto in ogni posto (solo sul server). */
 	TArray<TWeakObjectPtr<APawn>> Occupanti;
 
+	/** (14/11) Il PNG seduto in ogni posto (solo sul server, ValdorsoPNG.h): i coloni non ci si siedono sopra. */
+	TArray<TWeakObjectPtr<AActor>> Riservati;
+
 	/** Dove deve trovarsi il colono (il suo attore) quando è seduto in quel posto. (13/11) bDietro: seduto dall'altra
 	 *  parte della seduta, girato di mezzo giro (la panca non ha schienale); il posto lungo la panca resta lo stesso. */
 	FTransform TrasformaSeduto(int32 Posto, const APawn* Chi, bool bDietro = false) const;

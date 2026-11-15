@@ -15,7 +15,9 @@ import os
 
 import unreal
 
-CARTELLA = globals().get("CARTELLA_ANIMAZIONI", "/Game/Fab/Armi/Spada")
+# (15/11) senza CARTELLA_ANIMAZIONI guarda tutte le cartelle dei colpi (Greystone, Grux, la lancia, Aurora, la porta)
+CARTELLE = [globals()["CARTELLA_ANIMAZIONI"]] if "CARTELLA_ANIMAZIONI" in globals() else [
+    "/Game/Fab/Armi/Spada", "/Game/Fab/Armi/Grux", "/Game/Fab/Armi/Lancia", "/Game/Fab/Armi/Aurora", "/Game/Fab/Gesti"]
 MOMENTI = 7
 
 # lo scheletro del manichino di Unreal 5 (il nostro colono): figlio -> padre
@@ -103,6 +105,27 @@ def controlla(nome, anim):
             problemi.append("t=%.2f: schiena piegata molto (%.0f gradi)" % (t, schiena))
         righe_momenti.append("   t=%.2f  testa %+4.0f cm, schiena %3.0f | %s" % (t, p["head"].z - p["root"].z, schiena, " | ".join(pezzi)))
     scrivi("%s (%.2f s): %s" % (nome, durata, "OK" if not problemi else "%d cose da guardare" % len(problemi)))
+    # (15/11) il momento del colpo: quando ogni mano va piu' veloce (30 volte al secondo), per l'istante del danno nel C++
+    try:
+        passo = 1.0 / 30.0
+        prima = None
+        picchi = {"l": (0.0, 0.0), "r": (0.0, 0.0)}
+        t = 0.0
+        while t <= durata + 1e-4:
+            p = posa(anim, t)
+            adesso = {s: v(p["pelvis"], p["hand_" + s]) for s in "lr"}
+            if prima is not None:
+                for s in "lr":
+                    vel = lung((adesso[s][0] - prima[s][0], adesso[s][1] - prima[s][1], adesso[s][2] - prima[s][2])) / passo
+                    if vel > picchi[s][1]:
+                        picchi[s] = (t, vel)
+            prima = adesso
+            t += passo
+        for s, lato in (("r", "destra"), ("l", "sinistra")):
+            tp, vel = picchi[s]
+            scrivi("   COLPO mano %s: t=%.2f s (%.0f%% della durata), %.0f cm/s" % (lato, tp, 100.0 * tp / max(durata, 1e-3), vel))
+    except Exception as e:  # noqa: BLE001
+        scrivi("   (il colpo non si misura: %s)" % e)
     for r in problemi[:12]:
         scrivi("   ! " + r)
     righe.extend(righe_momenti)
@@ -110,15 +133,16 @@ def controlla(nome, anim):
 
 def principale():
     registro = unreal.AssetRegistryHelpers.get_asset_registry()
-    dati = [d for d in registro.get_assets_by_path(CARTELLA, recursive=True)
-            if str(d.asset_class_path.asset_name) == "AnimSequence"]
-    scrivi("cartella %s: %d animazioni" % (CARTELLA, len(dati)))
-    for d in sorted(dati, key=lambda x: str(x.asset_name)):
-        anim = unreal.EditorAssetLibrary.load_asset(str(d.package_name))
-        try:
-            controlla(str(d.asset_name), anim)
-        except Exception as e:  # noqa: BLE001
-            scrivi("%s: non riesco a leggerla (%s)" % (d.asset_name, e))
+    for cartella in CARTELLE:
+        dati = [d for d in registro.get_assets_by_path(cartella, recursive=True)
+                if str(d.asset_class_path.asset_name) == "AnimSequence"]
+        scrivi("cartella %s: %d animazioni" % (cartella, len(dati)))
+        for d in sorted(dati, key=lambda x: str(x.asset_name)):
+            anim = unreal.EditorAssetLibrary.load_asset(str(d.package_name))
+            try:
+                controlla(str(d.asset_name), anim)
+            except Exception as e:  # noqa: BLE001
+                scrivi("%s: non riesco a leggerla (%s)" % (d.asset_name, e))
     scrivi("FATTO")
 
 

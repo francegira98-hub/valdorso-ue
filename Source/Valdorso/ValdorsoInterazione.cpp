@@ -250,6 +250,29 @@ void AValdorsoPorta::Interagisci(APawn* Chi)
 	OnRep_Verso();
 }
 
+void AValdorsoPorta::MettiAperta(bool bAperta, const FVector& DaDove)
+{
+	if (!HasAuthority() || bAperta == (Verso != 0) || (bAperta && bChiusaAChiave))
+	{
+		return;
+	}
+	if (!bAperta)
+	{
+		Verso = 0;
+	}
+	else
+	{
+		// come in Interagisci: si apre dalla parte opposta a chi la apre
+		Verso = FVector::DotProduct(DaDove - GetActorLocation(), GetActorForwardVector()) >= 0.f ? 1 : -1;
+		if (VersoFisso != 0)
+		{
+			Verso = VersoFisso > 0 ? 1 : -1;
+		}
+	}
+	ForceNetUpdate();
+	OnRep_Verso();
+}
+
 void AValdorsoPorta::OnRep_Verso()
 {
 	// Si muove nel Tick finché arriva all'angolo voluto.

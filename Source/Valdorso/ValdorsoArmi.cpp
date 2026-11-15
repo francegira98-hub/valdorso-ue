@@ -168,19 +168,66 @@ namespace ValdorsoArmi
 		{
 			return nullptr;
 		}
+		// (14/11) prima i colpi degli eroi di Paragon portati da porta_armi_paragon.py, se ci sono: Grux per le asce e
+		// le mazze (destro e sinistro a turno), Aurora per i pugnali (tre colpi a giro), la lancia della Free Animation Library
+		// per le aste. Se mancano, Greystone come prima.
+		const auto CaricaColpo = [](const TCHAR* Eroe, const TCHAR* Quale) -> UAnimSequenceBase*
+		{
+			const FString Dove = FString::Printf(TEXT("/Game/Fab/Armi/%s/%s.%s"), Eroe, Quale, Quale);
+			return LoadObject<UAnimSequenceBase>(nullptr, *Dove, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		};
+		const int32 Turno = FMath::Abs(Numero);
+		UAnimSequenceBase* DiEroe = nullptr;
+		switch (ValdorsoQualita::Famiglia(IdArma))
+		{
+		// (15/11) gli istanti del colpo sono misurati (controlla_animazioni.py: quando la mano va piu' veloce, piu' un
+		// soffio): i colpi di Paragon colpiscono presto e poi tornano in guardia piano.
+		case EValdorsoFamigliaArma::Pugnali:
+		{
+			static const TCHAR* ColpiAurora[] = {TEXT("Aurora_Rapido_A"), TEXT("Aurora_Rapido_B"), TEXT("Aurora_Rapido_C")};
+			static const float IstantiAurora[] = {0.32f, 0.29f, 0.26f};
+			DiEroe = CaricaColpo(TEXT("Aurora"), ColpiAurora[Turno % 3]);
+			if (DiEroe) { OutIstante = IstantiAurora[Turno % 3]; OutVelocita = 1.1f; }
+			break;
+		}
+		case EValdorsoFamigliaArma::Asce:
+			DiEroe = CaricaColpo(TEXT("Grux"), (Turno % 2) == 0 ? TEXT("Grux_Destro_A") : TEXT("Grux_Sinistro_A"));
+			if (DiEroe) { OutIstante = 0.24f; OutVelocita = 1.f; }
+			break;
+		case EValdorsoFamigliaArma::Mazze:
+			DiEroe = CaricaColpo(TEXT("Grux"), (Turno % 2) == 0 ? TEXT("Grux_Destro_B") : TEXT("Grux_Sinistro_B"));
+			if (DiEroe) { OutIstante = (Turno % 2) == 0 ? 0.22f : 0.28f; OutVelocita = 0.95f; }
+			break;
+		case EValdorsoFamigliaArma::Aste:
+		{
+			// tre affondi della Free Animation Library a giro (misurati: il 2 colpisce a 1,4 s, il 5 a 2,6, il 6 a 1,4)
+			static const TCHAR* Affondi[] = {TEXT("Lancia_Colpo_2"), TEXT("Lancia_Colpo_5"), TEXT("Lancia_Colpo_6")};
+			static const float IstantiAffondi[] = {0.24f, 0.56f, 0.62f};
+			DiEroe = CaricaColpo(TEXT("Lancia"), Affondi[Turno % 3]);
+			if (DiEroe) { OutIstante = IstantiAffondi[Turno % 3]; OutVelocita = 1.3f; }
+			break;
+		}
+		default:
+			break;
+		}
+		if (DiEroe)
+		{
+			return DiEroe;
+		}
 		// quale animazione, quando arriva il colpo (frazione della durata) e quanto in fretta
 		const TCHAR* Nome = nullptr;
 		switch (ValdorsoQualita::Famiglia(IdArma))
 		{
-		case EValdorsoFamigliaArma::Pugnali: Nome = TEXT("Spada_Rapido"); OutIstante = 0.45f; OutVelocita = 1.2f; break;
+		// (15/11) istanti misurati: Rapido 28%, Medio 20%, Pesante e Dall_Alto 21% (piu' un soffio)
+		case EValdorsoFamigliaArma::Pugnali: Nome = TEXT("Spada_Rapido"); OutIstante = 0.30f; OutVelocita = 1.2f; break;
 		case EValdorsoFamigliaArma::Spade:
 			Nome = (Numero % 2) == 0 ? TEXT("Spada_Rapido") : TEXT("Spada_Medio");
-			OutIstante = (Numero % 2) == 0 ? 0.45f : 0.42f;
+			OutIstante = (Numero % 2) == 0 ? 0.30f : 0.23f;
 			OutVelocita = (Numero % 2) == 0 ? 1.05f : 1.15f;
 			break;
-		case EValdorsoFamigliaArma::Asce: Nome = TEXT("Spada_Pesante"); OutIstante = 0.55f; OutVelocita = 0.95f; break;
-		case EValdorsoFamigliaArma::Mazze: Nome = TEXT("Spada_Dall_Alto"); OutIstante = 0.55f; OutVelocita = 0.9f; break;
-		case EValdorsoFamigliaArma::Aste: Nome = TEXT("Spada_Medio"); OutIstante = 0.42f; OutVelocita = 1.1f; break;
+		case EValdorsoFamigliaArma::Asce: Nome = TEXT("Spada_Pesante"); OutIstante = 0.24f; OutVelocita = 0.95f; break;
+		case EValdorsoFamigliaArma::Mazze: Nome = TEXT("Spada_Dall_Alto"); OutIstante = 0.24f; OutVelocita = 0.9f; break;
+		case EValdorsoFamigliaArma::Aste: Nome = TEXT("Spada_Medio"); OutIstante = 0.23f; OutVelocita = 1.1f; break;
 		case EValdorsoFamigliaArma::Scudo: Nome = TEXT("Spada_Parata"); OutIstante = 0.35f; OutVelocita = 1.3f; break;
 		default: return nullptr;
 		}

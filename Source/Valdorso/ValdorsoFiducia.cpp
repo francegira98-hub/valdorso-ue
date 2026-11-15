@@ -460,7 +460,8 @@ namespace ValdorsoFiducia
 			for (TActorIterator<AValdorsoPNG> It(Mondo); It; ++It)
 			{
 				AValdorsoPNG* Testimone = *It;
-				if (!Testimone || Testimone == Vittima || Testimone->Via()
+				// (14/11) chi dorme non e' testimone
+				if (!Testimone || Testimone == Vittima || Testimone->Via() || Testimone->Dorme()
 					|| FVector::Dist(Testimone->GetActorLocation(), Vittima->GetActorLocation()) > RaggioTestimoni)
 				{
 					continue;

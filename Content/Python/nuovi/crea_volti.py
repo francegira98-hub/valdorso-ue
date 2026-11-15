@@ -27,6 +27,7 @@
 # (12/11, v0.2.0) E Sibilla, la carovana (un giorno ogni tre: ValdorsoCarovana.h). E il magazzino del villaggio accanto alla bacheca della Gilda (le scorte: ValdorsoScorte.h).
 
 import math
+import os
 
 import unreal
 
@@ -557,6 +558,16 @@ def principale():
         scrivi("livello salvato")
     except Exception as e:  # noqa: BLE001
         avviso("salvataggio non riuscito (%s): Ctrl+Maiusc+S" % e)
+    # (14/11) i PNG che si siedono, dormono e aprono le porte (nuovi/giornate_vive.py): i volti sono rifatti da capo, quindi
+    # le loro panche e i loro letti si rimettono
+    _gv = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()),
+                       "Python", "nuovi", "giornate_vive.py")
+    try:
+        with open(_gv, "r", encoding="utf-8") as _f:
+            exec(compile(_f.read(), _gv, "exec"), {"__name__": "__main__"})
+        scrivi("panche, letti e porte dei PNG: fatto (Saved/Claude/giornate_vive.txt)")
+    except Exception as e:  # noqa: BLE001
+        avviso("panche, letti e porte non fatti (%s): lanciare Valdorso -> Villaggio -> PNG: panche, letti e porte" % e)
     scrivi("FATTO. In Play: Marta all'incudine, Agnese e Teodoro al mulino, Tobia al tempio, Livia al passo; Elric arriva "
            "con l'Atto I (prova: menu Staff -> atto, o console Valdorso.Atto.Battito). Si spostano con le ore del cielo.")
 

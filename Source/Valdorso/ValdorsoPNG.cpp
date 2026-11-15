@@ -14,6 +14,7 @@
 #include "ValdorsoGilda.h"
 #include "ValdorsoChat.h"
 #include "ValdorsoCielo.h"
+#include "ValdorsoFasiVillaggio.h"
 #include "ValdorsoDialoghi.h"
 #include "EngineUtils.h"
 #include "Valdorso.h"
@@ -24,13 +25,18 @@
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoZaino.h"
+#include "ValdorsoSeduta.h"
+#include "ValdorsoLetto.h"
+#include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "CollisionQueryParams.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/Pawn.h"
+#include "HAL/IConsoleManager.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
@@ -46,6 +52,51 @@ namespace
 
 	/** Dopo quanti secondi senza conversazioni il PNG torna a guardare dove guardava. */
 	constexpr float PngSecondiRitorno = 4.f;
+
+	// (14/11, "PNG che vivono") seduti, a letto, le porte
+	constexpr uint8 PngInPiedi = 0;
+	constexpr uint8 PngSeduto = 1;
+	constexpr uint8 PngDorme = 2;
+	const TCHAR* PngMovenzaPanca = TEXT("Panca");
+	const TCHAR* PngMovenzaLetto = TEXT("Letto");
+	/** Le stesse animazioni dei coloni: il seduto della panca del GASP (porta_panca_da_gasp.py) e il sonno di Mixamo
+	 *  (porta_dormire_da_mixamo.py), gia' messe a punto sulle nostre panche e sui nostri letti. */
+	const TCHAR* PngAnimSeduto = TEXT("/Game/Fab/GameAnimationSample/Panca/Seduto.Seduto");
+	const TCHAR* PngAnimDorme = TEXT("/Game/Mixamo/Dormire/Dorme.Dorme");
+	/** Quanto lontano da Dove puo' stare la panca o il letto della tappa (cm, in piano; e in altezza meno di 2 m). */
+	constexpr float PngRaggioMobile = 350.f;
+	/** Quanto davanti alla panca si rimette in piedi chi si alza (cm). */
+	constexpr float PngDavantiPanca = 65.f;
+	/** Quanto vicino a Porta deve stare la porta della tappa (cm). */
+	constexpr float PngRaggioPorta = 250.f;
+
+	// (14/11, "PNG che camminano")
+	/** Il passo dei PNG (cm al secondo): uguale per tutti i PC (i conti del cammino si fanno su ogni PC). */
+	constexpr float PngVelocitaPasso = 140.f;
+	/** Quanto si ferma sulla soglia per aprire la porta (secondi), e dopo quanto la porta si richiude. */
+	constexpr float PngSostaPorta = 1.4f;
+	constexpr double PngChiudiDopo = 4.0;
+	const TCHAR* PngAnimPasseggio = TEXT("/Game/Characters/Mannequins/Anims/Unarmed/Walk/MF_Unarmed_Walk_Fwd.MF_Unarmed_Walk_Fwd");
+	/** Aprire la porta: dalla Free Animation Library (porta_armi_paragon.py la porta nel nostro manichino). */
+	const TCHAR* PngAnimApre = TEXT("/Game/Fab/Gesti/Apre_Porta.Apre_Porta");
+
+	TAutoConsoleVariable<float> CVarPngRitmoPasso(
+		TEXT("Valdorso.PNG.RitmoPasso"),
+		0.9f,
+		TEXT("Velocita' dell'animazione del passo dei PNG (1 = come e' fatta): da ritoccare se i piedi scivolano."),
+		ECVF_Default);
+
+	/** L'animazione del seduto o del sonno, ferma sul posto come per i coloni (la radice resta dove la mettiamo noi). */
+	UAnimSequence* PngAnimPosa(const TCHAR* Percorso)
+	{
+		UAnimSequence* Sequenza = LoadObject<UAnimSequence>(nullptr, Percorso, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (Sequenza)
+		{
+			Sequenza->bEnableRootMotion = true;
+			Sequenza->RootMotionRootLock = ERootMotionRootLock::RefPose;
+		}
+		return Sequenza;
+	}
 
 	/** Il nome con cui il colono entra nella memoria dei dialoghi: il nome del personaggio (o dell'attore). */
 	FString PngNomeDi(const APawn* Chi)
@@ -225,6 +276,11 @@ void AValdorsoPNG::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AValdorsoPNG, bATerra);
 	DOREPLIFETIME(AValdorsoPNG, DoveFuga);
 	DOREPLIFETIME(AValdorsoPNG, bInFuga);
+	DOREPLIFETIME(AValdorsoPNG, bAlzato);
+	DOREPLIFETIME(AValdorsoPNG, bCammina);
+	DOREPLIFETIME(AValdorsoPNG, CamminoInizio);
+	DOREPLIFETIME(AValdorsoPNG, CamminoFermo);
+	DOREPLIFETIME(AValdorsoPNG, StradaUsata);
 }
 
 void AValdorsoPNG::BeginPlay()
@@ -297,6 +353,11 @@ void AValdorsoPNG::BeginPlay()
 	{
 		OnRep_Fuga();
 	}
+	// (14/11) arrivato mentre cammina
+	if (!HasAuthority() && bCammina)
+	{
+		OnRep_Cammino();
+	}
 }
 
 void AValdorsoPNG::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -308,7 +369,9 @@ void AValdorsoPNG::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		Mondo->GetTimerManager().ClearTimer(TimerGiornata);
 		Mondo->GetTimerManager().ClearTimer(TimerATerra);
 		Mondo->GetTimerManager().ClearTimer(TimerFuga);
+		Mondo->GetTimerManager().ClearTimer(TimerCammino);
 	}
+	LiberaMobile();
 	Conversazioni.Reset();
 	Super::EndPlay(EndPlayReason);
 }
@@ -338,8 +401,8 @@ bool AValdorsoPNG::Guardia() const
 
 FText AValdorsoPNG::TestoInterazione(const APawn* Chi) const
 {
-	// (14/11) a terra o in fuga non si parla
-	if (bVia || bATerra || bInFuga)
+	// (14/11) a terra o in fuga non si parla; (14/11) nemmeno con chi dorme
+	if (bVia || bATerra || bInFuga || Dorme())
 	{
 		return FText::GetEmpty();
 	}
@@ -355,7 +418,7 @@ FVector AValdorsoPNG::PuntoInterazione() const
 
 void AValdorsoPNG::Interagisci(APawn* Chi)
 {
-	if (!HasAuthority() || !Chi || bVia || bATerra || bInFuga)
+	if (!HasAuthority() || !Chi || bVia || bATerra || bInFuga || Dorme())
 	{
 		return;
 	}
@@ -683,7 +746,8 @@ void AValdorsoPNG::Chiudi(APlayerController* Chi, bool bAvvisa, const FString& C
 
 void AValdorsoPNG::GuardaVerso(const AActor* Chi)
 {
-	if (!HasAuthority() || !Chi)
+	// (14/11) seduto o a letto non si gira (girerebbe la panca con se')
+	if (!HasAuthority() || !Chi || Posa != PngInPiedi)
 	{
 		return;
 	}
@@ -730,13 +794,18 @@ void AValdorsoPNG::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	bool bAncora = false;
-	// (14/11) in fuga guarda dove corre; altrimenti si gira piano verso lo sguardo voluto
+	// (14/11) cammina verso la tappa (fermo se parla, e' a terra o scappa: lo decide il server)
+	if (bCammina && !bInFuga)
+	{
+		bAncora = MuoviCammino(DeltaSeconds);
+	}
+	// (14/11) in fuga guarda dove corre; altrimenti si gira piano verso lo sguardo voluto (camminando: dove va)
 	if (bInFuga)
 	{
 		// (alla fine della fuga, un giro in piu': lo sguardo torna al suo posto)
 		bAncora = MuoviFuga(DeltaSeconds) || !bInFuga;
 	}
-	else if (bSguardoValido)
+	else if (bSguardoValido && (!bCammina || CamminoFermo >= 0.f))
 	{
 		const float Adesso = static_cast<float>(GetActorRotation().Yaw);
 		const float Manca = FMath::FindDeltaAngleDegrees(Adesso, Sguardo);
@@ -768,7 +837,7 @@ void AValdorsoPNG::Saluta()
 {
 	UWorld* Mondo = GetWorld();
 	const FValdorsoDialogo* Dati = DatiDialogo();
-	if (!HasAuthority() || !Mondo || !Dati || bVia || bATerra || bInFuga)
+	if (!HasAuthority() || !Mondo || !Dati || bVia || bATerra || bInFuga || Dorme())
 	{
 		return;
 	}
@@ -880,7 +949,8 @@ namespace ValdorsoGiornata
 void AValdorsoPNG::GiroGiornata()
 {
 	UWorld* Mondo = GetWorld();
-	if (!HasAuthority() || !Mondo || Conversazioni.Num() > 0 || bInFuga || bATerra)
+	// (14/11) mentre cammina decide ControllaCammino
+	if (!HasAuthority() || !Mondo || Conversazioni.Num() > 0 || bInFuga || bATerra || bCammina)
 	{
 		return;
 	}
@@ -902,6 +972,36 @@ void AValdorsoPNG::GiroGiornata()
 		return;
 	}
 	const double Adesso = Mondo->GetTimeSeconds();
+	// (14/11, "PNG che camminano") la tappa nuova ha la sua strada: ci va a piedi, subito (anche se lo guardano). Non
+	// la prima volta (all'avvio si mette subito al suo posto), e non chi non deve esserci (non e' il suo giorno, l'atto).
+	// (la strada della fase del villaggio di adesso: le case, le palizzate e i muri cambiano)
+	int32 FaseVillaggio = 1;
+	for (TActorIterator<AValdorsoFasiVillaggio> It(Mondo); It; ++It)
+	{
+		FaseVillaggio = It->GetFase();
+		break;
+	}
+	const FValdorsoTappa* Nuova = Giornata.IsValidIndex(Voluta) ? &Giornata[Voluta] : nullptr;
+	const int32 IndiceStrada = FMath::Clamp(FaseVillaggio, 1, 255) - 1;
+	if (bGiornataPartita && Voluta != Tappa && Nuova && Nuova->Strade.IsValidIndex(IndiceStrada)
+		&& Nuova->Strade[IndiceStrada].Punti.Num() >= 2 && !bNonOggi && ValdorsoVoci::Atto(this) >= AttoMinimo)
+	{
+		StradaUsata = static_cast<uint8>(IndiceStrada);
+		VuoleCambiareDa = -1.0;
+		Tappa = Voluta;
+		bVia = false;
+		bViaAllArrivo = bVuoleVia;
+		bAlzato = false;
+		bCammina = true;
+		CamminoInizio = OraServer();
+		CamminoFermo = -1.f;
+		UltimaPortaAperta = INDEX_NONE;
+		ForceNetUpdate();
+		OnRep_Tappa();
+		OnRep_Cammino();
+		GetWorldTimerManager().SetTimer(TimerCammino, this, &AValdorsoPNG::ControllaCammino, 0.25f, true);
+		return;
+	}
 	if (VuoleCambiareDa < 0.0)
 	{
 		VuoleCambiareDa = Adesso;
@@ -924,14 +1024,25 @@ void AValdorsoPNG::GiroGiornata()
 	const bool bArriva = bGiornataPartita && bVia && !bVuoleVia && OgniGiorni > 0;
 	VuoleCambiareDa = -1.0;
 	bGiornataPartita = true;
+	const bool bTappaNuova = Tappa != Voluta;
 	Tappa = Voluta;
 	bVia = bVuoleVia;
+	// (14/11) una tappa nuova: di nuovo come la vuole (seduto, a letto), anche se prima l'avevano fatto alzare
+	if (bTappaNuova)
+	{
+		bAlzato = false;
+	}
 	if (bArriva)
 	{
 		ValdorsoCarovana::Arriva(this);
 	}
 	ForceNetUpdate();
 	OnRep_Tappa();
+	// (14/11) la porta della tappa: la bottega che apre la mattina, la locanda che chiude la sera
+	if (bTappaNuova && Giornata.IsValidIndex(Tappa))
+	{
+		UsaPorta(Giornata[Tappa]);
+	}
 }
 
 void AValdorsoPNG::OnRep_Tappa()
@@ -950,6 +1061,21 @@ void AValdorsoPNG::OnRep_Tappa()
 	}
 	if (bVia || !Giornata.IsValidIndex(Tappa))
 	{
+		// (14/11) a casa: lascia la panca o il letto
+		MettiPosa();
+		return;
+	}
+	// (14/11) cammina verso la tappa: in piedi, il posto lo da' il cammino (MuoviCammino)
+	if (bCammina)
+	{
+		LiberaMobile();
+		Posa = PngInPiedi;
+		if (Corpo)
+		{
+			Corpo->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -PngMezzaAltezza), FRotator(0.f, -90.f, 0.f));
+		}
+		AnimCammino = 0;
+		SetActorTickEnabled(true);
 		return;
 	}
 	const FValdorsoTappa& Ora = Giornata[Tappa];
@@ -962,18 +1088,36 @@ void AValdorsoPNG::OnRep_Tappa()
 			Sguardo = Ora.Gradi;
 		}
 	}
-	RimettiMovenza();
+	// (14/11) seduto sulla panca, a letto, o in piedi (e la sua movenza)
+	MettiPosa();
 }
 
 void AValdorsoPNG::RimettiMovenza()
 {
 	bCorre = false;
+	// (14/11) mentre cammina l'animazione la sceglie il cammino (MuoviCammino), al prossimo passo
+	if (bCammina)
+	{
+		AnimCammino = 0;
+		return;
+	}
 	if (!Corpo || GetNetMode() == NM_DedicatedServer)
 	{
 		return;
 	}
+	Corpo->SetPlayRate(1.f);
 	UAnimSequence* Movenza = nullptr;
-	if (Giornata.IsValidIndex(Tappa) && !Giornata[Tappa].Movenza.IsNone())
+	// (14/11) seduto o a letto: le animazioni dei coloni
+	if (Posa == PngSeduto)
+	{
+		Movenza = PngAnimPosa(PngAnimSeduto);
+	}
+	else if (Posa == PngDorme)
+	{
+		Movenza = PngAnimPosa(PngAnimDorme);
+	}
+	else if (Giornata.IsValidIndex(Tappa) && !Giornata[Tappa].Movenza.IsNone()
+		&& Giornata[Tappa].Movenza != FName(PngMovenzaPanca) && Giornata[Tappa].Movenza != FName(PngMovenzaLetto))
 	{
 		const FString Nome = Giornata[Tappa].Movenza.ToString();
 		Movenza = LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("/Game/Mixamo/Gesti/%s.%s"), *Nome, *Nome), nullptr,
@@ -982,6 +1126,555 @@ void AValdorsoPNG::RimettiMovenza()
 	if (Movenza || Riposo)
 	{
 		Corpo->PlayAnimation(Movenza ? Movenza : Riposo.Get(), true);
+	}
+	// (14/11) seduto o a letto la radice dell'animazione resta ferma (come per i coloni, che le suonano come montaggi)
+	if (UAnimInstance* Anima = Corpo->GetAnimInstance())
+	{
+		Anima->SetRootMotionMode(Posa != PngInPiedi ? ERootMotionMode::IgnoreRootMotion : ERootMotionMode::RootMotionFromMontagesOnly);
+	}
+}
+
+// ------------------------------------------------------------------------- (14/11, "PNG che vivono") panche e letti
+
+void AValdorsoPNG::OnRep_Alzato()
+{
+	if (HasActorBegunPlay())
+	{
+		MettiPosa();
+	}
+}
+
+void AValdorsoPNG::LiberaMobile()
+{
+	if (HasAuthority())
+	{
+		if (AValdorsoPanca* Panca = Cast<AValdorsoPanca>(Mobile.Get()))
+		{
+			if (Panca->Riservati.IsValidIndex(PostoMobile) && Panca->Riservati[PostoMobile].Get() == this)
+			{
+				Panca->Riservati[PostoMobile].Reset();
+			}
+		}
+		else if (AValdorsoLetto* Letto = Cast<AValdorsoLetto>(Mobile.Get()))
+		{
+			if (Letto->Riservati.IsValidIndex(PostoMobile) && Letto->Riservati[PostoMobile].Get() == this)
+			{
+				Letto->Riservati[PostoMobile].Reset();
+			}
+		}
+	}
+	Mobile.Reset();
+	PostoMobile = INDEX_NONE;
+}
+
+void AValdorsoPNG::MettiPosa()
+{
+	LiberaMobile();
+	Posa = PngInPiedi;
+	// il corpo al suo posto di sempre (a letto si sposta sotto la capsula)
+	if (Corpo)
+	{
+		Corpo->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -PngMezzaAltezza), FRotator(0.f, -90.f, 0.f));
+	}
+	// (14/11) mentre cammina e' in piedi: il posto e l'animazione li da' il cammino
+	if (bCammina)
+	{
+		AnimCammino = 0;
+		SetActorTickEnabled(true);
+		return;
+	}
+	UWorld* Mondo = GetWorld();
+	const FValdorsoTappa* Ora = (!bVia && Giornata.IsValidIndex(Tappa)) ? &Giornata[Tappa] : nullptr;
+	const bool bPanca = Ora && Ora->Movenza == FName(PngMovenzaPanca);
+	const bool bLetto = Ora && Ora->Movenza == FName(PngMovenzaLetto);
+	if (!Mondo || (!bPanca && !bLetto))
+	{
+		RimettiMovenza();
+		return;
+	}
+	const FVector Vicino = Ora->Dove.IsZero() ? GetActorLocation() : Ora->Dove;
+	const float Mezza = PngMezzaAltezza * static_cast<float>(GetActorScale3D().Z);
+	float Gradi = static_cast<float>(GetActorRotation().Yaw);
+	bool bTrovato = false;
+	if (bPanca)
+	{
+		// il posto (di tutte le panche) piu' vicino a Dove
+		AValdorsoPanca* Scelta = nullptr;
+		int32 Quale = INDEX_NONE;
+		float Meglio = PngRaggioMobile;
+		FVector Sedile = FVector::ZeroVector;
+		for (TActorIterator<AValdorsoPanca> It(Mondo); It; ++It)
+		{
+			for (int32 i = 0; i < It->Posti.Num(); ++i)
+			{
+				const FVector Punto = It->GetActorTransform().TransformPosition(FVector(It->AvantiPosto, It->Posti[i], 0.f));
+				const float Distanza = static_cast<float>(FVector::Dist2D(Punto, Vicino));
+				if (Distanza < Meglio && FMath::Abs(Punto.Z - (Vicino.Z - Mezza)) < 200.f)
+				{
+					Meglio = Distanza;
+					Scelta = *It;
+					Quale = i;
+					Sedile = Punto;
+				}
+			}
+		}
+		if (Scelta)
+		{
+			bTrovato = true;
+			Gradi = static_cast<float>(Scelta->GetActorRotation().Yaw);
+			Mobile = Scelta;
+			PostoMobile = Quale;
+			if (bAlzato)
+			{
+				SetActorLocationAndRotation(Sedile + Scelta->GetActorForwardVector() * PngDavantiPanca + FVector(0.f, 0.f, Mezza), FRotator(0.f, Gradi, 0.f));
+			}
+			else
+			{
+				SetActorLocationAndRotation(Sedile + FVector(0.f, 0.f, Mezza), FRotator(0.f, Gradi, 0.f));
+				Posa = PngSeduto;
+				if (HasAuthority())
+				{
+					if (Scelta->Riservati.Num() < Scelta->Posti.Num())
+					{
+						Scelta->Riservati.SetNum(Scelta->Posti.Num());
+					}
+					Scelta->Riservati[Quale] = this;
+				}
+			}
+		}
+	}
+	else
+	{
+		AValdorsoLetto* Scelta = nullptr;
+		int32 Quale = INDEX_NONE;
+		float Meglio = PngRaggioMobile;
+		for (TActorIterator<AValdorsoLetto> It(Mondo); It; ++It)
+		{
+			for (int32 i = 0; i < It->Posti.Num(); ++i)
+			{
+				const FVector Punto = It->GetActorTransform().TransformPosition(FVector(It->Posti[i], 0.f, 0.f));
+				const float Distanza = static_cast<float>(FVector::Dist2D(Punto, Vicino));
+				if (Distanza < Meglio && FMath::Abs(Punto.Z - (Vicino.Z - Mezza)) < 200.f)
+				{
+					Meglio = Distanza;
+					Scelta = *It;
+					Quale = i;
+				}
+			}
+		}
+		if (Scelta)
+		{
+			bTrovato = true;
+			Mobile = Scelta;
+			PostoMobile = Quale;
+			// i conti del letto sono fatti per una capsula di 90 cm (senza colono): qui la nostra
+			const FVector Alza(0.f, 0.f, Mezza - 90.f);
+			if (bAlzato)
+			{
+				const FTransform Uscita = Scelta->TrasformaUscita(Quale, nullptr);
+				Gradi = static_cast<float>(Uscita.Rotator().Yaw);
+				SetActorLocationAndRotation(Uscita.GetLocation() + Alza, FRotator(0.f, Gradi, 0.f));
+			}
+			else
+			{
+				FTransform Attore;
+				FTransform MeshRelativa;
+				Scelta->TrasformaSdraiato(Quale, nullptr, Attore, MeshRelativa);
+				const FTransform MeshNelMondo = MeshRelativa * Attore;
+				Gradi = static_cast<float>(Attore.Rotator().Yaw);
+				SetActorLocationAndRotation(Attore.GetLocation() + Alza, FRotator(0.f, Gradi, 0.f));
+				if (Corpo)
+				{
+					Corpo->SetWorldLocationAndRotation(MeshNelMondo.GetLocation(), MeshNelMondo.GetRotation());
+				}
+				Posa = PngDorme;
+				if (HasAuthority())
+				{
+					if (Scelta->Riservati.Num() < Scelta->Posti.Num())
+					{
+						Scelta->Riservati.SetNum(Scelta->Posti.Num());
+					}
+					Scelta->Riservati[Quale] = this;
+				}
+			}
+		}
+	}
+	if (bTrovato)
+	{
+		SguardoIniziale = Gradi;
+		if (HasAuthority())
+		{
+			Sguardo = Gradi;
+		}
+	}
+	else
+	{
+		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] PNG %s: nessuna %s entro %.0f cm da (%.0f, %.0f, %.0f): resta in piedi."),
+			*GetName(), bPanca ? TEXT("panca") : TEXT("letto"), PngRaggioMobile, Vicino.X, Vicino.Y, Vicino.Z);
+	}
+	RimettiMovenza();
+}
+
+void AValdorsoPNG::Alzati()
+{
+	if (!HasAuthority() || Posa == PngInPiedi || bAlzato)
+	{
+		return;
+	}
+	bAlzato = true;
+	ForceNetUpdate();
+	MettiPosa();
+}
+
+void AValdorsoPNG::UsaPorta(const FValdorsoTappa& Arrivo)
+{
+	UWorld* Mondo = GetWorld();
+	if (!HasAuthority() || !Mondo || Arrivo.Porta.IsZero())
+	{
+		return;
+	}
+	AValdorsoPorta* Scelta = nullptr;
+	float Meglio = PngRaggioPorta;
+	for (TActorIterator<AValdorsoPorta> It(Mondo); It; ++It)
+	{
+		// (le imposte delle finestre no)
+		if (It->IsA<AValdorsoImposta>())
+		{
+			continue;
+		}
+		const float Distanza = static_cast<float>(FVector::Dist(It->GetActorLocation(), Arrivo.Porta));
+		if (Distanza < Meglio)
+		{
+			Meglio = Distanza;
+			Scelta = *It;
+		}
+	}
+	if (Scelta)
+	{
+		Scelta->MettiAperta(Arrivo.bApriPorta, GetActorLocation());
+	}
+	else
+	{
+		UE_LOG(LogValdorso, Warning, TEXT("[Valdorso] PNG %s: nessuna porta entro %.0f cm da (%.0f, %.0f, %.0f)."),
+			*GetName(), PngRaggioPorta, Arrivo.Porta.X, Arrivo.Porta.Y, Arrivo.Porta.Z);
+	}
+}
+
+// ---------------------------------------------------------------------- (14/11, "PNG che camminano") il cammino
+
+double AValdorsoPNG::OraServer() const
+{
+	const UWorld* Mondo = GetWorld();
+	if (!Mondo)
+	{
+		return 0.0;
+	}
+	const AGameStateBase* Gioco = Mondo->GetGameState();
+	return Gioco ? Gioco->GetServerWorldTimeSeconds() : Mondo->GetTimeSeconds();
+}
+
+float AValdorsoPNG::TempoDelCammino() const
+{
+	return CamminoFermo >= 0.f ? CamminoFermo : static_cast<float>(FMath::Max(0.0, OraServer() - CamminoInizio));
+}
+
+const FValdorsoStrada* AValdorsoPNG::StradaDiAdesso() const
+{
+	if (!Giornata.IsValidIndex(Tappa) || !Giornata[Tappa].Strade.IsValidIndex(StradaUsata))
+	{
+		return nullptr;
+	}
+	const FValdorsoStrada& Strada = Giornata[Tappa].Strade[StradaUsata];
+	return Strada.Punti.Num() > 0 ? &Strada : nullptr;
+}
+
+bool AValdorsoPNG::PuntoDelCammino(float Tempo, FVector& Dove, float& Gradi, int32& PortaSulPercorso) const
+{
+	PortaSulPercorso = INDEX_NONE;
+	const FValdorsoStrada* Strada = StradaDiAdesso();
+	if (!Strada)
+	{
+		Dove = GetActorLocation();
+		Gradi = static_cast<float>(GetActorRotation().Yaw);
+		return false;
+	}
+	const TArray<FVector>& Punti = Strada->Punti;
+	float Resto = FMath::Max(0.f, Tempo);
+	Gradi = static_cast<float>(GetActorRotation().Yaw);
+	for (int32 i = 0; i < Punti.Num(); ++i)
+	{
+		if (i > 0)
+		{
+			const FVector Tratto = Punti[i] - Punti[i - 1];
+			const float Lungo = static_cast<float>(Tratto.Size2D());
+			if (Lungo > 1.f)
+			{
+				Gradi = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Tratto.Y, Tratto.X)));
+			}
+			const float Durata = Lungo / PngVelocitaPasso;
+			if (Resto < Durata)
+			{
+				Dove = FMath::Lerp(Punti[i - 1], Punti[i], Durata > 0.f ? Resto / Durata : 1.f);
+				return true;
+			}
+			Resto -= Durata;
+		}
+		if (Strada->Porte.Contains(i) && i + 1 < Punti.Num())
+		{
+			if (Resto < PngSostaPorta)
+			{
+				// sulla soglia, girato verso dove passa
+				const FVector Avanti = Punti[i + 1] - Punti[i];
+				if (Avanti.SizeSquared2D() > 1.f)
+				{
+					Gradi = static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Avanti.Y, Avanti.X)));
+				}
+				Dove = Punti[i];
+				PortaSulPercorso = i;
+				return true;
+			}
+			Resto -= PngSostaPorta;
+		}
+	}
+	Dove = Punti.Last();
+	return false;
+}
+
+bool AValdorsoPNG::MuoviCammino(float DeltaSeconds)
+{
+	if (!bCammina)
+	{
+		return false;
+	}
+	FVector Dove;
+	float Gradi = 0.f;
+	int32 Porta = INDEX_NONE;
+	PuntoDelCammino(TempoDelCammino(), Dove, Gradi, Porta);
+	// i piedi sulla terra (o sul pavimento): una linea dall'alto, vicino alla quota della strada
+	if (UWorld* Mondo = GetWorld())
+	{
+		const float Mezza = PngMezzaAltezza * static_cast<float>(GetActorScale3D().Z);
+		const double Riferimento = bCamminoZ ? FMath::Max(CamminoZ, Dove.Z) : Dove.Z;
+		FCollisionQueryParams Parametri(SCENE_QUERY_STAT(ValdorsoPngCammino), false, this);
+		FCollisionObjectQueryParams Cosa;
+		Cosa.AddObjectTypesToQuery(ECC_WorldStatic);
+		FHitResult Terra;
+		if (Mondo->LineTraceSingleByObjectType(Terra, FVector(Dove.X, Dove.Y, Riferimento + 100.0),
+			FVector(Dove.X, Dove.Y, Riferimento - 350.0), Cosa, Parametri))
+		{
+			Dove.Z = Terra.ImpactPoint.Z + Mezza;
+		}
+		CamminoZ = Dove.Z;
+		bCamminoZ = true;
+	}
+	SetActorLocation(Dove);
+	const bool bFermo = CamminoFermo >= 0.f;
+	if (!bFermo)
+	{
+		// si gira piano verso dove va (non di colpo agli angoli)
+		const float Adesso = static_cast<float>(GetActorRotation().Yaw);
+		const float Manca = FMath::FindDeltaAngleDegrees(Adesso, Gradi);
+		const float Passo = 240.f * DeltaSeconds;
+		SetActorRotation(FRotator(0.f, FMath::Abs(Manca) <= Passo ? Gradi : Adesso + FMath::Sign(Manca) * Passo, 0.f));
+	}
+	// l'animazione: cammina, apre la porta, o sta fermo (parla)
+	const uint8 Voluta = bFermo ? 3 : (Porta != INDEX_NONE ? 2 : 1);
+	if (Voluta != AnimCammino && Corpo && GetNetMode() != NM_DedicatedServer)
+	{
+		AnimCammino = Voluta;
+		UAnimSequence* Quale = nullptr;
+		float Ritmo = 1.f;
+		if (Voluta == 1)
+		{
+			if (!Passeggio)
+			{
+				Passeggio = LoadObject<UAnimSequence>(nullptr, PngAnimPasseggio, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			}
+			Quale = Passeggio;
+			Ritmo = FMath::Clamp(CVarPngRitmoPasso.GetValueOnGameThread(), 0.3f, 2.f);
+		}
+		else if (Voluta == 2)
+		{
+			if (!ApreLaPorta)
+			{
+				ApreLaPorta = LoadObject<UAnimSequence>(nullptr, PngAnimApre, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			}
+			Quale = ApreLaPorta;
+			if (Quale)
+			{
+				// tutta l'animazione nella sosta sulla soglia
+				Ritmo = FMath::Clamp(Quale->GetPlayLength() / PngSostaPorta, 0.5f, 3.f);
+			}
+		}
+		if (!Quale)
+		{
+			Quale = Riposo;
+		}
+		if (Quale)
+		{
+			Corpo->PlayAnimation(Quale, Voluta != 2);
+			Corpo->SetPlayRate(Ritmo);
+			if (UAnimInstance* Anima = Corpo->GetAnimInstance())
+			{
+				Anima->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
+			}
+		}
+	}
+	return true;
+}
+
+void AValdorsoPNG::OnRep_Cammino()
+{
+	if (!HasActorBegunPlay())
+	{
+		return;
+	}
+	SetActorTickEnabled(true);
+	if (bCammina)
+	{
+		// fermo o ripartito: l'animazione giusta al prossimo passo
+		AnimCammino = 0;
+		return;
+	}
+	// arrivato: al suo posto (o a casa), come vuole la tappa
+	if (!HasAuthority())
+	{
+		bCamminoZ = false;
+		AnimCammino = 0;
+		if (Corpo)
+		{
+			Corpo->SetPlayRate(1.f);
+		}
+		OnRep_Tappa();
+	}
+}
+
+void AValdorsoPNG::ControllaCammino()
+{
+	UWorld* Mondo = GetWorld();
+	if (!HasAuthority() || !Mondo)
+	{
+		return;
+	}
+	const double Adesso = OraServer();
+	if (bCammina)
+	{
+		// si ferma se parla, e' a terra o scappa; riparte quando ha finito
+		const bool bFermati = bInFuga || bATerra || Conversazioni.Num() > 0;
+		if (bFermati && CamminoFermo < 0.f)
+		{
+			CamminoFermo = TempoDelCammino();
+			ForceNetUpdate();
+			OnRep_Cammino();
+		}
+		else if (!bFermati && CamminoFermo >= 0.f)
+		{
+			CamminoInizio = Adesso - CamminoFermo;
+			CamminoFermo = -1.f;
+			ForceNetUpdate();
+			OnRep_Cammino();
+		}
+		FVector Dove;
+		float Gradi = 0.f;
+		int32 Soglia = INDEX_NONE;
+		const bool bAncora = PuntoDelCammino(TempoDelCammino(), Dove, Gradi, Soglia);
+		// sulla soglia: apre la porta (e fra poco la richiude dietro di se')
+		const FValdorsoStrada* Strada = StradaDiAdesso();
+		if (Soglia != INDEX_NONE && Soglia != UltimaPortaAperta && Strada && Strada->Punti.IsValidIndex(Soglia))
+		{
+			UltimaPortaAperta = Soglia;
+			const FVector Punto = Strada->Punti[Soglia];
+			AValdorsoPorta* Scelta = nullptr;
+			float Meglio = PngRaggioPorta;
+			for (TActorIterator<AValdorsoPorta> It(Mondo); It; ++It)
+			{
+				if (It->IsA<AValdorsoImposta>())
+				{
+					continue;
+				}
+				const float Distanza = static_cast<float>(FVector::Dist2D(It->GetActorLocation(), Punto));
+				if (Distanza < Meglio && FMath::Abs(It->GetActorLocation().Z - Punto.Z) < 250.f)
+				{
+					Meglio = Distanza;
+					Scelta = *It;
+				}
+			}
+			if (Scelta && !Scelta->Aperta())
+			{
+				Scelta->MettiAperta(true, Dove);
+				FPortaDaChiudere Nuova;
+				Nuova.Porta = Scelta;
+				Nuova.Alle = Adesso + PngSostaPorta + PngChiudiDopo;
+				PorteDaChiudere.Add(Nuova);
+			}
+		}
+		if (!bAncora && CamminoFermo < 0.f)
+		{
+			FinisciCammino();
+		}
+	}
+	// le porte aperte passando: si richiudono (non se c'e' qualcuno sulla soglia)
+	for (int32 i = PorteDaChiudere.Num() - 1; i >= 0; --i)
+	{
+		AValdorsoPorta* Porta = PorteDaChiudere[i].Porta.Get();
+		if (!Porta)
+		{
+			PorteDaChiudere.RemoveAt(i);
+			continue;
+		}
+		if (Adesso < PorteDaChiudere[i].Alle)
+		{
+			continue;
+		}
+		bool bQualcuno = FVector::Dist2D(GetActorLocation(), Porta->GetActorLocation()) < 180.0;
+		for (FConstPlayerControllerIterator It = Mondo->GetPlayerControllerIterator(); It && !bQualcuno; ++It)
+		{
+			const APawn* Colono = It->Get() ? It->Get()->GetPawn() : nullptr;
+			bQualcuno = Colono && FVector::Dist2D(Colono->GetActorLocation(), Porta->GetActorLocation()) < 180.0;
+		}
+		if (bQualcuno)
+		{
+			PorteDaChiudere[i].Alle = Adesso + 2.0;
+			continue;
+		}
+		Porta->MettiAperta(false, GetActorLocation());
+		PorteDaChiudere.RemoveAt(i);
+	}
+	if (!bCammina && PorteDaChiudere.Num() == 0)
+	{
+		GetWorldTimerManager().ClearTimer(TimerCammino);
+	}
+}
+
+void AValdorsoPNG::FinisciCammino()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	bCammina = false;
+	CamminoFermo = -1.f;
+	bCamminoZ = false;
+	AnimCammino = 0;
+	if (Corpo)
+	{
+		Corpo->SetPlayRate(1.f);
+	}
+	bVia = bViaAllArrivo;
+	ForceNetUpdate();
+	OnRep_Tappa();
+	// la porta della tappa (la bottega che apre, la locanda che chiude): non la richiude il cammino
+	if (Giornata.IsValidIndex(Tappa))
+	{
+		const FValdorsoTappa& Arrivo = Giornata[Tappa];
+		if (!Arrivo.Porta.IsZero())
+		{
+			PorteDaChiudere.RemoveAll([&Arrivo](const FPortaDaChiudere& Una)
+			{
+				return Una.Porta.IsValid() && FVector::Dist(Una.Porta->GetActorLocation(), Arrivo.Porta) < PngRaggioPorta;
+			});
+		}
+		UsaPorta(Arrivo);
 	}
 }
 
@@ -994,6 +1687,8 @@ bool AValdorsoPNG::Colpito(AActor* Da, float Danno)
 	{
 		return false;
 	}
+	// (14/11) seduto o a letto: prima salta in piedi
+	Alzati();
 	const double Adesso = Mondo->GetTimeSeconds();
 	APawn* Colono = Cast<APawn>(Da);
 	APlayerController* Giocatore = Colono ? Cast<APlayerController>(Colono->GetController()) : nullptr;
@@ -1051,10 +1746,12 @@ void AValdorsoPNG::Rialza()
 void AValdorsoPNG::Spaventa(APawn* Colono, bool bVittima)
 {
 	UWorld* Mondo = GetWorld();
-	if (!HasAuthority() || !Mondo || bVia)
+	// (14/11) chi dorme non vede niente (se lo colpiscono si sveglia: Colpito)
+	if (!HasAuthority() || !Mondo || bVia || (Dorme() && !bVittima))
 	{
 		return;
 	}
+	Alzati();
 	const double Adesso = Mondo->GetTimeSeconds();
 	if (Adesso - UltimoGrido >= 6.0)
 	{
@@ -1104,6 +1801,7 @@ void AValdorsoPNG::Fuggi(const AActor* Da)
 	{
 		return;
 	}
+	Alzati();
 	const FVector Qui = GetActorLocation();
 	FVector Lontano = (Qui - Da->GetActorLocation()).GetSafeNormal2D();
 	if (Lontano.IsNearlyZero())

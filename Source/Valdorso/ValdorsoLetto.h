@@ -172,6 +172,9 @@ public:
 	/** Chi dorme in ogni posto (solo sul server). */
 	TArray<TWeakObjectPtr<APawn>> Occupanti;
 
+	/** (14/11) Il PNG che dorme in ogni posto (solo sul server, ValdorsoPNG.h): i coloni non ci si coricano sopra. */
+	TArray<TWeakObjectPtr<AActor>> Riservati;
+
 	/** Dove deve stare l'attore del colono sdraiato in quel posto. */
 	void TrasformaSdraiato(int32 Posto, const APawn* Chi, FTransform& Attore, FTransform& MeshRelativa) const;
 

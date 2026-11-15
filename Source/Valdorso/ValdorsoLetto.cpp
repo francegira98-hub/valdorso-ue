@@ -487,7 +487,7 @@ int32 AValdorsoLetto::PostoLibero(const APawn* Chi) const
 	float Distanza = TNumericLimits<float>::Max();
 	for (int32 i = 0; i < Posti.Num(); ++i)
 	{
-		if (Occupanti.IsValidIndex(i) && Occupanti[i].IsValid())
+		if ((Occupanti.IsValidIndex(i) && Occupanti[i].IsValid()) || (Riservati.IsValidIndex(i) && Riservati[i].IsValid()))
 		{
 			continue;
 		}

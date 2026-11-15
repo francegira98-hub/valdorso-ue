@@ -32,8 +32,12 @@ mel = unreal.MaterialEditingLibrary
 
 
 def _file_scelte():
-    return os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), "Python",
-                        "texture_vere_villaggio.json")
+    # (15/11) il file sta fuori da Content (V:/Texture/valdorso/villaggio): dentro Content, Unreal lo vedeva cambiare e
+    # chiedeva di importarlo come DataTable. Se c'e' ancora quello vecchio in Content/Python, si usa quello.
+    fuori = "V:/Texture/valdorso/villaggio/texture_vere_villaggio.json"
+    vecchio = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), "Python",
+                           "texture_vere_villaggio.json")
+    return fuori if os.path.exists(fuori) or not os.path.exists(vecchio) else vecchio
 
 
 def _texture_di(cartella):
@@ -64,13 +68,19 @@ def applica():
     with open(_file_scelte(), "r", encoding="utf-8") as f:
         scelte = json.load(f)
     for nome, voce in scelte.items():
-        if nome not in SUPERFICI or not isinstance(voce, dict) or not voce.get("cartella"):
+        if nome not in SUPERFICI or not isinstance(voce, dict) or not (voce.get("cartella") or voce.get("colore")):
             continue
         mi = _istanza(nome)
         if mi is None:
             righe.append("%s: manca MI_Villaggio_%s (lanciare prima crea_villaggio.py)" % (nome, nome))
             continue
-        colore, rilievo = _texture_di(voce["cartella"])
+        # (15/11) si puo' dire anche la texture precisa ("colore" e "rilievo": percorsi interi), utile quando una
+        # cartella ne ha tante (i Megascans del Medieval Village stanno tutti insieme)
+        if voce.get("colore"):
+            colore = unreal.load_asset(voce["colore"])
+            rilievo = unreal.load_asset(voce["rilievo"]) if voce.get("rilievo") else None
+        else:
+            colore, rilievo = _texture_di(voce["cartella"])
         if colore is None:
             righe.append("%s: nella cartella %s non trovo la texture del colore" % (nome, voce["cartella"]))
             continue
@@ -113,20 +123,40 @@ def metti():
         unreal.log("[Valdorso] Texture vere: " + r)
 
 
+RADICI = ["/Game/Fab", "/Game/Megascans", "/Game/Materials", "/Game/Medieval_House_Props_V2", "/Game/MSPresets",
+          "/Game/Scene_Banquet", "/Game/KiteDemo"]
+
+
 def elenca():
-    """Scrive Saved/Claude/superfici.txt: le cartelle di Content/Fab che hanno una texture di colore e una di rilievo."""
-    trovate = {}
-    for p in libreria.list_assets("/Game/Fab", recursive=True, include_folder=False):
-        nome = p.rsplit(".", 1)[-1].lower()
+    """Scrive Saved/Claude/superfici.txt: tutte le texture di colore con il loro rilievo (stesso nome), nei pacchetti.
+    (15/11) Guarda anche /Game/Megascans e gli altri pacchetti, non solo /Game/Fab, e scrive le coppie una per una,
+    con la grandezza, perche' Claude scelga quella giusta per ogni superficie."""
+    registro = unreal.AssetRegistryHelpers.get_asset_registry()
+    tutte = {}
+    for radice in RADICI:
+        filtro = unreal.ARFilter(class_paths=[unreal.TopLevelAssetPath("/Script/Engine", "Texture2D")],
+                                 package_paths=[radice], recursive_paths=True)
+        for d in registro.get_assets(filtro):
+            try:
+                dim = str(d.get_tag_value("Dimensions") or "")
+            except Exception:  # noqa: BLE001
+                dim = ""
+            tutte[str(d.package_name)] = dim
+    per_radice = {}
+    for p in tutte:
+        nome = p.rsplit("/", 1)[-1].lower()
+        for c in COLORE:
+            if nome.endswith(c):
+                per_radice[p] = nome[: -len(c)]
+                break
+    righe = ["Texture di colore nei pacchetti, con il rilievo dello stesso nome (percorso | grandezza | rilievo):"]
+    for p, radice in sorted(per_radice.items()):
         cartella = p.rsplit("/", 1)[0]
-        if nome.endswith(COLORE):
-            trovate.setdefault(cartella, set()).add("colore")
-        elif nome.endswith(RILIEVO):
-            trovate.setdefault(cartella, set()).add("rilievo")
-    righe = ["Superfici trovate in /Game/Fab (cartelle con colore e rilievo):"]
-    righe += sorted(c for c, k in trovate.items() if {"colore", "rilievo"} <= k)
+        rilievo = next((q for q in tutte if q.rsplit("/", 1)[0] == cartella
+                        and q.rsplit("/", 1)[-1].lower() in tuple(radice + r for r in RILIEVO)), "")
+        righe.append("%s | %s | %s" % (p, tutte[p], rilievo or "-"))
     cartella = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "Claude")
     os.makedirs(cartella, exist_ok=True)
     with open(os.path.join(cartella, "superfici.txt"), "w", encoding="utf-8") as f:
-        f.write("\n".join(righe))
-    unreal.log("[Valdorso] Superfici: %d cartelle, elenco in Saved/Claude/superfici.txt" % (len(righe) - 1))
+        f.write("\n".join(righe) + "\n")
+    unreal.log("[Valdorso] Superfici: %d texture di colore, elenco in Saved/Claude/superfici.txt" % (len(righe) - 1))

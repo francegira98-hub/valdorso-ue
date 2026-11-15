@@ -235,7 +235,8 @@ void AValdorsoPlayerState::Arresta()
 	double Migliore = TNumericLimits<double>::Max();
 	for (TActorIterator<AValdorsoPNG> It(Mondo); It; ++It)
 	{
-		if (!It->Guardia() || It->Via() || It->ATerra())
+		// (14/11) una guardia che dorme sulla branda non arresta nessuno
+		if (!It->Guardia() || It->Via() || It->ATerra() || It->Dorme())
 		{
 			continue;
 		}

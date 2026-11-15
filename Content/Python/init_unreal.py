@@ -147,6 +147,17 @@ def crea_menu_valdorso():
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_grotta_nord.py")
     valdorso.add_menu_entry("Pericoli", voce)
 
+    # (15/11, v0.2.5) il sentiero dei nani: la mulattiera a tornanti fino alla grotta del nord (nuovi/crea_sentiero_nani.py)
+    for nome, etichetta, modo in (("SentieroNani", "Sentiero dei nani: costruisci (grotta del nord)", "fai"),
+                                  ("SentieroNaniVia", "Sentiero dei nani: togli", "togli")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", (
+            "import os, unreal; "
+            "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_sentiero_nani.py'); "
+            "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'SENTIERO_MODO': '%s'})") % modo)
+        valdorso.add_menu_entry("Pericoli", voce)
+
     # (11/11, v0.1.7) i gesti (Mixamo + Martellare e Spazzare provvisori) e i volti nuovi con le loro giornate
     voce = unreal.ToolMenuEntry(name="Gesti", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Gesti: importa da Mixamo (V:\\Mixamo\\Gesti) e fai Martellare e Spazzare")
@@ -161,6 +172,41 @@ def crea_menu_valdorso():
     voce = unreal.ToolMenuEntry(name="Volti", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Volti: Marta, Livia, Tobia, i mugnai, Elric (con le giornate) e la pietra dei segni")
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "crea_volti.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (15/11, v0.2.5) le case vere con il kit del Medieval Village, sulla stessa pianta (nuovi/costruisci_case.py)
+    for nome, etichetta, modo in (("CaseVereProva", "Case vere: casa di prova (Casa_Sud_1)", "prova"),
+                                  ("CaseVereTutte", "Case vere: tutte le case", "tutte"),
+                                  ("CaseVereIndietro", "Case vere: torna come prima", "indietro")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", (
+            "import os, unreal; "
+            "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'costruisci_case.py'); "
+            "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'CASE_MODO': '%s'})") % modo)
+        valdorso.add_menu_entry("Villaggio", voce)
+
+    # (15/11, v0.2.5) la pelle nuova delle case, primo passo: solo guardare i materiali (nuovi/guarda_case.py)
+    voce = unreal.ToolMenuEntry(name="GuardaCase", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Case: guarda i materiali (non cambia niente)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "guarda_case.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (15/11, v0.2.5) gli alberi in citta': la quercia della piazza e gli alberi nei cortili (nuovi/crea_alberi_citta.py)
+    for nome, etichetta, modo in (("AlberiCitta", "Alberi in citta': pianta (poi rilancia 'PNG: panche, letti e porte')", "fai"),
+                                  ("AlberiCittaVia", "Alberi in citta': togli", "togli")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", (
+            "import os, unreal; "
+            "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_alberi_citta.py'); "
+            "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'ALBERI_MODO': '%s'})") % modo)
+        valdorso.add_menu_entry("Villaggio", voce)
+
+    # (14/11) i PNG che si siedono sulle panche, dormono nei letti e aprono le porte (nuovi/giornate_vive.py)
+    voce = unreal.ToolMenuEntry(name="GiornateVive", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("PNG: panche, letti e porte")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "giornate_vive.py")
     valdorso.add_menu_entry("Villaggio", voce)
 
     # (12/11, v0.2.1) il .pak a pezzi: le etichette che dividono il gioco in cinque scatole (crea_scatole.py)
@@ -222,6 +268,29 @@ def crea_menu_valdorso():
     voce = unreal.ToolMenuEntry(name="ControllaAnimazioniArmi", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Armi: controlla le animazioni dei colpi")
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "controlla_animazioni.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
+    # (14/11, v0.2.5) l'inventario dei pacchetti di Fab aggiunti al progetto (nuovi/inventario_fab.py), per Claude
+    voce = unreal.ToolMenuEntry(name="InventarioFab", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Fab: inventario dei pacchetti (per Claude)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "inventario_fab.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
+    # (15/11, v0.2.5) la dieta della memoria: i tetti alle texture dei pacchetti (nuovi/dieta_texture.py)
+    for nome, etichetta, fai in (("MemoriaGuarda", "Memoria: guarda quanto pesano le texture (non cambia niente)", "False"),
+                                 ("MemoriaDieta", "Memoria: metti a dieta le texture dei pacchetti", "True")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", (
+            "import os, unreal; "
+            "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'dieta_texture.py'); "
+            "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'DIETA_FAI': %s})") % fai)
+        valdorso.add_menu_entry("Strumenti", voce)
+
+    # (14/11) i colpi di Grux (asce, mazze) e di Aurora (pugnali) nel nostro colono (nuovi/porta_armi_paragon.py)
+    voce = unreal.ToolMenuEntry(name="ArmiParagon", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Armi: porta le animazioni di Grux e Aurora")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "porta_armi_paragon.py")
     valdorso.add_menu_entry("Strumenti", voce)
 
     voce = unreal.ToolMenuEntry(name="AggiornaSuoni", type=unreal.MultiBlockType.MENU_ENTRY)
