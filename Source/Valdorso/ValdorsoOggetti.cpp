@@ -275,6 +275,15 @@ namespace
 		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Porta"), TEXT("Chiave della porta grande"),
 			TEXT("Pesante, con i denti larghi e la corona incisa sull'impugnatura. Toglie il lucchetto alla leva della grata."), 0.3f),
 			TEXT("La chiave della porta grande: la leva della grata risponde alla tua mano.")));
+		// (16/11, v0.2.6) la caserma della milizia (fase 3): apre il corpo di guardia accanto al portale, dove sta la leva
+		// della grata piccola. La tengono la capitana Livia e le guardie
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Caserma"), TEXT("Chiave della caserma"),
+			TEXT("Corta e tozza, con due lance incrociate incise sull'anello. Apre il corpo di guardia della milizia."), 0.15f),
+			TEXT("La chiave della caserma: il corpo di guardia della milizia si apre per te.")));
+		// (16/11 sera, v0.2.6) la prigione negli alloggi della milizia: apre le tre celle. La tengono la capitana e le guardie
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Prigione"), TEXT("Chiave della prigione"),
+			TEXT("Lunga, di ferro nero, con l'anello consumato dalle mani. Apre le celle della milizia."), 0.2f),
+			TEXT("La chiave della prigione: le sbarre delle celle si aprono per te.")));
 
 		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana, le monete e il pugnale dei nani, la storia di Lucia
 		C.Add(OggSemplice(TEXT("Piccone"), TEXT("Piccone"),
@@ -946,7 +955,8 @@ namespace
 			L.Add(OggLinea({ { -0.45f, -0.25f }, { 0.55f, -0.25f } }));
 		}
 		// (16/11, v0.2.6) le chiavi: l'anello, il fusto e i denti (quella della porta grande con la corona)
-		else if (N == TEXT("Chiave_Torri") || N == TEXT("Chiave_Porta"))
+		else if (N == TEXT("Chiave_Torri") || N == TEXT("Chiave_Porta") || N == TEXT("Chiave_Caserma")
+			|| N == TEXT("Chiave_Prigione"))
 		{
 			L.Add(OggCerchio(-0.5f, 0.f, 0.28f, 14));
 			L.Add(OggLinea({ { -0.22f, 0.f }, { 0.8f, 0.f } }));

@@ -188,8 +188,11 @@ def crea_menu_valdorso():
 
     # (16/11, v0.2.6 "Le mura" e v0.2.7 "Il tempio") i pezzi della chat 3D nel livello (nuovi/crea_mura.py)
     for nome, etichetta, modo in (("MuraAssi", "Mura: 1. prova degli assi", "assi"),
-                                  ("MuraCostruisci", "Mura: 2. costruisci le mura (fase 3)", "mura"),
+                                  ("MuraCostruisci", "Mura: 2. costruisci le mura (basse in fase 2, alte in fase 3)", "mura"),
                                   ("MuraTempio", "Mura: 3. il tempio che cresce (fasi 2 e 3)", "tempio"),
+                                  ("MuraStrade", "Mura: 4. strade, case spostate e niente erba", "strade"),
+                                  ("MuraCaserma", "Mura: 5. il recinto della caserma (fase 3)", "caserma"),
+                                  ("MuraAlloggi", "Mura: 6. la caserma dentro: camerata, ufficio, prigione (fase 3)", "alloggi"),
                                   ("MuraIndietro", "Mura: torna come prima", "indietro")):
         voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
         voce.set_label(etichetta)
@@ -198,6 +201,12 @@ def crea_menu_valdorso():
             "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_mura.py'); "
             "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'MURA_MODO': '%s'})") % modo)
         valdorso.add_menu_entry("Villaggio", voce)
+
+    # (16/11 sera, v0.2.7 "Il tempio") che cosa c'e' dentro la chiesa e la pieve (nuovi/guarda_tempio.py; non cambia niente)
+    voce = unreal.ToolMenuEntry(name="GuardaTempio", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Tempio: guarda cosa c'e' dentro (non cambia niente)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "guarda_tempio.py")
+    valdorso.add_menu_entry("Villaggio", voce)
 
     # (16/11, v0.2.6 "Le mura") la grata di prova con la leva e una porta chiusa a chiave (nuovi/metti_grata_prova.py)
     for nome, etichetta, modo in (("GrataProva", "Mura: metti una grata di prova davanti alla telecamera", "metti"),
