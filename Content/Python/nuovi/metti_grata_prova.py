@@ -66,7 +66,15 @@ def principale():
     if classe_grata is None or classe_leva is None:
         avviso("mancano le classi ValdorsoGrata e ValdorsoLeva: serve compilare il C++ della v0.2.6")
         return
-    ok, dove, gira = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_level_viewport_camera_info()
+    r = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_level_viewport_camera_info()
+    # (16/11 sera) in Unreal 5.8 i valori sono due (posizione, rotazione), non tre
+    if isinstance(r, tuple) and len(r) == 3:
+        ok, dove, gira = r
+    elif isinstance(r, tuple) and len(r) == 2:
+        dove, gira = r
+        ok = dove is not None
+    else:
+        ok, dove, gira = False, None, None
     if not ok:
         avviso("non trovo la telecamera dell'editor")
         return

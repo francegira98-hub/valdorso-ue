@@ -4,6 +4,9 @@
 #include "Valdorso.h"
 #include "ValdorsoCombattimento.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoCielo.h"
+#include "EngineUtils.h"
+#include "TimerManager.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -176,6 +179,12 @@ void AValdorsoGrata::BeginPlay()
 	if (HasAuthority())
 	{
 		bSu = bAlzataAllInizio;
+		if (bGiornoENotte)
+		{
+			// subito come vuole l'ora (di giorno alzata), poi ogni 5 secondi si guarda se e' cambiata
+			GuardaOra();
+			GetWorldTimerManager().SetTimer(TimerOra, this, &AValdorsoGrata::GuardaOra, 5.f, true);
+		}
 	}
 	QuotaAttuale = bSu ? Corsa : 0.f;
 	Saracinesca->SetRelativeLocation(FVector(0.f, 0.f, QuotaAttuale));
@@ -198,6 +207,46 @@ void AValdorsoGrata::Muovi(bool bAlzare, AActor* Chi)
 	ValdorsoRegistroEventi::Annota(bSu ? TEXT("GrataSu") : TEXT("GrataGiu"), Chi, this, GetActorLocation());
 	ForceNetUpdate();
 	OnRep_Su();
+}
+
+void AValdorsoGrata::GuardaOra()
+{
+	UWorld* Mondo = GetWorld();
+	if (!Mondo || !HasAuthority())
+	{
+		return;
+	}
+	const AValdorsoCielo* Cielo = nullptr;
+	for (TActorIterator<AValdorsoCielo> It(Mondo); It; ++It)
+	{
+		Cielo = *It;
+		break;
+	}
+	if (!Cielo)
+	{
+		return;
+	}
+	const float Ora = Cielo->Ora();
+	const bool bNotte = OraSera > OraMattina ? (Ora >= OraSera || Ora < OraMattina) : (Ora >= OraSera && Ora < OraMattina);
+	if (UltimaNotte < 0)
+	{
+		// la prima volta (il mondo appena partito): com'e' giusto adesso, senza rumore
+		UltimaNotte = bNotte ? 1 : 0;
+		bSu = !bNotte;
+		QuotaAttuale = bSu ? Corsa : 0.f;
+		if (Saracinesca)
+		{
+			Saracinesca->SetRelativeLocation(FVector(0.f, 0.f, QuotaAttuale));
+		}
+		ForceNetUpdate();
+		return;
+	}
+	if ((bNotte ? 1 : 0) != UltimaNotte)
+	{
+		UltimaNotte = bNotte ? 1 : 0;
+		// le guardie: giu' la sera, su la mattina (chi l'ha mossa con la chiave nel frattempo, la ritrova come dicono loro)
+		Muovi(!bNotte, nullptr);
+	}
 }
 
 void AValdorsoGrata::OnRep_Su()

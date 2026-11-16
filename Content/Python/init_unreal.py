@@ -186,6 +186,19 @@ def crea_menu_valdorso():
             "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'CASE_MODO': '%s'})") % modo)
         valdorso.add_menu_entry("Villaggio", voce)
 
+    # (16/11, v0.2.6 "Le mura" e v0.2.7 "Il tempio") i pezzi della chat 3D nel livello (nuovi/crea_mura.py)
+    for nome, etichetta, modo in (("MuraAssi", "Mura: 1. prova degli assi", "assi"),
+                                  ("MuraCostruisci", "Mura: 2. costruisci le mura (fase 3)", "mura"),
+                                  ("MuraTempio", "Mura: 3. il tempio che cresce (fasi 2 e 3)", "tempio"),
+                                  ("MuraIndietro", "Mura: torna come prima", "indietro")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", (
+            "import os, unreal; "
+            "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_mura.py'); "
+            "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'MURA_MODO': '%s'})") % modo)
+        valdorso.add_menu_entry("Villaggio", voce)
+
     # (16/11, v0.2.6 "Le mura") la grata di prova con la leva e una porta chiusa a chiave (nuovi/metti_grata_prova.py)
     for nome, etichetta, modo in (("GrataProva", "Mura: metti una grata di prova davanti alla telecamera", "metti"),
                                   ("GrataProvaVia", "Mura: togli la grata di prova", "togli")):
@@ -196,6 +209,18 @@ def crea_menu_valdorso():
             "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'metti_grata_prova.py'); "
             "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'GRATA_MODO': '%s'})") % modo)
         valdorso.add_menu_entry("Villaggio", voce)
+
+    # (16/11, v0.2.10 "Casa mia") misura la locanda di Bruno di oggi per la chat 3D (nuovi/misura_locanda.py; non cambia niente)
+    voce = unreal.ToolMenuEntry(name="MisuraLocanda", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Locande: misura la locanda di oggi")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "misura_locanda.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (16/11 sera, v0.2.6) le quote del terreno intorno alle mura per le strade delle porte (nuovi/esporta_quote.py)
+    voce = unreal.ToolMenuEntry(name="EsportaQuote", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Strade: esporta le quote intorno alle mura (per la chat 3D)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "esporta_quote.py")
+    valdorso.add_menu_entry("Villaggio", voce)
 
     # (15/11, v0.2.5) la pelle nuova delle case, primo passo: solo guardare i materiali (nuovi/guarda_case.py)
     voce = unreal.ToolMenuEntry(name="GuardaCase", type=unreal.MultiBlockType.MENU_ENTRY)

@@ -1,12 +1,51 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-14",
+ "aggiornato": "2026-11-16",
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
   {
+   "versione": "0.2.5",
+   "nome": "La valle più bella",
+   "data": "2026-11-16",
+   "sommario": "Gli abitanti vivono la loro giornata: camminano per il villaggio, si siedono sulle panche, dormono nei letti, aprono e chiudono le porte. Un sentiero di pietra sale alla grotta del nord, querce e faggi fanno ombra in città, le case hanno il legno vero. E il gioco chiede meno alla scheda video.",
+   "gruppi": [
+    {
+     "titolo": "Novità: gli abitanti vivono la giornata",
+     "voci": [
+      "Gli abitanti camminano da un posto all'altro lungo le strade del villaggio, invece di comparire dove devono essere. Le strade cambiano con le fasi del villaggio.",
+      "Si siedono sulle panche (alla locanda, al pozzo, nel tempio) e la notte dormono nei loro letti. Chi dorme non ti risponde e non vede quello che fai.",
+      "Aprono la porta, entrano e se la richiudono dietro; se resti sulla soglia, aspettano che ti sposti.",
+      "Se li colpisci o li spaventi mentre sono seduti o a letto, si alzano di scatto."
+     ]
+    },
+    {
+     "titolo": "Novità: la valle",
+     "voci": [
+      "Il sentiero dei nani: una mulattiera di pietra a tornanti, con il muretto a secco dal lato della valle, sale fino alla frana della grotta del nord.",
+      "Alberi in città: tre grandi faggi intorno alla piazza, uno accanto al tempio, e una ventina di alberi nei cortili e lungo le strade.",
+      "Le assi e le travi delle case hanno il legno vero, con le venature."
+     ]
+    },
+    {
+     "titolo": "Novità: le armi",
+     "voci": [
+      "Ogni famiglia d'arma colpisce con le sue mosse: i pugnali veloci, le asce e le mazze pesanti, le lance con l'affondo.",
+      "Il colpo arriva nel momento giusto del movimento, quando la lama è davvero in avanti."
+     ]
+    },
+    {
+     "titolo": "Sistema",
+     "voci": [
+      "Il gioco usa molta meno memoria della scheda video: le texture troppo grandi dei pacchetti ora hanno il tetto della qualità Epica (era la causa del crash del 14/11).",
+      "La qualità più bassa nelle opzioni alleggerisce da sola le texture per i computer meno potenti."
+     ]
+    }
+   ]
+  },
+  {
    "versione": "0.2.4",
    "nome": "PNG veri",
-   "data": "",
+   "data": "2026-11-15",
    "sommario": "La valle si ricorda di te. I suoi abitanti ti salutano a modo loro, raccontano quello che hai fatto ieri, si fidano o diffidano; se alzi le mani su di loro cadono e si rialzano, e le guardie della Corona vengono a prenderti. E il Battito comincia a intrecciare storie solo per te.",
    "gruppi": [
     {

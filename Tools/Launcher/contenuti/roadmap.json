@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-14",
+ "aggiornato": "2026-11-16",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
  "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0: sei alpha, quattro beta e il regno. Ogni tappa è una versione che si può giocare.",
  "tappe": [
@@ -207,7 +207,7 @@
    "versione": "0.2.4",
    "nome": "PNG veri",
    "stato": "fatta",
-   "data": "",
+   "data": "2026-11-15",
    "voci": [
     "La valle che ricorda e la fiducia a parole",
     "Gli abitanti si colpiscono ma non muoiono",
@@ -219,15 +219,38 @@
   {
    "versione": "0.2.5",
    "nome": "La valle più bella",
-   "stato": "prossima",
+   "stato": "fatta",
    "voci": [
-    "Il villaggio con i pezzi nuovi di Fab",
-    "Case, tavole, sacchi e oggetti",
-    "Il bosco e le valli antiche"
-   ]
+    "Gli abitanti camminano, si siedono, dormono e aprono le porte",
+    "Il sentiero dei nani fino alla grotta del nord",
+    "Alberi in città e il legno vero sulle case",
+    "Le mosse di ogni famiglia d'arma",
+    "Meno memoria della scheda video"
+   ],
+   "data": "2026-11-16"
   },
   {
    "versione": "0.2.6",
+   "nome": "Le mura",
+   "stato": "in_corso",
+   "voci": [
+    "Mura di pietra con il camminamento e i merli",
+    "Torri con la scala a chiocciola",
+    "La porta della città con la grata e la leva",
+    "Le chiavi: le porte che si aprono solo a chi le ha"
+   ]
+  },
+  {
+   "versione": "0.2.7",
+   "nome": "Il tempio",
+   "stato": "prossima",
+   "voci": [
+    "Il Tempio del Cuore cresce con il villaggio: cappella, chiesa, pieve",
+    "Il campanile e il sagrato sulla piazza"
+   ]
+  },
+  {
+   "versione": "0.2.8",
    "nome": "L'armaiolo e la Loggia",
    "stato": "futura",
    "voci": [
@@ -237,7 +260,7 @@
    ]
   },
   {
-   "versione": "0.2.7",
+   "versione": "0.2.9",
    "nome": "Lettere e sigilli",
    "stato": "futura",
    "voci": [
@@ -247,7 +270,7 @@
    ]
   },
   {
-   "versione": "0.2.8",
+   "versione": "0.2.10",
    "nome": "Le stagioni",
    "stato": "futura",
    "voci": [
@@ -255,7 +278,7 @@
    ]
   },
   {
-   "versione": "0.2.9",
+   "versione": "0.2.11",
    "nome": "Zone del Battito e lapidi",
    "stato": "futura",
    "voci": [

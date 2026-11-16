@@ -1,8 +1,16 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-15",
+ "aggiornato": "2026-11-16",
  "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
  "notizie": [
+  {
+   "data": "2026-11-16",
+   "etichetta": "Patch",
+   "titolo": "La valle più bella: v0.2.5",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Gli abitanti vivono la loro giornata: camminano per il villaggio, si siedono, dormono e si chiudono la porta alle spalle. Un sentiero di pietra sale alla grotta del nord e grandi faggi fanno ombra sulla piazza."
+  },
   {
    "data": "2026-11-15",
    "etichetta": "Patch",

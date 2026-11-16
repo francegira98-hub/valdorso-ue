@@ -7,6 +7,7 @@
 //   fatta con i cubi (9 sbarre in piedi e 6 di traverso, 4 x 4,8 m): il modello vero della chat 3D (SM_Grata) si mette
 //   nei Dettagli (Modello) e prende il posto delle sbarre. Un blocco invisibile della stessa misura ferma chi passa.
 //   Origine: in basso al centro, la grata nel piano Y-Z (si passa lungo la X).
+//   (16/11) Di sera (21) le guardie la abbassano e la mattina (6) la alzano (bGiornoENotte, OraSera, OraMattina).
 // - AValdorsoLeva: la leva nella stanza dell'argano, sopra la porta. Con E alza o abbassa la grata a cui e' legata
 //   (Grata, nei Dettagli). Se ha una Chiave (di serie Chiave_Porta), la usa solo chi ce l'ha nello zaino, o lo staff con
 //   il permesso Mondo; gli altri leggono "La leva ha un lucchetto". Tutto finisce nel registro eventi.
@@ -55,9 +56,20 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Grata", meta = (ClampMin = "5"))
 	float VelocitaGiu = 250.f;
 
-	/** Com'e' quando parte il mondo. */
+	/** Com'e' quando parte il mondo (se non la decide l'ora: bGiornoENotte). */
 	UPROPERTY(EditAnywhere, Category = "Grata")
 	bool bAlzataAllInizio = false;
+
+	/** (16/11) Le guardie la abbassano la sera e la alzano la mattina (l'ora della valle, AValdorsoCielo). Tra un cambio
+	 *  e l'altro chi ha la chiave puo' muoverla con la leva: le guardie tornano solo al cambio dopo. */
+	UPROPERTY(EditAnywhere, Category = "Grata")
+	bool bGiornoENotte = true;
+
+	UPROPERTY(EditAnywhere, Category = "Grata", meta = (ClampMin = "0", ClampMax = "24"))
+	float OraSera = 21.f;
+
+	UPROPERTY(EditAnywhere, Category = "Grata", meta = (ClampMin = "0", ClampMax = "24"))
+	float OraMattina = 6.f;
 
 	/** Vero se e' alzata (o sta salendo). */
 	bool Su() const { return bSu; }
@@ -106,6 +118,14 @@ private:
 
 	float QuotaAttuale = 0.f;
 	double NataAlle = 0.0;
+
+	/** (16/11) Solo sul server, ogni 5 secondi: e' arrivata la sera (o la mattina)? */
+	void GuardaOra();
+
+	FTimerHandle TimerOra;
+
+	/** -1 = non ancora guardato; 0 = giorno; 1 = notte. */
+	int8 UltimaNotte = -1;
 };
 
 UCLASS()
