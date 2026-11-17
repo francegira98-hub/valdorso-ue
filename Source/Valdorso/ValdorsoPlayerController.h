@@ -389,6 +389,12 @@ private:
 	void Telecamera(float DeltaTime);
 	TWeakObjectPtr<APawn> CorpoTelecamera;
 	float CampoBase = 90.f;
+	/** (17/11, v0.2.7) La rotella del mouse avvicina e allontana la telecamera (solo su questo PC; resta finche' si gioca).
+	 *  Senza schermate aperte e fuori dalla modalita' foto. */
+	void TastoRotellaSu();
+	void TastoRotellaGiu();
+	void Rotella(float Passo);
+	float DistanzaTelecamera = 400.f;
 	/** (08/11) I tasti 1-8 della barra delle azioni (Indice da 0 a 7) e Invio per la chat: solo in gioco, senza schermate aperte. */
 	void TastoAzione(int32 Indice);
 	void TastoChat();

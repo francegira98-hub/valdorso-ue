@@ -193,6 +193,7 @@ def crea_menu_valdorso():
                                   ("MuraStrade", "Mura: 4. strade, case spostate e niente erba", "strade"),
                                   ("MuraCaserma", "Mura: 5. il recinto della caserma (fase 3)", "caserma"),
                                   ("MuraAlloggi", "Mura: 6. la caserma dentro: camerata, ufficio, prigione (fase 3)", "alloggi"),
+                                  ("MuraGradini", "Mura: 7. i gradini davanti alle porte (dal collaudo)", "gradini"),
                                   ("MuraIndietro", "Mura: torna come prima", "indietro")):
         voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
         voce.set_label(etichetta)
@@ -201,6 +202,12 @@ def crea_menu_valdorso():
             "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_mura.py'); "
             "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'MURA_MODO': '%s'})") % modo)
         valdorso.add_menu_entry("Villaggio", voce)
+
+    # (17/11, v0.2.7) i dati per il sagrato e per i ponti, per la chat 3D (nuovi/esporta_tempio_ponti.py; non cambia niente)
+    voce = unreal.ToolMenuEntry(name="EsportaTempioPonti", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Tempio e ponti: esporta i dati per la chat 3D")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "esporta_tempio_ponti.py")
+    valdorso.add_menu_entry("Villaggio", voce)
 
     # (16/11 sera, v0.2.7 "Il tempio") che cosa c'e' dentro la chiesa e la pieve (nuovi/guarda_tempio.py; non cambia niente)
     voce = unreal.ToolMenuEntry(name="GuardaTempio", type=unreal.MultiBlockType.MENU_ENTRY)
@@ -265,6 +272,13 @@ def crea_menu_valdorso():
     voce = unreal.ToolMenuEntry(name="ArmiGreystone", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Armi: porta le spade di Greystone nel colono")
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "porta_armi_greystone.py")
+    valdorso.add_menu_entry("Strumenti", voce)
+
+    # (17/11, v0.2.7) il collaudo dei passaggi: un manichino attraverso tutte le porte, nelle tre fasi
+    # (collauda_passaggi.py: scrive Saved/Claude/collaudo_passaggi.txt e .json)
+    voce = unreal.ToolMenuEntry(name="CollaudaPassaggi", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Per Claude: collauda i passaggi (porte e soglie, tre fasi)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "collauda_passaggi.py")
     valdorso.add_menu_entry("Strumenti", voce)
 
     voce = unreal.ToolMenuEntry(name="ControllaAnimazioni", type=unreal.MultiBlockType.MENU_ENTRY)

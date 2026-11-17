@@ -255,6 +255,9 @@ void AValdorsoPlayerController::CollegaTasti()
 		// (11/11, v0.1.5) G: la guardia della scherma (e la croce in su del controller)
 		InputComponent->BindKey(Tasto(EValdorsoTasto::Guardia), IE_Pressed, this, &AValdorsoPlayerController::TastoGuardia);
 		InputComponent->BindKey(EKeys::Gamepad_DPad_Up, IE_Pressed, this, &AValdorsoPlayerController::TastoGuardia);
+		// (17/11, v0.2.7) la rotella del mouse: la telecamera piu' vicina o piu' lontana
+		InputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &AValdorsoPlayerController::TastoRotellaSu);
+		InputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &AValdorsoPlayerController::TastoRotellaGiu);
 	}
 
 	// only add IMCs for local player controllers
@@ -493,6 +496,31 @@ void AValdorsoPlayerController::Telecamera(float DeltaTime)
 	const float Veloce = Corpo->GetVelocity().Size2D();
 	const float Voluto = CampoBase + (Veloce > 450.f ? 5.f : 0.f);
 	Occhio->SetFieldOfView(FMath::FInterpTo(Occhio->FieldOfView, Voluto, DeltaTime, 3.f));
+	// (17/11, v0.2.7) la distanza scelta con la rotella: ci si arriva piano
+	if (!FMath::IsNearlyEqual(Braccio->TargetArmLength, DistanzaTelecamera, 0.5f))
+	{
+		Braccio->TargetArmLength = FMath::FInterpTo(Braccio->TargetArmLength, DistanzaTelecamera, DeltaTime, 8.f);
+	}
+}
+
+// (17/11, v0.2.7) La rotella del mouse: in su avvicina, in giu' allontana (da 150 a 700 cm, a passi di 50; di serie 400).
+void AValdorsoPlayerController::TastoRotellaSu()
+{
+	Rotella(-50.f);
+}
+
+void AValdorsoPlayerController::TastoRotellaGiu()
+{
+	Rotella(50.f);
+}
+
+void AValdorsoPlayerController::Rotella(float Passo)
+{
+	if (!GetPawn() || SchermataAperta() || ValdorsoFoto::Aperta(this))
+	{
+		return;
+	}
+	DistanzaTelecamera = FMath::Clamp(DistanzaTelecamera + Passo, 150.f, 700.f);
 }
 
 void AValdorsoPlayerController::TastoStaff()

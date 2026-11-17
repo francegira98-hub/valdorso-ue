@@ -308,13 +308,17 @@ def note_markdown(patch, versione):
     return "# Valdorso %s\n\nSi installa con il launcher: https://valdorso.altervista.org/launcher/\n" % versione
 
 
+def _peso_ascii(n):
+    """Il peso di un file per le scritte dei .cmd (solo ASCII)."""
+    return ("%.1f GB" % (n / 1024 ** 3) if n >= 1024 ** 3 else "%.0f MB" % (n / 1024 ** 2)).replace(".", ",")
+
+
 def carica_su_github_cmd(cartella, url, versione, parti):
     """Scrive "Carica su GitHub.cmd" (righe CRLF) se l'indirizzo è quello di una release di GitHub."""
     m = re.match(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/?$", url)
     if not m:
         return None
     utente, repo, etichetta = m.groups()
-    nomi = " ".join('"%s"' % os.path.basename(p) for p in parti)
     righe = [
         "@echo off",
         "rem Valdorso - Carica le parti del gioco %s nella release %s di GitHub (%s/%s)." % (versione, etichetta, utente, repo),
@@ -334,20 +338,35 @@ def carica_su_github_cmd(cartella, url, versione, parti):
         # (14/11) se gh non e' collegato a GitHub, si collega adesso (si fa nel browser, una volta sola)
         "%GH% auth status >nul 2>nul",
         "if errorlevel 1 %GH% auth login --hostname github.com --git-protocol https --web",
+        # (17/11) una parte alla volta, con il conto: cosi' si vede a che punto e' il caricamento
         '%%GH%% release view %s --repo %s/%s >nul 2>nul' % (etichetta, utente, repo),
-        "if errorlevel 1 (",
-        '    %%GH%% release create %s --repo %s/%s --title "Valdorso %s" --notes-file note_github.md %s' % (etichetta, utente, repo, versione, nomi),
-        ") else (",
-        "    %%GH%% release upload %s --repo %s/%s --clobber %s" % (etichetta, utente, repo, nomi),
-        ")",
-        "if errorlevel 1 (",
-        "    echo CARICAMENTO NON RIUSCITO: manda uno screenshot a Claude.",
-        "    pause",
-        "    exit /b 1",
-        ")",
+        'if errorlevel 1 %%GH%% release create %s --repo %s/%s --title "Valdorso %s" --notes-file note_github.md' % (etichetta, utente, repo, versione),
+        "if errorlevel 1 goto errore",
+    ]
+    pesi = [os.path.getsize(p) if os.path.exists(p) else 0 for p in parti]
+    tutto = sum(pesi) or 1
+    fatto = 0
+    for i, p in enumerate(parti):
+        barra = int(20 * fatto / tutto)
+        righe += [
+            "echo.",
+            "echo [%s%s] %d%%%%  parte %d di %d: %s (%s)" % ("#" * barra, "." * (20 - barra), int(100 * fatto / tutto), i + 1, len(parti),
+                                                          os.path.basename(p), _peso_ascii(pesi[i])),
+            '%%GH%% release upload %s --repo %s/%s --clobber "%s"' % (etichetta, utente, repo, os.path.basename(p)),
+            "if errorlevel 1 goto errore",
+        ]
+        fatto += pesi[i]
+    righe += [
         "echo.",
+        "echo [####################] 100%%",
         "echo PARTI CARICATE. Ora trascina Build\\Altervista\\launcher su Altervista con FileZilla.",
         "pause",
+        "exit /b 0",
+        ":errore",
+        "echo.",
+        "echo CARICAMENTO NON RIUSCITO: manda uno screenshot a Claude. Rilanciando questo file si riparte da capo.",
+        "pause",
+        "exit /b 1",
     ]
     percorso = os.path.join(cartella, "Carica su GitHub.cmd")
     with open(percorso, "w", encoding="ascii", errors="replace", newline="\r\n") as f:

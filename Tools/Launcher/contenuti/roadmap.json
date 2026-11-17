@@ -14,6 +14,13 @@
     "Il progetto in C++",
     "Il repository",
     "L'inventario delle risorse"
+   ],
+   "nome_en": "Preparation",
+   "voci_en": [
+    "The work drive and Unreal Engine 5.8",
+    "The C++ project",
+    "The repository",
+    "The asset inventory"
    ]
   },
   {
@@ -27,6 +34,14 @@
     "Scavalcare",
     "Il pugno",
     "Il server dedicato di prova"
+   ],
+   "nome_en": "The character",
+   "voci_en": [
+    "Walking and running",
+    "The dodge",
+    "Vaulting",
+    "The punch",
+    "The test dedicated server"
    ]
   },
   {
@@ -42,6 +57,16 @@
     "Pausa, impostazioni e accessibilità",
     "Uscita con attesa di 20 s e riconnessione senza password",
     "Privacy: gli IP si tengono 30 giorni"
+   ],
+   "nome_en": "Who you are",
+   "voci_en": [
+    "The Gold and Embers menu",
+    "Invite-only accounts, protected passwords, recovery codes",
+    "Three characters",
+    "The Register of Val d'Orso: face, body, hair, eyes, faith, age, the priest's questions, the signature",
+    "Pause, settings and accessibility",
+    "Logging out with a 20 s wait, and reconnecting without a password",
+    "Privacy: IP addresses are kept for 30 days"
    ]
   },
   {
@@ -67,6 +92,26 @@
     "La modalità foto",
     "Il menu con la valle al tramonto e lo stato del mondo",
     "Il launcher"
+   ],
+   "nome_en": "The valley",
+   "sommario_en": "The real valley, ready to explore.",
+   "voci_en": [
+    "The 3 × 3 km valley: river, lake, waterfall, mountains, forest",
+    "The village in 3 phases: square, Temple of the Heart, inn, Guild, Bailiff, militia, craftsmen, mill, cemetery, gardens",
+    "Granny Edda's marsh",
+    "The guard post and the Crown's seal at the pass",
+    "The Ruins of the Ancients, the five stones, the sealed crypt",
+    "The east cave, the north cave, the lookout",
+    "Doors, shutters, notice boards, inscriptions, benches, beds, ladders, swimming",
+    "Day and night (120 minutes), weather, rain, fog",
+    "The sounds of the valley and the temple bells",
+    "The paper map, the compass, the travel notebook",
+    "The stone of Val d'Orso in the temple",
+    "The language of runes and the rune notebook",
+    "The first who speak: Gaspare and the guards of the pass",
+    "Photo mode",
+    "The menu with the valley at sunset and the state of the world",
+    "The launcher"
    ]
   },
   {
@@ -82,6 +127,16 @@
     "Scuoiare, cucinare al fuoco, il falò",
     "Lo zaino, le botteghe e la Gilda con la bacheca degli incarichi",
     "La finestra dello staff con i permessi"
+   ],
+   "nome_en": "Dangers",
+   "sommario_en": "Alpha 1 «The valley». The valley bites: wolves, boars and bears, weapons and the shield, falling and rising again at the Temple of the Heart.",
+   "voci_en": [
+    "Wolves, boars, bears, deer, hares and foxes",
+    "Weapons and the shield, held in hand",
+    "Dying and rising again at the temple, with the peace of the pulse",
+    "Skinning, cooking over the fire, the campfire",
+    "The backpack, the workshops and the Guild with its job board",
+    "The staff window with permissions"
    ]
   },
   {
@@ -94,6 +149,13 @@
     "Le abilità (K) che salgono usandole, con le evoluzioni",
     "La scherma: tre guardie, le tecniche nella barra, il Vigore",
     "L'accessibilità: tasti da cambiare, sottotitoli dei suoni"
+   ],
+   "nome_en": "Growing",
+   "sommario_en": "Alpha 2 «The stories». Skills rise as you use them, fencing with the three guards, and Vigour.",
+   "voci_en": [
+    "Skills (K) that rise as you use them, with their evolutions",
+    "Fencing: three guards, techniques on the bar, Vigour",
+    "Accessibility: rebindable keys, subtitles for sounds"
    ]
   },
   {
@@ -108,6 +170,15 @@
     "Le voci della locanda e i sogni",
     "Il gatto di Bruno, che sa le cose",
     "L'Atto I: il battito che salta"
+   ],
+   "nome_en": "The living valley",
+   "sommario_en": "Alpha 2 «The stories». The valley moves on its own: flocks, leaves, the passing dragon, the voices of the inn and dreams.",
+   "voci_en": [
+    "Flocks, swallows, bats, fireflies and chimney smoke",
+    "The dragon passing high over the mountains, and its roar",
+    "The voices of the inn and dreams",
+    "Bruno's cat, who knows things",
+    "Act I: the skipped beat"
    ]
   },
   {
@@ -123,6 +194,16 @@
     "La porta segreta e la stanza del tesoro che chiama le ossa",
     "Le miniere allagate e le cantine segrete",
     "La storia di Lucia: quelli che non tornarono"
+   ],
+   "nome_en": "The north cave",
+   "sommario_en": "Alpha 2 «The stories». The dwarves' tunnels behind the landslide: skeletons, deadly traps and secret rooms.",
+   "voci_en": [
+    "The landslide that is dug in two",
+    "The skeletons, the captain and the guardian of the forge",
+    "The traps: spears, trapdoors, pendulums",
+    "The secret door and the treasure room that calls the bones",
+    "The flooded mines and the secret cellars",
+    "Lucia's story: those who did not return"
    ]
   },
   {
@@ -138,6 +219,16 @@
     "La ruota dei gesti (B) e la musica",
     "Quattro storie segrete: la lettera, il sogno, l'incudine, la veglia",
     "F8 per segnalare un problema"
+   ],
+   "nome_en": "Stories of the valley",
+   "sommario_en": "Alpha 2 «The stories». New faces with their days, the rites of the valley, gestures and secret stories.",
+   "voci_en": [
+    "Marta, Captain Livia, Tobia, Teodoro and Agnese, Master Elric",
+    "Daily routines: everyone has their place at every hour",
+    "The birth star, the ceremony of a year and a day, the stone of signs",
+    "The gesture wheel (B) and music",
+    "Four secret stories: the letter, the dream, the anvil, the vigil",
+    "F8 to report a problem"
    ]
   },
   {
@@ -150,6 +241,13 @@
     "Il secchio: l'acqua pura della cascata, la chiara del lago, la torbida delle miniere; il pozzo e la pioggia",
     "Tagliare la legna, spaccare la pietra, cavare il ferro",
     "Assi, chiodi, lingotti, attrezzi e pietra squadrata ai banchi"
+   ],
+   "nome_en": "Hands and materials, part one",
+   "sommario_en": "Alpha 3 «Hands and materials». Water and the materials of the valley, and the workbenches to work them.",
+   "voci_en": [
+    "The bucket: pure water from the waterfall, clear from the lake, murky from the mines; the well and the rain",
+    "Cutting wood, splitting stone, mining iron",
+    "Planks, nails, ingots, tools and dressed stone at the workbenches"
    ]
   },
   {
@@ -164,7 +262,16 @@
     "Il baule del colono",
     "La grande prova: tutto, anche con un amico"
    ],
-   "data": "2026-11-12"
+   "data": "2026-11-12",
+   "nome_en": "Hands and materials",
+   "sommario_en": "Alpha 3 «Hands and materials». The village stores and the caravan; then the big test, also for two.",
+   "voci_en": [
+    "The village stores and the warehouse",
+    "The hidden grain, when the valley is hungry",
+    "Sibilla's caravan, with the Crown's pass",
+    "The settler's chest",
+    "The big test: everything, also with a friend"
+   ]
   },
   {
    "versione": "0.2.1",
@@ -175,6 +282,12 @@
     "La E su tutto, anche lontano dal server",
     "Volti e gesti nel gioco scaricato",
     "Il gioco a parti e gli aggiornamenti leggeri"
+   ],
+   "nome_en": "After the test",
+   "voci_en": [
+    "E works on everything, even far from the server",
+    "Faces and gestures in the downloaded game",
+    "The game in parts, and light updates"
    ]
   },
   {
@@ -188,6 +301,14 @@
     "Il Banditore della Corona e la Gazzetta del passo",
     "Porte, chiavi e uccelli più calmi",
     "I capelli al loro posto"
+   ],
+   "nome_en": "Finishing touches",
+   "voci_en": [
+    "Watercolour icons",
+    "The card with the wax seal",
+    "The Crown Crier and the Pass Gazette",
+    "Doors, keys and calmer birds",
+    "Hair where it belongs"
    ]
   },
   {
@@ -201,7 +322,15 @@
     "Le armi si consumano e si riparano; si forgiano da sé",
     "L'arco e le frecce"
    ],
-   "data": "2026-11-14"
+   "data": "2026-11-14",
+   "nome_en": "Real weapons",
+   "voci_en": [
+    "Real weapons and shields: each family with its own strike",
+    "Item quality: common, good, rare, epic, legendary",
+    "Where each thing comes from: the workshop, finds, stories",
+    "Weapons wear out and get repaired; you forge them yourself",
+    "The bow and arrows"
+   ]
   },
   {
    "versione": "0.2.4",
@@ -214,6 +343,14 @@
     "La colpa, le guardie, la multa e la cella",
     "Le storie del Battito: la finestra, Accetta, Ci penso o Rifiuta",
     "Il custode del Battito, per lo staff"
+   ],
+   "nome_en": "Real NPCs",
+   "voci_en": [
+    "The valley that remembers, and trust in words",
+    "Villagers can be hit but do not die",
+    "Guilt, the guards, the fine and the cell",
+    "The stories of the Pulse: the window, Accept, Let me think or Refuse",
+    "The Pulse keeper, for the staff"
    ]
   },
   {
@@ -227,7 +364,15 @@
     "Le mosse di ogni famiglia d'arma",
     "Meno memoria della scheda video"
    ],
-   "data": "2026-11-16"
+   "data": "2026-11-16",
+   "nome_en": "A more beautiful valley",
+   "voci_en": [
+    "Villagers walk, sit, sleep and open doors",
+    "The dwarves' path up to the north cave",
+    "Trees in town and real wood on the houses",
+    "The moves of every weapon family",
+    "Less video memory"
+   ]
   },
   {
    "versione": "0.2.6",
@@ -243,7 +388,18 @@
     "La caserma della milizia: recinto, camerata, ufficio",
     "La prigione vera in ogni fase: la gabbia, la cella della caserma, le tre celle; la pena passa anche a gioco chiuso"
    ],
-   "data": ""
+   "data": "2026-11-17",
+   "nome_en": "The walls",
+   "voci_en": [
+    "Low walls in phase 2, high walls with the wall-walk and battlements in phase 3",
+    "Towers with spiral staircases",
+    "The town gates with the portcullis and the lever",
+    "Keys: doors that open only for those who have them",
+    "New roads to the gates and to the yard",
+    "The Temple of the Heart in three phases: chapel, church, parish church",
+    "The militia barracks: enclosure, dormitory, office",
+    "A real prison in every phase: the cage, the barracks cell, the three cells; the sentence runs even with the game closed"
+   ]
   },
   {
    "versione": "0.2.7",
@@ -259,6 +415,18 @@
     "Texture vere per gli interni e pietra da castello sulle mura",
     "Il collaudo dei passaggi: porte, scale e soglie provate una per una in tutte e tre le fasi",
     "La telecamera che si avvicina e si allontana con la rotella del mouse"
+   ],
+   "nome_en": "The temple",
+   "voci_en": [
+    "Inside the church and the parish church: the altar, the stone of Val d'Orso, the pews",
+    "The bell tower and the churchyard on the square",
+    "Livia and the Bailiff hand out the keys; the guards patrol the walls at night",
+    "The sentry in the watchbox and the barracks bell",
+    "Bruno's new inn and the coaching inn outside the walls",
+    "Real bridges over the stream",
+    "Real textures for interiors and castle stone on the walls",
+    "The passage test: doors, stairs and thresholds tried one by one in all three phases",
+    "The camera that moves closer and farther with the mouse wheel"
    ]
   },
   {
@@ -278,6 +446,21 @@
     "Se il capo non divide la paga lo si segnala al bancone della Gilda: decide il capo della Gilda",
     "Chi esce dal gioco resta nel mondo qualche secondo: non si scappa da un pericolo chiudendo il gioco",
     "La prima prova in due: compagnia, incarichi e bottino giocati con un amico"
+   ],
+   "nome_en": "The foundations",
+   "voci_en": [
+    "The valley's real server, always on, with nightly backups",
+    "Signing up with email, and password recovery",
+    "If the game closes on its own, the launcher offers to send a report",
+    "Postcards from the valley and the diary of the evening",
+    "The Discord bot with the state of the valley",
+    "Villagers talk about what's new",
+    "The new settler's guided first hour",
+    "The company: a pact signed at the Guild, two to six companions with a leader; one company at a time",
+    "In a company you talk within earshot, and the companions share the loot",
+    "If the leader does not share the pay, you report it at the Guild counter: the head of the Guild decides",
+    "Whoever leaves the game stays in the world for a few seconds: you cannot escape a danger by closing the game",
+    "The first test for two: company, jobs and loot played with a friend"
    ]
   },
   {
@@ -297,6 +480,21 @@
     "La fama della compagnia: incarichi, sotterranei ed eventi la fanno salire di grado, e la valle la riconosce; il grado parte dal compagno di grado più basso, la fama guadagnata resta",
     "Un maestro può prendere a bottega altri coloni: chi impara da un maestro cresce prima, e il maestro guadagna fama",
     "Il diario della compagnia: un libro vero alla Gilda con le sue imprese, di cui si può comprare una copia"
+   ],
+   "nome_en": "The armourer and the Lodge",
+   "voci_en": [
+    "Armour",
+    "The armourer",
+    "The craftsmen's Lodge",
+    "Skill refinements every ten levels",
+    "The village job board",
+    "Evenings at the inn",
+    "Duels and the tournament",
+    "Crafts are learned in the workshop: apprentice, journeyman, master with their own mark",
+    "Master of one craft, or of two with much more time: legendary things are made only by masters",
+    "The company's fame: jobs, dungeons and events raise its rank, and the valley recognises it; the rank starts from the lowest-ranked companion, the fame earned stays",
+    "A master can take other settlers as apprentices: those who learn from a master grow faster, and the master gains fame",
+    "The company's diary: a real book at the Guild with its deeds, and you can buy a copy"
    ]
   },
   {
@@ -310,6 +508,15 @@
     "Le lettere al futuro",
     "La tessera: le guardie la chiedono al passo e di notte",
     "I mestieri dello scrivano e del corriere"
+   ],
+   "nome_en": "Letters and seals",
+   "voci_en": [
+    "Letters and the post",
+    "Wax seals",
+    "Contracts, debts and loans",
+    "Letters to the future",
+    "The card: the guards ask for it at the pass and at night",
+    "The crafts of the scribe and the courier"
    ]
   },
   {
@@ -321,6 +528,13 @@
     "L'arredatore: gli interni di ogni casa",
     "Le finestre che si accendono la sera",
     "Il fuoco: le case di legno bruciano, e i vicini aiutano"
+   ],
+   "nome_en": "A home of my own",
+   "voci_en": [
+    "Buying or renting a house",
+    "The furnisher: the interior of every house",
+    "Windows that light up in the evening",
+    "Fire: wooden houses burn, and the neighbours help"
    ]
   },
   {
@@ -334,6 +548,15 @@
     "Gli edifici delle fattorie",
     "I mestieri del muratore e del carpentiere",
     "Le case delle compagnie, fuori dalle mura o nei lotti"
+   ],
+   "nome_en": "The building site",
+   "voci_en": [
+    "Plots: building your own house",
+    "The plan and the land register",
+    "Cellars and secret passages",
+    "Farm buildings",
+    "The crafts of the mason and the carpenter",
+    "Company houses, outside the walls or on plots"
    ]
   },
   {
@@ -348,6 +571,16 @@
     "Il sentiero dei nani rifinito",
     "Il bosco di faggi e carpini, la palude come acqua vera, il segno sulla Collina dell'Orso",
     "Il mestiere dell'erborista, con Nonna Edda"
+   ],
+   "nome_en": "The mountains",
+   "voci_en": [
+    "Living mountains: the terrain dresses itself, with grass below, rock on steep slopes, scree and snow above",
+    "Walls of real rock, forests of fir and pine that thin out as you climb, then mountain pines and alpine meadows",
+    "Fog and low clouds on the peaks, wind-blown snow",
+    "Paths, shepherds' huts and passes: the places of mountain stories",
+    "The dwarves' path finished",
+    "The beech and hornbeam forest, the marsh as real water, the sign on the Bear's Hill",
+    "The herbalist's craft, with Granny Edda"
    ]
   },
   {
@@ -362,6 +595,16 @@
     "Le costellazioni dei Vecchi Dei",
     "Le notti dei lupi",
     "I mestieri del contadino e del pastore"
+   ],
+   "nome_en": "The seasons",
+   "voci_en": [
+    "The four seasons, with weather that matters",
+    "Fields, pastures, animals and granaries",
+    "The Saturday market",
+    "The cart and the mule, brigands at night, the farm dog",
+    "The constellations of the Old Gods",
+    "Wolf nights",
+    "The crafts of the farmer and the shepherd"
    ]
   },
   {
@@ -373,6 +616,13 @@
     "Il libro delle ricette",
     "La pesca",
     "I mestieri del cuoco e dell'oste"
+   ],
+   "nome_en": "The hearth",
+   "voci_en": [
+    "Cooking and hunger",
+    "The recipe book",
+    "Fishing",
+    "The crafts of the cook and the innkeeper"
    ]
   },
   {
@@ -384,6 +634,13 @@
     "Le lapidi e la morte sensata degli abitanti",
     "Le Rovine degli Antichi rifatte",
     "Le rovine vive a sorpresa, scelte dal Battito ogni settimana"
+   ],
+   "nome_en": "Pulse zones and gravestones",
+   "voci_en": [
+    "Pocket zones and the Echoes",
+    "Gravestones and a meaningful death for villagers",
+    "The Ruins of the Ancients remade",
+    "Living ruins by surprise, chosen by the Pulse every week"
    ]
   },
   {
@@ -396,6 +653,14 @@
     "La forgia runica",
     "La lettera dell'accademia",
     "Le pietre per parlare da lontano, per chi le possiede"
+   ],
+   "nome_en": "Arcane",
+   "sommario_en": "Alpha 4: the closed test with 5-10 friends.",
+   "voci_en": [
+    "Magic and runes",
+    "The runic forge",
+    "The academy's letter",
+    "Stones to speak from afar, for those who own them"
    ]
   },
   {
@@ -410,6 +675,16 @@
     "La gogna del Balivo",
     "Evasioni dalla prigione, ricercati e taglie",
     "Catture e manette: lecite per le guardie e per chi agisce per la legge, un crimine per tutti gli altri"
+   ],
+   "nome_en": "Law and shadow",
+   "sommario_en": "Alpha 5: the closed alpha.",
+   "voci_en": [
+    "Laws, crimes and justice",
+    "The Inquisition",
+    "The Whisper",
+    "The Bailiff's pillory",
+    "Prison breaks, wanted people and bounties",
+    "Captures and shackles: lawful for guards and for those acting for the law, a crime for everyone else"
    ]
   },
   {
@@ -421,6 +696,13 @@
     "Le gilde dei giocatori",
     "Le fedi",
     "Feste e matrimoni"
+   ],
+   "nome_en": "Guilds, faiths and social life",
+   "sommario_en": "Alpha 6.",
+   "voci_en": [
+    "Player guilds",
+    "Faiths",
+    "Feasts and weddings"
    ]
   },
   {
@@ -431,6 +713,12 @@
    "voci": [
     "Le razze segrete",
     "La Corruzione"
+   ],
+   "nome_en": "Hidden powers",
+   "sommario_en": "Beta 1: the closed beta, 20-30 people.",
+   "voci_en": [
+    "The secret races",
+    "The Corruption"
    ]
   },
   {
@@ -442,6 +730,13 @@
     "Creature magiche",
     "Il drago",
     "Le leggende"
+   ],
+   "nome_en": "Secrets and legends",
+   "sommario_en": "Beta 2.",
+   "voci_en": [
+    "Magical creatures",
+    "The dragon",
+    "The legends"
    ]
   },
   {
@@ -452,6 +747,12 @@
    "voci": [
     "Feudi, terre e vassalli",
     "La mappa del regno"
+   ],
+   "nome_en": "Lands and vassals",
+   "sommario_en": "Beta 3: the open beta.",
+   "voci_en": [
+    "Fiefs, lands and vassals",
+    "The map of the kingdom"
    ]
   },
   {
@@ -462,6 +763,12 @@
    "voci": [
     "La corona",
     "Gli assedi"
+   ],
+   "nome_en": "The crown",
+   "sommario_en": "Beta 4.",
+   "voci_en": [
+    "The crown",
+    "Sieges"
    ]
   },
   {
@@ -471,8 +778,15 @@
    "sommario": "Il server pubblico, su Steam.",
    "voci": [
     "Il regno, per tutti"
+   ],
+   "nome_en": "The kingdom",
+   "sommario_en": "The public server, on Steam.",
+   "voci_en": [
+    "The kingdom, for everyone"
    ]
   }
  ],
- "dopo": "Una tappa alla volta, fino alla 1.0. Subito dopo la v0.1.3 arrivano anche il palco del Registro rifatto e il lancio del Kickstarter."
+ "dopo": "Una tappa alla volta, fino alla 1.0.",
+ "intro_en": "The road of Valdorso, stage by stage, from the first stone to 1.0: six alphas, four betas and the kingdom. Every stage is a version you can play.",
+ "dopo_en": "One stage at a time, up to 1.0."
 }

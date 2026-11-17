@@ -135,6 +135,10 @@ def zona(pr, S, L, t, mappa, lastricato, rettangolo, dentro, poli_largo, poli_og
     _tavoli(pr, S, "Tavolo della caserma", X, Y, gr, pav, info)
     _campo(pr, S, M, t, lastricato, "SM_Milizia_Campo2", "Campo della milizia", (8.0, 3.0), 22.0, 16.0, fantocci=4, bersagli=2,
            rastrelliere=1, stendardo_=False)
+    # (17/11, collaudo dei passaggi) il palo stava in (-9.0, -4.6), proprio davanti alla porta della caserma. NON e' stato
+    # cambiato qui il punto: in Villaggio_3000.json tutto il pezzo e la sua luce sono spostati di +150 cm in X (la voce
+    # "Lanterna della caserma" 181100 -> 181250, "luce 0" 180255 -> 180405). Se si rigenera il villaggio, mettere qui
+    # (-7.5, -4.6) al posto di (-9.0, -4.6): e' lo stesso risultato.
     _lanterne(pr, S, M, t, "SM_Milizia_Lanterne2", "Lanterna della caserma", [(-9.0, -4.6)])
     # due botti e una cassa davanti alla caserma
     for k, (x, y) in enumerate(((-15.5, -4.8), (-14.7, -4.5), (-2.5, -4.8))):

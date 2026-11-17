@@ -1667,6 +1667,230 @@ def fai_strade():
     scrivi("FATTO e salvato. Poi 'PNG: panche, letti e porte' (le porte delle case spostate).")
 
 
+# ------------------------------------------------------------------------------------------------ gradini da soglia
+# (17/11, v0.2.7) Il collaudo dei passaggi (nuovi/collauda_passaggi.py) ha trovato una cinquantina di case con il
+# pavimento che finisce a 80-90 cm dalla porta e scende di 20-96 cm sul terreno, senza gradino. La chat 3D ha fatto un
+# kit: SM_Gradino_Soglia_1..6 (alzate di 18 cm, pedata 30, larghi 140; origine a terra al centro del lato che tocca la
+# casa, scendono verso +X; Z dell'origine = Z del pavimento - N x 18). "Mura: 7" legge le porte segnate dal collaudo
+# (Saved/Claude/collaudo_passaggi.json), rimisura da se' il bordo del pavimento e il salto fuori da ogni porta e mette
+# il gradino giusto, con la fase della porta. Si puo' rilanciare: toglie e rimette i suoi gradini.
+
+GRADINI = "ValdorsoGradiniSoglia"
+GRADINI_CARTELLA = "Valle/Villaggio/Gradini"
+GRADINO_ALZATA = 18.0
+GRADINO_MINIMO = 20.0          # sotto questo salto non serve un gradino
+GRADINO_TERRA = ("Landscape", "Strade", "Piazza", "Strada")   # su che cosa puo' appoggiare un gradino
+
+
+def fase_di_attore(a):
+    for t in a.get_editor_property("tags"):
+        x = str(t)
+        if x.startswith("ValdorsoFase "):
+            try:
+                da, fino = [int(v) for v in x[len("ValdorsoFase "):].split("-")]
+                return da, fino, x
+            except ValueError:
+                return None
+    return None
+
+
+def linea_colono(mondo, a, b, ignora):
+    """Una linea con il profilo del colono (Pawn): la tupla del colpo o None."""
+    try:
+        r = unreal.SystemLibrary.line_trace_single_by_profile(mondo, a, b, "Pawn", False, ignora,
+                                                              unreal.DrawDebugTrace.NONE, True)
+    except Exception:  # noqa: BLE001
+        r = unreal.SystemLibrary.line_trace_single(mondo, a, b, unreal.TraceTypeQuery.TRACE_TYPE_QUERY1, False, ignora,
+                                                   unreal.DrawDebugTrace.NONE, True)
+    if r is None:
+        return None
+    if isinstance(r, tuple):
+        if len(r) == 2 and isinstance(r[0], bool):
+            if not r[0] or r[1] is None:
+                return None
+            r = r[1]
+        else:
+            return r if r and r[0] else None
+    t = r.to_tuple()
+    return t if t and t[0] else None
+
+
+def chi_e(t):
+    a = t[9] if len(t) > 9 else None
+    if a is None:
+        return ""
+    return a.get_class().get_name() + " " + a.get_actor_label()
+
+
+def misura_soglia(mondo, cx, cy, base, dx, dy, ignora):
+    """Dal centro della porta verso (dx, dy): dove finisce il pavimento e quanto si scende.
+    Ritorna (distanza del bordo, quota del pavimento, salto, su che cosa si scende) oppure None se non c'e' un salto
+    verso il terreno entro 1,5 m."""
+    t = linea_colono(mondo, unreal.Vector(cx, cy, base + 120.0), unreal.Vector(cx, cy, base - 150.0), ignora)
+    if t is None:
+        return None
+    z = t[4].z
+    s = 10.0
+    while s <= 150.0:
+        x, y = cx + dx * s, cy + dy * s
+        t = linea_colono(mondo, unreal.Vector(x, y, z + 60.0), unreal.Vector(x, y, z - 250.0), ignora)
+        if t is None or t[3] < 1.0:
+            return None                      # il vuoto, o un muro: qui un gradino non serve
+        zn = t[4].z
+        if zn - z > 45.0:
+            return None
+        if z - zn > 12.0:
+            # il bordo: si guarda il terreno 15 cm piu' in la' (dove appoggia il primo gradino in basso)
+            sotto = chi_e(t)
+            t2 = linea_colono(mondo, unreal.Vector(x + dx * 15.0, y + dy * 15.0, z + 60.0),
+                              unreal.Vector(x + dx * 15.0, y + dy * 15.0, z - 250.0), ignora)
+            if t2 is not None and t2[3] >= 1.0 and (t2[4].z <= zn or not any(k in sotto for k in GRADINO_TERRA)):
+                zn = min(zn, t2[4].z)
+                sotto = chi_e(t2) or sotto
+            if any(k in sotto for k in GRADINO_TERRA):
+                return s, z, z - zn, sotto
+            # scende su un pezzo della casa (uno zoccolo, un suo scalino): si va avanti da li'
+            zn = t[4].z
+        z = zn
+        s += 2.0
+    return None
+
+
+def fai_gradini():
+    """(17/11, v0.2.7) "Mura: 7. i gradini davanti alle porte": vedi sopra."""
+    cartella = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "Claude")
+    f = os.path.join(cartella, "collaudo_passaggi.json")
+    if not os.path.exists(f):
+        avviso("manca %s: lancia prima 'Per Claude: collauda i passaggi'" % f)
+        return
+    with open(f, "r", encoding="utf-8") as g:
+        collaudo = json.load(g).get("porte", [])
+    # (secondo controllo) tutte le porte del collaudo, non solo quelle segnate: dopo il primo giro le porte sistemate
+    # tornano OK, e rilanciando si toglierebbero i loro gradini. Chi non ha un salto sul terreno resta senza gradino.
+    segnate = {}
+    for r in collaudo:
+        segnate.setdefault(r["porta"], r)
+    scrivi("porte del collaudo: %d" % len(segnate))
+    pezzi = importa(["SM_Gradino_Soglia_%d" % n for n in range(1, 7)], materiali())
+    if len(pezzi) < 6:
+        avviso("gradini da soglia: mancano dei pezzi del kit (%d su 6): niente" % len(pezzi))
+        return
+    tutti = [a for a in attori.get_all_level_actors() if a]
+    tolti = 0
+    for a in tutti:
+        if a.actor_has_tag(GRADINI):
+            attori.destroy_actor(a)
+            tolti += 1
+    if tolti:
+        scrivi("tolti %d gradini messi prima" % tolti)
+        tutti = [a for a in attori.get_all_level_actors() if a]
+    mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    classe_porta = getattr(unreal, "ValdorsoPorta", None)
+    if mondo is None or classe_porta is None:
+        avviso("gradini: manca il mondo o la classe C++ ValdorsoPorta (compila e riapri l'editor)")
+        return
+    per_nome = {}
+    porte = []
+    con_fase = []
+    for a in tutti:
+        per_nome.setdefault(a.get_actor_label(), a)
+        if isinstance(a, classe_porta) or a.get_class().get_name() in ("ValdorsoGrata", "ValdorsoCella"):
+            porte.append(a)
+        fa = fase_di_attore(a)
+        if fa is not None:
+            try:
+                o, e = a.get_actor_bounds(False)
+                con_fase.append((a, fa, o.x, o.y, e.x, e.y))
+            except Exception:  # noqa: BLE001
+                con_fase.append((a, fa, 0.0, 0.0, 1e9, 1e9))
+    messi = 0
+    conti = {}
+    nuovi = []
+    for nome in sorted(segnate):
+        r = segnate[nome]
+        porta = per_nome.get(nome)
+        if porta is None:
+            avviso("gradini: nel livello non trovo la porta '%s'" % nome)
+            continue
+        # le porte delle mura, delle celle e degli alloggi hanno gia' i loro gradini; le capanne si guardano a parte
+        if (porta.actor_has_tag(ETICHETTA) or porta.actor_has_tag(CELLE_FASI) or porta.actor_has_tag(ALLOGGI)
+                or porta.actor_has_tag(CASERMA) or nome.startswith("Capanna")):
+            continue
+        cx, cy, base = [float(v) for v in r["mondo_cm"]]
+        yaw = math.radians(float(r["passaggio_yaw"]))
+        fp = fase_di_attore(porta)
+        fase = fp[0] if fp else 3
+        ignora = list(porte) + nuovi
+        for a, fa, ox, oy, ex, ey in con_fase:
+            if not (fa[0] <= fase and (fa[1] == 0 or fase <= fa[1])):
+                if abs(ox - cx) - ex <= 600.0 and abs(oy - cy) - ey <= 600.0 and a not in ignora:
+                    ignora.append(a)
+        trovato = None
+        for verso in (1.0, -1.0):
+            dx, dy = math.cos(yaw) * verso, math.sin(yaw) * verso
+            m = misura_soglia(mondo, cx, cy, base, dx, dy, ignora)
+            if m is not None and m[2] > GRADINO_MINIMO and (trovato is None or m[2] > trovato[0][2]):
+                trovato = (m, dx, dy)
+        if trovato is None:
+            continue
+        (bordo, pavimento, salto, sotto), dx, dy = trovato
+        n = int(math.ceil(salto / GRADINO_ALZATA))
+        # (secondo controllo) se il terreno scende ancora, al piede del gradino il salto e' piu' grande: si rimisura
+        # li' (una volta) e, se serve, si prende il pezzo con un'alzata in piu'
+        piede = bordo + 30.0 * min(n, 6) - 10.0
+        tp = linea_colono(mondo, unreal.Vector(cx + dx * piede, cy + dy * piede, pavimento + 60.0),
+                          unreal.Vector(cx + dx * piede, cy + dy * piede, pavimento - 300.0), ignora)
+        if tp is not None and tp[3] >= 1.0 and any(k in chi_e(tp) for k in GRADINO_TERRA):
+            salto = max(salto, pavimento - tp[4].z)
+            n = int(math.ceil(salto / GRADINO_ALZATA))
+        if n > 6:
+            avviso("gradini: %s ha un salto di %.0f cm, piu' dei 108 del kit: metto il _6, da guardare" % (nome, salto))
+            n = 6
+        lungo = 5.0 + 30.0 * n
+        x, y = cx + dx * (bordo - 2.0), cy + dy * (bordo - 2.0)
+        # c'e' posto davanti? una linea a 40 cm sopra il pavimento, lunga come il gradino piu' mezzo metro
+        t = linea_colono(mondo, unreal.Vector(x + dx * 5.0, y + dy * 5.0, pavimento + 40.0),
+                         unreal.Vector(x + dx * (lungo + 50.0), y + dy * (lungo + 50.0), pavimento + 40.0), ignora)
+        davanti = ""
+        if t is not None and "Landscape" not in chi_e(t):
+            davanti = "; ATTENZIONE: davanti a %.0f cm c'e' %s" % (t[3], chi_e(t))
+        a = attori.spawn_actor_from_object(pezzi["SM_Gradino_Soglia_%d" % n],
+                                           unreal.Vector(x, y, pavimento - n * GRADINO_ALZATA),
+                                           unreal.Rotator(roll=0.0, pitch=0.0, yaw=math.degrees(math.atan2(dy, dx))))
+        if a is None:
+            avviso("gradini: non riesco a mettere il gradino di %s" % nome)
+            continue
+        a.set_actor_label("Gradino ~ %s" % nome)
+        a.set_folder_path(GRADINI_CARTELLA)
+        a.set_editor_property("tags", [unreal.Name(GRADINI)] + ([unreal.Name(fp[2])] if fp else []))
+        messi += 1
+        nuovi.append(a)
+        conti[n] = conti.get(n, 0) + 1
+        scrivi("  %s: salto %.0f cm su %s, bordo a %.0f cm dalla porta -> SM_Gradino_Soglia_%d%s%s"
+               % (nome, salto, sotto, bordo, n, " (%s)" % fp[2] if fp else "", davanti))
+    scrivi("gradini messi: %d (%s)" % (messi, ", ".join("_%d: %d" % (k, conti[k]) for k in sorted(conti))))
+    # (17/11) la lanterna della caserma della fase 2 stava davanti alla porta, ora anche davanti al gradino: nei dati
+    # del villaggio e' stata spostata di 1,5 m a est; qui si portano li' anche le due cose gia' nel livello
+    try:
+        with open(STRADE + "/Villaggio_3000.json", "r", encoding="utf-8-sig") as g:
+            cose = json.load(g).get("cose", [])
+        angolo = angolo_paesaggio()
+        for c in cose:
+            if c.get("nome") in ("Lanterna della caserma", "Lanterna della caserma luce 0") and angolo is not None:
+                a = per_nome.get(c["nome"])
+                if a is None:
+                    continue
+                dove = a.get_actor_location()
+                nx, ny = angolo.x + float(c["pos"][0]), angolo.y + float(c["pos"][1])
+                if abs(dove.x - nx) > 1.0 or abs(dove.y - ny) > 1.0:
+                    a.set_actor_location(unreal.Vector(nx, ny, dove.z), False, False)
+                    scrivi("  %s spostata di (%+.0f, %+.0f) cm, come nei dati del villaggio" % (c["nome"], nx - dove.x, ny - dove.y))
+    except Exception as e:  # noqa: BLE001
+        avviso("lanterna della caserma non spostata (%s)" % e)
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    scrivi("FATTO e salvato. Ora rilancia 'Per Claude: collauda i passaggi' per vedere che cosa resta.")
+
+
 try:
     if MODO == "assi":
         fai_assi()
@@ -1682,6 +1906,8 @@ try:
         fai_caserma()
     elif MODO == "alloggi":
         fai_alloggi()
+    elif MODO == "gradini":
+        fai_gradini()
     else:
         avviso("modo sconosciuto: %s" % MODO)
 except Exception as e:  # noqa: BLE001
