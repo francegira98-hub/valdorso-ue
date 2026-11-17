@@ -67,7 +67,9 @@ namespace ValdorsoFiducia
 	/** Ogni quanto un colpo conta come un'altra colpa (la fiducia, il registro): non a ogni pugno. */
 	inline constexpr float SecondiTraColpe = 10.f;
 	inline constexpr int32 Multa = 20;
-	inline constexpr float SecondiCella = 90.f;
+	/** (16/11, v0.2.6) Con la prigione vera la pena scorre anche a gioco chiuso: cinque minuti veri (prima novanta
+	 *  secondi, fermo dov'era). Si cambia per prova con Valdorso.Cella.Secondi. */
+	inline constexpr float SecondiCella = 300.f;
 	inline constexpr float RaggioTestimoni = 2000.f;
 	inline constexpr float RaggioGrida = 2500.f;
 	inline constexpr float RaggioFuga = 1200.f;

@@ -1,8 +1,56 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-16",
+ "aggiornato": "2026-11-17",
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
+  {
+   "versione": "0.2.6",
+   "nome": "Le mura",
+   "data": "",
+   "sommario": "Val d'Orso si chiude dentro le sue mura. Nella fase 2 un muro basso di pietra con il camminamento prende il posto della palizzata; nella fase 3 arrivano le mura alte, con le torri, la grata e la leva. Strade nuove portano alle quattro porte, la milizia ha la sua caserma con il recinto, la camerata e una prigione vera. E certe porte, d'ora in poi, si aprono solo a chi ha la chiave.",
+   "gruppi": [
+    {
+     "titolo": "Novità: le mura",
+     "voci": [
+      "Fase 3: mura alte di pietra tutto intorno al villaggio, con il camminamento, i merli e le torri con la scala a chiocciola.",
+      "Fase 2: mura basse di pietra al posto della palizzata larga, con le scale per salire sul cammino di ronda.",
+      "Quattro porte della città. Dalla fase 3 hanno la grata di ferro, che si alza e si abbassa con la leva nella stanza sopra il passaggio.",
+      "Lanterne di ferro alle porte, nelle torri e lungo il cammino."
+     ]
+    },
+    {
+     "titolo": "Novità: chiavi e porte",
+     "voci": [
+      "Le chiavi: certe porte si aprono solo a chi ha la chiave giusta. Ci sono la chiave delle torri, quella della porta grande, quella della caserma e quella della prigione.",
+      "La leva della grata ha il lucchetto: senza la chiave della porta grande non si muove."
+     ]
+    },
+    {
+     "titolo": "Novità: il villaggio",
+     "voci": [
+      "Strade nuove dalla piazza alle quattro porte e al piazzale delle carovane. Dove passano le strade, dalla fase 3 alcune case si spostano di qualche passo.",
+      "Il Tempio del Cuore cresce con il villaggio: cappella nella fase 1, chiesa nella fase 2, pieve nella fase 3.",
+      "La caserma della milizia (fase 3) ha un recinto di pietra con il portale, la grata e il corpo di guardia, la garitta e il campo d'addestramento.",
+      "Gli alloggi della milizia sono rifatti dentro: la sala, l'ufficio della capitana, la camerata al piano di sopra. La torre di guardia ha i piani e la scala a chiocciola, e una porta che dà sulla camerata."
+     ]
+    },
+    {
+     "titolo": "Novità: la prigione",
+     "voci": [
+      "Chi sceglie la cella dopo un arresto ci finisce davvero, in ogni fase e sempre nella zona delle guardie: una gabbia di legno nella fase 1, una cella nella caserma nella fase 2, tre celle con le sbarre negli alloggi della milizia nella fase 3.",
+      "In cella ci si può muovere, ma non uscire: chi ci prova viene riportato dentro. La pena dura cinque minuti e passa anche a gioco chiuso; uscire dal gioco o morire non la cancella.",
+      "A pena finita le guardie ti accompagnano fuori. Le porte delle celle si aprono solo con la chiave della prigione."
+     ]
+    },
+    {
+     "titolo": "Sistema",
+     "voci": [
+      "Le porte, le grate e le leve restano sempre caricate, così funzionano anche viste da lontano.",
+      "Nuovi comandi per lo staff: Valdorso.Colpa.Cella (mette in cella) e Valdorso.Cella.Secondi (la durata); Valdorso.Colpa.Assolvi ora fa anche uscire di prigione."
+     ]
+    }
+   ]
+  },
   {
    "versione": "0.2.5",
    "nome": "La valle più bella",

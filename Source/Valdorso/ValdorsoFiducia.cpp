@@ -16,6 +16,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
 #include "HAL/IConsoleManager.h"
+#include "UObject/UObjectIterator.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoFiducia"
 
@@ -573,17 +574,63 @@ namespace
 		Uscita.Logf(TEXT("Annotato: %s, ieri. Ora passa vicino a un PNG (o parlaci)."), *Argomenti[0]);
 	}
 
+	/**
+	 * (17/11, v0.2.6, trovato da Fra provando la prigione) I coloni come li vede il SERVER, in qualsiasi mondo di gioco di
+	 * questo programma: giocando dall'editor con il server a parte, la console scrive nel mondo del PC, dove il colono
+	 * non ha l'autorita' e il comando rispondeva "(sul server)" senza fare niente. Cosi' il comando vale anche da li',
+	 * come Valdorso.Villaggio.Fase. Nome vuoto: tutti i coloni con un giocatore dietro.
+	 */
+	TArray<AValdorsoPlayerState*> FiduciaStatiSulServer(const TArray<FString>& Argomenti, int32 Da)
+	{
+		const FString Nome = Argomenti.IsValidIndex(Da) ? Argomenti[Da] : FString();
+		TArray<AValdorsoPlayerState*> Trovati;
+		for (TObjectIterator<AValdorsoPlayerState> It; It; ++It)
+		{
+			AValdorsoPlayerState* Stato = *It;
+			const UWorld* MondoSuo = IsValid(Stato) ? Stato->GetWorld() : nullptr;
+			if (!MondoSuo || !MondoSuo->IsGameWorld() || !Stato->HasAuthority() || !Stato->GetPlayerController())
+			{
+				continue;
+			}
+			if (Nome.IsEmpty() || Stato->GetPlayerName().Equals(Nome, ESearchCase::IgnoreCase))
+			{
+				Trovati.Add(Stato);
+			}
+		}
+		return Trovati;
+	}
+
 	void FiduciaComandoAssolvi(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
 	{
-		APlayerController* Giocatore = FiduciaGiocatore(Mondo, Argomenti, 0);
-		AValdorsoPlayerState* Stato = Giocatore ? Giocatore->GetPlayerState<AValdorsoPlayerState>() : nullptr;
-		if (!Stato || !Stato->HasAuthority())
+		const TArray<AValdorsoPlayerState*> Stati = FiduciaStatiSulServer(Argomenti, 0);
+		if (Stati.IsEmpty())
 		{
-			Uscita.Log(TEXT("Valdorso.Colpa.Assolvi [nome] (sul server)"));
+			Uscita.Log(TEXT("Valdorso.Colpa.Assolvi [nome]: nessun colono trovato (serve essere in gioco)"));
 			return;
 		}
-		Stato->Assolvi();
-		Uscita.Log(TEXT("Assolto: il nome non e' piu' rosso, le guardie non cercano piu' nessuno."));
+		for (AValdorsoPlayerState* Stato : Stati)
+		{
+			Stato->Assolvi();
+			// (16/11, v0.2.6) e se era in cella, esce
+			Stato->LiberaDallaCella();
+		}
+		Uscita.Logf(TEXT("Assolti %d: il nome non e' piu' rosso, le guardie non cercano piu' nessuno; chi era in cella e' fuori."), Stati.Num());
+	}
+
+	/** (16/11, v0.2.6) Per provare la prigione senza farsi arrestare. */
+	void FiduciaComandoCella(const TArray<FString>& Argomenti, UWorld* Mondo, FOutputDevice& Uscita)
+	{
+		const TArray<AValdorsoPlayerState*> Stati = FiduciaStatiSulServer(Argomenti, 0);
+		if (Stati.IsEmpty())
+		{
+			Uscita.Log(TEXT("Valdorso.Colpa.Cella [nome]: nessun colono trovato (serve essere in gioco)"));
+			return;
+		}
+		for (AValdorsoPlayerState* Stato : Stati)
+		{
+			Stato->InCella();
+		}
+		Uscita.Logf(TEXT("In cella: %d. Per farli uscire subito: Valdorso.Colpa.Assolvi. Per la durata: Valdorso.Cella.Secondi."), Stati.Num());
 	}
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice FiduciaComando1(TEXT("Valdorso.PNG.Fiducia"),
@@ -595,6 +642,9 @@ namespace
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice FiduciaComando3(TEXT("Valdorso.Colpa.Assolvi"),
 		TEXT("Toglie la colpa al colono (il nome rosso, le guardie). Valdorso.Colpa.Assolvi [nome]"),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&FiduciaComandoAssolvi));
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice FiduciaComando4(TEXT("Valdorso.Colpa.Cella"),
+		TEXT("Mette il colono in cella (per provare la prigione). Valdorso.Colpa.Cella [nome]"),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&FiduciaComandoCella));
 }
 
 #undef LOCTEXT_NAMESPACE

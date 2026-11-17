@@ -170,3 +170,41 @@ protected:
 private:
 	float AngoloAttuale = -35.f;
 };
+
+/**
+ * (16/11, v0.2.6, deciso da Fra) Una cella della prigione, negli alloggi della milizia (fase 3). Non si vede: dice al
+ * server dov'e' la cella. L'attore sta nel punto dove compare il prigioniero (sul pavimento); la scatola e' l'interno
+ * della cella nel sistema dell'attore; Uscita e' dove lo si mette a fine pena (nel mondo). Le mette crea_mura.py
+ * ("Mura: 6") dai dati della chat 3D. Chi e' in cella (AValdorsoPlayerState) ci viene riportato se ne esce.
+ */
+UCLASS()
+class VALDORSO_API AValdorsoCella : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	AValdorsoCella();
+
+	UPROPERTY(EditAnywhere, Category = "Cella")
+	int32 Numero = 1;
+
+	/** Il centro e la mezza misura dell'interno della cella (cm, nel sistema dell'attore). */
+	UPROPERTY(EditAnywhere, Category = "Cella")
+	FVector CentroScatola = FVector(0.f, 0.f, 150.f);
+
+	UPROPERTY(EditAnywhere, Category = "Cella")
+	FVector MezzaScatola = FVector(100.f, 150.f, 150.f);
+
+	/** Dove esce chi ha finito la pena (nel mondo, sul pavimento). Zero: resta dov'e'. */
+	UPROPERTY(EditAnywhere, Category = "Cella")
+	FVector Uscita = FVector::ZeroVector;
+
+	/** Falso se la fase del villaggio la nasconde (prima della fase 3 la prigione non c'e'). */
+	bool Usabile() const;
+
+	/** Vero se il punto e' dentro la cella (con un margine in cm). */
+	bool Dentro(const FVector& Punto, float Margine) const;
+
+	/** La cella usabile con meno coloni dentro (a parita', il numero piu' basso). nullptr se non ce ne sono. */
+	static AValdorsoCella* PiuLibera(UWorld* Mondo);
+};

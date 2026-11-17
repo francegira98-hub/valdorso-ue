@@ -452,8 +452,11 @@ void UValdorsoZainoComponent::Svuota()
 		const bool bData = Zaino.bPartenzaData;
 		// (12/11) il baule resta: si svuota lo zaino, non quello che il colono ha lasciato da Bruno
 		const TArray<FValdorsoPostoZaino> NelBaule = Zaino.Baule;
+		// (16/11, v0.2.6) e resta la pena: svuotare lo zaino non fa uscire di prigione
+		const int64 Pena = Zaino.CellaFinoUtc;
 		Zaino = FValdorsoZaino();
 		Zaino.Baule = NelBaule;
+		Zaino.CellaFinoUtc = Pena;
 		ValdorsoZaino::Sistema(Zaino);
 		// svuotato apposta: la partenza non torna da sola
 		Zaino.bPartenzaData = bData || !bPersonaggio;

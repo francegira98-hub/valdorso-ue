@@ -10,10 +10,10 @@
 namespace ValdorsoVersione
 {
 	/** Il numero ("0.1.3"). */
-	inline const TCHAR* Numero() { return TEXT("0.2.5"); }
+	inline const TCHAR* Numero() { return TEXT("0.2.6"); }
 
 	/** Il nome della tappa ("La valle"). */
-	inline const TCHAR* Nome() { return TEXT("La valle più bella"); }
+	inline const TCHAR* Nome() { return TEXT("Le mura"); }
 
 	/** Per le scritte: "v0.1.3 «La valle»". */
 	inline FString PerScritte() { return FString::Printf(TEXT("v%s «%s»"), Numero(), Nome()); }

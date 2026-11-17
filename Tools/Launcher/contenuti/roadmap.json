@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-16",
+ "aggiornato": "2026-11-17",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
  "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0: sei alpha, quattro beta e il regno. Ogni tappa è una versione che si può giocare.",
  "tappe": [
@@ -232,58 +232,158 @@
   {
    "versione": "0.2.6",
    "nome": "Le mura",
-   "stato": "in_corso",
+   "stato": "fatta",
    "voci": [
-    "Mura di pietra con il camminamento e i merli",
+    "Mura basse nella fase 2, mura alte con il camminamento e i merli nella fase 3",
     "Torri con la scala a chiocciola",
-    "La porta della città con la grata e la leva",
-    "Le chiavi: le porte che si aprono solo a chi le ha"
-   ]
+    "Le porte della città con la grata e la leva",
+    "Le chiavi: le porte che si aprono solo a chi le ha",
+    "Strade nuove alle porte e al piazzale",
+    "Il Tempio del Cuore in tre fasi: cappella, chiesa, pieve",
+    "La caserma della milizia: recinto, camerata, ufficio",
+    "La prigione vera in ogni fase: la gabbia, la cella della caserma, le tre celle; la pena passa anche a gioco chiuso"
+   ],
+   "data": ""
   },
   {
    "versione": "0.2.7",
    "nome": "Il tempio",
-   "stato": "prossima",
+   "stato": "in_corso",
    "voci": [
-    "Il Tempio del Cuore cresce con il villaggio: cappella, chiesa, pieve",
-    "Il campanile e il sagrato sulla piazza"
+    "L'interno di chiesa e pieve: l'altare, la pietra di Val d'Orso, i banchi",
+    "Il campanile e il sagrato sulla piazza",
+    "Livia e il Balivo consegnano le chiavi; le guardie di ronda sulle mura di notte",
+    "La sentinella nella garitta e la campanella della caserma",
+    "La locanda nuova di Bruno e l'osteria di posta fuori dalle mura",
+    "Ponti veri sul torrente",
+    "Texture vere per gli interni e pietra da castello sulle mura",
+    "Il collaudo dei passaggi: porte, scale e soglie provate una per una in tutte e tre le fasi",
+    "La telecamera che si avvicina e si allontana con la rotella del mouse"
    ]
   },
   {
    "versione": "0.2.8",
+   "nome": "Le fondamenta",
+   "stato": "prossima",
+   "voci": [
+    "Il server vero della valle, sempre acceso, con le copie notturne",
+    "Registrazione con l'email e recupero della password",
+    "Se il gioco si chiude da solo, il launcher propone di mandare la segnalazione",
+    "Le cartoline della valle e il diario della serata",
+    "Il bot di Discord con lo stato della valle",
+    "Gli abitanti commentano le novità",
+    "La prima ora guidata del nuovo colono",
+    "La compagnia: un patto firmato alla Gilda, da due a sei compagni con un capo; una compagnia sola alla volta",
+    "In compagnia ci si parla a portata di voce, e il bottino lo dividono i compagni",
+    "Se il capo non divide la paga lo si segnala al bancone della Gilda: decide il capo della Gilda",
+    "Chi esce dal gioco resta nel mondo qualche secondo: non si scappa da un pericolo chiudendo il gioco",
+    "La prima prova in due: compagnia, incarichi e bottino giocati con un amico"
+   ]
+  },
+  {
+   "versione": "0.2.9",
    "nome": "L'armaiolo e la Loggia",
    "stato": "futura",
    "voci": [
     "Le armature",
     "L'armaiolo",
-    "La Loggia degli artigiani"
+    "La Loggia degli artigiani",
+    "Affinamenti delle abilità ogni dieci livelli",
+    "La bacheca dei lavori del villaggio",
+    "La sera alla locanda",
+    "Duelli e torneo",
+    "I mestieri si imparano a bottega: garzone, lavorante, maestro con il proprio marchio",
+    "Maestro di un'arte sola, o di due con molto più tempo: le cose leggendarie le fanno solo i maestri",
+    "La fama della compagnia: incarichi, sotterranei ed eventi la fanno salire di grado, e la valle la riconosce; il grado parte dal compagno di grado più basso, la fama guadagnata resta",
+    "Un maestro può prendere a bottega altri coloni: chi impara da un maestro cresce prima, e il maestro guadagna fama",
+    "Il diario della compagnia: un libro vero alla Gilda con le sue imprese, di cui si può comprare una copia"
    ]
   },
   {
-   "versione": "0.2.9",
+   "versione": "0.2.10",
    "nome": "Lettere e sigilli",
    "stato": "futura",
    "voci": [
     "Le lettere e la posta",
     "I sigilli di ceralacca",
-    "Contratti, debiti e prestiti"
-   ]
-  },
-  {
-   "versione": "0.2.10",
-   "nome": "Le stagioni",
-   "stato": "futura",
-   "voci": [
-    "Le quattro stagioni, con il tempo che conta"
+    "Contratti, debiti e prestiti",
+    "Le lettere al futuro",
+    "La tessera: le guardie la chiedono al passo e di notte",
+    "I mestieri dello scrivano e del corriere"
    ]
   },
   {
    "versione": "0.2.11",
+   "nome": "Casa mia",
+   "stato": "futura",
+   "voci": [
+    "Comprare o affittare una casa",
+    "L'arredatore: gli interni di ogni casa",
+    "Le finestre che si accendono la sera",
+    "Il fuoco: le case di legno bruciano, e i vicini aiutano"
+   ]
+  },
+  {
+   "versione": "0.2.12",
+   "nome": "Il cantiere",
+   "stato": "futura",
+   "voci": [
+    "I lotti: costruire la propria casa",
+    "Il progetto e il catasto",
+    "Sotterranei e passaggi segreti",
+    "Gli edifici delle fattorie",
+    "I mestieri del muratore e del carpentiere",
+    "Le case delle compagnie, fuori dalle mura o nei lotti"
+   ]
+  },
+  {
+   "versione": "0.2.13",
+   "nome": "Le montagne",
+   "stato": "futura",
+   "voci": [
+    "Le montagne vive: il terreno si veste da solo, con erba in basso, roccia sui pendii ripidi, ghiaione e neve in alto",
+    "Pareti di roccia vera, boschi di abeti e pini che si diradano salendo, poi mughi e prati alpini",
+    "Nebbia e nuvole basse sulle cime, neve portata dal vento",
+    "Sentieri, rifugi dei pastori e passi: i posti delle storie di montagna",
+    "Il sentiero dei nani rifinito",
+    "Il bosco di faggi e carpini, la palude come acqua vera, il segno sulla Collina dell'Orso",
+    "Il mestiere dell'erborista, con Nonna Edda"
+   ]
+  },
+  {
+   "versione": "0.2.14",
+   "nome": "Le stagioni",
+   "stato": "futura",
+   "voci": [
+    "Le quattro stagioni, con il tempo che conta",
+    "Campi, pascoli, animali e granai",
+    "Il mercato del sabato",
+    "Il carro e il mulo, i briganti di notte, il cane della fattoria",
+    "Le costellazioni dei Vecchi Dei",
+    "Le notti dei lupi",
+    "I mestieri del contadino e del pastore"
+   ]
+  },
+  {
+   "versione": "0.2.15",
+   "nome": "Il focolare",
+   "stato": "futura",
+   "voci": [
+    "La cucina e la fame",
+    "Il libro delle ricette",
+    "La pesca",
+    "I mestieri del cuoco e dell'oste"
+   ]
+  },
+  {
+   "versione": "0.2.16",
    "nome": "Zone del Battito e lapidi",
    "stato": "futura",
    "voci": [
     "Le zone tasca e le Eco",
-    "Le lapidi e la morte sensata degli abitanti"
+    "Le lapidi e la morte sensata degli abitanti",
+    "Le Rovine degli Antichi rifatte",
+    "Le rovine vive a sorpresa, scelte dal Battito ogni settimana"
    ]
   },
   {
@@ -294,7 +394,8 @@
    "voci": [
     "La magia e le rune",
     "La forgia runica",
-    "La lettera dell'accademia"
+    "La lettera dell'accademia",
+    "Le pietre per parlare da lontano, per chi le possiede"
    ]
   },
   {
@@ -305,7 +406,10 @@
    "voci": [
     "Leggi, crimini e giustizia",
     "L'Inquisizione",
-    "Il Sussurro"
+    "Il Sussurro",
+    "La gogna del Balivo",
+    "Evasioni dalla prigione, ricercati e taglie",
+    "Catture e manette: lecite per le guardie e per chi agisce per la legge, un crimine per tutti gli altri"
    ]
   },
   {

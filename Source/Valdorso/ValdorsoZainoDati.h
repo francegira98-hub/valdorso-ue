@@ -99,6 +99,12 @@ struct FValdorsoZaino
 	 *  si portano dietro. Nei file di prima manca: si legge vuoto (Sistema lo mette della misura giusta). */
 	UPROPERTY()
 	TArray<FValdorsoPostoZaino> Baule;
+
+	/** (16/11, v0.2.6) La prigione (ValdorsoStatoColono.h): fino a quando il colono resta in cella, in secondi Unix
+	 *  (UTC). 0 = libero. Sta nel file del personaggio: la pena scorre anche a gioco chiuso, e chi esce e rientra
+	 *  (o muore) si ritrova in cella finche' non e' passata. Nei file di prima manca: si legge 0. */
+	UPROPERTY()
+	int64 CellaFinoUtc = 0;
 };
 
 namespace ValdorsoZaino

@@ -12,6 +12,8 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
+#include "Components/SceneComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Net/UnrealNetwork.h"
@@ -384,6 +386,64 @@ void AValdorsoLeva::Tick(float DeltaSeconds)
 	const float Voluto = (Grata && Grata->Su()) ? 35.f : -35.f;
 	AngoloAttuale = FMath::FInterpConstantTo(AngoloAttuale, Voluto, DeltaSeconds, 140.f);
 	Perno->SetRelativeRotation(FRotator(AngoloAttuale, 0.f, 0.f));
+}
+
+// ------------------------------------------------------------------------------------------------
+// (16/11, v0.2.6) La cella della prigione
+// ------------------------------------------------------------------------------------------------
+
+AValdorsoCella::AValdorsoCella()
+{
+	PrimaryActorTick.bCanEverTick = false;
+	// serve solo al server; nel livello c'e' comunque su tutti (non si replica niente)
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Radice"));
+	RootComponent->SetMobility(EComponentMobility::Static);
+}
+
+bool AValdorsoCella::Usabile() const
+{
+	// AValdorsoFasiVillaggio nasconde le cose delle altre fasi (SetActorHiddenInGame)
+	return !IsHidden();
+}
+
+bool AValdorsoCella::Dentro(const FVector& Punto, float Margine) const
+{
+	const FVector Locale = GetActorTransform().InverseTransformPosition(Punto) - CentroScatola;
+	return FMath::Abs(Locale.X) <= MezzaScatola.X + Margine
+		&& FMath::Abs(Locale.Y) <= MezzaScatola.Y + Margine
+		&& FMath::Abs(Locale.Z) <= MezzaScatola.Z + Margine + 60.f;
+}
+
+AValdorsoCella* AValdorsoCella::PiuLibera(UWorld* Mondo)
+{
+	if (!Mondo)
+	{
+		return nullptr;
+	}
+	AValdorsoCella* Scelta = nullptr;
+	int32 Meno = TNumericLimits<int32>::Max();
+	for (TActorIterator<AValdorsoCella> It(Mondo); It; ++It)
+	{
+		if (!It->Usabile())
+		{
+			continue;
+		}
+		int32 Quanti = 0;
+		for (FConstPlayerControllerIterator Chi = Mondo->GetPlayerControllerIterator(); Chi; ++Chi)
+		{
+			const APawn* Corpo = Chi->IsValid() ? (*Chi)->GetPawn() : nullptr;
+			if (Corpo && It->Dentro(Corpo->GetActorLocation(), 0.f))
+			{
+				++Quanti;
+			}
+		}
+		if (Quanti < Meno || (Quanti == Meno && Scelta && It->Numero < Scelta->Numero))
+		{
+			Meno = Quanti;
+			Scelta = *It;
+		}
+	}
+	return Scelta;
 }
 
 #undef LOCTEXT_NAMESPACE

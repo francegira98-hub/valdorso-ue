@@ -1146,6 +1146,140 @@ def sistema_panche():
     scrivi("panche rimesse ai due lati lunghi dei tavoli (mensa, caserma della fase 2): %d" % fatte)
 
 
+CELLE_FASI = "ValdorsoCelleFasi"
+CELLE_FASI_DATI = "Valdorso_celle_fasi.json"
+# (17/11, v0.2.7, deciso da Fra: la prigione in tutte e tre le fasi, sempre nella zona delle guardie) chi fa da ancora:
+# la cella della fase 2 sta dentro la caserma della fase 2 (attore del villaggio); la gabbia della fase 1 e' all'aperto
+CELLE_ANCORE = {"SM_Cella_Caserma_Fase2": "Caserma_della_milizia"}
+
+
+def telecamera_passa(a):
+    """(17/11, foto di Fra: nella gabbia la telecamera finiva addosso al colono) Le sbarre non fermano la telecamera: resta
+    alla sua distanza, dietro e sopra, e guarda dentro attraverso le sbarre. Il colono le urta come prima."""
+    if a is None:
+        return
+    for comp in a.get_components_by_class(unreal.PrimitiveComponent):
+        try:
+            comp.set_collision_response_to_channel(unreal.CollisionChannel.ECC_CAMERA, unreal.CollisionResponseType.ECR_IGNORE)
+        except Exception as ex:  # noqa: BLE001
+            avviso("%s: la telecamera non passa (%s)" % (a.get_actor_label(), ex))
+            return
+
+
+def fai_celle_fasi():
+    """(17/11, v0.2.7) Le celle delle fasi 1 e 2 (dati della chat 3D, V:/Texture/valdorso/mura/Valdorso_celle_fasi.json):
+    la gabbia di legno della milizia (fase 1) e la cella nella caserma (fase 2). Per ognuna: il modello, la porta vera
+    con la Chiave_Prigione e una AValdorsoCella (il C++ ci porta chi e' arrestato). Nella fase 3 ci sono le celle degli
+    alloggi (fai_alloggi). Si puo' rilanciare: toglie e rimette le sue cose."""
+    dati = leggi(CELLE_FASI_DATI)
+    if not dati:
+        scrivi("celle delle fasi 1 e 2: niente (manca %s)" % CELLE_FASI_DATI)
+        return
+    angolo = angolo_paesaggio()
+    classe_porta = getattr(unreal, "ValdorsoPorta", None)
+    classe_cella = getattr(unreal, "ValdorsoCella", None)
+    if angolo is None or not classe_porta or not classe_cella:
+        avviso("celle delle fasi 1 e 2: manca il paesaggio o il C++ (ValdorsoPorta, ValdorsoCella): compila")
+        return
+    celle = dati["celle"]
+    nomi = set()
+    for c in celle.values():
+        nomi.add(c["pezzo"])
+        nomi.add(c["porta"]["pezzo"])
+    pezzi = importa(sorted(nomi), materiali())
+    sy = numero_specchio() or 1.0
+    for a in attori.get_all_level_actors():
+        if a and a.actor_has_tag(CELLE_FASI):
+            attori.destroy_actor(a)
+    per_nome = tutti_per_nome()
+    mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    fatte = 0
+    for chiave, c in celle.items():
+        fase = "ValdorsoFase %d-%d" % (int(c["fase"][0]), int(c["fase"][1]))
+        m = pezzi.get(c["pezzo"])
+        mp = pezzi.get(c["porta"]["pezzo"])
+        if m is None or mp is None:
+            avviso("%s: manca il modello (%s o %s)" % (chiave, c["pezzo"], c["porta"]["pezzo"]))
+            continue
+        ancora = CELLE_ANCORE.get(c["pezzo"])
+        if ancora:
+            # dentro un edificio del villaggio: stesso posto e stessi gradi dell'attore (scala 1: e' un pezzo come le mura)
+            b = per_nome.get(ancora)
+            if b is None:
+                avviso("%s: nel livello manca \"%s\"" % (chiave, ancora))
+                continue
+            o = b.get_actor_location()
+            yaw0 = b.get_actor_rotation().yaw
+        else:
+            # all'aperto: X e Y dalla Pianta; il pavimento 8 cm sopra il terreno piu' alto sotto i quattro angoli
+            pm = c["posizione_mondo_cm"]
+            yaw0 = float(c.get("gradi", 0))
+            base = unreal.Vector(pm[0] + angolo.x, pm[1] + angolo.y, float(pm[2]))
+            sc = c["scatola_cm"]
+            quote = []
+            for cx, cy in ((sc["min"][0], sc["min"][1]), (sc["min"][0], sc["max"][1]), (sc["max"][0], sc["min"][1]),
+                           (sc["max"][0], sc["max"][1]), (0.0, 0.0)):
+                w = al_mondo(base, yaw0, (cx, cy, 0.0))
+                q = terreno(mondo, w.x, w.y, base.z)
+                if q is not None:
+                    quote.append(q)
+            z = (max(quote) + 8.0) if quote else base.z
+            if quote and abs(z - base.z) > 15.0:
+                scrivi("%s: pavimento a %.1f (i dati dicevano %.1f): seguo il terreno vero" % (chiave, z, base.z))
+            o = unreal.Vector(base.x, base.y, z)
+
+        def mio(a, nome, fase=fase):
+            a.set_actor_label(nome)
+            a.set_folder_path("Valle/Caserma/Celle")
+            a.set_editor_property("tags", [unreal.Name(CELLE_FASI), unreal.Name(fase)])
+            return a
+
+        etichetta = "Cella ~ %s" % chiave
+        prima = set(attori.get_all_level_actors())
+        try:
+            a = metti_mesh(m, o, yaw0, etichetta, sy)
+            if a is None:
+                continue
+            mio(a, etichetta)
+            telecamera_passa(a)
+            p = c["porta"]
+            num = re.search(r"da\s*([+-]?\d+(?:\.\d+)?)\s*a\s*([+-]?\d+(?:\.\d+)?)", str(p.get("apre", "")))
+            verso = 1 if not num or float(num.group(2)) > float(num.group(1)) else -1
+            porta = porta_vera(classe_porta, mp, al_mondo(o, yaw0, p["cardine_cm"]), yaw0 + float(p.get("yaw", 0)), verso,
+                               "Chiave_Prigione", etichetta + " porta", sy)
+            if porta:
+                mio(porta, etichetta + " porta")
+                telecamera_passa(porta)
+            pp = c["prigioniero_cm"]
+            sc = c["scatola_cm"]
+            ca = attori.spawn_actor_from_class(classe_cella, al_mondo(o, yaw0, pp),
+                                               unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw0))
+            if ca:
+                mio(ca, etichetta + " segnaposto")
+                ca.set_editor_property("numero", 1)
+                ca.set_editor_property("centro_scatola", unreal.Vector(
+                    (sc["min"][0] + sc["max"][0]) / 2.0 - pp[0], (sc["min"][1] + sc["max"][1]) / 2.0 - pp[1],
+                    (sc["min"][2] + sc["max"][2]) / 2.0 - pp[2]))
+                ca.set_editor_property("mezza_scatola", unreal.Vector(
+                    (sc["max"][0] - sc["min"][0]) / 2.0, (sc["max"][1] - sc["min"][1]) / 2.0,
+                    (sc["max"][2] - sc["min"][2]) / 2.0))
+                # l'uscita all'aperto, alla quota del terreno vero
+                u = al_mondo(o, yaw0, c.get("uscita_cm", (0.0, 0.0, 0.0)))
+                q = terreno(mondo, u.x, u.y, o.z)
+                ca.set_editor_property("uscita", unreal.Vector(u.x, u.y, q if q is not None else o.z))
+                fatte += 1
+        except Exception as ex:  # noqa: BLE001
+            avviso("%s: non messa (%s)" % (chiave, ex))
+            # (secondo controllo) niente pezzi a meta' nel livello: via tutto quello che e' nato per questa cella
+            for x in attori.get_all_level_actors():
+                if x and x not in prima:
+                    try:
+                        attori.destroy_actor(x)
+                    except Exception:  # noqa: BLE001
+                        pass
+    scrivi("celle delle fasi 1 e 2 (gabbia della milizia, cella della caserma): %d su %d" % (fatte, len(celle)))
+
+
 def fai_alloggi():
     """(16/11 sera, v0.2.6, deciso da Fra) La caserma della milizia dentro, fase 3: gli Alloggi rifatti (sala, ufficio
     della capitana, prigione con tre celle; sopra la camerata) e la Torre di guardia a piani con la scala a chiocciola
@@ -1307,10 +1441,35 @@ def fai_alloggi():
                 continue
             mio(a, nome)
             conti[ruolo] = conti.get(ruolo, 0) + 1
+        # (16/11 notte, v0.2.6) le celle vere: un attore AValdorsoCella nel punto del prigioniero, girato come
+        # l'edificio, con la scatola dell'interno nel suo sistema e il punto dove si esce a fine pena (sotto il portico,
+        # davanti all'ingresso). Il C++ (AValdorsoPlayerState) ci porta chi e' arrestato e ce lo tiene.
+        classe_cella = getattr(unreal, "ValdorsoCella", None)
+        if e.get("celle") and classe_cella is None:
+            avviso("manca la classe del C++ ValdorsoCella (compila): le celle restano solo stanze")
+        ingresso = e.get("ingresso", {}).get("vano_cm", [-715, -595])
+        uscita = al_mondo(o, yaw0, ((ingresso[0] + ingresso[1]) / 2.0, -560.0, 0.0))
         for c in e.get("celle", []):
             sc = c["scatola_cm"]
             a1, a2 = al_mondo(o, yaw0, sc["min"]), al_mondo(o, yaw0, sc["max"])
             pr = al_mondo(o, yaw0, c["prigioniero_cm"])
+            if classe_cella is not None:
+                try:
+                    ca = attori.spawn_actor_from_class(classe_cella, pr, unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw0))
+                    if ca:
+                        mio(ca, "%s cella %s" % (nome_b, c["cella"]))
+                        pp = c["prigioniero_cm"]
+                        ca.set_editor_property("numero", int(c["cella"]))
+                        ca.set_editor_property("centro_scatola", unreal.Vector(
+                            (sc["min"][0] + sc["max"][0]) / 2.0 - pp[0], (sc["min"][1] + sc["max"][1]) / 2.0 - pp[1],
+                            (sc["min"][2] + sc["max"][2]) / 2.0 - pp[2]))
+                        ca.set_editor_property("mezza_scatola", unreal.Vector(
+                            (sc["max"][0] - sc["min"][0]) / 2.0, (sc["max"][1] - sc["min"][1]) / 2.0,
+                            (sc["max"][2] - sc["min"][2]) / 2.0))
+                        ca.set_editor_property("uscita", uscita)
+                        conti["celle del C++"] = conti.get("celle del C++", 0) + 1
+                except Exception as ex:  # noqa: BLE001
+                    avviso("cella %s: non messa (%s)" % (c["cella"], ex))
             scrivi("cella %s: scatola (%.0f, %.0f, %.0f)-(%.0f, %.0f, %.0f), prigioniero (%.0f, %.0f, %.0f)"
                    % (c["cella"], min(a1.x, a2.x), min(a1.y, a2.y), a1.z, max(a1.x, a2.x), max(a1.y, a2.y), a2.z,
                       pr.x, pr.y, pr.z))
@@ -1340,10 +1499,15 @@ def fai_alloggi():
         sistema_panche()
     except Exception as ex:  # noqa: BLE001
         avviso("panche della mensa non sistemate (%s)" % ex)
+    try:
+        fai_celle_fasi()
+    except Exception as ex:  # noqa: BLE001
+        avviso("celle delle fasi 1 e 2 non messe (%s)" % ex)
     mostra_fase(3)
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, False)
     scrivi("FATTO e salvato. Poi 'Rete: le cose che si usano sempre caricate' e 'PNG: panche, letti e porte'. "
-           "In Play: Valdorso.Villaggio.Fase 3, Valdorso.Zaino.Dai Chiave_Caserma (ufficio), Chiave_Prigione (celle)")
+           "In Play: Valdorso.Villaggio.Fase 3, Valdorso.Zaino.Dai Chiave_Caserma (ufficio), Chiave_Prigione (celle); "
+           "Valdorso.Cella.Secondi 30 e Valdorso.Colpa.Cella per provare la prigione")
 
 
 def mostra_fase(fase):

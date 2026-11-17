@@ -1,8 +1,16 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-16",
+ "aggiornato": "2026-11-17",
  "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
  "notizie": [
+  {
+   "data": "2026-11-17",
+   "etichetta": "Patch",
+   "titolo": "Le mura: v0.2.6",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Val d'Orso ha le sue mura: basse nella fase 2, alte con torri, grate e leve nella fase 3. Strade nuove portano alle porte, la milizia ha caserma e camerata, e chi alza le mani finisce in una cella vera, con le sbarre."
+  },
   {
    "data": "2026-11-16",
    "etichetta": "Patch",
@@ -80,6 +88,7 @@
   }
  ],
  "voci": [
+  "Dicono che nella cella di mezzo, alla caserma, qualcuno abbia inciso un nome sul tavolaccio.",
   "Dicono che di notte le rune delle rovine si accendano da sole.",
   "Un pastore giura di aver visto un'ombra enorme passare davanti alla luna.",
   "Al posto di guardia del passo non lasciano uscire nessuno. Nemmeno le lettere.",

@@ -3,12 +3,16 @@
 
 #include "ValdorsoStatoColono.h"
 #include "ValdorsoFiducia.h"
+#include "ValdorsoMura.h"
+#include "ValdorsoPericoli.h"
 #include "ValdorsoPNG.h"
 #include "ValdorsoPlayerController.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoZainoDati.h"
+#include "Components/CapsuleComponent.h"
 #include "EngineUtils.h"
+#include "HAL/IConsoleManager.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -17,6 +21,29 @@
 #include "TimerManager.h"
 
 #define LOCTEXT_NAMESPACE "ValdorsoStatoColono"
+
+namespace
+{
+	// (16/11, v0.2.6) quanto dura la cella, in secondi veri (scorre anche a gioco chiuso). Per le prove: 20.
+	TAutoConsoleVariable<float> CVarCellaSecondi(TEXT("Valdorso.Cella.Secondi"), ValdorsoFiducia::SecondiCella,
+		TEXT("Quanti secondi veri dura la cella (la pena scorre anche a gioco chiuso)."));
+
+	/** Mette il colono in piedi su un punto del pavimento. */
+	void CellaPorta(ACharacter* Colono, const FVector& Pavimento, float Gradi)
+	{
+		if (!Colono)
+		{
+			return;
+		}
+		const UCapsuleComponent* Capsula = Colono->GetCapsuleComponent();
+		const float Mezza = Capsula ? Capsula->GetScaledCapsuleHalfHeight() : 90.f;
+		Colono->TeleportTo(Pavimento + FVector(0.f, 0.f, Mezza + 5.f), FRotator(0.f, Gradi, 0.f), false, true);
+		if (UCharacterMovementComponent* Movimento = Colono->GetCharacterMovement())
+		{
+			Movimento->StopMovementImmediately();
+		}
+	}
+}
 
 AValdorsoPlayerState::AValdorsoPlayerState()
 {
@@ -138,21 +165,223 @@ void AValdorsoPlayerState::InCella()
 	{
 		return;
 	}
+	const float Pena = FMath::Clamp(CVarCellaSecondi.GetValueOnGameThread(), 5.f, 86400.f);
 	bInCellaOra = true;
 	bInArresto = false;
-	CellaFinoA = Mondo->GetTimeSeconds() + ValdorsoFiducia::SecondiCella;
-	if (ACharacter* Colono = Cast<ACharacter>(GetPawn()))
+	CellaFinoA = Mondo->GetTimeSeconds() + Pena;
+	// (16/11, v0.2.6) la fine della pena nel file del personaggio: vale anche se esce, se muore, a gioco chiuso
+	SalvaPena(FDateTime::UtcNow().ToUnixTimestamp() + FMath::CeilToInt64(Pena));
+	CellaMia = AValdorsoCella::PiuLibera(Mondo);
+	TieniInCella();
+	if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetPlayerController()))
 	{
-		if (UCharacterMovementComponent* Movimento = Colono->GetCharacterMovement())
+		if (CellaMia.IsValid())
+		{
+			// in una cella vera ci si muove: l'avviso non lo tiene fermo
+			Giocatore->ClientAvviso(LOCTEXT("CellaVera", "Ti chiudono in cella: un tavolaccio, pane duro e le sbarre. La pena passa anche se lasci la valle; quando e' finita ti accompagnano fuori."),
+				8.f, 0.f);
+		}
+		else
+		{
+			Giocatore->ClientAvviso(LOCTEXT("Cella", "Una notte in cella: paglia, pane duro e una finestra sul passo. All'alba ti lasciano andare."),
+				Pena, Pena);
+		}
+	}
+}
+
+void AValdorsoPlayerState::SalvaPena(int64 FinoUtc)
+{
+	if (UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::Di(GetPlayerController()))
+	{
+		Zaino->Cambia([FinoUtc](FValdorsoZaino& Z)
+		{
+			if (Z.CellaFinoUtc == FinoUtc)
+			{
+				return false;
+			}
+			Z.CellaFinoUtc = FinoUtc;
+			return true;
+		});
+	}
+}
+
+void AValdorsoPlayerState::LeggiPenaSalvata(double Adesso)
+{
+	// solo quando c'e' un personaggio con il suo file (nelle prove dell'editor senza file conta CellaFinoA e basta)
+	const UValdorsoZainoComponent* Zaino = UValdorsoZainoComponent::Di(GetPlayerController());
+	if (!Zaino || !Zaino->HaPersonaggio())
+	{
+		return;
+	}
+	const int64 Fine = Zaino->Contenuto().CellaFinoUtc;
+	const int64 Ora = FDateTime::UtcNow().ToUnixTimestamp();
+	if (Fine > Ora)
+	{
+		if (!bInCellaOra)
+		{
+			// e' rientrato (o ha cambiato personaggio) con la pena ancora da finire
+			bInCellaOra = true;
+			bInArresto = false;
+			CellaMia = nullptr;
+			if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetPlayerController()))
+			{
+				Giocatore->ClientAvviso(LOCTEXT("AncoraCella", "Sei ancora in cella: la pena non e' finita."), 5.f, 0.f);
+			}
+		}
+		CellaFinoA = Adesso + static_cast<double>(Fine - Ora);
+	}
+	else if (!bInCellaOra)
+	{
+		if (Fine != 0)
+		{
+			// la pena e' finita mentre era via: e' ancora chiuso nella cella dove ha lasciato il gioco. Lo si fa uscire
+			// come gli altri (EsciDallaCella lo porta fuori e azzera il file)
+			bInCellaOra = true;
+			CellaMia = nullptr;
+			CellaFinoA = Adesso;
+		}
+	}
+	else
+	{
+		// la pena e' finita adesso; oppure (Fine a zero) e' entrato un altro personaggio, che non c'entra
+		if (Fine == 0)
+		{
+			bInCellaOra = false;
+			CellaMia = nullptr;
+			RidaiMovimento();
+			// (secondo controllo) e non eredita nemmeno la colpa dell'altro
+			Assolvi();
+		}
+		else
+		{
+			CellaFinoA = Adesso;
+		}
+	}
+}
+
+void AValdorsoPlayerState::TieniInCella()
+{
+	UWorld* Mondo = GetWorld();
+	ACharacter* Colono = Cast<ACharacter>(GetPawn());
+	UCharacterMovementComponent* Movimento = Colono ? Colono->GetCharacterMovement() : nullptr;
+	if (!Mondo || !Colono || !Movimento)
+	{
+		return;
+	}
+	// chi e' a terra (morto, in attesa di rinascere al tempio) si lascia stare: lo si riporta in cella dopo
+	const UValdorsoPericoliComponent* Pericoli = UValdorsoPericoliComponent::Di(Colono);
+	if (Pericoli && Pericoli->Caduto())
+	{
+		return;
+	}
+	if (!CellaMia.IsValid() || !CellaMia->Usabile())
+	{
+		// (secondo controllo) chi rientra resta nella cella dov'e' gia'; altrimenti la piu' libera
+		CellaMia = nullptr;
+		for (TActorIterator<AValdorsoCella> It(Mondo); It; ++It)
+		{
+			if (It->Usabile() && It->Dentro(Colono->GetActorLocation(), 40.f))
+			{
+				CellaMia = *It;
+				break;
+			}
+		}
+		if (!CellaMia.IsValid())
+		{
+			CellaMia = AValdorsoCella::PiuLibera(Mondo);
+		}
+	}
+	AValdorsoCella* Cella = CellaMia.Get();
+	if (!Cella)
+	{
+		// niente prigione (fasi 1 e 2): fermo dov'e', come prima
+		if (Movimento->MovementMode != MOVE_None)
 		{
 			Movimento->StopMovementImmediately();
 			Movimento->DisableMovement();
+			bFermoPerCella = true;
+		}
+		return;
+	}
+	RidaiMovimento();
+	if (!Cella->Dentro(Colono->GetActorLocation(), 40.f))
+	{
+		// e' fuori (appena arrestato, rinato al tempio, rientrato nel gioco, o la porta era aperta): dentro
+		CellaPorta(Colono, Cella->GetActorLocation(), Cella->GetActorRotation().Yaw);
+		if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetPlayerController()))
+		{
+			Giocatore->ClientSetRotation(FRotator(0.f, Cella->GetActorRotation().Yaw, 0.f), true);
 		}
 	}
-	if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetPlayerController()))
+}
+
+void AValdorsoPlayerState::EsciDallaCella(bool bAvvisa)
+{
+	if (!bInCellaOra)
 	{
-		Giocatore->ClientAvviso(LOCTEXT("Cella", "Una notte in cella: paglia, pane duro e una finestra sul passo. All'alba ti lasciano andare."),
-			ValdorsoFiducia::SecondiCella, ValdorsoFiducia::SecondiCella);
+		return;
+	}
+	bInCellaOra = false;
+	SalvaPena(0);
+	RidaiMovimento();
+	if (ACharacter* Colono = Cast<ACharacter>(GetPawn()))
+	{
+		// fuori, davanti agli alloggi (la porta della cella e quella della prigione restano chiuse a chiave)
+		const AValdorsoCella* Cella = CellaMia.Get();
+		if (!Cella || !Cella->Dentro(Colono->GetActorLocation(), 60.f))
+		{
+			// (chi rientra a pena finita non ha ancora la "sua" cella: quella in cui si trova)
+			Cella = nullptr;
+			for (TActorIterator<AValdorsoCella> It(GetWorld()); It; ++It)
+			{
+				if (It->Dentro(Colono->GetActorLocation(), 60.f))
+				{
+					Cella = *It;
+					break;
+				}
+			}
+		}
+		if (Cella && !Cella->Uscita.IsZero())
+		{
+			CellaPorta(Colono, Cella->Uscita, Cella->GetActorRotation().Yaw + 90.f);
+		}
+	}
+	CellaMia = nullptr;
+	Assolvi();
+	if (bAvvisa)
+	{
+		if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetPlayerController()))
+		{
+			Giocatore->ClientAvviso(LOCTEXT("Libero", "La pena e' finita: ti accompagnano fuori. Sei libero: tieni le mani a posto."), 4.f, 0.1f);
+			// (secondo controllo: 0.1 e non 0, cosi' il PC smette di tenerlo fermo se la cella senza prigione e' finita prima)
+		}
+	}
+}
+
+void AValdorsoPlayerState::RidaiMovimento()
+{
+	if (!bFermoPerCella)
+	{
+		return;
+	}
+	bFermoPerCella = false;
+	if (const ACharacter* Colono = Cast<ACharacter>(GetPawn()))
+	{
+		if (UCharacterMovementComponent* Movimento = Colono->GetCharacterMovement())
+		{
+			if (Movimento->MovementMode == MOVE_None)
+			{
+				Movimento->SetMovementMode(MOVE_Walking);
+			}
+		}
+	}
+}
+
+void AValdorsoPlayerState::LiberaDallaCella()
+{
+	if (HasAuthority())
+	{
+		EsciDallaCella(true);
 	}
 }
 
@@ -179,24 +408,21 @@ void AValdorsoPlayerState::GiroColpa()
 		return;
 	}
 	const double Adesso = Mondo->GetTimeSeconds();
+	// (16/11, v0.2.6) la pena scritta nel file del personaggio comanda (chi rientra e' ancora in cella)
+	LeggiPenaSalvata(Adesso);
 	if (bInCellaOra)
 	{
 		if (Adesso < CellaFinoA)
 		{
+			TieniInCella();
 			return;
 		}
-		bInCellaOra = false;
-		if (ACharacter* Colono = Cast<ACharacter>(GetPawn()))
+		// (senza corpo, appena entrato o fra un corpo e l'altro, si aspetta: va portato fuori dalla cella)
+		// (secondo controllo) e chi e' a terra esce dopo essere rinato
+		const UValdorsoPericoliComponent* Pericoli = UValdorsoPericoliComponent::Di(GetPawn());
+		if (GetPawn() && !(Pericoli && Pericoli->Caduto()))
 		{
-			if (UCharacterMovementComponent* Movimento = Colono->GetCharacterMovement())
-			{
-				Movimento->SetMovementMode(MOVE_Walking);
-			}
-		}
-		Assolvi();
-		if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetPlayerController()))
-		{
-			Giocatore->ClientAvviso(LOCTEXT("Libero", "All'alba la porta si apre. Sei libero: tieni le mani a posto."), 4.f, 0.f);
+			EsciDallaCella(true);
 		}
 		return;
 	}

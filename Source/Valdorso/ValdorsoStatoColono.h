@@ -55,8 +55,17 @@ public:
 	/** Solo sul server: la colpa e' pagata (o perdonata dallo staff). */
 	void Assolvi();
 
-	/** Solo sul server: una notte in cella (fermo, poi libero e assolto). */
+	/** Solo sul server: in cella. (16/11, v0.2.6) Nella fase 3 e' una cella vera degli alloggi della milizia
+	 *  (AValdorsoCella): il colono ci compare dentro, puo' muoversi ma se esce ci torna; la fine della pena sta nel
+	 *  file del personaggio (FValdorsoZaino::CellaFinoUtc), quindi scorre anche a gioco chiuso e vale dopo la morte e
+	 *  dopo l'uscita. Senza celle (fasi 1 e 2) resta fermo dov'e', come prima. Poi libero e assolto. */
 	void InCella();
+
+	/** Solo sul server: se e' in cella esce adesso (lo staff: Valdorso.Colpa.Assolvi). */
+	void LiberaDallaCella();
+
+	/** Vero se e' in cella (solo sul server). */
+	bool InCellaOra() const { return bInCellaOra; }
 
 	/** Solo sul server: il dialogo dell'arresto si e' chiuso (se la colpa c'e' ancora, lo riprendono fra poco). */
 	void ArrestoChiuso();
@@ -70,6 +79,16 @@ private:
 	void GiroColpa();
 	/** Le guardie lo prendono: al posto di guardia, e il dialogo dell'arresto. */
 	void Arresta();
+	/** (16/11, v0.2.6) Ogni secondo: la pena scritta nel file del personaggio (chi rientra e' ancora in cella). */
+	void LeggiPenaSalvata(double Adesso);
+	/** (16/11, v0.2.6) Ogni secondo finche' e' in cella: dentro la sua cella (o fermo, se celle non ce ne sono). */
+	void TieniInCella();
+	/** (16/11, v0.2.6) Fine della pena: fuori dalla cella, assolto. */
+	void EsciDallaCella(bool bAvvisa);
+	/** (16/11, v0.2.6) Scrive nel file del personaggio fino a quando resta in cella (0 = libero). */
+	void SalvaPena(int64 FinoUtc);
+	/** (16/11, v0.2.6) Rida' il movimento tolto dalla cella senza prigione (solo se l'aveva tolto lei). */
+	void RidaiMovimento();
 
 	UPROPERTY(Replicated)
 	bool bColpevole = false;
@@ -81,6 +100,10 @@ private:
 	double CellaFinoA = 0.0;
 	bool bInArresto = false;
 	bool bInCellaOra = false;
+	/** (16/11, v0.2.6) La cella dove sta (solo sul server). */
+	TWeakObjectPtr<class AValdorsoCella> CellaMia;
+	/** (16/11, v0.2.6) Vero se la cella (senza prigione) gli ha tolto il movimento: solo allora glielo si rida'. */
+	bool bFermoPerCella = false;
 	FTimerHandle TimerColpa;
 
 	UPROPERTY(Replicated)

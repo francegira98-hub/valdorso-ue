@@ -60,6 +60,9 @@ public:
 	/** Il personaggio entra: il suo zaino letto dal file (e, la prima volta, quello che porta dall'arrivo). */
 	void Carica(const FValdorsoZaino& Salvato, const FValdorsoRegistro* Registro);
 
+	/** (16/11, v0.2.6) Server: vero dopo Carica (c'e' un personaggio con il suo file). */
+	bool HaPersonaggio() const { return bPersonaggio; }
+
 	/** Lo zaino com'è adesso, da salvare nel file del personaggio. */
 	FValdorsoZaino Dati() const { return Zaino; }
 
