@@ -438,7 +438,9 @@ def capanna_palafitta(nome, W=480.0, D=420.0, alto=140.0, quote_pali=None):
         for sy in (-1, 1):
             m.blocco("Trave", sx * W / 2 - 10, sx * W / 2 + 10, sy * D / 2 - 10, sy * D / 2 + 10, base, base + 250)
     m.blocco({"altri": "Trave", "-z": "Assi", "+z": "Assi"}, -W / 2, W / 2, -D / 2, D / 2, base + 240, base + 252)
-    tetto_casa(m, W, D, base + 250, "Paglia", 50.0, sporto=70, gronda=50, gable="Assi")
+    # (17/11, collaudo dei passaggi) lo sporto era 70: con la pendenza di 50 gradi la gronda scendeva a 167 cm proprio
+    # davanti alla porta e il colono (alto 192) ci batteva la testa uscendo. Con 25 la gronda resta a 220.
+    tetto_casa(m, W, D, base + 250, "Paglia", 50.0, sporto=25, gronda=50, gable="Assi")
     # scaletta (gradini) davanti
     for k in range(5):
         zz = alto - (k + 1) * alto / 6

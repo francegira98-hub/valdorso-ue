@@ -23,6 +23,9 @@
 #include "ValdorsoRegistro.h"
 #include "ValdorsoTaccuino.h"
 #include "SValdorsoTessera.h"
+#include "SValdorsoContratto.h"
+#include "ValdorsoMilizia.h"
+#include "TimerManager.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/Engine.h"
@@ -324,6 +327,19 @@ void UValdorsoZainoComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		}
 		SchermataTessera.Reset();
 	}
+	if (UWorld* MondoTimer = GetWorld())
+	{
+		MondoTimer->GetTimerManager().ClearTimer(ContrattoTimer);
+	}
+	if (SchermataContratto.IsValid())
+	{
+		UWorld* Mondo = GetWorld();
+		if (UGameViewportClient* Viewport = Mondo ? Mondo->GetGameViewport() : nullptr)
+		{
+			Viewport->RemoveViewportWidgetContent(SchermataContratto.ToSharedRef());
+		}
+		SchermataContratto.Reset();
+	}
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -454,9 +470,25 @@ void UValdorsoZainoComponent::Svuota()
 		const TArray<FValdorsoPostoZaino> NelBaule = Zaino.Baule;
 		// (16/11, v0.2.6) e resta la pena: svuotare lo zaino non fa uscire di prigione
 		const int64 Pena = Zaino.CellaFinoUtc;
+		// (17/11, v0.2.7) e resta il grado nella milizia (le chiavi no: sono oggetti, e Livia le ridà)
+		const uint8 Grado = Zaino.GradoMilizia;
+		const int32 Turni = Zaino.TurniMilizia;
+		// (18/11) e restano la ferma, il soldo pagato e i contratti firmati
+		const int64 MiliziaDal = Zaino.MiliziaDalUtc;
+		const int64 MiliziaPagato = Zaino.MiliziaPagatoUtc;
+		const int32 MiliziaSoldo = Zaino.MiliziaGiorniSoldo;
+		const int64 MiliziaGiorno = Zaino.MiliziaGiornoTurno;
+		const TArray<FValdorsoDocumento> Firmati = Zaino.Documenti;
 		Zaino = FValdorsoZaino();
 		Zaino.Baule = NelBaule;
 		Zaino.CellaFinoUtc = Pena;
+		Zaino.GradoMilizia = Grado;
+		Zaino.TurniMilizia = Turni;
+		Zaino.MiliziaDalUtc = MiliziaDal;
+		Zaino.MiliziaPagatoUtc = MiliziaPagato;
+		Zaino.MiliziaGiorniSoldo = MiliziaSoldo;
+		Zaino.MiliziaGiornoTurno = MiliziaGiorno;
+		Zaino.Documenti = Firmati;
 		ValdorsoZaino::Sistema(Zaino);
 		// svuotato apposta: la partenza non torna da sola
 		Zaino.bPartenzaData = bData || !bPersonaggio;
@@ -518,7 +550,7 @@ void UValdorsoZainoComponent::ServerMostraTessera_Implementation()
 		return;
 	}
 	TesseraDiProva();
-	SuoZaino->ClientTessera(Tessera, Io, false);
+	SuoZaino->ClientTessera(TesseraDiAdesso(), Io, false);
 	const APlayerState* Stato = Scelto->PlayerState;
 	Avvisa(FText::Format(LOCTEXT("Mostrata", "Mostri la tessera a {0}."), FText::FromString(Stato ? Stato->GetPlayerName() : FString(TEXT("chi hai davanti")))), 3.f);
 }
@@ -534,6 +566,130 @@ void UValdorsoZainoComponent::TesseraDiProva()
 	const APlayerState* Stato = Controllore ? Controllore->PlayerState.Get() : nullptr;
 	const FString Nome = Stato ? Stato->GetPlayerName() : FString(TEXT("Colono"));
 	Tessera = ValdorsoTessera::Vista(Nome, nullptr, ValdorsoTessera::Nuova(Nome));
+}
+
+// --- (18/11, v0.2.7) la qualifica sulla tessera e il contratto da firmare ---------------------------------------
+
+FValdorsoTesseraVista UValdorsoZainoComponent::TesseraDiAdesso() const
+{
+	FValdorsoTesseraVista Vista = Tessera;
+	const FString Qualifica = ValdorsoMilizia::Qualifica(Zaino.GradoMilizia);
+	if (!Qualifica.IsEmpty())
+	{
+		Vista.Tessera.Qualifica = Qualifica;
+	}
+	return Vista;
+}
+
+void UValdorsoZainoComponent::OffriContratto(FValdorsoContrattoVista Vista, AActor* DaChi)
+{
+	const UWorld* Mondo = GetWorld();
+	if (!Mondo || !GetOwner() || !GetOwner()->HasAuthority() || Vista.Tipo.IsNone())
+	{
+		return;
+	}
+	TesseraDiProva();
+	Vista.Nome = Tessera.Nome;
+	Vista.FirmaRegistro = Tessera.Firma;
+	ContrattoOfferto = Vista.Tipo;
+	ContrattoDa = DaChi;
+	ContrattoFino = Mondo->GetTimeSeconds() + 300.0;
+	ClientContratto(Vista);
+}
+
+FString UValdorsoZainoComponent::NomeSullaTessera()
+{
+	TesseraDiProva();
+	return Tessera.Nome;
+}
+
+void UValdorsoZainoComponent::MostraFoglio(FValdorsoContrattoVista Vista)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	Vista.bSoloLettura = true;
+	if (Vista.Tipo.IsNone())
+	{
+		Vista.Tipo = FName(TEXT("Foglio"));
+	}
+	ClientContratto(Vista);
+}
+
+void UValdorsoZainoComponent::ClientContratto_Implementation(const FValdorsoContrattoVista& Vista)
+{
+	ContrattoInArrivo = Vista;
+	ContrattoProve = 0;
+	ProvaAdAprireIlContratto();
+}
+
+void UValdorsoZainoComponent::ProvaAdAprireIlContratto()
+{
+	APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	UWorld* Mondo = GetWorld();
+	if (!Controllore || !Mondo || ContrattoInArrivo.Tipo.IsNone())
+	{
+		return;
+	}
+	if (ValdorsoContrattoSchermo::Apri(Controllore, ContrattoInArrivo))
+	{
+		ContrattoInArrivo = FValdorsoContrattoVista();
+		return;
+	}
+	// il dialogo con chi porge il foglio si sta ancora chiudendo: si riprova per un paio di secondi
+	if (++ContrattoProve <= 10)
+	{
+		Mondo->GetTimerManager().SetTimer(ContrattoTimer, FTimerDelegate::CreateUObject(this, &UValdorsoZainoComponent::ProvaAdAprireIlContratto), 0.2f, false);
+		return;
+	}
+	const bool bEraUnFoglio = ContrattoInArrivo.bSoloLettura;
+	ContrattoInArrivo = FValdorsoContrattoVista();
+	if (bEraUnFoglio)
+	{
+		// (19/11) un foglio solo da leggere (il registro della ronda): se non si apre, pazienza
+		return;
+	}
+	if (AValdorsoPlayerController* Nostro = Cast<AValdorsoPlayerController>(Controllore))
+	{
+		Nostro->ClientAvviso(LOCTEXT("ContrattoOccupato", "Chiudi quello che hai aperto e chiedi di nuovo il contratto."), 4.f, 0.f);
+	}
+}
+
+void UValdorsoZainoComponent::ServerFirmaContratto_Implementation(FName Tipo, const FString& Firma)
+{
+	APlayerController* Controllore = Cast<APlayerController>(GetOwner());
+	const APawn* Corpo = Controllore ? Controllore->GetPawn() : nullptr;
+	const UWorld* Mondo = GetWorld();
+	if (!Corpo || !Mondo || TroppeRichieste())
+	{
+		return;
+	}
+	const FName Offerto = ContrattoOfferto;
+	AActor* DaChi = ContrattoDa.Get();
+	const bool bVale = !Offerto.IsNone() && Offerto == Tipo && Mondo->GetTimeSeconds() <= ContrattoFino
+		&& DaChi && FVector::DistSquared(DaChi->GetActorLocation(), Corpo->GetActorLocation()) <= FMath::Square(800.f);
+	if (!bVale)
+	{
+		ContrattoOfferto = NAME_None;
+		ContrattoDa.Reset();
+		Avvisa(LOCTEXT("ContrattoScaduto", "Il foglio non e' piu' sul tavolo: chiedilo di nuovo."), 4.f);
+		return;
+	}
+	// la firma: disegnata (con i limiti del Registro) o con il nome ("@")
+	FString Vera = Firma.Left(ValdorsoRegistro::MassimoLunghezzaFirma);
+	if (Vera != ValdorsoRegistro::FirmaColNome && !ValdorsoRegistro::ProblemaFirma(Vera, true).IsEmpty())
+	{
+		Avvisa(LOCTEXT("ContrattoSenzaFirma", "Senza una firma vera il contratto non vale."), 4.f);
+		return;
+	}
+	// un contratto si firma una volta sola (secondo controllo: una firma respinta non consuma l'offerta)
+	ContrattoOfferto = NAME_None;
+	ContrattoDa.Reset();
+	if (Tipo == ValdorsoMilizia::TipoContratto)
+	{
+		ValdorsoMilizia::Firmato(Controllore, DaChi, Vera);
+	}
 }
 
 void UValdorsoZainoComponent::ClientApriBottega_Implementation(uint8 Banco)
@@ -832,7 +988,7 @@ void UValdorsoZainoComponent::Usa(int32 Posto)
 	{
 		// (09/11) la tessera: si apre come un foglio vero sul PC di chi gioca (con la sua faccia)
 		TesseraDiProva();
-		ClientTessera(Tessera, Corpo, true);
+		ClientTessera(TesseraDiAdesso(), Corpo, true);
 		return;
 	}
 	case EValdorsoUso::Accendi:

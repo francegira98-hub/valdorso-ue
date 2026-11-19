@@ -8,6 +8,8 @@
 #include "ValdorsoBotteghe.h"
 #include "ValdorsoStorie.h"
 #include "ValdorsoFiducia.h"
+#include "ValdorsoMilizia.h"
+#include "ValdorsoContratto.h"
 #include "ValdorsoBattito.h"
 #include "ValdorsoStatoColono.h"
 #include "ValdorsoVoci.h"
@@ -634,6 +636,17 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	{
 		Evento = NAME_None;
 	}
+	// (17/11, v0.2.7) la milizia: arruolarsi da Livia, le chiavi del grado, lasciare (ValdorsoMilizia.h)
+	// (18/11) "Fammi leggere il contratto": il dialogo si chiude e al giocatore si apre la pergamena da firmare
+	UValdorsoZainoComponent* Contratto = nullptr;
+	if (ValdorsoMilizia::EventoDialogo(Evento, Chi, this, Prossimo))
+	{
+		if (Evento == FName(TEXT("MiliziaContratto")) && Prossimo.IsNone())
+		{
+			Contratto = UValdorsoZainoComponent::Di(Chi);
+		}
+		Evento = NAME_None;
+	}
 	const FString Detta = Nodo->Scelte[Vera].Testo;
 	// (08/11) I segni: della risposta scelta (per esempio "MonetaOfferta": la moneta non si offre più) e del nodo dopo.
 	ValdorsoDialoghi::MettiSegnoDi(Memoria, Dati->Id, Nodo->Scelte[Vera].Segna);
@@ -670,6 +683,10 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 		if (Merci)
 		{
 			Merci->ClientApriBottega(static_cast<uint8>(EValdorsoTipoBanco::Carovana));
+		}
+		if (Contratto)
+		{
+			Contratto->OffriContratto(ValdorsoMilizia::Contratto(), this);
 		}
 		return;
 	}
@@ -1045,6 +1062,62 @@ void AValdorsoPNG::GiroGiornata()
 	}
 }
 
+void AValdorsoPNG::VaiAllaFase(int32 Fase)
+{
+	const int32 Indice = FMath::Clamp(Fase, 1, 255) - 1;
+	bool bQuestaCambia = false;
+	for (int32 i = 0; i < Giornata.Num(); ++i)
+	{
+		FValdorsoTappa& Una = Giornata[i];
+		if (!Una.DovePerFase.IsValidIndex(Indice) || Una.DovePerFase[Indice].IsZero())
+		{
+			continue;
+		}
+		const float Gradi = Una.GradiPerFase.IsValidIndex(Indice) ? Una.GradiPerFase[Indice] : Una.Gradi;
+		if (!Una.Dove.Equals(Una.DovePerFase[Indice], 1.0) || !FMath::IsNearlyEqual(Una.Gradi, Gradi, 0.5f))
+		{
+			bQuestaCambia = bQuestaCambia || i == Tappa;
+			Una.Dove = Una.DovePerFase[Indice];
+			Una.Gradi = Gradi;
+		}
+	}
+	if (Giornata.Num() == 0)
+	{
+		// chi sta sempre nello stesso posto (Padre Anselmo davanti all'altare).
+		// (secondo controllo) solo quando la fase cambia davvero: Applica gira a ogni pezzo di mondo che arriva, e lo
+		// rimetterebbe dritto mentre parla o mentre scappa
+		if (Indice != FaseMessa && PostoPerFase.IsValidIndex(Indice) && !PostoPerFase[Indice].IsZero())
+		{
+			FaseMessa = Indice;
+			if (bInFuga)
+			{
+				// sta scappando: quando torna, torna al posto della fase nuova
+				PostoFuga = PostoPerFase[Indice];
+				return;
+			}
+			const float Gradi = GradiPerFase.IsValidIndex(Indice) ? GradiPerFase[Indice] : static_cast<float>(GetActorRotation().Yaw);
+			SetActorLocationAndRotation(PostoPerFase[Indice], FRotator(0.f, Gradi, 0.f));
+			SguardoIniziale = Gradi;
+			if (HasAuthority())
+			{
+				Sguardo = Gradi;
+			}
+		}
+		return;
+	}
+	// e' proprio in quella tappa, fermo: si sposta subito al posto della fase nuova (mentre cammina ci arriva da se')
+	// (secondo controllo) non mentre parla, e' a terra o scappa: chi scappa torna al posto nuovo, gli altri ci vanno
+	// alla prossima tappa
+	if (bQuestaCambia && bInFuga && Giornata.IsValidIndex(Tappa))
+	{
+		PostoFuga = Giornata[Tappa].Dove;
+	}
+	else if (bQuestaCambia && HasActorBegunPlay() && !bVia && !bCammina && !bATerra && Conversazioni.Num() == 0)
+	{
+		OnRep_Tappa();
+	}
+}
+
 void AValdorsoPNG::OnRep_Tappa()
 {
 	SetActorHiddenInGame(bVia);
@@ -1205,6 +1278,11 @@ void AValdorsoPNG::MettiPosa()
 		FVector Sedile = FVector::ZeroVector;
 		for (TActorIterator<AValdorsoPanca> It(Mondo); It; ++It)
 		{
+			// (19/11) non le panche di un'altra fase del villaggio (quelle della cappella, nascoste nella chiesa)
+			if (It->IsHidden())
+			{
+				continue;
+			}
 			for (int32 i = 0; i < It->Posti.Num(); ++i)
 			{
 				const FVector Punto = It->GetActorTransform().TransformPosition(FVector(It->AvantiPosto, It->Posti[i], 0.f));

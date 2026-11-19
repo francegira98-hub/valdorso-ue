@@ -61,7 +61,9 @@ class Valle:
         c_panca = getattr(unreal, "ValdorsoPanca", None)
         c_letto = getattr(unreal, "ValdorsoLetto", None)
         c_png = getattr(unreal, "ValdorsoPNG", None)
-        self.panche = [a for a in self.tutti if c_panca and isinstance(a, c_panca)]
+        # (19/11) non i posti a sedere della chiesa e della pieve (fasi 2 e 3, "Mura: 3"): qui si sceglie per la fase 1
+        self.panche = [a for a in self.tutti if c_panca and isinstance(a, c_panca)
+                       and not a.get_actor_label().startswith("Tempio del Cuore, fase")]
         self.letti = [a for a in self.tutti if c_letto and isinstance(a, c_letto)]
         self.png = {}
         for a in self.tutti:
@@ -114,6 +116,13 @@ def leggi(t):
     d = {k: t.get_editor_property(k) for k in ("ora", "dove", "gradi", "movenza", "assente", "porta", "apri_porta")}
     try:
         d["strade"] = list(t.get_editor_property("strade"))
+    except Exception:  # noqa: BLE001
+        pass
+    # (19/11) i posti per fase del villaggio (crea_volti.py): si tengono cosi' come sono
+    try:
+        dpf, gpf = list(t.get_editor_property("dove_per_fase")), list(t.get_editor_property("gradi_per_fase"))
+        if dpf:
+            d["dove_per_fase"], d["gradi_per_fase"] = dpf, gpf
     except Exception:  # noqa: BLE001
         pass
     return d
@@ -200,6 +209,12 @@ def seduto(V, giorno, ora, chi, raggio=600.0):
     if p is None:
         return giorno
     nuova = tappa(ora, p, "Panca", porta=d["porta"] if not vettore_zero(d["porta"]) else None, apri=d["apri_porta"])
+    # (19/11) i posti per fase del villaggio restano (Elric nella chiesa e nella pieve): quello della fase 1 lo rimette
+    # metti_cammini sul posto di adesso
+    # (secondo controllo) la fase 1 e' subito il posto sulla panca: metti_cammini puo' non girare
+    if d.get("dove_per_fase"):
+        nuova["dove_per_fase"] = [nuova["dove"]] + list(d["dove_per_fase"][1:])
+        nuova["gradi_per_fase"] = [float(nuova["gradi"])] + list((d.get("gradi_per_fase") or [])[1:])
     return cambia(giorno, ora, nuova)
 
 
@@ -519,15 +534,23 @@ def quota(x, y, z_vicino):
     return z_vicino
 
 
-def luogo_della_tappa(d, chi, P, V, casa):
-    """Dove sta in quella tappa: (x, y, z_piedi) del punto dove arriva a piedi, e la casa in cui e' (o None)."""
+def luogo_della_tappa(d, chi, P, V, casa, fase=1):
+    """Dove sta in quella tappa: (x, y, z_piedi) del punto dove arriva a piedi, e la casa in cui e' (o None).
+    (19/11) Se la tappa ha un posto per quella fase del villaggio (il tempio che cambia), il cammino arriva li'."""
     if d["assente"]:
         return casa
     if vettore_zero(d["dove"]):
         return None
     v = d["dove"]
+    gradi = d["gradi"]
+    dpf = d.get("dove_per_fase") or []
+    if 0 <= fase - 1 < len(dpf) and not vettore_zero(dpf[fase - 1]):
+        v = dpf[fase - 1]
+        gpf = d.get("gradi_per_fase") or []
+        if fase - 1 < len(gpf):
+            gradi = gpf[fase - 1]
     x, y, z = v.x, v.y, v.z - MEZZA_ALTEZZA
-    g = math.radians(d["gradi"])
+    g = math.radians(gradi)
     m = str(d["movenza"])
     if m == "Panca":                                   # davanti alla panca (poi si siede)
         x, y = x + math.cos(g) * 70.0, y + math.sin(g) * 70.0
@@ -625,6 +648,84 @@ def cammino(A, B, P, V, chi):
     return vettori, nuove, lungo
 
 
+# (19/11, v0.2.7) LE SCALE CHE I CAMMINI NON CONOSCONO. La pianta del villaggio non sa niente del quartiere della Guardia
+# Reale al passo, che sta su una terrazza a due metri da terra: chi ha una tappa lassu' ci arriverebbe attraverso il muro.
+# La chat 3D ha dato la linea della scala gradino per gradino (Valdorso_passo_guardia_reale.json, linee_delle_scale):
+# chi va sulla terrazza cammina fino ai piedi della scala e poi sale i suoi punti; chi scende fa il contrario.
+SCALE_DATI = "V:/Texture/valdorso/passo/Valdorso_passo_guardia_reale.json"
+SCALA_VICINO = 1500.0        # cm: una tappa e' "in cima a quella scala" se sta entro tanto dall'ultimo gradino...
+SCALA_QUOTA = 80.0           # ...e alla sua quota (piu' o meno)
+
+
+def leggi_scale():
+    """Le scale note: liste di punti (x, y, z dei piedi) da terra alla cima."""
+    scale = []
+    if not os.path.exists(SCALE_DATI):
+        return scale
+    try:
+        import json
+        with open(SCALE_DATI, "r", encoding="utf-8-sig") as f:
+            linee = json.load(f).get("linee_delle_scale", {})
+        punti = [tuple(float(v) for v in q["mondo_cm"]) for q in linee.get("quartiere", {}).get("scala", [])]
+        if len(punti) >= 2 and punti[-1][2] - punti[0][2] > 50.0:
+            scale.append(punti)
+    except Exception as e:  # noqa: BLE001
+        avviso("scale del passo: non riesco a leggerle (%s): i cammini restano come prima" % e)
+    return scale
+
+
+def scala_per(luogo, scale):
+    """La scala in cima alla quale sta quel luogo (o None)."""
+    if luogo is None:
+        return None
+    x, y, z = luogo["p"]
+    for punti in scale:
+        cx, cy, cz = punti[-1]
+        if abs(z - cz) <= SCALA_QUOTA and math.hypot(x - cx, y - cy) <= SCALA_VICINO:
+            return punti
+    return None
+
+
+def cammino_con_scale(A, B, P, V, chi, scale):
+    """Come cammino(), ma se A o B stanno in cima a una scala nota il tratto a terra va (o parte) dai piedi della scala e
+    i gradini si fanno uno per uno."""
+    sa, sb = scala_per(A, scale), scala_per(B, scale)
+    if sa is None and sb is None:
+        return cammino(A, B, P, V, chi)
+    if sa is sb:
+        return None                                    # sulla stessa terrazza: come prima (nessun cammino)
+    def imbocco(scala):
+        """(secondo controllo) Un punto a terra un metro e mezzo prima del primo gradino, sull'asse della scala: il
+        tratto a terra arriva li', cosi' la scala si prende di fronte e non di fianco (tagliando i gradini bassi)."""
+        dx, dy = scala[0][0] - scala[1][0], scala[0][1] - scala[1][1]
+        n = math.hypot(dx, dy) or 1.0
+        x, y = scala[0][0] + dx / n * 150.0, scala[0][1] + dy / n * 150.0
+        return (x, y, quota(x, y, scala[0][2]))
+
+    a_terra = A if sa is None else {"p": imbocco(sa), "casa": None, "punti": None, "a_casa": False}
+    b_terra = B if sb is None else {"p": imbocco(sb), "casa": None, "punti": None, "a_casa": False}
+    r = cammino(a_terra, b_terra, P, V, chi)
+    if r is None:
+        return None
+    vettori, soglie, lungo = r
+
+    def su(p):
+        return unreal.Vector(p[0], p[1], p[2] + MEZZA_ALTEZZA)
+
+    def lunga(punti):
+        return sum(math.hypot(punti[k][0] - punti[k - 1][0], punti[k][1] - punti[k - 1][1]) for k in range(1, len(punti)))
+
+    prima, dopo = [], []
+    if sa is not None:
+        # (i gradini tutti, dal piu' alto al primo: l'imbocco a terra e' gia' in testa al tratto a terra)
+        prima = [su(A["p"])] + [su(p) for p in reversed(sa)]
+        lungo += lunga([A["p"]] + list(reversed(sa)) + [a_terra["p"]])
+    if sb is not None:
+        dopo = [su(p) for p in sb] + [su(B["p"])]
+        lungo += lunga([b_terra["p"]] + list(sb) + [B["p"]])
+    return prima + list(vettori) + dopo, [k + len(prima) for k in soglie], lungo
+
+
 def metti_cammini(V):
     paesaggi = [a for a in V.tutti if isinstance(a, unreal.Landscape)]
     if not paesaggi:
@@ -634,6 +735,9 @@ def metti_cammini(V):
     piante = [Pianta(angolo, f) for f in FASI]
     if not all(P.ok for P in piante):
         return
+    scale = leggi_scale()
+    if scale:
+        scrivi("cammini: conosco %d scala del passo (%d punti)" % (len(scale), len(scale[0])))
     for dialogo, a in sorted(V.png.items()):
         giorno = sorted(giornata(a), key=lambda d: d["ora"])
         if len(giorno) < 2:
@@ -644,13 +748,18 @@ def metti_cammini(V):
         casa = casa_del_png(dialogo, giorno, piante[0], V) if assente else None
         for d in giorno:
             d["strade"] = []
+            # (19/11) il posto della fase 1 e' quello di adesso (se la tappa e' stata spostata su una panca o un letto)
+            if d.get("dove_per_fase") and not vettore_zero(d["dove"]):
+                d["dove_per_fase"][0] = d["dove"]
+                if d.get("gradi_per_fase"):
+                    d["gradi_per_fase"][0] = float(d["gradi"])
         righe_png = []
         for fase, P in zip(FASI, piante):
-            luoghi = [luogo_della_tappa(d, chi, P, V, casa) for d in giorno]
+            luoghi = [luogo_della_tappa(d, chi, P, V, casa, fase) for d in giorno]
             fatti = []
             for k, d in enumerate(giorno):
                 strada = unreal.ValdorsoStrada()
-                r = cammino(luoghi[k - 1], luoghi[k], P, V, chi)
+                r = cammino_con_scale(luoghi[k - 1], luoghi[k], P, V, chi, scale)
                 if r is None:
                     fatti.append("%g no" % d["ora"])
                 else:
@@ -716,6 +825,36 @@ def principale():
         if p:
             giorno.append(tappa(1.0, p, "Letto"))
         salva(a, "Fulvio", giorno)
+
+    # (19/11, v0.2.7, chiesto da Fra) Tebaldo va alla leva quando la grata del passo si muove: mezzo minuto prima
+    # dell'ora lascia la garitta e si mette alla leva (80 cm verso la strada, girato verso la leva), mezzo minuto dopo
+    # torna al suo posto. La grata si muove da sola all'ora giusta (AValdorsoGrata, ora_mattina e ora_sera) e la leva
+    # con lei: cosi' e' lui che la chiude la sera e la apre la mattina. Solo se c'e' il posto di guardia nuovo.
+    a = V.png.get("GuardiaCorrado")
+    leva = V.per_nome.get("Passo ~ leva della grata")
+    grata = V.per_nome.get("Passo ~ grata del portale")
+    if a and leva is not None and grata is not None:
+        try:
+            mattina, sera = float(grata.get_editor_property("ora_mattina")), float(grata.get_editor_property("ora_sera"))
+        except Exception:  # noqa: BLE001
+            mattina, sera = 6.0, 20.0
+        g = giornata(a)
+        # la garitta: se lo script e' gia' passato, e' la tappa di dopo l'apertura (la prima sarebbe quella alla leva)
+        b = alla(g, mattina + 0.1)
+        b = dict(b) if b is not None and not vettore_zero(b["dove"]) else base_fissa(a, g, mattina + 0.1)
+        pl = leva.get_actor_location()
+        # verso la strada (il "traverso" del passo: 0,5986; -0,80105), e girato dall'altra parte, verso la leva
+        lx, ly = pl.x + 0.59860 * 80.0, pl.y - 0.80105 * 80.0
+        alla_leva = (lx, ly, b["dove"].z - MEZZA_ALTEZZA, 126.77)
+        giorno = [
+            tappa(mattina - 0.1, alla_leva),
+            b,
+            tappa(sera - 0.1, alla_leva),
+            tappa(sera + 0.1, base=b),
+        ]
+        salva(a, "Tebaldo", giorno)
+        scrivi("Tebaldo: alla leva della grata alle %g e alle %g, in (%.0f, %.0f), a %.0f cm dalla garitta"
+               % (mattina - 0.1, sera - 0.1, lx, ly, math.hypot(lx - b["dove"].x, ly - b["dove"].y)))
 
     # --- i PNG di crea_volti.py (hanno gia' la giornata: si cambiano solo alcune tappe)
     a = V.png.get("Marta")

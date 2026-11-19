@@ -194,6 +194,11 @@ def crea_menu_valdorso():
                                   ("MuraCaserma", "Mura: 5. il recinto della caserma (fase 3)", "caserma"),
                                   ("MuraAlloggi", "Mura: 6. la caserma dentro: camerata, ufficio, prigione (fase 3)", "alloggi"),
                                   ("MuraGradini", "Mura: 7. i gradini davanti alle porte (dal collaudo)", "gradini"),
+                                  ("MuraScale", "Mura: 8. le scale di fuori (mulino, casermetta, torre del passo)", "scale"),
+                                  ("MuraPonti", "Mura: 9. i ponti veri sul fiume", "ponti"),
+                                  ("MuraLocanda", "Mura: 10. la locanda nuova di Bruno", "locanda"),
+                                  ("MuraPasso", "Mura: 11. il posto di guardia reale del passo", "passo"),
+                                  ("MuraRonda", "Mura: 12. i registri della ronda", "ronda"),
                                   ("MuraIndietro", "Mura: torna come prima", "indietro")):
         voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
         voce.set_label(etichetta)
@@ -207,6 +212,12 @@ def crea_menu_valdorso():
     voce = unreal.ToolMenuEntry(name="EsportaTempioPonti", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Tempio e ponti: esporta i dati per la chat 3D")
     voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "esporta_tempio_ponti.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
+    # (18/11, v0.2.7) le misure del posto di guardia del passo, per rifarlo per la Guardia Reale (nuovi/esporta_passo.py)
+    voce = unreal.ToolMenuEntry(name="EsportaPasso", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Passo: esporta le misure del posto di guardia per la chat 3D")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "esporta_passo.py")
     valdorso.add_menu_entry("Villaggio", voce)
 
     # (16/11 sera, v0.2.7 "Il tempio") che cosa c'e' dentro la chiesa e la pieve (nuovi/guarda_tempio.py; non cambia niente)

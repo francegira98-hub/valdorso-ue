@@ -813,7 +813,20 @@ def fai_mura():
 
     # la stalla del mulo al posto di guardia del passo (la proposta della chat 3D)
     st = schede.get("posto_di_guardia", {}).get("SM_Stalla_Mulo", {}).get("proposta_nel_mondo")
-    if st and pezzi.get("SM_Stalla_Mulo"):
+    # (18/11 sera, secondo controllo) con il posto di guardia della Guardia Reale ("Mura: 11") la stalla sta a ovest
+    # della strada, girata verso la strada: rimessa dov'era toccherebbe la terrazza del quartiere
+    passo_nuovo = next((a for a in attori.get_all_level_actors() if a and a.actor_has_tag(PASSO_REALE)), None)
+    porta_passo = tutti_per_nome().get(PASSO_PORTA) if passo_nuovo is not None else None
+    if st and pezzi.get("SM_Stalla_Mulo") and porta_passo is not None:
+        g0 = porta_passo.get_actor_location()
+        x = g0.x + PASSO_D[0] * PASSO_STALLA[0] + PASSO_N[0] * PASSO_STALLA[1]
+        y = g0.y + PASSO_D[1] * PASSO_STALLA[0] + PASSO_N[1] * PASSO_STALLA[1]
+        q = terreno(mondo, x, y, g0.z)
+        if q is not None:
+            metti_mesh(pezzi["SM_Stalla_Mulo"], unreal.Vector(x, y, q - 10.0), float(st.get("yaw", 0)) + 180.0,
+                       "Stalla del mulo", sy, fase=None, cartella="Valle/Posto di guardia")
+            scrivi("la stalla del mulo a ovest della strada del passo (posto di guardia della Guardia Reale)")
+    elif st and pezzi.get("SM_Stalla_Mulo"):
         x, y = st["posizione"][0] + angolo.x, st["posizione"][1] + angolo.y
         q = terreno(mondo, x, y, angolo.z + 10000.0)
         if q is not None:
@@ -828,7 +841,11 @@ def fai_mura():
 def fai_tempio():
     schede, _ = apri_dati()
     mat = materiali()
-    pezzi = importa(["SM_Tempio_Fase2", "SM_Tempio_Fase3", "SM_Prova_Assi"], mat)
+    # (17/11 sera, v0.2.7) gli interni e i sagrati della chat 3D: se i loro file ci sono, si importano e si mettono
+    # nell'origine dei gusci, con la stessa fase. I materiali degli interni (pietra_dentro...) vanno pronti prima.
+    materiali_interni()
+    in_piu = [n for n in TEMPIO_IN_PIU if os.path.exists("%s/glb/%s.glb" % (CARTELLA, n))]
+    pezzi = importa(["SM_Tempio_Fase2", "SM_Tempio_Fase3", "SM_Prova_Assi"] + in_piu, mat)
     sy = numero_specchio()
     if sy is None:
         sy = specchio_y(pezzi)
@@ -852,8 +869,98 @@ def fai_tempio():
         m = pezzi.get(nome)
         if m is None:
             continue
+        etichetta_fase = "ValdorsoFase %d-%d" % (fase, 0 if fase == 3 else 2)
         metti_mesh(m, unreal.Vector(o.x, o.y, o.z), yaw, "Tempio del Cuore, fase %d" % fase, sy,
-                   fase="ValdorsoFase %d-%d" % (fase, 0 if fase == 3 else 2), cartella="Valle/Tempio")
+                   fase=etichetta_fase, cartella="Valle/Tempio")
+        for coda, titolo in (("_Dentro", "dentro"), ("_Sagrato", "sagrato")):
+            m2 = pezzi.get(nome + coda)
+            if m2 is not None:
+                metti_mesh(m2, unreal.Vector(o.x, o.y, o.z), yaw, "Tempio del Cuore, fase %d, %s" % (fase, titolo), sy,
+                           fase=etichetta_fase, cartella="Valle/Tempio")
+                scrivi("fase %d: messo %s" % (fase, nome + coda))
+        # una luce calda piccola sui due candelieri grandi davanti all'altare (i primi due punti di luci_cm)
+        dentro = (leggi(TEMPIO_DENTRO_DATI) or {}).get("pezzi", {}).get(nome + "_Dentro")
+        # (19/11) il posto a sedere di Maestro Elric sulla panca contro il muro (dati della chat 3D): i banchi della
+        # chiesa sono un modello solo, quindi sopra ci va una panca del C++ che non si vede, con un posto
+        seduto = ((dentro or {}).get("posti", {}).get("maestro_elric", {}) or {}).get("seduto_cm")
+        classe_panca_t = getattr(unreal, "ValdorsoPanca", None)
+        if seduto and classe_panca_t is not None and pezzi.get(nome + "_Dentro") is not None:
+            try:
+                g_s = float(dentro["posti"]["maestro_elric"].get("yaw_seduto", 0.0))
+                # il pavimento e' a 6 cm (i piedi di chi sta in piedi li' davanti)
+                pavimento = float((dentro["posti"]["maestro_elric"].get("in_piedi_davanti_cm") or [0, 0, 6.0])[2])
+                pa = attori.spawn_actor_from_class(classe_panca_t, al_mondo(o, yaw, (float(seduto[0]), float(seduto[1]), pavimento)),
+                                                   unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw + g_s))
+                if pa:
+                    pa.set_editor_property("posti", [0.0])
+                    for comp in pa.get_components_by_class(unreal.StaticMeshComponent):
+                        comp.set_visibility(False, True)
+                        comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+                    finisci(pa, "Tempio del Cuore, fase %d, panca del muro (posto a sedere)" % fase, etichetta_fase, "Valle/Tempio")
+                    scrivi("fase %d: posto a sedere sulla panca del muro" % fase)
+            except Exception as ex:  # noqa: BLE001
+                avviso("tempio, fase %d: il posto a sedere di Elric: %s" % (fase, ex))
+        if dentro and pezzi.get(nome + "_Dentro") is not None:
+            for i, pt in enumerate(dentro.get("luci_cm", [])[:2]):
+                l = attori.spawn_actor_from_class(unreal.PointLight, al_mondo(o, yaw, (pt[0], pt[1], pt[2] + 12.0)),
+                                                  unreal.Rotator(roll=0.0, pitch=0.0, yaw=0.0))
+                if l is None:
+                    continue
+                lc = l.get_component_by_class(unreal.PointLightComponent)
+                lc.set_mobility(unreal.ComponentMobility.MOVABLE)
+                try:
+                    lc.set_editor_property("intensity_units", unreal.LightUnits.CANDELAS)
+                except Exception:  # noqa: BLE001
+                    pass
+                lc.set_intensity(LUCE_INTENSITA)
+                lc.set_attenuation_radius(280.0)
+                lc.set_light_color(unreal.LinearColor(LUCE_COLORE[0], LUCE_COLORE[1], LUCE_COLORE[2], 1.0))
+                lc.set_cast_shadows(False)
+                finisci(l, "Tempio del Cuore, fase %d, candela %d" % (fase, i), etichetta_fase, "Valle/Tempio")
+    # (17/11 sera) le dodici panche della cappella restano solo nella fase 1: nelle fasi 2 e 3 ci sono i banchi degli
+    # interni nuovi, negli stessi posti (prima si vedevano in tutte le fasi, in mezzo alla navata)
+    if any(pezzi.get(n) is not None for n in TEMPIO_IN_PIU):
+        panche = 0
+        for a in attori.get_all_level_actors():
+            if a and a.get_actor_label() == "Tempio_del_Cuore panca":
+                t2 = [t for t in a.get_editor_property("tags") if not str(t).startswith("ValdorsoFase")
+                      and str(t) != TEMPIO_CAMBIATO]
+                a.modify()
+                # (con TEMPIO_CAMBIATO "Mura: torna come prima" le rimette in tutte le fasi, come la cappella)
+                a.set_editor_property("tags", t2 + [unreal.Name("ValdorsoFase 1-1"), unreal.Name(TEMPIO_CAMBIATO)])
+                panche += 1
+        scrivi("panche della cappella lasciate solo alla fase 1: %d" % panche)
+    # (19/11, v0.2.7) la pietra di Val d'Orso segue l'altare: nella chiesa e nella pieve l'altare e' piu' in fondo, e la
+    # pietra restava a mezz'aria fra i banchi. Il C++ (AValdorsoPietraVillaggio::PostoPerFase) la sposta quando cambia la
+    # fase; qui si scrivono i posti: fase 1 dov'e' adesso (zero = resta), fasi 2 e 3 dai dati della chat 3D
+    # (posti.pietra_val_d_orso.centro_cm: il centro del piano dell'altare).
+    classe_pietra = getattr(unreal, "ValdorsoPietraVillaggio", None)
+    pietre = [a for a in attori.get_all_level_actors() if a and classe_pietra and isinstance(a, classe_pietra)]
+    dati_dentro = (leggi(TEMPIO_DENTRO_DATI) or {}).get("pezzi", {})
+    if len(pietre) == 1:
+        # (secondo controllo) la fase 1 e' scritta per intero (dov'e' adesso, sull'altare della cappella): cosi' ci torna
+        # anche se il villaggio scende di fase. Se i posti c'erano gia', quello della fase 1 resta quello di prima.
+        gia = list(pietre[0].get_editor_property("posto_per_fase") or [])
+        qui = pietre[0].get_actor_location()
+        primo = gia[0] if gia and (abs(gia[0].x) + abs(gia[0].y) + abs(gia[0].z)) > 1.0 else qui
+        posti_pietra = [unreal.Vector(primo.x, primo.y, primo.z)]
+        for nome in ("SM_Tempio_Fase2_Dentro", "SM_Tempio_Fase3_Dentro"):
+            c = dati_dentro.get(nome, {}).get("posti", {}).get("pietra_val_d_orso", {}).get("centro_cm")
+            if c and pezzi.get(nome) is not None:
+                posti_pietra.append(al_mondo(o, yaw, (float(c[0]), float(c[1]), float(c[2]))))
+            else:
+                posti_pietra.append(unreal.Vector(0.0, 0.0, 0.0))
+        try:
+            pietre[0].modify()
+            pietre[0].set_editor_property("posto_per_fase", posti_pietra)
+            qp = pietre[0].get_actor_location()
+            scrivi("pietra di Val d'Orso: fase 1 dov'e' (%.0f, %.0f, %.0f); fase 2 (%.0f, %.0f, %.0f); fase 3 (%.0f, %.0f, %.0f)"
+                   % (qp.x, qp.y, qp.z, posti_pietra[1].x, posti_pietra[1].y, posti_pietra[1].z,
+                      posti_pietra[2].x, posti_pietra[2].y, posti_pietra[2].z))
+        except Exception as ex:  # noqa: BLE001
+            avviso("pietra di Val d'Orso: i posti per fase non si scrivono (%s): serve compilare il C++ del 19/11" % ex)
+    else:
+        avviso("pietra di Val d'Orso: nel livello ce ne sono %d (ne serve una): i posti per fase non si scrivono" % len(pietre))
     # la cappella resta solo nella fase 1
     tags = [t for t in cappella.get_editor_property("tags") if not str(t).startswith("ValdorsoFase")
             and str(t) != TEMPIO_CAMBIATO]
@@ -874,6 +981,11 @@ def fai_indietro():
     accese = 0
     for a in attori.get_all_level_actors():
         if a and a.actor_has_tag(SPENTA):
+            # (18/11 sera, secondo controllo) le cose di prima del passo restano spente: il posto di guardia della Guardia
+            # Reale ("Mura: 11") non si toglie da qui, e riaccese farebbero un posto di guardia doppio
+            na = a.get_actor_label()
+            if na in PASSO_VECCHIE or na.startswith(PASSO_VECCHIE_INIZI):
+                continue
             spegni(a, False)
             accese += 1
         if a and a.actor_has_tag(CAMBIATA):
@@ -883,6 +995,16 @@ def fai_indietro():
                     and str(t) != TEMPIO_CAMBIATO]
             a.set_editor_property("tags", tags + [unreal.Name("ValdorsoFase 1-0")])
             scrivi("la cappella torna in tutte le fasi")
+    # (19/11, secondo controllo) con la cappella in tutte le fasi la pietra di Val d'Orso non si sposta piu'
+    classe_pietra = getattr(unreal, "ValdorsoPietraVillaggio", None)
+    for a in attori.get_all_level_actors():
+        if a and classe_pietra and isinstance(a, classe_pietra):
+            try:
+                a.modify()
+                a.set_editor_property("posto_per_fase", [])
+                scrivi("pietra di Val d'Orso: resta sull'altare della cappella in tutte le fasi")
+            except Exception:  # noqa: BLE001
+                pass
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, False)
     scrivi("FATTO: tolti %d pezzi nuovi, riaccese %d cose vecchie" % (via, accese))
 
@@ -1814,7 +1936,7 @@ def fai_gradini():
             continue
         # le porte delle mura, delle celle e degli alloggi hanno gia' i loro gradini; le capanne si guardano a parte
         if (porta.actor_has_tag(ETICHETTA) or porta.actor_has_tag(CELLE_FASI) or porta.actor_has_tag(ALLOGGI)
-                or porta.actor_has_tag(CASERMA) or nome.startswith("Capanna")):
+                or porta.actor_has_tag(CASERMA) or porta.actor_has_tag(PASSO_REALE) or nome.startswith("Capanna")):
             continue
         cx, cy, base = [float(v) for v in r["mondo_cm"]]
         yaw = math.radians(float(r["passaggio_yaw"]))
@@ -1883,12 +2005,1362 @@ def fai_gradini():
                 dove = a.get_actor_location()
                 nx, ny = angolo.x + float(c["pos"][0]), angolo.y + float(c["pos"][1])
                 if abs(dove.x - nx) > 1.0 or abs(dove.y - ny) > 1.0:
+                    a.modify()       # (17/11 sera) senza, lo spostamento non si salvava e alla riapertura tornava com'era
                     a.set_actor_location(unreal.Vector(nx, ny, dove.z), False, False)
                     scrivi("  %s spostata di (%+.0f, %+.0f) cm, come nei dati del villaggio" % (c["nome"], nx - dove.x, ny - dove.y))
     except Exception as e:  # noqa: BLE001
         avviso("lanterna della caserma non spostata (%s)" % e)
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     scrivi("FATTO e salvato. Ora rilancia 'Per Claude: collauda i passaggi' per vedere che cosa resta.")
+
+
+# ------------------------------------------------------------------------------------------------ scale di fuori
+# (17/11, v0.2.7) Tre porte nostre (Mulino, Casermetta_della_Guardia, Torre_del_passo) stanno 3-4 m sopra il terreno
+# senza scala: il collaudo dei passaggi le dava BLOCCO. Tools/Generatori/scale_esterne.py fa per ognuna una scala di
+# legno (ballatoio + rampa lungo la facciata fino al terreno vero) e scrive V:/Texture/valdorso/mura/
+# Valdorso_scale_esterne.json. "Mura: 8" le importa e le mette: l'origine sul bordo del pavimento davanti alla porta
+# (rimisurato qui), +X verso fuori. Si puo' rilanciare: toglie e rimette le sue scale.
+
+TEMPIO_IN_PIU = ("SM_Tempio_Fase2_Dentro", "SM_Tempio_Fase3_Dentro", "SM_Tempio_Fase2_Sagrato", "SM_Tempio_Fase3_Sagrato")
+TEMPIO_DENTRO_DATI = "Valdorso_tempio_dentro.json"
+PONTI_DATI = "Valdorso_ponti.json"
+
+
+def fai_ponti():
+    """(17/11 sera, v0.2.7) "Mura: 9. i ponti veri sul fiume": i due ponti della chat 3D (SM_Ponte_Mulino, SM_Ponte_Nord)
+    al posto dei nostri, sugli stessi attori del villaggio: stessa origine e stesso yaw. Gli attori del villaggio hanno
+    la scala Y = -1, i pezzi della chat 3D no: la scala diventa (1, sy, 1), come per gli alloggi."""
+    dati = leggi(PONTI_DATI)
+    if not dati or not dati.get("pezzi"):
+        scrivi("ponti: niente (manca %s)" % PONTI_DATI)
+        return
+    angolo = angolo_paesaggio()
+    pezzi = importa(sorted(dati["pezzi"]), materiali())
+    sy = numero_specchio() or 1.0
+    per_nome = tutti_per_nome()
+    fatti = 0
+    for asset, d in sorted(dati["pezzi"].items()):
+        m = pezzi.get(asset)
+        b = per_nome.get(d.get("nome"))
+        if m is None or b is None:
+            avviso("ponti: manca il modello %s o nel livello non c'e' '%s'" % (asset, d.get("nome")))
+            continue
+        cb = b.get_component_by_class(unreal.StaticMeshComponent)
+        if cb is None:
+            avviso("ponti: '%s' non ha un modello" % d.get("nome"))
+            continue
+        dove = b.get_actor_location()
+        yaw = b.get_actor_rotation().yaw
+        o = d.get("origine_mondo_cm")
+        if angolo is not None and o:
+            scarto = math.hypot(dove.x - (angolo.x + o[0]), dove.y - (angolo.y + o[1]))
+            dy = (yaw - float(d.get("yaw", yaw)) + 180.0) % 360.0 - 180.0
+            scrivi("  %s: scarto dall'origine dei dati %.1f cm in pianta, %.1f cm in quota, %.1f gradi di yaw"
+                   % (d["nome"], scarto, dove.z - o[2], dy))
+            if scarto > 5.0 or abs(dove.z - o[2]) > 5.0 or abs(dy) > 0.5:
+                avviso("ponti: %s non sta dove dicono i dati: lascio il ponte di prima" % d["nome"])
+                continue
+        b.modify()
+        cb.set_editor_property("static_mesh", m)
+        b.set_actor_scale3d(unreal.Vector(1.0, sy, 1.0))
+        for i in range(len(m.get_editor_property("static_materials"))):
+            cb.set_material(i, m.get_material(i))
+        fatti += 1
+        scrivi("  %s: ora e' %s" % (d["nome"], asset))
+    scrivi("ponti cambiati: %d su %d" % (fatti, len(dati["pezzi"])))
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    scrivi("FATTO e salvato.")
+
+
+SCALE_FUORI = "ValdorsoScaleFuori"
+SCALE_FUORI_DATI = "Valdorso_scale_esterne.json"
+CAPANNE_RIFATTE = (("Capanna di Nonna Edda", "SM_Palude_CapannaEdda"),
+                   ("Capanna di Orlando il Muto", "SM_Villaggio_CapannaOrlando"))
+
+
+def fai_scale():
+    dati = leggi(SCALE_FUORI_DATI)
+    if not dati or not dati.get("scale"):
+        scrivi("scale di fuori: niente (manca %s)" % SCALE_FUORI_DATI)
+        return
+    angolo = angolo_paesaggio()
+    mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    classe_porta = getattr(unreal, "ValdorsoPorta", None)
+    if angolo is None or mondo is None or classe_porta is None:
+        avviso("scale di fuori: manca il paesaggio o la classe C++ ValdorsoPorta")
+        return
+    pezzi = importa(sorted(set(sc["pezzo"] for sc in dati["scale"])), materiali())
+    sy = numero_specchio() or 1.0
+    tutti = [a for a in attori.get_all_level_actors() if a]
+    tolte = 0
+    for a in tutti:
+        if a.actor_has_tag(SCALE_FUORI):
+            attori.destroy_actor(a)
+            tolte += 1
+    if tolte:
+        scrivi("tolte %d scale messe prima" % tolte)
+        tutti = [a for a in attori.get_all_level_actors() if a]
+    per_nome = {}
+    porte = []
+    for a in tutti:
+        per_nome.setdefault(a.get_actor_label(), a)
+        if isinstance(a, classe_porta):
+            porte.append(a)
+    messe = 0
+    for sc in dati["scale"]:
+        m = pezzi.get(sc["pezzo"])
+        porta = per_nome.get(sc["porta"])
+        if m is None or porta is None:
+            avviso("scale di fuori: manca il modello %s o la porta '%s'" % (sc["pezzo"], sc["porta"]))
+            continue
+        if porta.actor_has_tag(SPENTA):
+            # (18/11 sera) la casermetta e la torre del passo di prima sono spente ("Mura: 11"): niente scala
+            scrivi("scale di fuori: '%s' e' spenta, la sua scala non si mette" % sc["porta"])
+            continue
+        yaw = float(sc["yaw"])
+        dx, dy = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+        ox, oy = angolo.x + float(sc["origine_pianta_cm"][0]), angolo.y + float(sc["origine_pianta_cm"][1])
+        pav = float(sc["origine_pianta_cm"][2])
+        # si rimisura: il pavimento 40 cm prima del bordo dei dati, poi in fuori a passi di 2 cm finche' finisce
+        bordo = None
+        t = linea_colono(mondo, unreal.Vector(ox - dx * 40.0, oy - dy * 40.0, pav + 100.0),
+                         unreal.Vector(ox - dx * 40.0, oy - dy * 40.0, pav - 100.0), porte)
+        if t is not None and t[3] >= 1.0 and abs(t[4].z - pav) <= 30.0:
+            z = t[4].z
+            d = -40.0
+            while d <= 60.0:
+                t2 = linea_colono(mondo, unreal.Vector(ox + dx * d, oy + dy * d, z + 40.0),
+                                  unreal.Vector(ox + dx * d, oy + dy * d, z - 40.0), porte)
+                if t2 is None or t2[3] < 1.0 or abs(t2[4].z - z) > 12.0:
+                    bordo = d - 2.0
+                    break
+                d += 2.0
+            if bordo is not None:
+                scrivi("  %s: pavimento misurato a z %.1f (dati %.1f), bordo a %+.0f cm da quello dei dati"
+                       % (sc["porta"], z, pav, bordo))
+                pav = z
+        if bordo is None:
+            avviso("scale di fuori: %s: non riesco a rimisurare il bordo del pavimento, uso i dati" % sc["porta"])
+            bordo = 0.0
+        dove = unreal.Vector(ox + dx * bordo, oy + dy * bordo, pav)
+        a = attori.spawn_actor_from_object(m, dove, unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
+        if a is None:
+            avviso("scale di fuori: non riesco a mettere la scala di %s" % sc["porta"])
+            continue
+        if sy < 0:
+            a.set_actor_scale3d(unreal.Vector(1.0, -1.0, 1.0))
+        a.set_actor_label("Scala ~ %s" % sc["porta"])
+        a.set_folder_path("Valle/Villaggio/Scale di fuori")
+        fp = fase_di_attore(porta)
+        a.set_editor_property("tags", [unreal.Name(SCALE_FUORI)] + ([unreal.Name(fp[2])] if fp else []))
+        messe += 1
+        scrivi("  %s: %s, %d gradini verso %+d, scende %.0f cm" % (sc["porta"], sc["pezzo"], int(sc["gradini"]),
+                                                                  int(sc["verso_rampa"]), float(sc["scende_cm"])))
+    scrivi("scale di fuori messe: %d su %d" % (messe, len(dati["scale"])))
+    # (17/11) le due capanne su pali: il generatore le ha rifatte con la gronda piu' alta davanti alla porta
+    # (Tools/Generatori/villaggio_edifici.py, capanna_palafitta); qui si reimportano tenendo materiali e impostazioni
+    for nome, asset in CAPANNE_RIFATTE:
+        try:
+            f = "%s/%s.glb" % (STRADE, asset)
+            b = per_nome.get(nome)
+            cb = b.get_component_by_class(unreal.StaticMeshComponent) if b else None
+            vecchio = cb.get_editor_property("static_mesh") if cb else None
+            if not os.path.exists(f) or vecchio is None:
+                avviso("capanne: manca %s o nel livello non c'e' '%s'" % (f, nome))
+                continue
+            imp = impostazioni(vecchio)
+            strumenti.import_asset_tasks([compito(f, STRADE_PEZZI)])
+            m = cerca_e_metti_a_posto(asset, STRADE_PEZZI, sposta=False)
+            if m is None:
+                avviso("capanne: %s non importato" % asset)
+                continue
+            applica(m, imp)
+            if cb.get_editor_property("static_mesh") != m:
+                cb.set_editor_property("static_mesh", m)
+            scrivi("  %s: modello reimportato (%s)" % (nome, asset))
+        except Exception as e:  # noqa: BLE001
+            avviso("capanne: %s non rifatta (%s)" % (nome, e))
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    scrivi("FATTO e salvato. Ora rilancia 'Per Claude: collauda i passaggi'.")
+
+
+# ------------------------------------------------------------------------------------------------ la locanda nuova
+# (17/11 notte, v0.2.7) "Mura: 10. la locanda nuova di Bruno". Il modello della chat 3D (SM_Locanda_Livia: sala con
+# bancone e camino, cucina, retro dell'oste, cinque camere, la stanza grande con la vasca) va sull'attore del villaggio
+# "Locanda_di_Bruno", stesso posto e stesso yaw: la porta cade dov'era (locale (-150, -500), prima (-150, -480)).
+# - le cose vecchie dentro (letti, panche, tavoli, botti, "Vita Locanda_di_Bruno") si spengono con la fase 99;
+# - la porta "Locanda_di_Bruno porta" resta la stessa (la usano i cammini dei PNG), spostata sulla soglia nuova e
+#   allargata al vano di 140 x 240;
+# - porte delle camere, letti, bauli, targhette, vasca, scrittoio, cassaforte dai dati (Valdorso_locande.json, arredi);
+# - la sala: quattro tavoli con due panche ciascuno (sala_arredi);
+# - il baule del colono va al suo posto nuovo. Bruno, il gatto e i posti della sera li rimettono i loro script
+#   (metti_png.py, crea_volti.py, crea_gatto.py, giornate_vive.py), che hanno gia' i punti nuovi: vanno rilanciati dopo.
+# Si puo' rilanciare: toglie e rimette le sue cose (etichetta LOCANDA_NUOVA).
+
+LOCANDE = "V:/Texture/valdorso/locande"
+LOCANDA_NUOVA = "ValdorsoLocandaNuova"
+LOCANDA_VECCHIE = ("Locanda_di_Bruno letto", "Locanda_di_Bruno panca", "Tavolo della locanda 0", "Tavolo della locanda 1",
+                   "Botte della locanda 0", "Botte della locanda 1", "Botte della locanda 2", "Vita Locanda_di_Bruno")
+LOCANDA_TAVOLO = "/Game/Fab/Mercato_Tenda1/table_002"
+TAVOLO_LUNGO = 140.0          # cm: il tavolo della sala in pianta (18/11: piu' piccolo)
+TAVOLO_LARGO = 70.0
+PANCA_DAL_TAVOLO = 65.0       # cm dal centro del tavolo al centro della panca
+ZOCCOLO_FONDO = 400.0         # cm di zoccolo sotto la fondazione della locanda
+# (18/11 notte) la chat 3D ha riempito di pietra la fascia sotto i muri nel modello (Valdorso-locanda-correzioni-18-11):
+# lo zoccolo provvisorio non serve piu'. Quello messo prima lo toglie il passo 0 (ha l'etichetta della locanda nuova).
+ZOCCOLO_SERVE = False
+LETTO_CONTATO = 220.0         # cm: la lunghezza del letto con cui la chat 3D ha contato le camere (18/11)
+
+
+def ingombro_mesh(a):
+    """Centro e mezzo ingombro (nel mondo) dei soli modelli di un attore: senza le scatole invisibili (dove ci si sdraia,
+    dove si clicca), che get_actor_bounds conterebbe."""
+    lo = hi = None
+    for c in a.get_components_by_class(unreal.StaticMeshComponent):
+        if c.get_editor_property("static_mesh") is None:
+            continue
+        r = unreal.SystemLibrary.get_component_bounds(c)
+        ce, ex = r[0], r[1]
+        p0 = (ce.x - ex.x, ce.y - ex.y, ce.z - ex.z)
+        p1 = (ce.x + ex.x, ce.y + ex.y, ce.z + ex.z)
+        lo = p0 if lo is None else tuple(min(u, v) for u, v in zip(lo, p0))
+        hi = p1 if hi is None else tuple(max(u, v) for u, v in zip(hi, p1))
+    if lo is None:
+        return a.get_actor_bounds(False)
+    return (unreal.Vector((lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0, (lo[2] + hi[2]) / 2.0),
+            unreal.Vector((hi[0] - lo[0]) / 2.0, (hi[1] - lo[1]) / 2.0, (hi[2] - lo[2]) / 2.0))
+
+
+MISURE_LETTO = {}             # lungo e largo (cm) del letto vero, misurati da metti_letto
+
+
+def metti_letto(classe_letto, mondo, dove, yaw, nome):
+    """Un letto vero (BP_Letto) dove i dati della chat 3D mettono il loro (centro 'dove', testa a +Y del pezzo girato
+    di 'yaw'). Rende l'attore (o None)."""
+    # (18/11 notte, Fra: "letti troppo nel muro") il nostro letto (BP_Letto) non ha l'origine nel mezzo, e' piu'
+    # lungo di quello dei dati e ha il cuscino dalla parte -Y (nei dati la testa e' a +Y, contro il muro).
+    # 1) Si prova girato di 180 (cuscino al muro) con il MEZZO del modello dove dicono i dati; ma dal letto si
+    #    scende sempre dalla sua +X (AValdorsoLetto::TrasformaUscita, 110 cm): se li' c'e' un muro si tiene il
+    #    verso dei dati (secondo controllo: nelle camere 1 e 5 e da Bruno si scenderebbe dentro il muro).
+    # 2) Se e' piu' lungo dei 220 cm contati dalla chat 3D scivola verso i piedi, fin dove c'e' posto.
+    # (18/11 sera) Le misure si prendono con il letto dritto (yaw 0) e poi lo si gira: cosi' vale anche per i letti messi
+    # di sbieco (il quartiere del passo e' girato di 37 gradi, e li' la scatola del mondo sarebbe piu' grande del letto).
+    a = attori.spawn_actor_from_class(classe_letto, dove, unreal.Rotator(roll=0.0, pitch=0.0, yaw=0.0))
+    if a:
+        c0, e0 = ingombro_mesh(a)
+        q0 = a.get_actor_location()
+        fx, fy = c0.x - q0.x, c0.y - q0.y          # dal punto dell'attore al mezzo del modello, nel sistema del letto
+        lungo_letto = 2.0 * e0.y
+        MISURE_LETTO["lungo"], MISURE_LETTO["largo"] = max(2.0 * e0.x, 2.0 * e0.y), min(2.0 * e0.x, 2.0 * e0.y)
+        if e0.x > e0.y:
+            avviso("%s: il modello del letto e' lungo lungo la sua X (%.0f x %.0f): il verso potrebbe essere sbagliato"
+                   % (nome, 2.0 * e0.x, 2.0 * e0.y))
+            lungo_letto = 2.0 * e0.x
+
+        def metti_girato(gradi, scivola=0.0, sx=0.0, sy_=0.0):
+            r = math.radians(gradi)
+            a.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=0.0, yaw=gradi), False)
+            a.set_actor_location(unreal.Vector(dove.x - (fx * math.cos(r) - fy * math.sin(r)) + sx * scivola,
+                                               dove.y - (fx * math.sin(r) + fy * math.cos(r)) + sy_ * scivola, q0.z),
+                                 False, False)
+
+        def libero_verso(dx, dy, quanto):
+            """Quanti cm liberi dal mezzo del letto in quella direzione (al massimo 'quanto'), a 100 cm da terra."""
+            da = unreal.Vector(dove.x, dove.y, dove.z + 100.0)
+            t = linea_colono(mondo, da, unreal.Vector(dove.x + dx * quanto, dove.y + dy * quanto, dove.z + 100.0), [a])
+            return quanto if t is None else float(t[3])
+
+        verso = yaw + 180.0
+        metti_girato(verso)
+        girato = True
+        ga = math.radians(verso)
+        if libero_verso(math.cos(ga), math.sin(ga), 150.0) < 150.0:
+            # dalla parte dove si scende c'e' qualcosa: il verso dei dati
+            verso = yaw
+            metti_girato(verso)
+            girato = False
+            ga = math.radians(verso)
+            if libero_verso(math.cos(ga), math.sin(ga), 150.0) < 150.0:
+                avviso("%s: non c'e' posto per scendere ne' da una parte ne' dall'altra (da guardare)" % nome)
+        ang = math.radians(yaw)
+        tx, ty = -math.sin(ang), math.cos(ang)          # dove sta la testa nei dati (il muro), nel mondo
+        in_piu = max(0.0, (lungo_letto - LETTO_CONTATO) / 2.0) + 3.0
+        # (secondo controllo) nelle camere 4 e 5 il letto sta di traverso fra due muri: non oltre il posto che c'e'
+        posto_ai_piedi = libero_verso(-tx, -ty, lungo_letto / 2.0 + 60.0) - lungo_letto / 2.0
+        in_piu = max(0.0, min(in_piu, posto_ai_piedi - 2.0))
+        posto_in_testa = libero_verso(tx, ty, lungo_letto / 2.0 + 60.0) - lungo_letto / 2.0
+        if posto_in_testa + in_piu < 0.0:
+            avviso("%s: il letto (%.0f cm) non ci sta: entra nel muro di %.0f cm (da dire alla chat 3D)"
+                   % (nome, lungo_letto, -(posto_in_testa + in_piu)))
+        metti_girato(verso, in_piu, -tx, -ty)
+        scrivi("  %s: lungo %.0f cm, %s, verso i piedi di %.0f cm (posto: %.0f in testa, %.0f ai piedi)"
+               % (nome, lungo_letto, "cuscino al muro" if girato else "verso dei dati (si scende dall'altra parte)",
+                  in_piu, posto_in_testa, posto_ai_piedi))
+    return a
+
+
+def fai_locanda():
+    global CARTELLA
+    f = LOCANDE + "/Valdorso_locande.json"
+    if not os.path.exists(f):
+        avviso("locanda: manca %s" % f)
+        return
+    with open(f, "r", encoding="utf-8-sig") as g:
+        dati = json.load(g)
+    e = dati.get("edifici", {}).get("SM_Locanda_Livia")
+    classe_porta = getattr(unreal, "ValdorsoPorta", None)
+    classe_panca = getattr(unreal, "ValdorsoPanca", None)
+    if not e or classe_porta is None or classe_panca is None:
+        avviso("locanda: mancano i dati di SM_Locanda_Livia o le classi C++ ValdorsoPorta / ValdorsoPanca")
+        return
+    letto = unreal.load_asset("/Game/Fab/Letto/BP_Letto")
+    classe_letto = letto.generated_class() if letto else None
+    mat = materiali()
+    materiali_interni()
+    nomi = {"SM_Locanda_Livia"}
+    for ar in e["arredi"]:
+        if ar.get("pezzo"):
+            nomi.add(ar["pezzo"])
+            if ar["pezzo"] in COPERCHI:
+                nomi.add(COPERCHI[ar["pezzo"]][0])
+        if ar.get("coperchio"):
+            nomi.add(ar["coperchio"])
+    # i pezzi che ci sono gia' (porte, bauli e scrittoio della caserma) non si reimportano: si usano quelli. Il modello
+    # della locanda si reimporta sempre (la chat 3D lo ha cambiato il 17/11).
+    gia = {}
+    da_importare = []
+    for n in sorted(nomi):
+        m = None if n == "SM_Locanda_Livia" else unreal.load_asset("%s/%s" % (PEZZI, n))
+        if isinstance(m, unreal.StaticMesh):
+            gia[n] = m
+        else:
+            da_importare.append(n)
+    vecchia = CARTELLA
+    CARTELLA = LOCANDE
+    try:
+        pezzi = importa(da_importare, mat)
+    finally:
+        CARTELLA = vecchia
+    pezzi.update(gia)
+    if pezzi.get("SM_Locanda_Livia") is None:
+        avviso("locanda: il modello SM_Locanda_Livia non c'e': niente")
+        return
+    sy = numero_specchio() or 1.0
+    per_nome = tutti_per_nome()
+    b = per_nome.get("Locanda_di_Bruno")
+    cb = b.get_component_by_class(unreal.StaticMeshComponent) if b else None
+    if cb is None:
+        avviso("locanda: nel livello non c'e' 'Locanda_di_Bruno'")
+        return
+
+    def mia(a, nome):
+        a.set_actor_label(nome)
+        a.set_folder_path("Valle/Villaggio/Locanda nuova")
+        a.set_editor_property("tags", [unreal.Name(LOCANDA_NUOVA)])
+        return a
+
+    # 0. via le cose messe da un lancio di prima
+    tolte = 0
+    for a in attori.get_all_level_actors():
+        if a and a.actor_has_tag(LOCANDA_NUOVA):
+            attori.destroy_actor(a)
+            tolte += 1
+    if tolte:
+        scrivi("tolte %d cose messe prima" % tolte)
+    # 1. il modello nuovo sull'attore del villaggio (scala (1, sy, 1), come gli alloggi)
+    m = pezzi["SM_Locanda_Livia"]
+    b.modify()
+    cb.set_editor_property("static_mesh", m)
+    for i in range(len(m.get_editor_property("static_materials"))):
+        cb.set_material(i, m.get_material(i))
+    b.set_actor_scale3d(unreal.Vector(1.0, sy, 1.0))
+    o = b.get_actor_location()
+    yaw0 = b.get_actor_rotation().yaw
+    # (18/11 notte, Fra: "e' ancora sollevata da terra") il pavimento stava a 15-45 cm sopra il prato. Si abbassa fin dove
+    # il terreno lo permette: il punto piu' alto del prato sotto i muri, piu' 4 cm (piu' giu' il prato entrerebbe in sala).
+    z_prima = o.z
+    mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    fuori0 = re.findall(r"\d+(?:\.\d+)?", str(e.get("misure_cm", {}).get("fuori", "")))
+    mx0, my0 = (float(fuori0[0]) / 2.0, float(fuori0[1]) / 2.0) if len(fuori0) >= 2 else (750.0, 500.0)
+    quote = []
+    for i in range(9):
+        for j in range(7):
+            w = al_mondo(o, yaw0, (-mx0 + 2.0 * mx0 * i / 8.0, -my0 + 2.0 * my0 * j / 6.0, 0.0))
+            q = terreno(mondo, w.x, w.y, o.z)
+            if q is not None:
+                quote.append(q)
+    if len(quote) >= 40:
+        nuova_z = max(quote) + 4.0
+        scrivi("terreno sotto la locanda: da %.0f a %.0f; pavimento da %.0f a %.0f (%+.0f cm)"
+               % (min(quote), max(quote), o.z, nuova_z, nuova_z - o.z))
+        if abs(nuova_z - o.z) >= 80.0:
+            avviso("locanda: il terreno e' a %+.0f cm dal pavimento, troppo: non la sposto (da guardare)" % (nuova_z - o.z))
+        elif abs(nuova_z - o.z) > 1.0:
+            if nuova_z - o.z < -20.0:
+                avviso("locanda: scende di %.0f cm: guardare che la piazza davanti alla porta non resti piu' alta della soglia"
+                       % (o.z - nuova_z))
+            b.set_actor_location(unreal.Vector(o.x, o.y, nuova_z), False, False)
+            o = b.get_actor_location()
+            # (secondo controllo) i gradini davanti alla porta erano misurati sul pavimento di prima: si tolgono, e
+            # "Mura: 7" li rifa' dopo il collaudo
+            sg = e.get("ingresso", {}).get("centro_soglia_cm", [-150, -500, 0])
+            ws = al_mondo(o, yaw0, sg)
+            for g in attori.get_all_level_actors():
+                if g and g.actor_has_tag(GRADINI):
+                    pg = g.get_actor_location()
+                    if math.hypot(pg.x - ws.x, pg.y - ws.y) < 300.0:
+                        scrivi("tolto %s (era per il pavimento di prima)" % g.get_actor_label())
+                        attori.destroy_actor(g)
+    else:
+        avviso("locanda: non riesco a misurare il terreno sotto (%d punti): resta alla quota di prima" % len(quote))
+    scrivi("Locanda_di_Bruno: modello nuovo SM_Locanda_Livia a (%.0f, %.0f, %.0f), yaw %.0f" % (o.x, o.y, o.z, yaw0))
+    # 1b. (18/11, Fra: "locanda sollevata") il terreno scende verso est piu' del metro di fondazione del modello: sotto
+    # ci va uno zoccolo di pietra largo come l'edificio, che scende altri 4 metri (sotto terra non si vede)
+    cubo = unreal.load_asset("/Engine/BasicShapes/Cube")
+    # (secondo controllo) largo come i MURI, non come l'ingombro del modello (che comprende le gronde: 790 x 550 contro
+    # 750 x 500): "fuori": "1500 x 1000", con l'origine al centro. La z e' il fondo della fondazione.
+    ing_p = dati.get("pezzi", {}).get("SM_Locanda_Livia", {}).get("ingombro_cm", {})
+    fuori = re.findall(r"\d+(?:\.\d+)?", str(e.get("misure_cm", {}).get("fuori", "")))
+    mx, my = (float(fuori[0]) / 2.0, float(fuori[1]) / 2.0) if len(fuori) >= 2 else (750.0, 500.0)
+    ix, iy, iz = [-mx, mx], [-my, my], ing_p.get("z", [-100, 1328])
+    if ZOCCOLO_SERVE and cubo is not None:
+        # (18/11 notte, dalla foto di Fra) la fondazione del modello e' piu' stretta dei muri: sotto il filo dei muri si
+        # vedeva il vuoto. Lo zoccolo parte quindi da 1 cm sotto il pavimento (non dal fondo della fondazione) e sporge
+        # 3 cm dai muri, come un basamento.
+        ix, iy = [ix[0] - 3.0, ix[1] + 3.0], [iy[0] - 3.0, iy[1] + 3.0]
+        centro = ((ix[0] + ix[1]) / 2.0, (iy[0] + iy[1]) / 2.0, -1.0 - ZOCCOLO_FONDO / 2.0)
+        zc = attori.spawn_actor_from_object(cubo, al_mondo(o, yaw0, centro), unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw0))
+        if zc:
+            zc.set_actor_scale3d(unreal.Vector((ix[1] - ix[0]) / 100.0, (iy[1] - iy[0]) / 100.0, ZOCCOLO_FONDO / 100.0))
+            pietra = mat.get("Pietra") or mat.get("Muro")
+            if pietra is not None:
+                zc.get_component_by_class(unreal.StaticMeshComponent).set_material(0, pietra)
+            mia(zc, "Locanda_di_Bruno zoccolo")
+            scrivi("zoccolo di pietra sotto la locanda: da 1 a %.0f cm sotto il pavimento, 3 cm fuori dai muri" % (1.0 + ZOCCOLO_FONDO))
+    # 2. le cose vecchie dentro si spengono
+    # (secondo controllo) i letti e le panche vecchi si tolgono del tutto, come negli alloggi: spenti resterebbero nel
+    # livello, e le giornate dei PNG (giornate_vive.py) li sceglierebbero ancora come panca e letto piu' vicini
+    spente = 0
+    via = 0
+    for a in attori.get_all_level_actors():
+        if not a or a.actor_has_tag(LOCANDA_NUOVA):
+            continue
+        n = a.get_actor_label()
+        if n in ("Locanda_di_Bruno letto", "Locanda_di_Bruno panca"):
+            attori.destroy_actor(a)
+            via += 1
+        elif n in LOCANDA_VECCHIE and not a.actor_has_tag(MAI):
+            spegni(a, True)
+            spente += 1
+    scrivi("cose vecchie della locanda: %d letti e panche tolti, %d spente (fase 99)" % (via, spente))
+    # 3. la porta d'ingresso: la stessa di prima, sulla soglia nuova, larga e alta come il vano
+    porta = per_nome.get("Locanda_di_Bruno porta")
+    ing = e.get("ingresso", {})
+    soglia = ing.get("centro_soglia_cm", [-150, -500, 0])
+    if porta is not None:
+        porta.modify()
+        # nel mezzo del muro (il muro va da y -500 a -440): la soglia dei dati e' sul filo di fuori
+        dove = al_mondo(o, yaw0, (soglia[0], soglia[1] + 30.0, soglia[2]))
+        porta.set_actor_location(dove, False, False)
+        # (secondo controllo) non si scala l'attore (con l'anta che gira si storcerebbe): si allarga l'anta e si sposta
+        # la cerniera. Di serie: cerniera a (0, -50, 0), anta cubo 100 x 6 x 210 con il centro a (0, 50, 105).
+        largo = float(ing.get("larghezza_cm", 140))
+        alto = float(ing.get("altezza_cm", 240))
+        porta.set_actor_scale3d(unreal.Vector(1.0, 1.0, 1.0))
+        cerniera = porta.get_editor_property("cerniera")
+        anta = porta.get_editor_property("anta")
+        cerniera.modify()
+        anta.modify()
+        cerniera.set_relative_location(unreal.Vector(0.0, -largo / 2.0, 0.0), False, False)
+        anta.set_relative_scale3d(unreal.Vector(0.06, largo / 100.0, alto / 100.0))
+        anta.set_relative_location(unreal.Vector(0.0, largo / 2.0, alto / 2.0), False, False)
+        scrivi("porta d'ingresso sulla soglia nuova (%.0f, %.0f), %s x %s cm" % (dove.x, dove.y, ing.get("larghezza_cm", 140),
+                                                                              ing.get("altezza_cm", 240)))
+    else:
+        avviso("locanda: non trovo 'Locanda_di_Bruno porta'")
+    # 4. gli arredi dai dati
+    conti = {}
+    letti_messi = []
+    bauli_messi = []
+    for ar in e["arredi"]:
+        ruolo = ar.get("ruolo")
+        nome = "Locanda_di_Bruno %s" % ar["nome"]
+        dove = al_mondo(o, yaw0, ar["posizione_cm"])
+        yaw = yaw0 + float(ar.get("yaw", 0))
+        a = None
+        coperchio_messo = None
+        try:
+            if ruolo == "porta":
+                if ar["nome"] == "porta_ingresso":
+                    continue          # resta la porta di prima (vedi 3)
+                mp = pezzi.get(ar.get("pezzo"))
+                if mp is None:
+                    avviso("%s: manca il modello %s" % (nome, ar.get("pezzo")))
+                    continue
+                num = re.search(r"da\s*([+-]?\d+(?:\.\d+)?)\s*a\s*([+-]?\d+(?:\.\d+)?)", str(ar.get("apre", "")))
+                verso = 1 if not num or float(num.group(2)) > float(num.group(1)) else -1
+                a = porta_vera(classe_porta, mp, dove, yaw, verso, None, nome, sy)
+            elif ruolo == "letto":
+                if classe_letto is None:
+                    avviso("manca /Game/Fab/Letto/BP_Letto: niente letti")
+                    continue
+                a = metti_letto(classe_letto, mondo, dove, yaw, nome)
+            elif ar.get("pezzo"):
+                mp = pezzi.get(ar["pezzo"])
+                if mp is None:
+                    avviso("%s: manca il modello %s" % (nome, ar["pezzo"]))
+                    continue
+                a = metti_mesh(mp, dove, yaw, nome, sy)
+                cop = COPERCHI.get(ar["pezzo"])
+                if cop is None and ar.get("coperchio"):
+                    # (secondo controllo) dove sta il coperchio sulla cassa lo dicono i dati del pezzo
+                    su = dati.get("pezzi", {}).get(ar["coperchio"], {}).get("posizione_sulla_cassa_cm", [0.0, 0.0, 0.0])
+                    cop = (ar["coperchio"], (float(su[0]), float(su[1]), float(su[2])))
+                if a and cop and pezzi.get(cop[0]):
+                    c2 = metti_mesh(pezzi[cop[0]], al_mondo(dove, yaw, cop[1]), yaw, nome + " coperchio", sy)
+                    if c2:
+                        mia(c2, nome + " coperchio")
+                        coperchio_messo = c2
+            else:
+                conti["solo il posto (%s)" % ruolo] = conti.get("solo il posto (%s)" % ruolo, 0) + 1
+                continue
+        except Exception as ex:  # noqa: BLE001
+            avviso("%s (%s): %s" % (nome, ruolo, ex))
+            if a is not None:
+                try:
+                    attori.destroy_actor(a)
+                except Exception:  # noqa: BLE001
+                    pass
+            continue
+        if a is None:
+            avviso("non riesco a mettere %s" % nome)
+            continue
+        mia(a, nome)
+        conti[ruolo] = conti.get(ruolo, 0) + 1
+        if ruolo == "letto":
+            letti_messi.append(a)
+        elif ruolo == "baule":
+            bauli_messi.append((a, coperchio_messo))
+    # 4b. (18/11 notte, Fra: "letti e bauli troppo attaccati") il nostro letto vero (BP_Letto) e' piu' grande di quello dei
+    # dati: dove un baule entra nel letto si sposta quanto basta (piu' 6 cm), dal lato dove deve muoversi di meno
+    scostati = 0
+    for cassa, cop in bauli_messi:
+        try:
+            co, ce = ingombro_mesh(cassa)
+            for lt in letti_messi:
+                lo, le = ingombro_mesh(lt)
+                if abs(co.z - lo.z) > 150.0:
+                    continue
+                px = (ce.x + le.x) - abs(co.x - lo.x)
+                py = (ce.y + le.y) - abs(co.y - lo.y)
+                if px <= -6.0 or py <= -6.0:
+                    continue          # gia' staccati di almeno 6 cm
+                if min(px, py) > 80.0:
+                    avviso("%s e' tutto dentro un letto (%.0f cm): lo lascio, da guardare" % (cassa.get_actor_label(), min(px, py)))
+                    continue
+                if px < py:
+                    sposta = unreal.Vector((px + 6.0) * (1.0 if co.x >= lo.x else -1.0), 0.0, 0.0)
+                else:
+                    sposta = unreal.Vector(0.0, (py + 6.0) * (1.0 if co.y >= lo.y else -1.0), 0.0)
+                for pezzo in (cassa, cop):
+                    if pezzo is not None:
+                        q = pezzo.get_actor_location()
+                        pezzo.set_actor_location(unreal.Vector(q.x + sposta.x, q.y + sposta.y, q.z), False, False)
+                scostati += 1
+                scrivi("  %s staccato dal letto di (%+.0f, %+.0f) cm" % (cassa.get_actor_label(), sposta.x, sposta.y))
+                break
+        except Exception as ex:  # noqa: BLE001
+            avviso("baule e letto: %s" % ex)
+    if scostati:
+        scrivi("bauli staccati dai letti: %d" % scostati)
+    # 5. la sala: i tavoli e le panche.
+    # (18/11, Fra: "tavoli piu' piccoli, sembra troppo ingombrante") il tavolo si stringe a 140 x 70 in pianta (alto come
+    # prima), la panca si accorcia a 140 e si avvicina (a 65 dal centro del tavolo invece di 85), e la fila davanti
+    # all'ingresso sta 10 cm piu' verso il fondo (nei dati): davanti alla porta restano piu' di 150 cm liberi.
+    tavolo = unreal.load_asset(LOCANDA_TAVOLO)
+    sala = e.get("sala_arredi", {})
+    misure_tavolo = sala.get("tavolo_cm") or [TAVOLO_LARGO, TAVOLO_LUNGO]
+    tavolo_largo, tavolo_lungo = float(min(misure_tavolo)), float(max(misure_tavolo))
+    panca_dal_tavolo = float(sala.get("panche_a_cm", PANCA_DAL_TAVOLO))
+    for t in sala.get("tavoli", []):
+        yaw = yaw0 + float(t.get("yaw", 0))
+        # (18/11 notte) la chat 3D ha rifatto i dati con queste misure (fila davanti all'ingresso gia' a y -200): i centri
+        # si prendono dai dati cosi' come sono
+        ct = list(t["centro_cm"])
+        dove = al_mondo(o, yaw0, ct)
+        if isinstance(tavolo, unreal.StaticMesh):
+            bb = tavolo.get_bounding_box()
+            lx, ly = max(bb.max.x - bb.min.x, 1.0), max(bb.max.y - bb.min.y, 1.0)
+            # il lato lungo del tavolo corre lungo le panche (Y): se il modello e' lungo in X si gira di 90
+            gira_tavolo = 90.0 if lx > ly else 0.0
+            lungo, corto = max(lx, ly), min(lx, ly)
+            s_lungo, s_corto = min(1.0, tavolo_lungo / lungo), min(1.0, tavolo_largo / corto)
+            scala = unreal.Vector(s_lungo, s_corto, 1.0) if lx > ly else unreal.Vector(s_corto, s_lungo, 1.0)
+            cx, cy = (bb.min.x + bb.max.x) / 2.0 * scala.x, (bb.min.y + bb.max.y) / 2.0 * scala.y
+            a = attori.spawn_actor_from_object(tavolo, al_mondo(dove, yaw + gira_tavolo, (-cx, -cy, -bb.min.z)),
+                                               unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw + gira_tavolo))
+            if a:
+                a.set_actor_scale3d(scala)
+                mia(a, "Locanda_di_Bruno %s" % t["nome"])
+                conti["tavolo"] = conti.get("tavolo", 0) + 1
+                if conti["tavolo"] == 1:
+                    scrivi("tavolo: il modello e' %.0f x %.0f cm, messo a %.0f x %.0f" % (lx, ly, lx * scala.x, ly * scala.y))
+        for pa in t.get("panche", []):
+            # (secondo controllo) chi siede guarda il tavolo: il davanti della panca e' la sua +X, quindi quella a est si gira
+            dxp, dyp = pa["centro_cm"][0] - t["centro_cm"][0], pa["centro_cm"][1] - t["centro_cm"][1]
+            if abs(dxp) < abs(dyp):
+                # (secondo controllo) una panca in testa al tavolo (oggi non ce ne sono): resta dove dicono i dati
+                avviso("locanda: la panca %s di %s non e' sul lato lungo: la lascio dove dicono i dati" % (pa.get("lato", ""), t["nome"]))
+                a = attori.spawn_actor_from_class(classe_panca, al_mondo(o, yaw0, pa["centro_cm"]),
+                                                  unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw + float(pa.get("yaw", 0))))
+                if a:
+                    mia(a, "Locanda_di_Bruno %s panca %s" % (t["nome"], pa.get("lato", "")))
+                    conti["panca"] = conti.get("panca", 0) + 1
+                continue
+            est = dxp > 0
+            gira = 180.0 if est else 0.0
+            cp = (ct[0] + (panca_dal_tavolo if est else -panca_dal_tavolo), ct[1], pa["centro_cm"][2])
+            a = attori.spawn_actor_from_class(classe_panca, al_mondo(o, yaw0, cp),
+                                              unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw + gira))
+            if a:
+                a.set_actor_scale3d(unreal.Vector(1.0, tavolo_lungo / 180.0, 1.0))
+                if "Trave" in mat:
+                    for comp in a.get_components_by_class(unreal.StaticMeshComponent):
+                        comp.set_material(0, mat["Trave"])
+                mia(a, "Locanda_di_Bruno %s panca %s" % (t["nome"], pa.get("lato", "")))
+                conti["panca"] = conti.get("panca", 0) + 1
+    if not isinstance(tavolo, unreal.StaticMesh):
+        avviso("locanda: manca %s: la sala ha le panche ma non i tavoli" % LOCANDA_TAVOLO)
+    # 6. il baule del colono al posto nuovo (con i suoi pezzi, che lo seguono)
+    baule = per_nome.get("Il baule del colono")
+    bc = sala.get("baule_colono", {}).get("cm")
+    if baule is not None and bc:
+        prima = baule.get_actor_location()
+        nuovo_posto = al_mondo(o, yaw0, (bc[0], bc[1] - 5.0, 0.0))
+        # (secondo controllo) in z si muove solo di quanto e' scesa la locanda: il baule sta a 40 cm dal pavimento
+        # (crea_volti.py), non a 0
+        dx, dy, dz = nuovo_posto.x - prima.x, nuovo_posto.y - prima.y, o.z - z_prima
+        if abs(dx) > 1.0 or abs(dy) > 1.0 or abs(dz) > 1.0:
+            mossi = 0
+            for a in attori.get_all_level_actors():
+                if a and a.get_actor_label().startswith("Il baule del colono"):
+                    q = a.get_actor_location()
+                    a.modify()
+                    a.set_actor_location(unreal.Vector(q.x + dx, q.y + dy, q.z + dz), False, False)
+                    mossi += 1
+            scrivi("baule del colono spostato di (%+.0f, %+.0f) cm, con %d pezzi" % (dx, dy, mossi - 1))
+    scrivi("messi: " + ", ".join("%s %d" % (k, conti[k]) for k in sorted(conti)))
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    scrivi("FATTO e salvato. ORA, in questo ordine: 'PNG: metti Gaspare... Bruno...', 'Volti: ...', 'Gatto della locanda', "
+           "'Rete', 'PNG: panche, letti e porte', 'Per Claude: collauda i passaggi', e alla fine 'Mura: 7' (i gradini).")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# (18/11 sera, v0.2.7) IL POSTO DI GUARDIA DEL PASSO PER LA GUARDIA REALE (deciso da Fra il 18/11; pezzi della chat 3D,
+# Valdorso-passo-guardia-reale-18-11.zip in V:/Texture/valdorso/passo). Voce "Mura: 11".
+#   - il portale di pietra (SM_Passo_Portale) prende il posto del portale di legno SULLO STESSO ATTORE "Porta del passo"
+#     (cosi' gli script delle persone, che lo cercano per nome, continuano a valere);
+#   - la GRATA al posto della sbarra (Fra, 18/11; come nelle Cronache): AValdorsoGrata, alzata dall'alba al tramonto;
+#     la leva ha un lucchetto con una chiave che i coloni non hanno (Chiave_Passo): la muovono solo le guardie del Re;
+#   - muri merlati, torretta di vedetta, quartiere (corpo di guardia e alloggio della capitana) con porte, letti, tavolo,
+#     baule, scrittoio e sedia; braciere, panche, rastrelliera, lanterne;
+#   - le cose di prima (palizzata, torre, casermetta, fuoco, lanterne, brande) si SPENGONO (fase 99), non si cancellano;
+#   - la stalla del mulo e le botti si spostano a ovest della strada.
+# Si puo' rilanciare: toglie e rimette le sue cose (etichetta PASSO_REALE).
+PASSO = "V:/Texture/valdorso/passo"
+PASSO_DATI = "Valdorso_passo_guardia_reale.json"
+PASSO_REALE = "ValdorsoPassoReale"
+PASSO_CARTELLA = "Valle/Passo/Guardia Reale"
+PASSO_PORTA = "Porta del passo"
+PASSO_VECCHIE = ("Palizzata del passo 1", "Palizzata del passo 2", "Torre_del_passo", "Torre_del_passo porta",
+                 "Torre_del_passo scala", "Scala ~ Torre_del_passo porta", "Casermetta_della_Guardia",
+                 "Casermetta_della_Guardia porta", "Scala ~ Casermetta_della_Guardia porta", "Campo della Guardia",
+                 "Luce del fuoco della Guardia", "Lanterne del passo")
+PASSO_VECCHIE_INIZI = ("Luce lanterna del passo", "Gradino ~ Torre_del_passo", "Gradino ~ Casermetta_della_Guardia")
+PASSO_VIA = ("Branda della Guardia", "Panca della Guardia")     # queste si tolgono (vedi fai_passo, passo 2)
+PASSO_ORA_MATTINA = 6.0        # la grata si alza
+PASSO_ORA_SERA = 20.0          # e si abbassa ("aperto dall'alba al tramonto", la bacheca)
+PASSO_STALLA = (1700.0, -750.0)                 # lungo, traverso (cm): dove va la stalla del mulo
+PASSO_STALLA_GIRA = 180.0                       # la stalla si gira: il lato aperto verso la strada, non verso la roccia
+# dietro la stalla (a ovest), non davanti al suo lato aperto; sono cinque (villaggio.py, guardia())
+PASSO_BOTTI = ((1560.0, -1000.0), (1660.0, -1030.0), (1760.0, -1000.0), (1860.0, -1030.0), (1960.0, -1000.0))
+PASSO_D = (-0.80105, -0.59860)                  # lungo il passo, verso la valle (villaggio.py, guardia())
+PASSO_N = (0.59860, -0.80105)                   # di traverso
+
+
+def luce_calda(dove, nome, intensita, raggio):
+    l = attori.spawn_actor_from_class(unreal.PointLight, dove, unreal.Rotator(roll=0.0, pitch=0.0, yaw=0.0))
+    if l is None:
+        return None
+    lc = l.get_component_by_class(unreal.PointLightComponent)
+    lc.set_mobility(unreal.ComponentMobility.MOVABLE)
+    try:
+        lc.set_editor_property("intensity_units", unreal.LightUnits.CANDELAS)
+    except Exception:  # noqa: BLE001
+        pass
+    lc.set_intensity(intensita)
+    lc.set_attenuation_radius(raggio)
+    lc.set_light_color(unreal.LinearColor(LUCE_COLORE[0], LUCE_COLORE[1], LUCE_COLORE[2], 1.0))
+    lc.set_cast_shadows(False)
+    l.set_actor_label(nome)
+    return l
+
+
+def fai_passo():
+    global CARTELLA
+    f = PASSO + "/" + PASSO_DATI
+    if not os.path.exists(f):
+        avviso("passo: manca %s" % f)
+        return
+    with open(f, "r", encoding="utf-8-sig") as g:
+        dati = json.load(g)
+    pz = dati["pezzi"]
+    classe_porta = getattr(unreal, "ValdorsoPorta", None)
+    classe_grata = getattr(unreal, "ValdorsoGrata", None)
+    classe_leva = getattr(unreal, "ValdorsoLeva", None)
+    classe_panca = getattr(unreal, "ValdorsoPanca", None)
+    if classe_porta is None or classe_grata is None or classe_leva is None:
+        avviso("passo: mancano le classi del C++ (ValdorsoPorta, ValdorsoGrata, ValdorsoLeva): compila")
+        return
+    letto = unreal.load_asset("/Game/Fab/Letto/BP_Letto")
+    classe_letto = letto.generated_class() if letto else None
+    mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    per_nome = tutti_per_nome()
+    porta = per_nome.get(PASSO_PORTA)
+    cporta = porta.get_component_by_class(unreal.StaticMeshComponent) if porta else None
+    if cporta is None:
+        avviso("passo: nel livello non c'e' '%s' (sei in L_Valle?)" % PASSO_PORTA)
+        return
+    mat = materiali()
+    materiali_interni()
+    # i pezzi del passo si reimportano sempre; quelli del kit che ci sono gia' (porte, baule, scrittoio, sedia, lanterna,
+    # leva) si usano cosi' come sono
+    del_passo = sorted(n for n in pz if n.startswith("SM_Passo_"))
+    vecchia = CARTELLA
+    CARTELLA = PASSO
+    try:
+        pezzi = importa(del_passo, mat)
+    finally:
+        CARTELLA = vecchia
+    for n in ("SM_Porta_Esterna", "SM_Porta_Camera", "SM_Baule_Grande", "SM_Baule_Grande_Coperchio", "SM_Scrittoio",
+              "SM_Sedia", "SM_Lanterna_Muro", "SM_Leva"):
+        m = unreal.load_asset("%s/%s" % (PEZZI, n))
+        if isinstance(m, unreal.StaticMesh):
+            pezzi[n] = m
+        else:
+            avviso("passo: manca il pezzo %s (lo mette 'Mura: 10' o 'Mura: 5'): quella cosa si salta" % n)
+    if any(pezzi.get(n) is None for n in ("SM_Passo_Portale", "SM_Passo_Grata")):
+        avviso("passo: mancano il portale o la grata: niente")
+        return
+    sy = numero_specchio() or 1.0
+    conti = {}
+
+    def mio(a, nome, fase=None):
+        a.set_actor_label(nome)
+        a.set_folder_path(PASSO_CARTELLA)
+        a.set_editor_property("tags", [unreal.Name(PASSO_REALE)] + ([unreal.Name(fase)] if fase else []))
+        return a
+
+    def v(p):
+        return unreal.Vector(float(p[0]), float(p[1]), float(p[2]))
+
+    def pezzo_intero(nome_pezzo, etichetta):
+        d = pz.get(nome_pezzo, {})
+        m = pezzi.get(nome_pezzo)
+        if m is None or "origine_mondo_cm" not in d:
+            avviso("passo: %s non messo (manca il modello o l'origine)" % nome_pezzo)
+            return None
+        a = metti_mesh(m, v(d["origine_mondo_cm"]), float(d["yaw"]), etichetta, sy)
+        if a:
+            mio(a, etichetta)
+            conti["pezzi grandi"] = conti.get("pezzi grandi", 0) + 1
+        return a
+
+    # 0. via le cose messe da un lancio di prima
+    tolte = 0
+    for a in attori.get_all_level_actors():
+        if a and a.actor_has_tag(PASSO_REALE):
+            attori.destroy_actor(a)
+            tolte += 1
+    if tolte:
+        scrivi("tolte %d cose messe prima" % tolte)
+
+    # 1. il portale sull'attore di sempre
+    dp = pz["SM_Passo_Portale"]
+    o_dati = v(dp["origine_mondo_cm"])
+    o_ora = porta.get_actor_location()
+    scarto = math.hypot(o_ora.x - o_dati.x, o_ora.y - o_dati.y)
+    if scarto > 50.0 or abs(o_ora.z - o_dati.z) > 50.0:
+        avviso("passo: '%s' e' a %.0f cm (e %.0f in altezza) dall'origine dei dati: i pezzi nuovi non combacerebbero. Niente."
+               % (PASSO_PORTA, scarto, o_ora.z - o_dati.z))
+        return
+    porta.modify()
+    cporta.modify()
+    cporta.set_editor_property("static_mesh", pezzi["SM_Passo_Portale"])
+    for i in range(cporta.get_num_materials()):
+        cporta.set_material(i, pezzi["SM_Passo_Portale"].get_material(i))
+    porta.set_actor_location(o_dati, False, False)
+    porta.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(dp["yaw"])), False)
+    porta.set_actor_scale3d(unreal.Vector(1.0, sy, 1.0))
+    scrivi("'%s': ora e' SM_Passo_Portale, a (%.0f, %.0f, %.0f), yaw %.2f (era a %.1f cm da li')"
+           % (PASSO_PORTA, o_dati.x, o_dati.y, o_dati.z, float(dp["yaw"]), scarto))
+
+    # 2. le cose di prima si spengono (fase 99: nel gioco spariscono, con la collisione)
+    spente = []
+    tolte_vecchie = []
+    for a in attori.get_all_level_actors():
+        if not a or a.actor_has_tag(PASSO_REALE):
+            continue
+        n = a.get_actor_label()
+        if n.startswith(PASSO_VIA):
+            # (secondo controllo) le brande e la panca di prima si TOLGONO: spente resterebbero scelte dagli abitanti
+            # per dormire e sedersi (giornate_vive.py), come i letti vecchi della locanda
+            attori.destroy_actor(a)
+            tolte_vecchie.append(n)
+            continue
+        if n in PASSO_VECCHIE or n.startswith(PASSO_VECCHIE_INIZI):
+            spegni(a, True)
+            try:
+                a.set_editor_property("enable_auto_lod_generation", False)
+            except Exception:  # noqa: BLE001
+                pass
+            # (18/11 sera, foto di Fra) la scala a pioli della torre di prima restava in vista nell'editor: non e' fatta
+            # di modelli normali. Si nascondono tutti i pezzi che si vedono, non solo i modelli
+            for pc in a.get_components_by_class(unreal.PrimitiveComponent):
+                try:
+                    pc.modify()
+                    pc.set_visibility(False, True)
+                    pc.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+                except Exception:  # noqa: BLE001
+                    pass
+            for lc in a.get_components_by_class(unreal.LightComponent):
+                lc.modify()
+                lc.set_visibility(False, True)
+            spente.append(n)
+    scrivi("cose di prima spente (%d): %s" % (len(spente), ", ".join(sorted(spente)) or "nessuna"))
+    if tolte_vecchie:
+        scrivi("brande e panca di prima tolte: %s" % ", ".join(sorted(tolte_vecchie)))
+    mancano = [n for n in PASSO_VECCHIE if n not in spente]
+    if mancano:
+        scrivi("  (non trovate, forse gia' tolte: %s)" % ", ".join(mancano))
+
+    # 3. muri, torretta, quartiere
+    pezzo_intero("SM_Passo_Muro_Ovest", "Passo ~ muro ovest")
+    pezzo_intero("SM_Passo_Muro_Est", "Passo ~ muro est")
+    pezzo_intero("SM_Passo_Torretta", "Passo ~ torretta di vedetta")
+    pezzo_intero("SM_Passo_Quartiere", "Passo ~ quartiere della Guardia Reale")
+
+    # 4. la grata (al posto della sbarra) e la sua leva
+    gr = dp.get("grata", {})
+    grata = None
+    try:
+        ch = gr["chiusa"]
+        # come nelle mura: la grata del C++ sta nel piano Y-Z, quindi l'attore e' girato di 90 gradi e il modello di -90
+        grata = attori.spawn_actor_from_class(classe_grata, v(ch["mondo_cm"]),
+                                              unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(ch["yaw_mondo"]) + 90.0))
+        if grata:
+            grata.set_editor_property("modello", pezzi["SM_Passo_Grata"])
+            grata.set_editor_property("larghezza", 520.0)
+            grata.set_editor_property("altezza", 595.0)
+            grata.set_editor_property("corsa", float(gr.get("corsa_cm", 595)))
+            grata.set_editor_property("giorno_e_notte", True)
+            grata.set_editor_property("ora_mattina", PASSO_ORA_MATTINA)
+            grata.set_editor_property("ora_sera", PASSO_ORA_SERA)
+            mesh_su(grata.get_editor_property("ferro"), pezzi["SM_Passo_Grata"], sy, -90.0)
+            mio(grata, "Passo ~ grata del portale")
+            conti["grata"] = 1
+    except Exception as ex:  # noqa: BLE001
+        avviso("passo: la grata: %s" % ex)
+    lv = gr.get("leva", {}).get("perno")
+    if grata and lv and pezzi.get("SM_Leva"):
+        try:
+            leva = attori.spawn_actor_from_class(classe_leva, v(lv["mondo_cm"]),
+                                                 unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(lv["yaw_mondo"]) + 90.0))
+            if leva:
+                leva.set_editor_property("grata", grata)
+                # il lucchetto: una chiave che nessun colono ha (la grata la muovono le guardie del Re, con l'ora)
+                leva.set_editor_property("chiave", unreal.Name("Chiave_Passo"))
+                leva.get_editor_property("perno").set_relative_location(unreal.Vector(0.0, 0.0, 0.0), False, False)
+                mesh_su(leva.get_editor_property("asta"), pezzi["SM_Leva"], sy, -90.0)
+                base = leva.get_editor_property("base")
+                base.set_relative_location(unreal.Vector(0.0, 0.0, -25.0), False, False)
+                base.set_relative_scale3d(unreal.Vector(0.4, 0.3, 0.5))
+                base.set_visibility(False, True)
+                mio(leva, "Passo ~ leva della grata")
+                conti["leva"] = 1
+        except Exception as ex:  # noqa: BLE001
+            avviso("passo: la leva: %s" % ex)
+
+    # 5. le lanterne di ferro con la loro luce, e le luci dentro la torretta
+    lanterna = pezzi.get("SM_Lanterna_Muro")
+    for j, lt in enumerate(dati.get("lanterne_SM_Lanterna_Muro", [])):
+        if lanterna is None:
+            break
+        a = metti_mesh(lanterna, v(lt["mondo_cm"]), float(lt["yaw_mondo"]), "Passo ~ lanterna %d" % (j + 1), sy)
+        if a is None:
+            continue
+        mio(a, "Passo ~ lanterna %d" % (j + 1))
+        try:
+            a.get_component_by_class(unreal.StaticMeshComponent).set_collision_profile_name("NoCollision")
+        except Exception:  # noqa: BLE001
+            pass
+        conti["lanterne"] = conti.get("lanterne", 0) + 1
+        if LANTERNE_CON_LUCE and lt.get("luce"):
+            l = luce_calda(v(lt["luce"]["mondo_cm"]), "Passo ~ luce lanterna %d" % (j + 1), LUCE_INTENSITA, LUCE_RAGGIO_FUORI)
+            if l:
+                mio(l, "Passo ~ luce lanterna %d" % (j + 1))
+    for j, ld in enumerate(pz.get("SM_Passo_Torretta", {}).get("luci_dentro", [])):
+        l = luce_calda(v(ld["mondo_cm"]), "Passo ~ luce della torretta %d" % (j + 1), LUCE_INTENSITA, LUCE_RAGGIO_DENTRO)
+        if l:
+            mio(l, "Passo ~ luce della torretta %d" % (j + 1))
+
+    # 6. il cortile: braciere (con il suo fuoco), panche, rastrelliera
+    for nome_pezzo, etichetta in (("SM_Passo_Braciere", "Passo ~ braciere"), ("SM_Passo_Panca", "Passo ~ panca"),
+                                  ("SM_Passo_Rastrelliera", "Passo ~ rastrelliera"),
+                                  # (19/11) il banco da campo di Livia: registro dei turni e cassetta del soldo
+                                  ("SM_Passo_Banco_Livia", "Passo ~ banco di Livia")):
+        m = pezzi.get(nome_pezzo)
+        for j, ps in enumerate(pz.get(nome_pezzo, {}).get("posa", [])):
+            if m is None:
+                break
+            nome = etichetta if len(pz[nome_pezzo]["posa"]) == 1 else "%s %d" % (etichetta, j + 1)
+            a = metti_mesh(m, v(ps["origine_mondo_cm"]), float(ps["yaw"]), nome, sy)
+            if a:
+                mio(a, nome)
+                conti["arredi del cortile"] = conti.get("arredi del cortile", 0) + 1
+            # (18/11 sera) i posti a sedere delle panche di pietra (dati della chat 3D): sopra il modello va una panca del
+            # C++ (AValdorsoPanca) che non si vede, con i posti dei dati. La panca del C++ e' lunga lungo la sua Y e ci si
+            # siede guardando la sua +X; quella di pietra e' lunga lungo la sua X.
+            posti = ps.get("posti") or []
+            if a and posti and classe_panca is not None:
+                try:
+                    guarda = float(posti[0]["yaw_mondo"])
+                    pa = attori.spawn_actor_from_class(classe_panca, v(ps["origine_mondo_cm"]),
+                                                       unreal.Rotator(roll=0.0, pitch=0.0, yaw=guarda))
+                    if pa:
+                        # dove sta ogni posto lungo la Y della panca del C++ (dal suo centro)
+                        rg = math.radians(guarda)
+                        yx, yy = -math.sin(rg), math.cos(rg)
+                        o_p = ps["origine_mondo_cm"]
+                        lungo_y = sorted((float(q["mondo_cm"][0]) - o_p[0]) * yx + (float(q["mondo_cm"][1]) - o_p[1]) * yy
+                                         for q in posti)
+                        pa.set_editor_property("posti", lungo_y)
+                        for comp in pa.get_components_by_class(unreal.StaticMeshComponent):
+                            comp.set_visibility(False, True)
+                        mio(pa, nome + " (posti a sedere)")
+                        conti["panche da sedersi"] = conti.get("panche da sedersi", 0) + 1
+                except Exception as ex:  # noqa: BLE001
+                    avviso("passo: i posti di %s: %s" % (nome, ex))
+    fuoco = pz.get("SM_Passo_Braciere", {}).get("luce")
+    if fuoco:
+        l = luce_calda(v(fuoco["mondo_cm"]), "Passo ~ fuoco del braciere", LUCE_INTENSITA * 4.0, 1100.0)
+        if l:
+            mio(l, "Passo ~ fuoco del braciere")
+
+    # 7. le porte della torretta e del quartiere, e gli arredi del quartiere
+    def porta_dai_dati(d, nome, chiave):
+        m = pezzi.get(str(d.get("pezzo")))
+        if m is None:
+            avviso("passo: %s: manca il modello %s" % (nome, d.get("pezzo")))
+            return
+        # "yaw da 0 a +90": se il secondo numero e' piu' grande del primo gira nel verso +1
+        num = [float(x) for x in re.findall(r"-?\d+(?:\.\d+)?", str(d.get("apre", "")).split("yaw")[-1])]
+        verso = 1 if len(num) < 2 or num[1] > num[0] else -1
+        p = porta_vera(classe_porta, m, v(d["mondo_cm"]), float(d["yaw_mondo"]), verso, chiave, nome, sy)
+        if p:
+            mio(p, nome)
+            conti["porte"] = conti.get("porte", 0) + 1
+
+    tp = pz.get("SM_Passo_Torretta", {}).get("porta")
+    if tp:
+        porta_dai_dati(tp, "Passo ~ torretta porta", "Chiave_Passo" if tp.get("a_chiave") else None)
+    ar = pz.get("SM_Passo_Quartiere", {}).get("arredi", {})
+    letti_messi, bauli_messi = [], []
+    for chiave_dati, d in ar.items():
+        if not isinstance(d, dict):
+            continue
+        nome = "Passo ~ quartiere %s" % chiave_dati.replace("_", " ")
+        pezzo = str(d.get("pezzo", ""))
+        a = None
+        try:
+            if chiave_dati.startswith("porta_"):
+                # (secondo controllo) a chiave solo dove lo dicono i dati: l'alloggio della capitana (una chiave che i
+                # coloni non hanno). Nel corpo di guardia e sulla torretta si entra, come nella torre di prima.
+                porta_dai_dati(d, nome, "Chiave_Passo" if d.get("a_chiave") else None)
+                continue
+            dove, yaw = v(d["mondo_cm"]), float(d["yaw_mondo"])
+            if pezzo.startswith("letto"):
+                if classe_letto is None:
+                    avviso("passo: manca /Game/Fab/Letto/BP_Letto: niente %s" % nome)
+                    continue
+                a = metti_letto(classe_letto, mondo, dove, yaw, nome)
+                if a:
+                    letti_messi.append((a, yaw))
+            elif pezzo.startswith("tavolo"):
+                tavolo = unreal.load_asset(LOCANDA_TAVOLO)
+                if not isinstance(tavolo, unreal.StaticMesh):
+                    avviso("passo: manca %s: niente tavolo" % LOCANDA_TAVOLO)
+                    continue
+                bb = tavolo.get_bounding_box()
+                lx, ly = max(bb.max.x - bb.min.x, 1.0), max(bb.max.y - bb.min.y, 1.0)
+                # nei dati il tavolo e' lungo lungo la sua Y (come in sala), girato di 'yaw'
+                gira_tavolo = 90.0 if lx > ly else 0.0
+                s_lungo, s_corto = min(1.0, TAVOLO_LUNGO / max(lx, ly)), min(1.0, TAVOLO_LARGO / min(lx, ly))
+                scala = unreal.Vector(s_lungo, s_corto, 1.0) if lx > ly else unreal.Vector(s_corto, s_lungo, 1.0)
+                cx, cy = (bb.min.x + bb.max.x) / 2.0 * scala.x, (bb.min.y + bb.max.y) / 2.0 * scala.y
+                a = attori.spawn_actor_from_object(tavolo, al_mondo(dove, yaw + gira_tavolo, (-cx, -cy, -bb.min.z)),
+                                                   unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw + gira_tavolo))
+                if a:
+                    a.set_actor_scale3d(scala)
+                # le due panche ai posti dei dati, lunghe come il tavolo, con il davanti (+X) verso il tavolo
+                for j, po in enumerate(d.get("posti", [])):
+                    if classe_panca is None:
+                        break
+                    pp = v(po["mondo_cm"])
+                    verso_tavolo = math.degrees(math.atan2(dove.y - pp.y, dove.x - pp.x))
+                    pa = attori.spawn_actor_from_class(classe_panca, pp, unreal.Rotator(roll=0.0, pitch=0.0, yaw=verso_tavolo))
+                    if pa:
+                        pa.set_actor_scale3d(unreal.Vector(1.0, TAVOLO_LUNGO / 180.0, 1.0))
+                        if "Trave" in mat:
+                            for comp in pa.get_components_by_class(unreal.StaticMeshComponent):
+                                comp.set_material(0, mat["Trave"])
+                        mio(pa, "%s panca %d" % (nome, j + 1))
+                        conti["panche"] = conti.get("panche", 0) + 1
+            elif pezzi.get(pezzo) is not None:
+                a = metti_mesh(pezzi[pezzo], dove, yaw, nome, sy)
+                cop = COPERCHI.get(pezzo)
+                if a and cop and pezzi.get(cop[0]):
+                    c2 = metti_mesh(pezzi[cop[0]], al_mondo(dove, yaw, cop[1]), yaw, nome + " coperchio", sy)
+                    if c2:
+                        mio(c2, nome + " coperchio")
+                    bauli_messi.append((a, c2, pezzi[pezzo], yaw))
+            else:
+                avviso("passo: %s: non so mettere '%s'" % (nome, pezzo))
+                continue
+        except Exception as ex:  # noqa: BLE001
+            avviso("passo: %s: %s" % (nome, ex))
+            if a is not None:
+                try:
+                    attori.destroy_actor(a)
+                except Exception:  # noqa: BLE001
+                    pass
+            continue
+        if a is None:
+            avviso("passo: non riesco a mettere %s" % nome)
+            continue
+        mio(a, nome)
+        conti["arredi del quartiere"] = conti.get("arredi del quartiere", 0) + 1
+
+    # 7b. (secondo controllo) il nostro letto e' piu' grande di quello dei dati: un baule che ci entra si stacca di 6 cm.
+    # Si conta negli assi del letto (il quartiere e' girato di 37 gradi: le scatole del mondo qui non valgono).
+    for cassa, cop, mesh_cassa, yaw_cassa in bauli_messi:
+        try:
+            bbc = mesh_cassa.get_bounding_box()
+            hx, hy = (bbc.max.x - bbc.min.x) / 2.0, (bbc.max.y - bbc.min.y) / 2.0
+            cc = ingombro_mesh(cassa)[0]
+            for lt, yaw_letto in letti_messi:
+                cb = ingombro_mesh(lt)[0]
+                rb = math.radians(yaw_letto)
+                ux, uy = -math.sin(rb), math.cos(rb)          # lungo il letto
+                wx, wy = math.cos(rb), math.sin(rb)           # di traverso
+                th = math.radians(yaw_cassa - yaw_letto)
+                eu = hx * abs(math.sin(th)) + hy * abs(math.cos(th))
+                ew = hx * abs(math.cos(th)) + hy * abs(math.sin(th))
+                du = (cc.x - cb.x) * ux + (cc.y - cb.y) * uy
+                dw = (cc.x - cb.x) * wx + (cc.y - cb.y) * wy
+                pu = MISURE_LETTO.get("lungo", 220.0) / 2.0 + eu - abs(du)
+                pw = MISURE_LETTO.get("largo", 110.0) / 2.0 + ew - abs(dw)
+                if pu <= -6.0 or pw <= -6.0 or min(pu, pw) > 80.0:
+                    continue
+                if pu < pw:
+                    k = (pu + 6.0) * (1.0 if du >= 0 else -1.0)
+                    mx, my = ux * k, uy * k
+                else:
+                    k = (pw + 6.0) * (1.0 if dw >= 0 else -1.0)
+                    mx, my = wx * k, wy * k
+                for pezzo_mosso in (cassa, cop):
+                    if pezzo_mosso is not None:
+                        q = pezzo_mosso.get_actor_location()
+                        pezzo_mosso.set_actor_location(unreal.Vector(q.x + mx, q.y + my, q.z), False, False)
+                scrivi("  %s staccato dal letto di %.0f cm" % (cassa.get_actor_label(), math.hypot(mx, my)))
+                break
+        except Exception as ex:  # noqa: BLE001
+            avviso("passo: baule e letto: %s" % ex)
+
+    # 8. la stalla del mulo e le botti: a ovest della strada (dove stavano tocca la terrazza del quartiere)
+    def al_passo(lungo, traverso):
+        return (o_dati.x + PASSO_D[0] * lungo + PASSO_N[0] * traverso, o_dati.y + PASSO_D[1] * lungo + PASSO_N[1] * traverso)
+
+    def sposta(a, lungo, traverso):
+        q = a.get_actor_location()
+        t0 = terreno(mondo, q.x, q.y, q.z)
+        x, y = al_passo(lungo, traverso)
+        t1 = terreno(mondo, x, y, o_dati.z)
+        if t1 is None:
+            avviso("passo: %s: non trovo il terreno nel posto nuovo: resta dov'e'" % a.get_actor_label())
+            return False
+        a.modify()
+        a.set_actor_location(unreal.Vector(x, y, t1 + ((q.z - t0) if t0 is not None else 0.0)), False, False)
+        return True
+
+    per_nome = tutti_per_nome()
+    stalla = per_nome.get("Stalla del mulo")
+    if stalla is not None:
+        qs = stalla.get_actor_location()
+        if sposta(stalla, PASSO_STALLA[0], PASSO_STALLA[1]):
+            if not stalla.actor_has_tag("ValdorsoStallaGirata"):
+                # (secondo controllo) una volta sola: rilanciando non rigira
+                rs = stalla.get_actor_rotation()
+                stalla.set_actor_rotation(unreal.Rotator(roll=rs.roll, pitch=rs.pitch, yaw=rs.yaw + PASSO_STALLA_GIRA), False)
+                stalla.set_editor_property("tags", list(stalla.get_editor_property("tags")) + [unreal.Name("ValdorsoStallaGirata")])
+            ns = stalla.get_actor_location()
+            dx, dy, dz = ns.x - qs.x, ns.y - qs.y, ns.z - qs.z
+            # con la stalla vanno le sue cose (il mulo, la mangiatoia: tutto cio' che comincia con il suo nome)
+            con = 0
+            for a in attori.get_all_level_actors():
+                if a and a != stalla and a.get_actor_label().startswith(("Stalla del mulo", "Mulo")) \
+                        and not a.actor_has_tag(PASSO_REALE):
+                    q = a.get_actor_location()
+                    if math.hypot(q.x - qs.x, q.y - qs.y) < 600.0:
+                        a.modify()
+                        a.set_actor_location(unreal.Vector(q.x + dx, q.y + dy, q.z + dz), False, False)
+                        con += 1
+            scrivi("stalla del mulo spostata a ovest della strada (lungo %.0f, traverso %.0f), con %d sue cose"
+                   % (PASSO_STALLA[0], PASSO_STALLA[1], con))
+    botti = sorted((a for a in attori.get_all_level_actors() if a and a.get_actor_label().startswith("Botte della Guardia")),
+                   key=lambda a: a.get_actor_label())
+    mosse = 0
+    for a, (lu, tr) in zip(botti, PASSO_BOTTI):
+        if sposta(a, lu, tr):
+            mosse += 1
+    if len(botti) > len(PASSO_BOTTI):
+        avviso("passo: le botti sono %d ma i posti nuovi %d: le ultime restano dove sono (da spostare a mano)"
+               % (len(botti), len(PASSO_BOTTI)))
+    if botti:
+        scrivi("botti della Guardia spostate accanto alla stalla: %d su %d" % (mosse, len(botti)))
+
+    # 9. (18/11 sera) niente erba sotto il portale e lungo la strada del cortile: la maschera T_SenzaErba (in
+    # V:/Texture/valdorso/villaggio) ha il rettangolo nuovo; il materiale della valle la rilegge e l'erba si ricalcola
+    valle = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()),
+                         "Python", "usati", "crea_materiale_valle.py")
+    try:
+        with open(valle, "r", encoding="utf-8") as g:
+            exec(compile(g.read(), valle, "exec"), {"__name__": "__main__"})
+        unreal.SystemLibrary.execute_console_command(mondo, "grass.FlushCache")
+        scrivi("materiale della valle rifatto (T_SenzaErba con il passo) ed erba ricalcolata")
+    except Exception as ex:  # noqa: BLE001
+        avviso("passo: materiale della valle non rifatto (%s): lanciare a mano usati/crea_materiale_valle.py" % ex)
+
+    scrivi("messi: " + ", ".join("%s %d" % (k, n) for k, n in sorted(conti.items())))
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    scrivi("FATTO e salvato. ORA, in questo ordine: 'PNG: metti Gaspare, le guardie del passo...', 'Volti: ...', 'Rete', "
+           "'PNG: panche, letti e porte', 'Per Claude: collauda i passaggi', 'Mura: 7' (i gradini). "
+           "Se un giorno si rilancia 'crea il villaggio' (o la sua parte 'Guardia'), dopo va rilanciata questa voce.")
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# (19/11, v0.2.7) "Mura: 12. i registri della ronda". I pezzi della chat 3D (V:/Texture/valdorso/ronda): una cassetta
+# di ferro con il libro, su un palo. Quattro nel villaggio: locanda, forgia, mulino (accanto alla porta, fuori dai
+# 120 cm davanti) e tempio (accanto alla pietra dei segni, che c'e' in tutte e tre le fasi). Sono attori del C++
+# (AValdorsoRegistroRonda): la guardia di ronda li firma con E. Si puo' rilanciare: toglie quelli di prima.
+# Chi firma sta a -Y del pezzo (75 cm), quindi il pezzo si gira con la sua -Y verso fuori.
+RONDA = "V:/Texture/valdorso/ronda"
+RONDA_ETICHETTA = "ValdorsoRegistroRonda"
+RONDA_CARTELLA = "Valle/Villaggio/Ronda"
+# (tappa, come si chiama negli avvisi, edificio, porta, di lato preferito: +1 a destra di chi esce, -1 a sinistra)
+RONDA_PORTE = (
+    ("Locanda", "la locanda di Bruno", "Locanda_di_Bruno", "Locanda_di_Bruno porta", 1),
+    ("Forgia", "la forgia di Marta", "Fucina_di_Marta", "Fucina_di_Marta porta", 1),
+    ("Mulino", "il mulino", "Mulino", "Mulino porta", 1),
+)
+RONDA_FUORI = 75.0          # dal filo della porta verso fuori (il pezzo e' profondo 48)
+RONDA_DI_LATO = 140.0       # dal bordo dell'anta
+# il tempio: 170 cm a ovest della pietra dei segni (14820, 40298), girato verso la piazza (fuori = +Y del mondo)
+RONDA_TEMPIO = ("Tempio", "il tempio", 14650.0, 40298.0, 5509.0, 0.0, 1.0)
+
+
+def per_nome_vuoto():
+    return "Locanda_di_Bruno" not in tutti_per_nome()
+
+
+def fai_ronda():
+    global CARTELLA
+    classe = getattr(unreal, "ValdorsoRegistroRonda", None)
+    if classe is None:
+        avviso("ronda: manca la classe del C++ ValdorsoRegistroRonda: compila, poi rilancia")
+        return
+    mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    mat = materiali()
+    if not mat:
+        # (secondo controllo) senza i materiali il pezzo resta anche senza collisione, e con E non si troverebbe
+        avviso("ronda: mancano i materiali del villaggio (MI_Villaggio_...): niente")
+        return
+    if per_nome_vuoto():
+        avviso("ronda: nel livello non vedo il villaggio (sei in L_Valle, con il villaggio caricato?): niente")
+        return
+    vecchia = CARTELLA
+    CARTELLA = RONDA
+    try:
+        pezzi = importa(["SM_Registro_Ronda_Palo"], mat)
+    finally:
+        CARTELLA = vecchia
+    palo = pezzi.get("SM_Registro_Ronda_Palo")
+    if palo is None:
+        avviso("ronda: manca SM_Registro_Ronda_Palo in %s/glb: niente" % RONDA)
+        return
+    tolti = 0
+    for a in attori.get_all_level_actors():
+        if a and a.actor_has_tag(RONDA_ETICHETTA):
+            attori.destroy_actor(a)
+            tolti += 1
+    if tolti:
+        scrivi("tolti %d registri messi prima" % tolti)
+    per_nome = tutti_per_nome()
+
+    def libero(x, y, z, pende=25.0):
+        """Vero se in quel punto, e a 35 cm tutto intorno, sotto c'e' solo il prato o il selciato (niente gradini,
+        panche, muri). (19/11, dopo il primo lancio) la piazza e le strade sono modelli, non prato: vanno bene, purche'
+        piane (entro 25 cm dalla quota del punto)."""
+        for dx, dy in ((0, 0), (35, 0), (-35, 0), (0, 35), (0, -35)):
+            c = linea_colono(mondo, unreal.Vector(x + dx, y + dy, z + 260.0), unreal.Vector(x + dx, y + dy, z - 300.0), [])
+            if c is None:
+                return False, "sotto non c'e' niente"
+            chi = c[9]
+            nome = chi.get_actor_label() if chi else ""
+            prato = chi is not None and "Landscape" in chi.get_class().get_name()
+            selciato = nome.startswith(("Piazza", "Strada", "Via ", "Sagrato"))
+            if not (prato or selciato):
+                return False, "c'e' %s" % (nome or "qualcosa")
+            if abs(c[4].z - z) > pende:
+                return False, "non e' piano (%.0f cm)" % (c[4].z - z)
+        return True, ""
+
+    def suolo(x, y, z_vicino, da=300.0):
+        """La quota di dove si cammina in quel punto (prato o selciato), cercata da 3 m sopra a 8 m sotto."""
+        c = linea_colono(mondo, unreal.Vector(x, y, z_vicino + da), unreal.Vector(x, y, z_vicino - 800.0), [])
+        return c[4].z if c is not None else terreno(mondo, x, y, z_vicino)
+
+    def metti(tappa, luogo, x, y, z_vicino, fx, fy):
+        """Mette il registro in (x, y) con il davanti (dove sta chi firma) verso (fx, fy)."""
+        z = suolo(x, y, z_vicino, 100.0)
+        if z is None:
+            avviso("ronda: %s: non trovo il terreno in (%.0f, %.0f): non messo" % (tappa, x, y))
+            return None
+        yaw = math.degrees(math.atan2(fx, -fy))      # la -Y del pezzo verso (fx, fy)
+        a = attori.spawn_actor_from_class(classe, unreal.Vector(x, y, z), unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
+        if a is None:
+            avviso("ronda: %s: non riesco a metterlo" % tappa)
+            return None
+        c = a.get_editor_property("modello")
+        c.set_editor_property("static_mesh", palo)
+        a.set_editor_property("tappa", unreal.Name(tappa))
+        a.set_editor_property("luogo", luogo)
+        a.set_actor_label("Registro della ronda ~ %s" % tappa)
+        a.set_folder_path(RONDA_CARTELLA)
+        a.set_editor_property("tags", [unreal.Name(RONDA_ETICHETTA)])
+        scrivi("%s: registro in (%.0f, %.0f, %.0f), yaw %.1f; chi firma sta in (%.0f, %.0f)"
+               % (tappa, x, y, z, yaw, x + fx * 75.0, y + fy * 75.0))
+        return a
+
+    messi = 0
+    for tappa, luogo, n_casa, n_porta, lato_preferito in RONDA_PORTE:
+        casa, porta = per_nome.get(n_casa), per_nome.get(n_porta)
+        if casa is None or porta is None:
+            avviso("ronda: %s: non trovo '%s' o '%s' nel livello: saltato" % (tappa, n_casa, n_porta))
+            continue
+        pc, pp = casa.get_actor_location(), porta.get_actor_location()
+        # il verso "fuori": dal centro della casa alla porta, raddrizzato sull'asse della casa piu' vicino
+        yc = math.radians(casa.get_actor_rotation().yaw)
+        assi = [(math.cos(yc + k * math.pi / 2.0), math.sin(yc + k * math.pi / 2.0)) for k in range(4)]
+        vx, vy = pp.x - pc.x, pp.y - pc.y
+        fx, fy = max(assi, key=lambda t: t[0] * vx + t[1] * vy)
+        lx, ly = -fy, fx
+        # quanto e' larga l'anta (lungo il muro)
+        larga = 100.0
+        try:
+            o, e = porta.get_actor_bounds(True)
+            larga = max(80.0, min(240.0, 2.0 * (abs(e.x * lx) + abs(e.y * ly))))
+            # il centro vero dell'anta (l'attore sta sulla cerniera)
+            cx, cy = o.x, o.y
+        except Exception:  # noqa: BLE001
+            cx, cy = pp.x, pp.y
+        fatto = False
+        prove = []
+        # (19/11, dopo il secondo lancio) la porta del mulino e' in alto, in cima alla scala di fuori ("Mura: 8"), e
+        # intorno il terreno pende. Li' il registro va a terra contro il muro, sotto la porta e di lato (dalla parte
+        # senza la scala: sotto i gradini c'e' la scala e il posto viene scartato): il terreno si cerca da sotto il
+        # pianerottolo, e puo' pendere di piu' (lo zoccolo scende 30 cm sotto terra).
+        scala = per_nome.get("Scala ~ " + n_porta)
+        fuori_base, lato_base, salto, da, pende = RONDA_FUORI, larga / 2.0 + RONDA_DI_LATO, 120.0, 300.0, 25.0
+        fuori_prove = (fuori_base, fuori_base + 40.0)
+        ripiego = None
+        if scala is not None:
+            salto, da, pende = 900.0, -80.0, 45.0
+            # (19/11, dopo il terzo lancio) contro il muro del mulino il terreno scende di 70 cm in 75: si cerca anche
+            # piu' in fuori, dove spiana (li' stanno Teodoro e Agnese). Se proprio niente va bene, si mette nel posto
+            # libero che pende meno (ripiego), e lo si dice.
+            fuori_prove = (fuori_base, 150.0, 230.0, 310.0, 400.0, 500.0)
+            scrivi("%s: la porta ha la scala di fuori: il registro va a terra, sotto, di lato" % tappa)
+        for lato in (lato_preferito, -lato_preferito):
+            for di_lato in (0.0, 60.0, 120.0, 200.0, 300.0):
+                for fuori in fuori_prove:
+                    d = lato_base + di_lato
+                    x = cx + fx * fuori + lx * d * lato
+                    y = cy + fy * fuori + ly * d * lato
+                    z = suolo(x, y, pp.z, da)
+                    if z is None:
+                        prove.append("(%.0f, %.0f): niente terreno" % (x, y))
+                        continue
+                    if abs(z - pp.z) > salto:
+                        prove.append("(%.0f, %.0f): il terreno e' a %.0f cm dalla soglia" % (x, y, z - pp.z))
+                        continue
+                    ok, perche = libero(x, y, z, pende)
+                    if not ok:
+                        prove.append("(%.0f, %.0f): %s" % (x, y, perche))
+                        continue
+                    # anche il posto di chi firma deve essere libero
+                    ok, perche = libero(x + fx * 75.0, y + fy * 75.0, z, pende + 15.0)
+                    if not ok:
+                        prove.append("(%.0f, %.0f): davanti %s" % (x, y, perche))
+                        if scala is not None and "piano" in perche:
+                            zd = suolo(x + fx * 75.0, y + fy * 75.0, z, 100.0)
+                            scende = abs((zd if zd is not None else z - 999.0) - z)
+                            if ripiego is None or scende < ripiego[0]:
+                                ripiego = (scende, x, y, z, d, fuori)
+                        continue
+                    if metti(tappa, luogo, x, y, z, fx, fy):
+                        messi += 1
+                        scrivi("  (a %.0f cm dal centro della porta, di lato; %.0f cm fuori dal muro; anta larga %.0f)"
+                               % (d, fuori, larga))
+                    fatto = True
+                    break
+                if fatto:
+                    break
+            if fatto:
+                break
+        if not fatto and ripiego is not None:
+            scende, x, y, z, d, fuori = ripiego
+            if metti(tappa, luogo, x, y, z, fx, fy):
+                messi += 1
+                fatto = True
+                avviso("ronda: %s: nessun posto piano: messo dove pende meno (davanti scende di %.0f cm), a %.0f cm di lato "
+                       "e %.0f fuori dal muro: guarda la foto" % (tappa, scende, d, fuori))
+        if not fatto:
+            avviso("ronda: %s: nessun posto libero accanto alla porta. Provati: %s" % (tappa, "; ".join(prove)))
+
+    tappa, luogo, x, y, zv, fx, fy = RONDA_TEMPIO
+    z = suolo(x, y, zv)
+    if z is not None:
+        ok, perche = libero(x, y, z)
+        if not ok:
+            avviso("ronda: Tempio: nel posto scelto %s: lo metto lo stesso, guarda la foto" % perche)
+    if metti(tappa, luogo, x, y, zv, fx, fy):
+        messi += 1
+
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    scrivi("FATTO e salvato: %d registri su 4. Il tempio va guardato in tutte e tre le fasi ('Villaggio: mostra la fase N')."
+           % messi)
+
 
 
 try:
@@ -1908,6 +3380,16 @@ try:
         fai_alloggi()
     elif MODO == "gradini":
         fai_gradini()
+    elif MODO == "scale":
+        fai_scale()
+    elif MODO == "ponti":
+        fai_ponti()
+    elif MODO == "locanda":
+        fai_locanda()
+    elif MODO == "passo":
+        fai_passo()
+    elif MODO == "ronda":
+        fai_ronda()
     else:
         avviso("modo sconosciuto: %s" % MODO)
 except Exception as e:  # noqa: BLE001

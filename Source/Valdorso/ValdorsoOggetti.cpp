@@ -284,6 +284,12 @@ namespace
 		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Prigione"), TEXT("Chiave della prigione"),
 			TEXT("Lunga, di ferro nero, con l'anello consumato dalle mani. Apre le celle della milizia."), 0.2f),
 			TEXT("La chiave della prigione: le sbarre delle celle si aprono per te.")));
+		// (18/11, v0.2.7) il posto di guardia della Guardia Reale al passo: toglie il lucchetto alla leva della grata del
+		// portale e apre l'alloggio della capitana. La tengono solo le guardie del Re (Livia, Tebaldo, Fulvio): ai coloni
+		// non si da'. Per le prove: Valdorso.Zaino.Dai Chiave_Passo
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Passo"), TEXT("Chiave del passo"),
+			TEXT("D'acciaio brunito, con la quercia coronata sull'anello. Toglie il lucchetto alla leva della grata del passo. E' della Guardia Reale."), 0.3f),
+			TEXT("La chiave del passo: la grata della Guardia Reale risponde alla tua mano.")));
 
 		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana, le monete e il pugnale dei nani, la storia di Lucia
 		C.Add(OggSemplice(TEXT("Piccone"), TEXT("Piccone"),
@@ -956,7 +962,7 @@ namespace
 		}
 		// (16/11, v0.2.6) le chiavi: l'anello, il fusto e i denti (quella della porta grande con la corona)
 		else if (N == TEXT("Chiave_Torri") || N == TEXT("Chiave_Porta") || N == TEXT("Chiave_Caserma")
-			|| N == TEXT("Chiave_Prigione"))
+			|| N == TEXT("Chiave_Prigione") || N == TEXT("Chiave_Passo"))
 		{
 			L.Add(OggCerchio(-0.5f, 0.f, 0.28f, 14));
 			L.Add(OggLinea({ { -0.22f, 0.f }, { 0.8f, 0.f } }));

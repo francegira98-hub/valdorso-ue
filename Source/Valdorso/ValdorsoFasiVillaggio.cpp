@@ -3,6 +3,8 @@
 #include "ValdorsoFasiVillaggio.h"
 #include "Valdorso.h"
 #include "ValdorsoRegistroEventi.h"
+#include "ValdorsoTerritorio.h"
+#include "ValdorsoPNG.h"
 #include "Components/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
@@ -275,6 +277,16 @@ void AValdorsoFasiVillaggio::Applica(ULevel* SoloLivello)
 		{
 			Sistema(*It);
 		}
+	}
+	// (19/11, v0.2.7) la pietra di Val d'Orso segue l'altare: cappella, chiesa, pieve
+	for (TActorIterator<AValdorsoPietraVillaggio> Pietra(Mondo); Pietra; ++Pietra)
+	{
+		Pietra->VaiAlPostoDellaFase(Fase);
+	}
+	// (19/11, v0.2.7) e chi ci vive dentro: Padre Anselmo, Tobia, Elric hanno un posto per ogni fase
+	for (TActorIterator<AValdorsoPNG> Png(Mondo); Png; ++Png)
+	{
+		Png->VaiAllaFase(Fase);
 	}
 	if (Mostrate + Nascoste > 0)
 	{

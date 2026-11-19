@@ -26,6 +26,7 @@
 # (12/11, v0.2.0) E il baule del colono nella locanda di Bruno (AValdorsoBaule: le cose che non porti con te).
 # (12/11, v0.2.0) E Sibilla, la carovana (un giorno ogni tre: ValdorsoCarovana.h). E il magazzino del villaggio accanto alla bacheca della Gilda (le scorte: ValdorsoScorte.h).
 
+import json
 import math
 import os
 
@@ -203,6 +204,13 @@ class Posti:
             avviso("davanti a \"%s\": sopra il posto c'e' qualcosa: controlla" % porta)
         return (x, y, z, math.degrees(math.atan2(dy, dx)))
 
+    def sul_terreno(self, x, y, z_vicino, gradi):
+        """(18/11) Un punto del mondo gia' noto (dai dati della chat 3D): la quota e' quella del terreno li' sotto."""
+        z, _ = terra(x, y, z_vicino, self.ignora)
+        if z is None:
+            z = z_vicino
+        return (x, y, z, gradi)
+
     def passo(self, avanti, traverso):
         """Davanti alla porta del passo (metri verso la valle e di traverso, come le guardie in metti_png.py)."""
         porta = self.attore("Porta del passo")
@@ -222,14 +230,27 @@ class Posti:
         return (x, y, z, math.degrees(math.atan2(dy, dx)))
 
 
-def tappa(ora, posto, movenza="", scala=1.0, assente=False):
-    """Una unreal.ValdorsoTappa (FValdorsoTappa): Dove e' il centro della capsula (i piedi + la meta' dell'altezza)."""
+def tappa(ora, posto, movenza="", scala=1.0, assente=False, fasi=None):
+    """Una unreal.ValdorsoTappa (FValdorsoTappa): Dove e' il centro della capsula (i piedi + la meta' dell'altezza).
+    (19/11) fasi = [posto della fase 2, posto della fase 3] (o None dove non cambia): il posto per ogni fase del
+    villaggio (la fase 1 e' 'posto'); il C++ li usa quando la fase cambia."""
     t = unreal.ValdorsoTappa()
     t.set_editor_property("ora", float(ora))
     if posto is not None:
         x, y, z, g = posto
         t.set_editor_property("dove", unreal.Vector(x, y, z + MEZZA_ALTEZZA * scala))
         t.set_editor_property("gradi", float(g))
+        if fasi and any(f is not None for f in fasi):
+            dove, gradi = [], []
+            for f in [posto] + list(fasi):
+                fx, fy, fz, fg = f if f is not None else posto
+                dove.append(unreal.Vector(fx, fy, fz + MEZZA_ALTEZZA * scala))
+                gradi.append(float(fg))
+            try:
+                t.set_editor_property("dove_per_fase", dove)
+                t.set_editor_property("gradi_per_fase", gradi)
+            except Exception:  # noqa: BLE001
+                avviso("i posti per fase non si possono scrivere: compila il C++ e rilancia")
     if movenza:
         t.set_editor_property("movenza", unreal.Name(movenza))
     t.set_editor_property("assente", bool(assente))
@@ -400,12 +421,14 @@ def metti_baule(P):
     q = locanda.get_actor_location()
     g = locanda.get_actor_rotation().yaw
     # due angoli liberi a est (il bancone e' a nord-ovest, Teodoro a sud-ovest): quello piu' lontano dalla porta
-    angoli = [(580.0, -380.0), (580.0, 380.0)]
+    # (17/11 notte, v0.2.7) la locanda nuova: un posto solo, contro il muro nord in fondo al bancone (sala_arredi)
+    angoli = [(105.0, 90.0)]
     if porta is not None:
         pq = porta.get_actor_location()
         angoli.sort(key=lambda a: -math.hypot(al_mondo(q.x, q.y, g, a[0], a[1])[0] - pq.x, al_mondo(q.x, q.y, g, a[0], a[1])[1] - pq.y))
     lx, ly = angoli[0]
-    posto = P.dentro("Locanda_di_Bruno", lx, ly, 0.0, ly)
+    # (secondo controllo) il lato lungo del baule lungo il muro nord: guarda la sala (verso -Y)
+    posto = P.dentro("Locanda_di_Bruno", lx, ly, lx, ly - 100.0)
     if posto is None:
         return
     x, y, z, gradi = posto
@@ -490,12 +513,73 @@ def principale():
     incudine = P.sotto_tettoia("Fucina_di_Marta", 190.0, 700.0, 190.0, 620.0)
     davanti_fucina = P.sotto_tettoia("Fucina_di_Marta", 480.0, 820.0, 190.0, 620.0)
     # La locanda (W 1400, D 1000; il bancone a nord, y 320, x -580..-180; i tavoli a (0,-60) e (380,160)).
-    bancone = P.dentro("Locanda_di_Bruno", -330.0, 175.0, -330.0, 400.0)
-    tavolo_grande = P.dentro("Locanda_di_Bruno", 380.0, 20.0, 380.0, 160.0)
-    angolo_teodoro = P.dentro("Locanda_di_Bruno", -560.0, -380.0, 0.0, 0.0)
+    # (17/11 notte, v0.2.7) la locanda nuova (SM_Locanda_Livia, sala_arredi): davanti al bancone (x 160..240), in piedi
+    # guardando Bruno; accanto al tavolo delle serate (centro (-317, 30)); l'angolo tranquillo accanto al camino
+    bancone = P.dentro("Locanda_di_Bruno", 100.0, -120.0, 200.0, -120.0)
+    # (in piedi accanto al tavolo delle serate, nel passaggio davanti al camino: sulla panca ci sarebbe la panca)
+    tavolo_grande = P.dentro("Locanda_di_Bruno", -480.0, 30.0, -317.0, 30.0)
+    angolo_teodoro = P.dentro("Locanda_di_Bruno", -585.0, -390.0, -690.0, -390.0)
     # Il tempio (W 1200, D 2200; l'ingresso a -Y, l'altare a +Y): Tobia spazza la navata vicino all'ingresso.
     navata = P.dentro("Tempio_del_Cuore", 120.0, -700.0, 120.0, 0.0)
     navata_sera = P.dentro("Tempio_del_Cuore", -200.0, -450.0, 0.0, 400.0)
+
+    # (18/11 sera, v0.2.7) Il posto di guardia della Guardia Reale (crea_mura.py, "Mura: 11"; punti della chat 3D,
+    # Valdorso_passo_guardia_reale.json, "persone"): la mattina davanti al portale accanto a Tebaldo, a mezzogiorno sulla
+    # terrazza del quartiere accanto alla sua porta, il pomeriggio al braciere. Se il portale e' ancora quello di legno
+    # valgono i posti di prima (la casermetta, il fuoco).
+    # (19/11, v0.2.7) I posti nella chiesa (fase 2) e nella pieve (fase 3): dati della chat 3D
+    # (Valdorso_tempio_dentro.json, "posti", in cm del pezzo: l'ingresso a +Y, l'altare a -Y; il pezzo sta nel punto
+    # della cappella girato di 180 gradi, come lo mette "Mura: 3").
+    tobia_fasi, elric_fasi, anselmo_fasi = [None, None], [None, None], [None, None]
+    tempio = P.per_nome.get("Tempio_del_Cuore")
+    try:
+        with open("V:/Texture/valdorso/mura/Valdorso_tempio_dentro.json", "r", encoding="utf-8-sig") as fd:
+            dentro = json.load(fd).get("pezzi", {})
+    except Exception:  # noqa: BLE001
+        dentro = {}
+    if tempio is not None and dentro:
+        to = tempio.get_actor_location()
+        ty = tempio.get_actor_rotation().yaw + 180.0
+        tr = math.radians(ty)
+
+        def nel_tempio(p, gradi):
+            return (to.x + p[0] * math.cos(tr) - p[1] * math.sin(tr), to.y + p[0] * math.sin(tr) + p[1] * math.cos(tr),
+                    to.z + p[2], (ty + gradi + 180.0) % 360.0 - 180.0)
+
+        for i, nome_pezzo in enumerate(("SM_Tempio_Fase2_Dentro", "SM_Tempio_Fase3_Dentro")):
+            ps = dentro.get(nome_pezzo, {}).get("posti", {})
+            try:
+                # Tobia spazza dietro l'ultimo banco, girato verso l'altare (-Y del pezzo)
+                tobia_fasi[i] = nel_tempio(ps["tobia"]["partenza_cm"], -90.0)
+                # Elric seduto sulla panca contro il muro: il posto e' ai suoi piedi (la quota del pavimento li' davanti)
+                se, pd = ps["maestro_elric"]["seduto_cm"], ps["maestro_elric"]["in_piedi_davanti_cm"]
+                elric_fasi[i] = nel_tempio((se[0], se[1], pd[2]), float(ps["maestro_elric"].get("yaw_seduto", 0.0)))
+                anselmo_fasi[i] = nel_tempio(ps["padre_anselmo"]["in_piedi_cm"], float(ps["padre_anselmo"].get("yaw", 90.0)))
+            except Exception as ex:  # noqa: BLE001
+                avviso("i posti del tempio della fase %d non si leggono (%s): restano quelli della cappella" % (i + 2, ex))
+        scrivi("posti del tempio per fase: Tobia %s, Elric %s, Padre Anselmo %s"
+               % tuple("si'" if all(f is not None for f in l) else "no" for l in (tobia_fasi, elric_fasi, anselmo_fasi)))
+    else:
+        avviso("i posti del tempio per fase: manca il tempio nel livello o Valdorso_tempio_dentro.json: restano quelli della cappella")
+
+    porta_passo = P.attore("Porta del passo")
+    cm_passo = porta_passo.get_component_by_class(unreal.StaticMeshComponent) if porta_passo else None
+    sm_passo = cm_passo.get_editor_property("static_mesh") if cm_passo else None
+    if sm_passo is not None and sm_passo.get_name() == "SM_Passo_Portale":
+        livia_mattina = P.passo(2.4, -2.6)
+        # (19/11) se c'e' il suo banco da campo ("Mura: 11", SM_Passo_Banco_Livia) la mattina sta dietro il banco e
+        # guarda la strada (punto della chat 3D, persone.livia_mattina)
+        if P.per_nome.get("Passo ~ banco di Livia") is not None:
+            livia_mattina = P.sul_terreno(111666.1, 100072.8, 6726.2, -53.23)
+        # (19/11) a mezzogiorno sulla terrazza del quartiere, accanto alla porta del suo alloggio (il pavimento e' a
+        # 6838,5). Ci arriva dalla scala: giornate_vive.py ora conosce i suoi gradini (linee_delle_scale della chat 3D).
+        # Prima (18/11 sera) stava ai piedi della scala, perche' i cammini l'avrebbero fatta passare dal muro.
+        livia_mezzogiorno = (110935.3, 98503.1, 6838.5, 126.77)
+        livia_fuoco = P.sul_terreno(111105.4, 99653.8, 6718.0, 171.77)
+    else:
+        livia_mattina = P.passo(4.0, 0.0)
+        livia_mezzogiorno = P.fuori_porta("Casermetta_della_Guardia porta", "Casermetta_della_Guardia", 260.0, 120.0)
+        livia_fuoco = P.intorno("Luce del fuoco della Guardia", 170.0, 90.0)
 
     giornate = [
         ("Marta", "Marta, la fabbra", True, 1.0, 0, [
@@ -506,14 +590,14 @@ def principale():
             tappa(22.5, None, assente=True),
         ]),
         ("Livia", "La capitana Livia Serra", True, 1.0, 0, [
-            tappa(6.5, P.passo(4.0, 0.0)),
-            tappa(12.0, P.fuori_porta("Casermetta_della_Guardia porta", "Casermetta_della_Guardia", 260.0, 120.0)),
-            tappa(15.0, P.intorno("Luce del fuoco della Guardia", 170.0, 90.0)),
+            tappa(6.5, livia_mattina),
+            tappa(12.0, livia_mezzogiorno),
+            tappa(15.0, livia_fuoco),
             tappa(19.5, bancone),
             tappa(22.0, P.passo(3.0, 1.5)),
         ]),
         ("Tobia", "Tobia, l'orfano", False, T, 0, [
-            tappa(7.5, navata, "Spazzare", scala=T),
+            tappa(7.5, navata, "Spazzare", scala=T, fasi=tobia_fasi),
             tappa(10.0, P.fuori_porta("Mulino porta", "Mulino", 320.0, -200.0), scala=T),
             tappa(13.5, davanti_fucina, scala=T),
             tappa(16.0, P.intorno("Pozzo", 260.0, 20.0), "Esultare", scala=T),
@@ -532,7 +616,7 @@ def principale():
         ]),
         ("Elric", "Maestro Elric, mago di corte", False, 1.0, 1, [
             tappa(8.0, P.intorno("Rovine degli Antichi", 900.0, 0.0), "Indicare"),
-            tappa(18.0, navata_sera),
+            tappa(18.0, navata_sera, fasi=elric_fasi),
             tappa(21.5, None, assente=True),
         ]),
     ]
@@ -552,6 +636,30 @@ def principale():
     if metti(classe, "Sibilla", "Sibilla, la venditrice ambulante", True,
              [tappa(9.0, piazzale), tappa(20.0, None, assente=True)], 1.0, 0, 3):
         messi += 1
+    # (19/11, v0.2.7) Padre Anselmo (lo mette metti_png.py, non ha una giornata): il suo posto nelle tre fasi. Nella
+    # fase 1 dov'e' adesso; nella chiesa e nella pieve davanti all'altare nuovo (dati della chat 3D).
+    if all(f is not None for f in anselmo_fasi):
+        trovato = False
+        for a in attori.get_all_level_actors():
+            try:
+                if a is None or not isinstance(a, classe) or str(a.get_editor_property("dialogo")) != "PadreAnselmo":
+                    continue
+            except Exception:  # noqa: BLE001
+                continue
+            trovato = True
+            qui, gq = a.get_actor_location(), a.get_actor_rotation().yaw
+            try:
+                a.modify()
+                a.set_editor_property("posto_per_fase", [unreal.Vector(qui.x, qui.y, qui.z)]
+                                      + [unreal.Vector(f[0], f[1], f[2] + MEZZA_ALTEZZA) for f in anselmo_fasi])
+                a.set_editor_property("gradi_per_fase", [float(gq)] + [float(f[3]) for f in anselmo_fasi])
+                scrivi("Padre Anselmo: fase 1 dov'e' (%.0f, %.0f, %.0f); fase 2 (%.0f, %.0f); fase 3 (%.0f, %.0f)"
+                       % (qui.x, qui.y, qui.z, anselmo_fasi[0][0], anselmo_fasi[0][1], anselmo_fasi[1][0], anselmo_fasi[1][1]))
+            except Exception as ex:  # noqa: BLE001
+                avviso("Padre Anselmo: i posti per fase non si possono scrivere (%s): compila il C++ e rilancia" % ex)
+            break
+        if not trovato:
+            avviso("Padre Anselmo non c'e' nel livello ('PNG: metti Gaspare, le guardie...'): i suoi posti per fase non sono scritti")
     scrivi("messi %d volti nella cartella %s" % (messi, CARTELLA))
     try:
         unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)

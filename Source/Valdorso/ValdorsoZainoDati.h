@@ -9,6 +9,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ValdorsoContratto.h"
 #include "ValdorsoZainoDati.generated.h"
 
 struct FValdorsoRegistro;
@@ -105,6 +106,38 @@ struct FValdorsoZaino
 	 *  (o muore) si ritrova in cella finche' non e' passata. Nei file di prima manca: si legge 0. */
 	UPROPERTY()
 	int64 CellaFinoUtc = 0;
+
+	/** (17/11, v0.2.7) Il grado nella milizia (ValdorsoMilizia.h): 0 = non e' della milizia, 1 recluta, 2 guardia,
+	 *  3 sergente, 4 vice comandante, 5 comandante. Sta nel file del personaggio. Nei file di prima manca: si legge 0. */
+	UPROPERTY()
+	uint8 GradoMilizia = 0;
+
+	/** (17/11, v0.2.7) I turni fatti nella milizia (ronde, garitta): servono per salire di grado. */
+	UPROPERTY()
+	int32 TurniMilizia = 0;
+
+	/** (18/11, v0.2.7) Da quando e' nelle Guardie di Valdorso (secondi Unix, UTC; 0 = non lo e'): da qui si conta la
+	 *  ferma del contratto (ValdorsoMilizia::GiorniDiFerma). */
+	UPROPERTY()
+	int64 MiliziaDalUtc = 0;
+
+	/** (18/11, v0.2.7) Fino a quando il soldo e' stato pagato (secondi Unix, UTC). */
+	UPROPERTY()
+	int64 MiliziaPagatoUtc = 0;
+
+	/** (19/11, v0.2.7) I giorni con il turno fatto e il soldo non ancora ritirato (al massimo
+	 *  ValdorsoMilizia::GiorniArretrati). */
+	UPROPERTY()
+	int32 MiliziaGiorniSoldo = 0;
+
+	/** (19/11, v0.2.7) Il giorno della valle dell'ultimo turno segnato (secondi Unix / 7200): un turno al giorno. */
+	UPROPERTY()
+	int64 MiliziaGiornoTurno = 0;
+
+	/** (18/11, v0.2.7) I contratti firmati (ValdorsoContratto.h): che cosa, quando, come sono finiti. Nei file di prima
+	 *  manca: si legge vuoto. */
+	UPROPERTY()
+	TArray<FValdorsoDocumento> Documenti;
 };
 
 namespace ValdorsoZaino

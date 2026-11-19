@@ -3,6 +3,7 @@
 
 #include "ValdorsoStatoColono.h"
 #include "ValdorsoFiducia.h"
+#include "ValdorsoMilizia.h"
 #include "ValdorsoMura.h"
 #include "ValdorsoPericoli.h"
 #include "ValdorsoPNG.h"
@@ -129,6 +130,8 @@ bool AValdorsoPlayerState::Incolpa(bool bGuardia)
 		if (AValdorsoPlayerController* Giocatore = Cast<AValdorsoPlayerController>(GetPlayerController()))
 		{
 			Giocatore->ClientAvviso(LOCTEXT("Colpa", "Hai alzato le mani su un abitante della valle. Il tuo nome e' rosso, e le guardie ti cercano."), 5.f, 0.f);
+			// (17/11, v0.2.7) chi porta la divisa risponde di piu': fuori dalla milizia, e le chiavi tornano a Livia
+			ValdorsoMilizia::Espelli(Giocatore);
 		}
 	}
 	// chi colpisce una guardia lo prendono subito (o quasi)

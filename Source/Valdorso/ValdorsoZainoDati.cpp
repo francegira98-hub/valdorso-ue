@@ -78,6 +78,13 @@ namespace ValdorsoZaino
 	bool SiPuoDepositare(const FValdorsoZaino& Zaino, int32 Posto)
 	{
 		// la tessera va sempre con te; il foglio di un incarico della Gilda anche (la Gilda lo cerca nello zaino)
+		// (17/11, v0.2.7) e le chiavi della milizia: Livia le ritira dallo zaino a chi esce, nel baule le perderebbe di vista
+		const FName Id = Zaino.Posti.IsValidIndex(Posto) ? Zaino.Posti[Posto].Id : NAME_None;
+		if (Id == FName(TEXT("Chiave_Caserma")) || Id == FName(TEXT("Chiave_Torri")) || Id == FName(TEXT("Chiave_Prigione")) || Id == FName(TEXT("Chiave_Passo"))
+			|| Id == FName(TEXT("Chiave_Porta")))
+		{
+			return false;
+		}
 		return Zaino.Posti.IsValidIndex(Posto) && !Zaino.Posti[Posto].Vuoto() && ValdorsoOggetti::Trova(Zaino.Posti[Posto].Id)
 			&& Zaino.Posti[Posto].Id != FName(TEXT("Tessera")) && Zaino.Posti[Posto].Id != ValdorsoGilda::IdFoglio
 			&& Zaino.Posti[Posto].Numero == 0;

@@ -101,6 +101,15 @@ struct FValdorsoTappa
 	 *  quando nessuno lo vede. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
 	TArray<FValdorsoStrada> Strade;
+
+	/** (19/11, v0.2.7) Il posto di questa tappa nelle tre fasi del villaggio (0 = fase 1...), per chi sta in un
+	 *  edificio che cambia (il tempio: cappella, chiesa, pieve). Vuoto o zero = sempre Dove. Li scrive crea_volti.py;
+	 *  quando cambia la fase AValdorsoPNG::VaiAllaFase li copia in Dove e Gradi. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	TArray<FVector> DovePerFase;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Giornata")
+	TArray<float> GradiPerFase;
 };
 
 namespace ValdorsoGiornata
@@ -144,6 +153,22 @@ public:
 	 *  colono lo vede (o dopo dieci minuti che vorrebbe andare), e mai mentre parla. */
 	UPROPERTY(EditAnywhere, Category = "PNG|Giornata")
 	TArray<FValdorsoTappa> Giornata;
+
+	/** (19/11, v0.2.7) Per chi non ha una giornata (Padre Anselmo): dove sta nelle tre fasi del villaggio (0 = fase 1).
+	 *  Vuoto o zero = dove l'hanno messo. */
+	UPROPERTY(EditAnywhere, Category = "PNG|Giornata")
+	TArray<FVector> PostoPerFase;
+
+	UPROPERTY(EditAnywhere, Category = "PNG|Giornata")
+	TArray<float> GradiPerFase;
+
+	/** (19/11) Sul server e sui PC, quando il villaggio cambia fase (AValdorsoFasiVillaggio::Applica): mette i posti
+	 *  di quella fase nelle tappe e, se serve, lo sposta subito. */
+	void VaiAllaFase(int32 Fase);
+
+	/** (19/11) L'ultima fase messa a chi non ha una giornata: AValdorsoFasiVillaggio::Applica gira spesso (ogni pezzo
+	 *  di mondo che arriva), e lui si sposta solo quando la fase cambia davvero. Non viaggia in rete. */
+	int32 FaseMessa = INDEX_NONE;
 
 	/** (11/11) Arriva nella valle solo con quell'atto della storia (Maestro Elric: 1, dopo il battito saltato). */
 	UPROPERTY(EditAnywhere, Category = "PNG|Giornata", meta = (ClampMin = "0"))

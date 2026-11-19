@@ -1,8 +1,16 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-17",
+ "aggiornato": "2026-11-19",
  "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
  "notizie": [
+  {
+   "data": "2026-11-19",
+   "etichetta": "Patch",
+   "titolo": "Il tempio: v0.2.7",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Il Tempio del Cuore ha il suo interno e il sagrato, al passo c'è il presidio di pietra della Guardia Reale, la locanda di Bruno è nuova. E arriva il primo lavoro della valle: le Guardie di Valdorso, con un contratto da firmare, i turni di ronda e il soldo."
+  },
   {
    "data": "2026-11-17",
    "etichetta": "Patch",

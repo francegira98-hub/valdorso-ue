@@ -6,7 +6,9 @@
 // lui si apre la stessa tessera, con la tua faccia (la fotografa il suo PC dal tuo colono, che vede).
 // Cosa si salva (FValdorsoTessera, nel file del personaggio): il numero, la qualifica, dove e quando è stata rilasciata,
 // i timbri e le note. Il resto si legge dal Registro, che non cambia più dopo la firma.
-// Più avanti (roadmap): chi ti assume cambia la qualifica (il comandante della milizia scrive "Miliziano di Valdorso"),
+// (18/11) Chi è nelle Guardie di Valdorso ha la qualifica del suo grado: la mette UValdorsoZainoComponent quando la
+// tessera si apre (ValdorsoMilizia::Qualifica), non si salva qui. E c'è la riga del rango (popolano, finché non ci sono i titoli).
+// Più avanti (roadmap): gli altri lavori cambiano la qualifica allo stesso modo,
 // i timbri dei luoghi (il Balivo, la Gilda), le guardie che la chiedono al passo, la tessera falsa (con l'abilità e il
 // rischio), la tessera persa e rifatta dal Balivo.
 // Le regole qui sono senza mondo né rete (le provano i test Valdorso.Tessera.*). Le usa UValdorsoZainoComponent.
@@ -31,6 +33,10 @@ struct FValdorsoTessera
 	/** "Colono della valle dell'Orso"; chi ti assume la può cambiare (più avanti). */
 	UPROPERTY()
 	FString Qualifica;
+
+	/** (18/11, chiesto da Fra) Il rango: vuoto = popolano. I titoli (cavaliere, barone...) arrivano con i feudi. */
+	UPROPERTY()
+	FString Rango;
 
 	/** "Al passo, con la carovana di Pietralta". */
 	UPROPERTY()

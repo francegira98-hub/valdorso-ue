@@ -8,9 +8,9 @@
 # 10 cm, con la porta aperta. A ogni passo:
 #   - cerca il pavimento sotto i piedi (una linea verso il basso) e misura il gradino rispetto al passo prima;
 #   - controlla che il corpo ci stia (una capsula dal ginocchio in su: i gradini bassi non contano).
-# Segna:  BLOCCO   il corpo tocca qualcosa a meno di 1,1 m dalla soglia, o un gradino sopra i 45 cm, o il vuoto;
+# Segna:  BLOCCO   il corpo tocca qualcosa a meno di 1 m dalla soglia, o un gradino sopra i 45 cm, o il vuoto;
 #         GRADINO  un gradino tra 25 e 45 cm (si passa, ma si inciampa: da sistemare);
-#         VICINO   il corpo tocca qualcosa tra 1,1 e 1,5 m dalla soglia (un mobile davanti alla porta: da guardare);
+#         VICINO   il corpo tocca qualcosa tra 1 e 1,5 m dalla soglia (un mobile davanti alla porta: da guardare);
 #         OK.
 # Le cose delle altre fasi (che nell'editor ci sono tutte insieme) non contano: il manichino le ignora, come nel gioco.
 # Non guarda: le imposte (AValdorsoImposta), le grate, le scale a pioli (AValdorsoScala) e le scale dentro le torri
@@ -32,7 +32,9 @@ SALE = 45.0              # MaxStepHeight del colono (quello di serie di Unreal)
 GRADINO = 25.0           # sopra questo un gradino si segna (17/11: era 20; le alzate normali delle scale sono 18-22)
 TRATTO = 150.0           # quanto prima e quanto dopo la soglia
 PASSO = 10.0
-SOGLIA = 110.0           # entro questa distanza dalla soglia un tocco e' un BLOCCO, oltre e' solo VICINO
+SOGLIA = 100.0           # entro questa distanza dalla soglia un tocco e' un BLOCCO, oltre e' solo VICINO
+                         # (18/11: era 110; un corridoio largo 140, come quello delle camere della locanda, si tocca
+                         # a 110 dal filo della porta di fronte e non e' un blocco: ci si gira e si passa)
 PROFILO = "Pawn"
 PREFISSO = "ValdorsoFase "
 

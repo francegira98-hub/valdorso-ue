@@ -110,6 +110,17 @@ public:
 	/** Vero se in quel punto, adesso, vale la pace: la pietra batte e questo colpo non e' saltato (allora la pace trema). */
 	bool Protegge(const FVector& Dove) const;
 
+	/**
+	 * (19/11, v0.2.7 "Il tempio") Dove sta la pietra in ogni fase del villaggio (mondo, cm; il primo posto e' la fase 1).
+	 * Il tempio cresce (cappella, chiesa, pieve) e l'altare si sposta verso il fondo: la pietra e' una sola e lo segue.
+	 * Un posto a zero, o che manca, vuol dire "resta dov'e'". Li scrive crea_mura.py ("Mura: 3"), dai dati della chat 3D.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Pietra")
+	TArray<FVector> PostoPerFase;
+
+	/** La porta al posto di quella fase (su ogni PC e sul server: lo chiama AValdorsoFasiVillaggio quando applica la fase). */
+	void VaiAlPostoDellaFase(int32 Fase);
+
 	/** Solo sul server: cambia la forza (per le prove; più avanti i giorni e i rituali). */
 	void ImpostaForza(float Nuova);
 
@@ -124,6 +135,11 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	/** (19/11) Dove sta la pietra nel livello, prima che una fase la sposti (VaiAlPostoDellaFase): ci torna nelle fasi
+	 *  senza un posto loro, e da li' si misura la pace (Protegge). */
+	FVector PostoDiCasa = FVector::ZeroVector;
+	bool bPostoDiCasaPreso = false;
 
 	UPROPERTY(VisibleAnywhere, Category = "Pietra")
 	TObjectPtr<USceneComponent> Radice;

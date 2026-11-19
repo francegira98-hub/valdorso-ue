@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-17",
+ "aggiornato": "2026-11-19",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
  "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0: sei alpha, quattro beta e il regno. Ogni tappa è una versione che si può giocare.",
  "tappe": [
@@ -404,15 +404,17 @@
   {
    "versione": "0.2.7",
    "nome": "Il tempio",
-   "stato": "in_corso",
+   "stato": "fatta",
    "voci": [
     "L'interno di chiesa e pieve: l'altare, la pietra di Val d'Orso, i banchi",
     "Il campanile e il sagrato sulla piazza",
-    "Livia e il Balivo consegnano le chiavi; le guardie di ronda sulle mura di notte",
-    "La sentinella nella garitta e la campanella della caserma",
-    "La locanda nuova di Bruno e l'osteria di posta fuori dalle mura",
-    "Ponti veri sul torrente",
-    "Texture vere per gli interni e pietra da castello sulle mura",
+    "Le Guardie di Valdorso, il primo lavoro della valle: ci si arruola da Livia firmando un contratto su pergamena",
+    "Cinque gradi, da recluta a comandante; le chiavi arrivano con il grado",
+    "I turni: la ronda con i quattro registri da firmare, la guardia al portale del passo; il soldo per ogni giorno di turno",
+    "Il posto di guardia della Guardia Reale al passo: portale, grata, torretta, quartiere",
+    "La locanda nuova di Bruno",
+    "Scale di legno al mulino, gradini davanti alle case: ogni porta della valle si passa",
+    "Ponti veri di pietra sul fiume",
     "Il collaudo dei passaggi: porte, scale e soglie provate una per una in tutte e tre le fasi",
     "La telecamera che si avvicina e si allontana con la rotella del mouse"
    ],
@@ -420,13 +422,36 @@
    "voci_en": [
     "Inside the church and the parish church: the altar, the stone of Val d'Orso, the pews",
     "The bell tower and the churchyard on the square",
-    "Livia and the Bailiff hand out the keys; the guards patrol the walls at night",
-    "The sentry in the watchbox and the barracks bell",
-    "Bruno's new inn and the coaching inn outside the walls",
-    "Real bridges over the stream",
-    "Real textures for interiors and castle stone on the walls",
+    "The Guards of Valdorso, the valley's first job: you enlist with Livia by signing a contract on parchment",
+    "Five ranks, from recruit to commander; the keys come with the rank",
+    "Shifts: the patrol with its four registers to sign, the watch at the pass gate; pay for every day on duty",
+    "The Royal Guard's post at the pass: gate, portcullis, watchtower, quarters",
+    "Bruno's new inn",
+    "Wooden stairs at the mill, steps in front of the houses: every door in the valley can be walked through",
+    "Real stone bridges over the river",
     "The passage test: doors, stairs and thresholds tried one by one in all three phases",
-    "The camera that moves closer and farther with the mouse wheel"
+    "The camera zooms in and out with the mouse wheel"
+   ],
+   "data": "2026-11-19"
+  },
+  {
+   "versione": "0.2.7.1",
+   "nome": "Le rifiniture",
+   "stato": "in_corso",
+   "voci": [
+    "Le prove in gioco della 0.2.7, una per una, e le correzioni",
+    "L'osteria di posta fuori dalle mura",
+    "Texture vere per gli interni e pietra da castello sulle mura",
+    "I doveri della guardia che mancano: il turno in garitta, la campanella della caserma",
+    "Le chiavi delle camere della locanda"
+   ],
+   "nome_en": "Finishing touches",
+   "voci_en": [
+    "In-game testing of 0.2.7, item by item, and the fixes",
+    "The coaching inn outside the walls",
+    "Real textures for the interiors and castle stone on the walls",
+    "The guard duties still missing: the shift in the watchbox, the barracks bell",
+    "Keys for the rooms of the inn"
    ]
   },
   {

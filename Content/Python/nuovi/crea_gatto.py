@@ -8,6 +8,7 @@
 # e mette AValdorsoGatto nella Locanda di Bruno, due metri davanti a Bruno, sul pavimento.
 # Resoconto in Saved/Claude/gatto.txt.
 
+import math
 import os
 import zipfile
 
@@ -169,6 +170,15 @@ def principale():
     p = bruno.get_actor_location()
     avanti = bruno.get_actor_forward_vector()
     dove = unreal.Vector(p.x + avanti.x * 200.0, p.y + avanti.y * 200.0, p.z)
+    # (17/11 notte, v0.2.7) nella locanda nuova Bruno sta dietro il bancone: due metri davanti a lui c'e' il bancone.
+    # Il gatto va sul focolare, accanto al camino: (-570, -75) nel sistema della locanda (sala_arredi)
+    for a in attori.get_all_level_actors():
+        if a and a.get_actor_label() == "Locanda_di_Bruno":
+            q = a.get_actor_location()
+            r0 = math.radians(a.get_actor_rotation().yaw)
+            lx, ly = -570.0, -75.0
+            dove = unreal.Vector(q.x + lx * math.cos(r0) - ly * math.sin(r0), q.y + lx * math.sin(r0) + ly * math.cos(r0), p.z)
+            break
     mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     z = p.z - 90.0
     try:

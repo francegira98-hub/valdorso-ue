@@ -362,7 +362,8 @@ namespace
 			.Scelta(TEXT("Me ne vado."), TEXT("congedo"));
 
 		D.Nodo(TEXT("comanda"), {
-			TEXT("Qui la capitana Livia. Sopra di lei il Balivo, al villaggio. Sopra il Balivo la Corona di Aurelia."),
+			// (18/11, Fra) il posto del passo e' della Guardia Reale: risponde solo alla Corona, non al Balivo
+			TEXT("Qui la capitana Livia Serra, della Guardia Reale. Sopra di lei la Corona di Aurelia, e nessun altro. Il Balivo comanda il villaggio e le sue guardie: al passo no."),
 			TEXT("Sopra la Corona il cielo. Ma il cielo ordini non ne dà."),
 			})
 			.Scelta(TEXT("Altro."), TEXT("altro"))
@@ -1478,9 +1479,162 @@ namespace
 			TEXT("Ancora tu. Breve."),
 			})
 			.Scelta(TEXT("Parlami del sigillo."), TEXT("sigillo"))
+			.Scelta(TEXT("Parlami di te."), TEXT("di_te"))
+			.Scelta(TEXT("Vorrei parlare della milizia."), TEXT("milizia_dentro"), TEXT("MiliziaChiedi"))
+			.Scelta(TEXT("Niente. Buona guardia."), TEXT("congedo"));
+
+		// (17/11, v0.2.7) con la milizia le risposte del ritorno erano cinque (al massimo quattro): Bruno e casa stanno qui
+		D.Nodo(TEXT("di_te"), {
+			TEXT("(Alza un sopracciglio.)"),
+			TEXT("Di me c'e' poco da dire, e quel poco non lo dico in servizio. Fai la tua domanda."),
+			})
 			.Scelta(TEXT("Parlami di Bruno."), TEXT("bruno"))
 			.Scelta(TEXT("Ti manca casa?"), TEXT("casa"))
+			.Scelta(TEXT("Lascia stare."), TEXT("congedo"));
+
+		// --- (17/11, v0.2.7) la milizia: arruolarsi, le chiavi del grado, lasciare (ValdorsoMilizia.h). Dove va il
+		// dialogo lo decide il server (ValdorsoMilizia::EventoDialogo): il "verso" scritto qui vale solo se non decide.
+		D.Nodo(TEXT("milizia_no"), {
+			TEXT("(Livia ti guarda dalla testa ai piedi, senza fretta.)"),
+			TEXT("Le Guardie di Valdorso non sono una locanda: non entra chi passa. Fatti conoscere, tieni le mani a posto e il nome pulito. Poi ne riparliamo."),
+			})
+			.Scelta(TEXT("Capito, capitana."), TEXT("congedo"))
+			// (a questi nodi manda il server, ValdorsoMilizia::EventoDialogo: nessuno ha il segno MiliziaMai, quindi queste
+			// risposte non si vedono mai; servono al controllo dei dialoghi, che vuole ogni nodo raggiunto da una risposta)
+			.Scelta(TEXT("(la milizia: l'offerta)"), TEXT("milizia_offerta")).SceltaVisibileSe(TEXT("MiliziaMai"))
+			.Scelta(TEXT("(la milizia: la promozione)"), TEXT("milizia_promosso")).SceltaVisibileSe(TEXT("MiliziaMai"))
+			.Scelta(TEXT("(la milizia: le chiavi ci sono)"), TEXT("milizia_chiavi_no")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		// (18/11, Fra) due corpi diversi: Livia e' della Guardia Reale e risponde solo alla Corona; le Guardie di Valdorso
+		// ("la milizia") sono del Balivo. Il Comandante ancora non c'e', e il ruolo lo tiene lei. E si firma un contratto vero.
+		D.Nodo(TEXT("milizia_offerta"), {
+			TEXT("(Posa il rapporto. E' la prima volta che ti guarda davvero.)"),
+			TEXT("Mettiamo le cose in chiaro. Io e i miei siamo Guardia Reale: rispondiamo alla Corona, e a nessun altro. La milizia, le Guardie di Valdorso, e' un'altra cosa: gente del posto, pagata dal Balivo. Ma un Comandante il Balivo non l'ha ancora nominato, e finche' non c'e' il ruolo lo tengo io."),
+			TEXT("Una recluta fa i turni e tiene la bocca chiusa. In cambio: un letto in caserma, il soldo per ogni giorno di turno e la chiave del corpo di guardia. Si firma un contratto, e il contratto lega: trenta giorni di ferma. Leggilo prima di mettere il nome."),
+			})
+			.Scelta(TEXT("Fammi leggere il contratto."), NAME_None, TEXT("MiliziaContratto"))
+			.Scelta(TEXT("Ci devo pensare."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_dentro"), {
+			TEXT("(Un cenno del capo: da lei, e' quasi un saluto.)"),
+			TEXT("Sei delle guardie del Balivo, e finche' manca un Comandante rispondi a me. I turni si fanno e non si raccontano. Che ti serve?"),
+			})
+			.Scelta(TEXT("Dammi un turno."), TEXT("milizia_turni"))
+			.Scelta(TEXT("Sono qui per il soldo."), TEXT("milizia_paga"), TEXT("MiliziaPaga"))
+			.Scelta(TEXT("Un'altra cosa."), TEXT("milizia_altro"))
 			.Scelta(TEXT("Niente. Buona guardia."), TEXT("congedo"));
+
+		// (19/11, v0.2.7) i turni: la ronda e la guardia al passo (ValdorsoMilizia.h). Uno al giorno; a turno fatto si torna
+		// da lei, che lo segna: e' cosi' che si sale di grado e che matura il soldo
+		D.Nodo(TEXT("milizia_turni"), {
+			TEXT("(Apre il ruolo dei turni e scorre le righe con il dito.)"),
+			TEXT("Due posti scoperti. La ronda: un giro del villaggio, e firmi i registri alla locanda, alla forgia, al tempio e al mulino. Dove il registro non c'e' ancora, ti fai vedere da chi ci lavora. Chi vede passare la guardia dorme meglio, e chi ha cattivi pensieri ne ha di meno."),
+			TEXT("Oppure la guardia qui al passo: cinque minuti fermo al portale, accanto a Tebaldo, a guardare la strada. Scegli. Un turno al giorno, e a turno finito torni da me: se non lo segno io, non e' mai successo."),
+			})
+			.Scelta(TEXT("Prendo la ronda."), TEXT("milizia_ronda"), TEXT("MiliziaRonda"))
+			.Scelta(TEXT("Prendo la guardia al passo."), TEXT("milizia_guardia"), TEXT("MiliziaGuardia"))
+			.Scelta(TEXT("Ci ripenso."), TEXT("congedo"))
+			.Scelta(TEXT("(la milizia: hai gia' un turno)"), TEXT("milizia_turno_gia")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		D.Nodo(TEXT("milizia_ronda"), {
+			TEXT("(Segna il tuo nome sul ruolo.)"),
+			TEXT("Cammina, non correre: la ronda si deve vedere. A ogni registro metti la tua firma, e non serve che ti fermi a chiacchierare. E se trovi qualcosa che non va, non fare l'eroe: vieni da me."),
+			})
+			.Scelta(TEXT("Vado, capitana."), TEXT("congedo"))
+			.Scelta(TEXT("(la milizia: per oggi basta)"), TEXT("milizia_turno_domani")).SceltaVisibileSe(TEXT("MiliziaMai"))
+			.Scelta(TEXT("(la milizia: turno segnato)"), TEXT("milizia_turno_fatto")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		D.Nodo(TEXT("milizia_guardia"), {
+			TEXT("(Segna il tuo nome sul ruolo e indica il portale con il mento.)"),
+			TEXT("Mettiti accanto a Tebaldo e non ti muovere di li'. Lui e' Guardia Reale e tu no: guardi, impari e stai zitto. Se ti allontani, il tempo non conta."),
+			})
+			.Scelta(TEXT("Agli ordini, capitana."), TEXT("congedo"))
+			.Scelta(TEXT("(la milizia: di notte niente ronda)"), TEXT("milizia_turno_notte")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		D.Nodo(TEXT("milizia_turno_notte"), {
+			TEXT("(Guarda il cielo sopra il passo, poi te.)"),
+			TEXT("A quest'ora la valle dorme, e non c'e' nessuno da cui farsi vedere. Senza i registri, di notte la ronda non serve a niente: si fa la guardia qui al portale. Se la vuoi, e' tua."),
+			})
+			.Scelta(TEXT("Capito, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_turno_gia"), {
+			TEXT("(Batte il dito sul ruolo, dove c'e' gia' il tuo nome.)"),
+			TEXT("Un turno ce l'hai gia', e non l'hai finito. Finiscilo. Poi torna."),
+			})
+			.Scelta(TEXT("Agli ordini, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_turno_domani"), {
+			TEXT("(Chiude il ruolo.)"),
+			TEXT("Per oggi hai dato. Una guardia stanca vede la meta' e sbaglia il doppio. Torna domani."),
+			})
+			.Scelta(TEXT("A domani, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_turno_fatto"), {
+			TEXT("(Scrive una riga sul ruolo, accanto al tuo nome.)"),
+			TEXT("Segnato. Un turno fatto bene non fa rumore: e' per questo che nessuno ti ringraziera'. Io me lo ricordo. Il soldo di oggi e' tuo, quando lo vuoi."),
+			})
+			.Scelta(TEXT("Grazie, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_altro"), {
+			TEXT("(Aspetta, con la penna a mezz'aria.)"),
+			TEXT("Sentiamo."),
+			})
+			.Scelta(TEXT("Ho perso una chiave."), TEXT("milizia_chiavi"), TEXT("MiliziaChiavi"))
+			.Scelta(TEXT("Voglio lasciare le guardie."), TEXT("milizia_lascia"), TEXT("MiliziaLasciaChiedi"))
+			.Scelta(TEXT("Niente. Buona guardia."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_paga"), {
+			TEXT("(Apre la cassetta del Balivo, conta due volte e segna una riga sul ruolo.)"),
+			TEXT("Il tuo soldo. E' denaro del Balivo, non mio: se un giorno la cassa arriva vuota, e' a lui che lo chiedi. Non lasciarlo qui troppo: piu' di tre giorni di soldo da parte non li tengo."),
+			})
+			.Scelta(TEXT("Grazie, capitana."), TEXT("congedo"))
+			.Scelta(TEXT("(la milizia: niente soldo oggi)"), TEXT("milizia_paga_no")).SceltaVisibileSe(TEXT("MiliziaMai"))
+			.Scelta(TEXT("(la milizia: non ancora)"), TEXT("milizia_no")).SceltaVisibileSe(TEXT("MiliziaMai"))
+			.Scelta(TEXT("(la milizia: la ferma)"), TEXT("milizia_ferma")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		D.Nodo(TEXT("milizia_paga_no"), {
+			TEXT("(Scorre il ruolo con il dito.)"),
+			TEXT("Qui non c'e' niente da pagare. Il soldo matura con il turno: un giorno di turno, un giorno di soldo."),
+			})
+			.Scelta(TEXT("Capito, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_promosso"), {
+			TEXT("(Livia sfoglia il registro dei turni, poi lo chiude.)"),
+			TEXT("I turni li hai fatti, e nessuno si e' lamentato di te. Sali di grado, e sale il soldo. Tieni: le chiavi che ti spettano adesso."),
+			TEXT("Le torri e le porte delle mura no: quelle le tiene solo chi comanda. E chi fa strada nelle guardie di una provincia, un giorno, puo' farsi notare anche piu' in alto. Io ho cominciato cosi'."),
+			})
+			.Scelta(TEXT("Grazie, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_chiavi"), {
+			TEXT("(Sospira dal naso e stacca una chiave dall'anello.)"),
+			TEXT("Una chiave persa e' una porta aperta a chi non deve. Questa e' l'ultima volta che non lo scrivo nel rapporto."),
+			})
+			.Scelta(TEXT("Non succedera' piu'."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_chiavi_no"), {
+			TEXT("(Ti guarda la cintura.)"),
+			TEXT("Le hai tutte. Contale prima di venire da me."),
+			})
+			.Scelta(TEXT("Hai ragione, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_ferma"), {
+			TEXT("(Non alza nemmeno gli occhi dal ruolo.)"),
+			TEXT("Hai firmato una ferma, e la ferma non e' finita. Un contratto con il Balivo non si straccia perche' una mattina fa freddo. Torna a ferma finita, e ne parliamo."),
+			})
+			.Scelta(TEXT("Agli ordini, capitana."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_lascia"), {
+			TEXT("(Per un momento non dice niente.)"),
+			TEXT("La ferma l'hai fatta: nessuno ti tiene. Ma chi esce lascia qui le chiavi e i turni fatti, e se torna firma di nuovo e ricomincia da recluta. Sei sicuro?"),
+			})
+			.Scelta(TEXT("Sono sicuro. Lascio."), TEXT("milizia_lasciata"), TEXT("MiliziaLascia"))
+			.Scelta(TEXT("No. Resto."), TEXT("congedo"));
+
+		D.Nodo(TEXT("milizia_lasciata"), {
+			TEXT("(Riprende le chiavi una per una, e scrive due righe in fondo al tuo contratto.)"),
+			TEXT("Fatto: ferma onorata, e cosi' resta scritto dal Balivo. Sei un colono come gli altri. Tieni comunque gli occhi aperti: quello non si restituisce."),
+			})
+			.Scelta(TEXT("Buona guardia, capitana."), TEXT("congedo"));
 
 		D.Nodo(TEXT("sigillo"), {
 			TEXT("Perche' la Corona l'ha ordinato, con un sigillo di ceralacca grosso come una mano. Io gli ordini li eseguo. Non li commento con i coloni."),

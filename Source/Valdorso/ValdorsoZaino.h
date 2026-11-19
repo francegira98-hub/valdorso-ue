@@ -24,6 +24,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/TimerHandle.h"
 #include "ValdorsoZainoDati.h"
 #include "ValdorsoTessera.h"
 #include "ValdorsoZaino.generated.h"
@@ -31,6 +32,7 @@
 class APlayerController;
 class SValdorsoZaino;
 class SValdorsoTessera;
+class SValdorsoContratto;
 class SValdorsoBottega;
 class SValdorsoBaule;
 struct FValdorsoRegistro;
@@ -102,6 +104,25 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientTessera(const FValdorsoTesseraVista& Vista, APawn* Colono, bool bPropria);
 
+	/** (18/11, v0.2.7) Server: offre un contratto da firmare (ValdorsoContratto.h). DaChi e' chi lo porge (Livia): la
+	 *  firma vale solo li' vicino e per pochi minuti. Al giocatore si apre la pergamena. */
+	void OffriContratto(FValdorsoContrattoVista Vista, AActor* DaChi);
+
+	/** (19/11) Server: il nome e cognome scritti sulla tessera (per le firme sui registri). */
+	FString NomeSullaTessera();
+
+	/** (19/11) Server: fa leggere un foglio (il registro della ronda con le firme): la stessa pergamena del contratto,
+	 *  senza firma. Non offre niente: una firma mandata per questo foglio viene rifiutata. */
+	void MostraFoglio(FValdorsoContrattoVista Vista);
+
+	/** (18/11) Apre la pergamena del contratto su questo PC (SValdorsoContratto.h). */
+	UFUNCTION(Client, Reliable)
+	void ClientContratto(const FValdorsoContrattoVista& Vista);
+
+	/** (18/11) Il giocatore ha firmato il contratto che gli e' stato offerto. */
+	UFUNCTION(Server, Reliable)
+	void ServerFirmaContratto(FName Tipo, const FString& Firma);
+
 	// --- Dal PC del giocatore (il server controlla) ------------------------------------------------------
 
 	UFUNCTION(Server, Reliable)
@@ -153,6 +174,9 @@ public:
 	/** (09/11) La tessera aperta (solo sul PC del giocatore, ValdorsoTesseraSchermo). */
 	TSharedPtr<SValdorsoTessera> SchermataTessera;
 
+	/** (18/11) Il contratto aperto (solo sul PC del giocatore, ValdorsoContrattoSchermo). */
+	TSharedPtr<SValdorsoContratto> SchermataContratto;
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -174,6 +198,10 @@ private:
 	void ControllaAcqua();
 	/** Server: senza personaggio (l'accesso libero dell'editor) una tessera di prova, con il nome di chi gioca. */
 	void TesseraDiProva();
+	/** Server: (18/11) la tessera come si vede adesso: con la qualifica del grado nelle Guardie di Valdorso. */
+	FValdorsoTesseraVista TesseraDiAdesso() const;
+	/** PC: (18/11) prova ad aprire il contratto arrivato; se c'e' ancora il dialogo aperto riprova fra un attimo. */
+	void ProvaAdAprireIlContratto();
 	/** Server: un avviso breve in alto sullo schermo del giocatore. */
 	void Avvisa(const FText& Testo, float Secondi = 2.5f);
 
@@ -186,6 +214,15 @@ private:
 	/** Server: la tessera di chi gioca (vuota finché il personaggio non entra: allora una di prova). */
 	FValdorsoTesseraVista Tessera;
 	double ProssimaTesseraMostrata = 0.0;
+
+	/** Server: (18/11) il contratto offerto (NAME_None = nessuno), chi lo porge e fino a quando vale (secondi del mondo). */
+	FName ContrattoOfferto;
+	TWeakObjectPtr<AActor> ContrattoDa;
+	double ContrattoFino = 0.0;
+	/** PC: il contratto arrivato che aspetta di aprirsi, e quante volte ha provato. */
+	FValdorsoContrattoVista ContrattoInArrivo;
+	int32 ContrattoProve = 0;
+	FTimerHandle ContrattoTimer;
 
 	/** Server: vero dopo Carica (c'è un personaggio con il suo file). */
 	bool bPersonaggio = false;

@@ -229,6 +229,8 @@ void SValdorsoTessera::Construct(const FArguments& InArgs)
 	Aggiungi(Riga(LOCTEXT("Mestiere", "Già"), Vista.Mestiere));
 	Aggiungi(Riga(LOCTEXT("Fede", "Fede"), Vista.Fede));
 	Aggiungi(Riga(LOCTEXT("Qualifica", "Qualifica"), Vista.Tessera.Qualifica, true));
+	// (18/11, chiesto da Fra) il rango: popolano finché non arrivano i titoli
+	Aggiungi(Riga(LOCTEXT("Rango", "Rango"), Vista.Tessera.Rango.IsEmpty() ? FString(bDonna ? TEXT("Popolana") : TEXT("Popolano")) : Vista.Tessera.Rango));
 	Aggiungi(Riga(LOCTEXT("Rilascio", "Rilasciata"), Vista.Tessera.Rilascio));
 	if (Vista.Tessera.Timbri.Num() > 0)
 	{

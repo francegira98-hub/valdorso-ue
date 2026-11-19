@@ -119,7 +119,11 @@ namespace ValdorsoTerritori
 
 bool AValdorsoPietraVillaggio::Protegge(const FVector& Dove) const
 {
-	if (Forza <= 0.f || FVector::DistSquared(Dove, GetActorLocation()) > FMath::Square(RaggioPace))
+	// (19/11, secondo controllo) la pace si misura dal posto di casa della pietra (l'altare della cappella, nel mezzo
+	// del tempio), non da dove sta nella fase di adesso: se no nella chiesa e nella pieve, con l'altare in fondo, la
+	// navata verso l'ingresso resterebbe scoperta
+	const FVector Centro = bPostoDiCasaPreso ? PostoDiCasa : GetActorLocation();
+	if (Forza <= 0.f || FVector::DistSquared(Dove, Centro) > FMath::Square(RaggioPace))
 	{
 		return false;
 	}
@@ -315,6 +319,34 @@ void AValdorsoPietraVillaggio::BeginPlay()
 			Lino->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.36f, 0.29f, 0.2f));
 		}
 	}
+}
+
+void AValdorsoPietraVillaggio::VaiAlPostoDellaFase(int32 Fase)
+{
+	// (secondo controllo) il posto di casa: dove sta nel livello. Ci torna nelle fasi che non hanno un posto loro (se no,
+	// passando dalla fase 2 alla 1, resterebbe sull'altare della chiesa che non c'e' piu')
+	if (!bPostoDiCasaPreso)
+	{
+		PostoDiCasa = GetActorLocation();
+		bPostoDiCasaPreso = true;
+	}
+	const int32 Indice = Fase - 1;
+	const FVector Posto = (PostoPerFase.IsValidIndex(Indice) && !PostoPerFase[Indice].IsNearlyZero()) ? PostoPerFase[Indice] : PostoDiCasa;
+	if (GetActorLocation().Equals(Posto, 1.f))
+	{
+		return;
+	}
+	// i pezzi fermi non si spostano a gioco avviato: prima diventano mobili
+	TInlineComponentArray<USceneComponent*> Pezzi(this);
+	for (USceneComponent* Pezzo : Pezzi)
+	{
+		if (Pezzo && Pezzo->Mobility != EComponentMobility::Movable)
+		{
+			Pezzo->SetMobility(EComponentMobility::Movable);
+		}
+	}
+	SetActorLocation(Posto, false, nullptr, ETeleportType::TeleportPhysics);
+	UE_LOG(LogValdorso, Log, TEXT("[Valdorso] Pietra di Val d'Orso: fase %d, portata a (%.0f, %.0f, %.0f)"), Fase, Posto.X, Posto.Y, Posto.Z);
 }
 
 void AValdorsoPietraVillaggio::ImpostaForza(float Nuova)

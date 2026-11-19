@@ -44,8 +44,12 @@ GASPARE_LATI = (450.0, 350.0, 550.0, -450.0, -350.0, 650.0)
 
 # Le guardie: metri verso la valle davanti alla porta, metri di traverso (+ verso la bacheca del passo).
 GUARDIE = (
-    ("GuardiaCorrado", "Tebaldo, guardia della Corona", 2.0, -4.3),
-    ("GuardiaOttone", "Fulvio, guardia della Corona", 2.0, 4.3),
+    # (18/11 sera, v0.2.7) il posto di guardia della Guardia Reale (crea_mura.py, "Mura: 11"): ognuno nella sua garitta
+    # dentro le torri del portale (dati della chat 3D: lungo 133 e 132, traverso -430 e +430; il pavimento della nicchia
+    # sta 4 e 14 cm sotto l'origine del portale). Prima: 2 m davanti alla porta, a -4,3 e +4,3. L'ultimo numero e' la
+    # quota dei piedi rispetto all'origine della porta (None = si cerca il terreno, come prima).
+    ("GuardiaCorrado", "Tebaldo, guardia della Corona", 1.33, -4.3, -4.0),
+    ("GuardiaOttone", "Fulvio, guardia della Corona", 1.32, 4.3, -14.0),
 )
 NOME_PORTA = "Porta del passo"
 NOME_SIGILLO = "Sigillo della Corona"
@@ -65,8 +69,9 @@ EDDA_FRA_FUOCO_E_PASSERELLA = 0.65          # dal fuoco (0) all'inizio della pas
 NOME_LOCANDA = "Locanda_di_Bruno"
 NOME_PORTA_LOCANDA = "Locanda_di_Bruno porta"
 DATI_LOCANDA = (162200.0, 192428.0, 5569.2, 90.0)   # x, y, pavimento, gradi
-BRUNO_LOCALE = (-110.0, 300.0)              # in fondo al bancone (che va da -585 a -175 in x, a y 275..365)
-PORTA_LOCANDA_LOCALE = (-150.0, -480.0)
+# (17/11 notte, v0.2.7) la locanda nuova (SM_Locanda_Livia): Bruno dietro il bancone (x 160..240, y -310..70), prima (-110, 300)
+BRUNO_LOCALE = (305.0, -250.0)
+PORTA_LOCANDA_LOCALE = (-150.0, -500.0)
 
 NOME_ALTARE = "Altare del Cuore (luce)"     # 260 cm sopra il pavimento del tempio
 NOME_PIETRA = "La pietra di Val d'Orso"     # 118 cm sopra il pavimento (sull'altare)
@@ -255,10 +260,23 @@ def principale():
         dx, dy = dx / lung, dy / lung
         nx, ny = -dy, dx                              # di traverso al passo (come villaggio.py)
         verso_valle = math.degrees(math.atan2(dy, dx))
-        for dialogo, nome, avanti, traverso in GUARDIE:
+        # (18/11 sera) con il portale di pietra le guardie stanno nelle garitte: la quota e' quella dei dati (la linea
+        # dall'alto troverebbe il tetto della torre o il terreno sotto il lastricato)
+        nel_portale_nuovo = False
+        cm = porta.get_component_by_class(unreal.StaticMeshComponent)
+        sm = cm.get_editor_property("static_mesh") if cm else None
+        if sm is not None and sm.get_name() == "SM_Passo_Portale":
+            nel_portale_nuovo = True
+        for dialogo, nome, avanti, traverso, quota in GUARDIE:
+            if not nel_portale_nuovo:
+                # il portale di legno di prima: i posti di prima
+                avanti, traverso, quota = 2.0, (-4.3 if traverso < 0 else 4.3), None
             x = pp.x + (dx * avanti + nx * traverso) * 100.0
             y = pp.y + (dy * avanti + ny * traverso) * 100.0
-            z, libero = terra(x, y, pp.z, [porta, sigillo])
+            if quota is not None:
+                z, libero = pp.z + quota, True
+            else:
+                z, libero = terra(x, y, pp.z, [porta, sigillo])
             if z is None:
                 avviso("%s: la linea dall'alto non trova il paesaggio, uso la quota della porta" % nome)
                 z = pp.z
@@ -275,6 +293,8 @@ def principale():
     messi += metti_anselmo(classe, per_nome, nel_mondo, nostri)
 
     scrivi("messi %d PNG nella cartella %s" % (messi, CARTELLA))
+    # (19/11) Padre Anselmo viene rimesso da capo: i suoi posti nelle fasi 2 e 3 li riscrive "Volti"
+    scrivi("DOPO questa voce rilancia 'Volti: Marta, Livia, Tobia...': rimette i posti di Padre Anselmo nella chiesa e nella pieve")
     try:
         unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
         scrivi("livello salvato")

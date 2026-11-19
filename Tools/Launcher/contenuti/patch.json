@@ -1,8 +1,58 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-17",
+ "aggiornato": "2026-11-19",
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
+  {
+   "versione": "0.2.7",
+   "nome": "Il tempio",
+   "data": "",
+   "sommario": "Il Tempio del Cuore ha finalmente il suo interno: i banchi, l'altare, il sagrato. Al passo, la palizzata di legno lascia il posto al presidio di pietra della Guardia Reale, con la grata, la torretta e gli stendardi della Corona. E in valle arriva il primo lavoro vero: le Guardie di Valdorso, con un contratto da firmare, i turni e il soldo.",
+   "gruppi": [
+    {
+     "titolo": "Novità: le Guardie di Valdorso, il primo lavoro",
+     "voci": [
+      "Ci si arruola dalla capitana Livia, al passo: serve che si fidi di te e che tu non abbia colpe aperte.",
+      "Si firma un contratto vero, su pergamena, con la propria firma. Il contratto lega: trenta giorni di ferma prima di poter lasciare, e resta fra i documenti del Balivo.",
+      "Cinque gradi: recluta, guardia, sergente, vice comandante, comandante. Fino a sergente si sale con i turni fatti.",
+      "I turni, uno al giorno: la ronda (un giro del villaggio a firmare i quattro registri: locanda, forgia, tempio, mulino) oppure la guardia al portale del passo. A turno finito si torna dalla capitana, che lo segna.",
+      "I registri della ronda si possono leggere: su ogni foglio restano le firme di chi è passato, con il nome, il giorno e l'ora. Li può leggere chiunque; firmare, solo la guardia di ronda.",
+      "Il soldo: per ogni giorno di turno, secondo il grado. Si ritira dalla capitana.",
+      "Le chiavi arrivano con il grado: la caserma alla recluta, la prigione alla guardia. Le torri delle mura e le porte le tiene solo chi comanda.",
+      "Chi porta la divisa e commette una colpa è cacciato lo stesso giorno, e il suo contratto resta scritto come rotto.",
+      "La tessera del colono mostra la qualifica (per esempio «Recluta delle Guardie di Valdorso») e il rango."
+     ]
+    },
+    {
+     "titolo": "Novità: il passo e la Guardia Reale",
+     "voci": [
+      "Il posto di guardia del passo è rifatto in pietra: il portale con lo stemma e gli stendardi della Corona, i muri merlati, la torretta di vedetta con la scala a chiocciola, il quartiere con il corpo di guardia e l'alloggio della capitana.",
+      "Al posto della sbarra c'è una grata di ferro: alzata dall'alba al tramonto, abbassata di notte. La muove Tebaldo, che all'ora giusta lascia la garitta e va alla leva.",
+      "Al passo sta la Guardia Reale, che risponde solo alla Corona. Le Guardie di Valdorso sono un'altra cosa: gente del posto, pagata dal Balivo.",
+      "Nel cortile: il braciere, le panche di pietra su cui sedersi, la rastrelliera delle armi.",
+      "La capitana Livia la mattina sta al suo banco da campo, con il ruolo dei turni e la cassetta del soldo; a mezzogiorno sale sulla terrazza del quartiere."
+     ]
+    },
+    {
+     "titolo": "Novità: il villaggio",
+     "voci": [
+      "Il Tempio del Cuore ha l'interno nella chiesa (fase 2) e nella pieve (fase 3): banchi, altare, candelieri, e il sagrato davanti all'ingresso. La pietra di Val d'Orso sta sull'altare in ogni fase.",
+      "Padre Anselmo, Tobia e Maestro Elric hanno il loro posto in ogni fase del tempio: davanti all'altare, a spazzare dietro l'ultimo banco, seduto sulla panca contro il muro.",
+      "La locanda di Bruno è nuova: la sala con il bancone e il camino grande, la cucina, cinque camere, la stanza grande con la vasca e lo scrittoio, la camerata sotto il tetto.",
+      "Due ponti veri di pietra sul fiume, al mulino e a nord.",
+      "Scale di legno fuori dal mulino, e gradini davanti alle porte che ne avevano bisogno."
+     ]
+    },
+    {
+     "titolo": "Sistemato",
+     "voci": [
+      "Tutte le porte del villaggio sono state provate una per una, nelle tre fasi: non ce n'è più nessuna dove si resta bloccati.",
+      "La telecamera si avvicina e si allontana con la rotellina del mouse.",
+      "I letti non entrano più nei muri, e i bauli non entrano più nei letti."
+     ]
+    }
+   ]
+  },
   {
    "versione": "0.2.6",
    "nome": "Le mura",
