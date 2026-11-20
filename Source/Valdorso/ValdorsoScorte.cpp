@@ -1,6 +1,7 @@
 // Valdorso - Le scorte del villaggio (vedi ValdorsoScorte.h). Scritto da Claude l'11/11/2026.
 
 #include "ValdorsoScorte.h"
+#include "ValdorsoMonete.h"
 #include "Valdorso.h"
 #include "ValdorsoArchivista.h"
 #include "ValdorsoGilda.h"
@@ -242,9 +243,9 @@ void AValdorsoMagazzino::Interagisci(APawn* Chi)
 	{
 		Gilda->AggiungiPunti(Pezzi / 5);
 	}
-	Giocatore->ClientAvviso(FText::Format(LOCTEXT("Portato", "Porti al magazzino {0} pezzi: la cassa del villaggio ti da' {1} Aureus."),
-		FText::AsNumber(Pezzi), FText::AsNumber(Paga)), 4.f, 0.f);
-	ValdorsoRegistroEventi::Annota(TEXT("Magazzino"), Chi, this, GetActorLocation(), FString::Printf(TEXT("%d pezzi, %d Aureus"), Pezzi, Paga));
+	Giocatore->ClientAvviso(FText::Format(LOCTEXT("PortatoMonete", "Porti al magazzino {0} pezzi: la cassa del villaggio ti da' {1}."),
+		FText::AsNumber(Pezzi), ValdorsoMonete::Scritto(Paga)), 4.f, 0.f);
+	ValdorsoRegistroEventi::Annota(TEXT("Magazzino"), Chi, this, GetActorLocation(), FString::Printf(TEXT("%d pezzi, %d Lucio"), Pezzi, Paga));
 }
 
 // ------------------------------------------------------------------------------------------------ console (prove)

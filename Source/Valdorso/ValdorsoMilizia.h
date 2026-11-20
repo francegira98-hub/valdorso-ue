@@ -64,6 +64,11 @@ namespace ValdorsoMilizia
 	 *  e non finito entro SecondiPerUnTurno e' perso. Si segna tornando dalla capitana, uno al giorno della valle. */
 	inline constexpr uint8 TurnoRonda = 1;
 	inline constexpr uint8 TurnoGuardia = 2;
+	/** (20/11, v0.2.7.1) La guardia in garitta: SecondiDiGuardia nella garitta della caserma (entro RaggioGaritta cm dal
+	 *  punto AValdorsoCampanella::Garitta). La capitana la da' al posto di quella al passo un giorno si' e uno no, quando
+	 *  la caserma c'e' (fase 3 del villaggio). */
+	inline constexpr uint8 TurnoGaritta = 3;
+	inline constexpr float RaggioGaritta = 115.f;
 	inline constexpr float RaggioRonda = 700.f;
 	inline constexpr float RaggioGuardia = 900.f;
 	inline constexpr float SecondiDiGuardia = 300.f;

@@ -379,11 +379,11 @@ FString UValdorsoStaffComponent::Fai(const FString& Azione, const FString& Chi, 
 		{
 			if (!Valore.IsNumeric())
 			{
-				return TEXT("Scrivi gli Aureus (un numero).");
+				return TEXT("Scrivi i Lucio (un numero).");
 			}
 			Zaino->ImpostaMonete(FMath::Clamp(FCString::Atoi(*Valore), 0, ValdorsoZaino::MassimoMonete));
 			Annota(TEXT("fatto"));
-			return FString::Printf(TEXT("%s ha %d Aureus."), *Nome, Zaino->Contenuto().Monete);
+			return FString::Printf(TEXT("%s ha %d Lucio."), *Nome, Zaino->Contenuto().Monete);
 		}
 		if (Azione == TEXT("cura"))
 		{
@@ -509,12 +509,12 @@ FString UValdorsoStaffComponent::Fai(const FString& Azione, const FString& Chi, 
 		{
 			if (!Valore.IsNumeric())
 			{
-				return TEXT("Scrivi gli Aureus della cassa (un numero).");
+				return TEXT("Scrivi i Lucio della cassa (un numero).");
 			}
 			Bacheche->Dati().Cassa = FMath::Clamp(FCString::Atoi(*Valore), 0, ValdorsoGilda::CassaMassima);
 			Bacheche->Segna();
 			Annota(TEXT("fatto"));
-			return FString::Printf(TEXT("La cassa del villaggio ha %d Aureus."), Bacheche->Dati().Cassa);
+			return FString::Printf(TEXT("La cassa del villaggio ha %d Lucio."), Bacheche->Dati().Cassa);
 		}
 		// gli altri sono gli stessi comandi della chat (ComandoStaff controlla ancora i permessi)
 		FString Risposta;

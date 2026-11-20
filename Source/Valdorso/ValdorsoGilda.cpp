@@ -1,6 +1,7 @@
 // Valdorso - La Gilda nel mondo (vedi il .h). Scritto da Claude il 10/11/2026.
 
 #include "ValdorsoGilda.h"
+#include "ValdorsoMonete.h"
 #include "SValdorsoGilda.h"
 #include "Valdorso.h"
 #include "ValdorsoArchivista.h"
@@ -156,7 +157,7 @@ namespace
 			FRandomStream Caso(FPlatformTime::Cycles());
 			const bool bMesso = ValdorsoGilda::Genera(B->Dati(), UValdorsoBacheche::Adesso(), Caso);
 			B->Segna();
-			UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Gilda: %s (cassa %d Aureus)"), bMesso ? TEXT("un incarico nuovo") : TEXT("niente di nuovo"), B->Dati().Cassa);
+			UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Gilda: %s (cassa %d Lucio)"), bMesso ? TEXT("un incarico nuovo") : TEXT("niente di nuovo"), B->Dati().Cassa);
 		}));
 
 	FAutoConsoleCommandWithWorld ComandoGildaElenco(
@@ -171,7 +172,7 @@ namespace
 				return;
 			}
 			const FValdorsoBachecheSalvate& D = B->Dati();
-			UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Gilda: cassa %d Aureus, %d incarichi, %d proclami"), D.Cassa, D.Incarichi.Num(), D.Proclami.Num());
+			UE_LOG(LogValdorso, Display, TEXT("[Valdorso] Gilda: cassa %d Lucio, %d incarichi, %d proclami"), D.Cassa, D.Incarichi.Num(), D.Proclami.Num());
 			for (const FValdorsoIncarico& I : D.Incarichi)
 			{
 				UE_LOG(LogValdorso, Display, TEXT("  n. %d %s (%s, %s) presi %d su %d, compiuti %d, %s"), I.Numero, *I.Titolo,
@@ -418,7 +419,7 @@ bool UValdorsoBacheche::ComandoStaff(APlayerController* Chi, const FString& Riga
 		const FValdorsoIncarico& Messo = D.Incarichi.Last();
 		ValdorsoRegistroEventi::Annota(TEXT("Gilda"), Chi->GetPawn(), nullptr, FVector::ZeroVector,
 			FString::Printf(TEXT("incarico dello staff n. %d: %s (%s)"), Messo.Numero, *Messo.Titolo, *ValdorsoGilda::TestoLavoro(Messo).ToString()));
-		OutRisposta = FString::Printf(TEXT("Incarico n. %d appeso: %s (%s, %d Aureus)."), Messo.Numero, *Messo.Titolo.Left(60),
+		OutRisposta = FString::Printf(TEXT("Incarico n. %d appeso: %s (%s, %d Lucio)."), Messo.Numero, *Messo.Titolo.Left(60),
 			*ValdorsoGilda::NomeGrado(Messo.Grado).ToString(), Messo.Monete);
 		return true;
 	}
@@ -437,7 +438,7 @@ bool UValdorsoBacheche::ComandoStaff(APlayerController* Chi, const FString& Riga
 		return true;
 	}
 	// /cassa
-	OutRisposta = FString::Printf(TEXT("Cassa del villaggio: %d Aureus. Incarichi: %d (degli abitanti %d). Proclami: %d."),
+	OutRisposta = FString::Printf(TEXT("Cassa del villaggio: %d Lucio. Incarichi: %d (degli abitanti %d). Proclami: %d."),
 		D.Cassa, D.Incarichi.Num(), GildaDegliAbitanti(D), D.Proclami.Num());
 	return true;
 }
@@ -904,7 +905,7 @@ void UValdorsoGildaComponent::ServerBancone_Implementation(int32 Numero, uint8 A
 		}
 		Annota(FString::Printf(TEXT("Lucia assegna il n. %d: %s (cauzione %d)"), Numero, *Foglio.Titolo, Cauzione));
 		Avvisa(Cauzione > 0
-			? FText::Format(LOCTEXT("AssegnatoCauzione", "Lucia timbra il foglio «{0}» e tiene {1} Aureus di cauzione. L'incarico e' tuo."), Titolo, FText::AsNumber(Cauzione))
+			? FText::Format(LOCTEXT("AssegnatoCauzioneMonete", "Lucia timbra il foglio «{0}» e tiene {1} di cauzione. L'incarico e' tuo."), Titolo, ValdorsoMonete::Scritto(Cauzione))
 			: FText::Format(LOCTEXT("Assegnato", "Lucia timbra il foglio «{0}»: l'incarico e' tuo."), Titolo), 4.f);
 		break;
 	}
@@ -932,13 +933,13 @@ void UValdorsoGildaComponent::ServerBancone_Implementation(int32 Numero, uint8 A
 			Z.Monete = FMath::Min(ValdorsoZaino::MassimoMonete, Z.Monete + Paga);
 			return true;
 		});
-		Annota(FString::Printf(TEXT("compiuto il n. %d: %s (%d Aureus, %d punti)"), Numero, *Foglio.Titolo, Paga, Compiuto.Foglio.Punti));
+		Annota(FString::Printf(TEXT("compiuto il n. %d: %s (%d Lucio, %d punti)"), Numero, *Foglio.Titolo, Paga, Compiuto.Foglio.Punti));
 		// (10/11) i punti dicono quando si e' pronti; il grado lo da' una persona (Nomina)
 		const bool bPronto = ValdorsoGilda::DaAvvisarePronto(Gilda);
 		Avvisa(bPronto
-			? FText::Format(LOCTEXT("CompiutoPronto", "«Compiuto.» Lucia ti paga {0} Aureus. Hai i punti per il grado {1}: ne parlera' Mastro Ettore, il capo della filiale."),
-				FText::AsNumber(Paga), ValdorsoGilda::NomeGrado(ValdorsoGilda::GradoDopo(Gilda.Grado)))
-			: FText::Format(LOCTEXT("Compiuto", "«Compiuto.» Lucia timbra il foglio e ti paga {0} Aureus (+{1} punti della Gilda)."), FText::AsNumber(Paga), FText::AsNumber(Compiuto.Foglio.Punti)), 5.f);
+			? FText::Format(LOCTEXT("CompiutoProntoMonete", "«Compiuto.» Lucia ti paga {0}. Hai i punti per il grado {1}: ne parlera' Mastro Ettore, il capo della filiale."),
+				ValdorsoMonete::Scritto(Paga), ValdorsoGilda::NomeGrado(ValdorsoGilda::GradoDopo(Gilda.Grado)))
+			: FText::Format(LOCTEXT("CompiutoMonete", "«Compiuto.» Lucia timbra il foglio e ti paga {0} (+{1} punti della Gilda)."), ValdorsoMonete::Scritto(Paga), FText::AsNumber(Compiuto.Foglio.Punti)), 5.f);
 		if (bPronto)
 		{
 			Annota(FString::Printf(TEXT("pronto per il grado %s (%d punti)"), *ValdorsoGilda::NomeGrado(ValdorsoGilda::GradoDopo(Gilda.Grado)).ToString(), Gilda.Punti));

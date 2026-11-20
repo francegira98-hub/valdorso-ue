@@ -182,7 +182,7 @@ namespace
 
 	FAutoConsoleCommandWithWorldAndArgs ComandoZainoMonete(
 		TEXT("Valdorso.Zaino.Monete"),
-		TEXT("Per le prove: quanti Aureus ha il colono, Valdorso.Zaino.Monete <n> [nome] (sul server, o da soli)."),
+		TEXT("Per le prove: quanti Lucio ha il colono, Valdorso.Zaino.Monete <n> [nome] (sul server, o da soli)."),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Argomenti, UWorld* Mondo)
 		{
 			if (Argomenti.Num() < 1)
@@ -193,7 +193,7 @@ namespace
 			const int32 Monete = FMath::Max(0, FCString::Atoi(*Argomenti[0]));
 			const FString Nome = Argomenti.Num() > 1 ? Argomenti[1] : FString();
 			ZainoEsito(ZainoPerOgniGiocatore(Mondo, Nome, [Monete](UValdorsoZainoComponent& Zaino) { Zaino.ImpostaMonete(Monete); }),
-				FString::Printf(TEXT("%d Aureus"), Monete));
+				FString::Printf(TEXT("%d Lucio"), Monete));
 		}));
 
 	FAutoConsoleCommandWithWorldAndArgs ComandoZainoSvuota(
@@ -479,6 +479,9 @@ void UValdorsoZainoComponent::Svuota()
 		const int32 MiliziaSoldo = Zaino.MiliziaGiorniSoldo;
 		const int64 MiliziaGiorno = Zaino.MiliziaGiornoTurno;
 		const TArray<FValdorsoDocumento> Firmati = Zaino.Documenti;
+		// (20/11) e la camera alla locanda (la chiave no: gliela rida Bruno)
+		const uint8 Camera = Zaino.CameraLocanda;
+		const int64 CameraFino = Zaino.CameraFinoUtc;
 		Zaino = FValdorsoZaino();
 		Zaino.Baule = NelBaule;
 		Zaino.CellaFinoUtc = Pena;
@@ -489,6 +492,8 @@ void UValdorsoZainoComponent::Svuota()
 		Zaino.MiliziaGiorniSoldo = MiliziaSoldo;
 		Zaino.MiliziaGiornoTurno = MiliziaGiorno;
 		Zaino.Documenti = Firmati;
+		Zaino.CameraLocanda = Camera;
+		Zaino.CameraFinoUtc = CameraFino;
 		ValdorsoZaino::Sistema(Zaino);
 		// svuotato apposta: la partenza non torna da sola
 		Zaino.bPartenzaData = bData || !bPersonaggio;

@@ -2,6 +2,7 @@
 // Unity build: le cose del namespace anonimo cominciano con Fiducia.
 
 #include "ValdorsoFiducia.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoPNG.h"
 #include "ValdorsoStatoColono.h"
 #include "ValdorsoPlayerController.h"
@@ -507,7 +508,7 @@ namespace ValdorsoFiducia
 			if (Colono)
 			{
 				ValdorsoRegistroEventi::Annota(TEXT("Multa"), Colono, Png, Colono->GetActorLocation(),
-					FString::Printf(TEXT("%d Aureus al Balivo"), Multa));
+					FString::Printf(TEXT("%s al Balivo"), *ValdorsoMonete::Testo(Multa)));
 			}
 			return true;
 		}

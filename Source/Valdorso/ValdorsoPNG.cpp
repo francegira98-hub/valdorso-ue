@@ -9,6 +9,7 @@
 #include "ValdorsoStorie.h"
 #include "ValdorsoFiducia.h"
 #include "ValdorsoMilizia.h"
+#include "ValdorsoLocanda.h"
 #include "ValdorsoContratto.h"
 #include "ValdorsoBattito.h"
 #include "ValdorsoStatoColono.h"
@@ -633,6 +634,11 @@ void AValdorsoPNG::Scegli(APlayerController* Chi, int32 Passo, int32 Scelta)
 	}
 	// (14/11, v0.2.4) l'arresto: la multa (senza monete si va a "non_basta") o la cella (ValdorsoFiducia.h)
 	if (ValdorsoFiducia::EventoDialogo(Evento, Chi, this, Prossimo))
+	{
+		Evento = NAME_None;
+	}
+	// (20/11, v0.2.7.1) le camere della locanda: Bruno da' la chiave per una notte (ValdorsoLocanda.h)
+	if (ValdorsoLocanda::EventoDialogo(Evento, Chi, this, Prossimo))
 	{
 		Evento = NAME_None;
 	}

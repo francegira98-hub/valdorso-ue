@@ -1,6 +1,7 @@
 // Valdorso - Lo zaino: quello che si vede (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "SValdorsoZaino.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoGilda.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoOggetti.h"
@@ -476,7 +477,7 @@ int32 SValdorsoGrigliaZaino::OnPaint(const FPaintArgs& Args, const FGeometry& Al
 	ZainoScrivi(OutDrawElements, LayerId, AllottedGeometry, LOCTEXT("Barra", "La barra delle azioni (tasti 1-8)").ToString(), FontEtichetta,
 		FVector2f(AngoloTasto(0).X, RigaEtichetta), ValdorsoTema::InchiostroTenue());
 	{
-		const FString Monete = FText::Format(LOCTEXT("Aureus", "{0} Aureus"), FText::AsNumber(Contenuto.Monete)).ToString();
+		const FString Monete = ValdorsoMonete::Testo(Contenuto.Monete);
 		const FSlateFontInfo FontMonete = Caratteri->Titolo(14.f, TEXT("Bold"));
 		const FVector2f Misura = ZainoMisura(Monete, FontMonete);
 		const float Destra = AngoloTasto(ValdorsoZaino::NumeroAzioni - 1).X + LatoTasto;

@@ -1,6 +1,7 @@
 // Valdorso - La grotta del nord (vedi ValdorsoGrottaNord.h). Scritto da Claude l'11/11/2026.
 
 #include "ValdorsoGrottaNord.h"
+#include "ValdorsoMonete.h"
 #include "Valdorso.h"
 #include "ValdorsoArchivista.h"
 #include "ValdorsoAttributeSet.h"
@@ -372,9 +373,9 @@ namespace ValdorsoGrottaNord
 			{
 				Taccuino->AnnotaIscrizione(TitoloStoria() + TEXT(" (la fine)"), RigheFine());
 			}
-			Giocatore->ClientAvviso(LOCTEXT("Ricompensa", "Lucia ti da' 60 Aureus dalla cassa della Gilda, e scrive il tuo nome nel registro: 8 punti."), 6.f, 0.f);
+			Giocatore->ClientAvviso(LOCTEXT("Ricompensa", "Lucia ti da' 3 Aureus dalla cassa della Gilda, e scrive il tuo nome nel registro: 8 punti."), 6.f, 0.f);
 			ValdorsoRegistroEventi::Annota(TEXT("Storia"), Chi->GetPawn(), nullptr, FVector::ZeroVector,
-				TEXT("Quelli che non tornarono: finita (60 Aureus, 8 punti della Gilda)"));
+				TEXT("Quelli che non tornarono: finita (60 Lucio, 8 punti della Gilda)"));
 			return true;
 		}
 		return false;
@@ -810,9 +811,9 @@ void AValdorsoForziere::Interagisci(APawn* Chi)
 		// (14/11, v0.2.3) un ritrovamento dei nani: raro, e lo dice da dove viene
 		Zaino->Dai(TEXT("Pugnale_Nani"), 1, true, 2, TEXT("Trovato nella grotta del nord"));
 	}
-	Giocatore->ClientAvviso(FText::Format(LOCTEXT("Aperto", "Nel forziere: {0} monete dei nani e {1} Aureus."), FText::AsNumber(Monete),
-		FText::AsNumber(Aureus)), 4.f, 0.f);
-	ValdorsoRegistroEventi::Annota(TEXT("Forziere"), Chi, this, GetActorLocation(), FString::Printf(TEXT("%d monete, %d Aureus"), Monete, Aureus));
+	Giocatore->ClientAvviso(FText::Format(LOCTEXT("ApertoMonete", "Nel forziere: {0} monete dei nani e {1}."), FText::AsNumber(Monete),
+		ValdorsoMonete::Scritto(Aureus)), 4.f, 0.f);
+	ValdorsoRegistroEventi::Annota(TEXT("Forziere"), Chi, this, GetActorLocation(), FString::Printf(TEXT("%d monete, %d Lucio"), Monete, Aureus));
 	// (11/11) il forziere-trappola: la grata e le ossa (ValdorsoTrappole.h)
 	if (bAllarme)
 	{

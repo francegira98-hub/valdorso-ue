@@ -1,6 +1,7 @@
 // Valdorso - La milizia (vedi ValdorsoMilizia.h).
 
 #include "ValdorsoMilizia.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoContratto.h"
 #include "ValdorsoFiducia.h"
 #include "ValdorsoStatoColono.h"
@@ -8,6 +9,7 @@
 #include "ValdorsoPNG.h"
 #include "ValdorsoRegistroEventi.h"
 #include "ValdorsoRegistroRonda.h"
+#include "ValdorsoCampanella.h"
 #include "ValdorsoTaccuino.h"
 #include "ValdorsoZaino.h"
 #include "ValdorsoZainoDati.h"
@@ -136,6 +138,7 @@ namespace
 		double Scade = 0.0;             // FPlatformTime::Seconds() oltre cui il turno e' perso
 		double Ultimo = 0.0;            // FPlatformTime::Seconds() dell'ultimo giro (per contare il tempo vero passato)
 		bool bFinito = false;           // fatto: resta da tornare dalla capitana
+		FVector Posto = FVector::ZeroVector;   // la guardia in garitta: dove deve stare
 	};
 
 	TArray<FMiliziaTurno> MiliziaTurni;
@@ -261,6 +264,28 @@ namespace
 				{
 					Turno.bFinito = true;
 					MiliziaAvvisa(Chi, LOCTEXT("RondaFinita", "Ronda finita: il giro e' fatto. Torna dalla capitana a farti segnare il turno."));
+				}
+			}
+			else if (Turno.Tipo == ValdorsoMilizia::TurnoGaritta)
+			{
+				// (20/11) nella garitta della caserma: sullo stesso piano, a due passi dal punto
+				if (FVector::DistSquared2D(Turno.Posto, Qui) <= FMath::Square(ValdorsoMilizia::RaggioGaritta) && FMath::Abs(Turno.Posto.Z - Qui.Z) < 300.0)
+				{
+					Turno.Secondi += Passo;
+					const int32 Minuti = FMath::FloorToInt32(Turno.Secondi / 60.f);
+					if (Turno.Secondi >= ValdorsoMilizia::SecondiDiGuardia)
+					{
+						Turno.bFinito = true;
+						MiliziaAvvisa(Chi, LOCTEXT("GarittaFinita", "Guardia finita: il cambio e' arrivato. Torna dalla capitana a farti segnare il turno."));
+					}
+					else if (Minuti > Turno.MinutiDetti)
+					{
+						Turno.MinutiDetti = Minuti;
+						const int32 Restano = FMath::CeilToInt32((ValdorsoMilizia::SecondiDiGuardia - Turno.Secondi) / 60.f);
+						MiliziaAvvisa(Chi, Restano <= 1
+							? LOCTEXT("GarittaUnMinuto", "Di guardia in garitta: ancora un minuto.")
+							: FText::Format(LOCTEXT("GarittaMinuti", "Di guardia in garitta: ancora {0} minuti."), FText::AsNumber(Restano)));
+					}
 				}
 			}
 			else if (Turno.Tipo == ValdorsoMilizia::TurnoGuardia)
@@ -432,7 +457,7 @@ namespace ValdorsoMilizia
 		Vista.Righe.Add(TEXT("Io sottoscritto, colono della valle dell'Orso, di mia volonta' e senza costrizione, entro nelle Guardie di Valdorso con il grado di recluta."));
 		Vista.Righe.Add(TEXT("Giuro di servire il Balivo e la gente della valle, di obbedire al Comandante delle Guardie e a chi ne tiene il posto, di fare i turni che mi sono dati e di tacere quello che vedo in servizio."));
 		Vista.Righe.Add(FString::Printf(TEXT("Mi lego per una ferma di %d giorni: prima di allora non posso lasciare il servizio."), GiorniDiFerma));
-		Vista.Righe.Add(FString::Printf(TEXT("Ricevo dal Balivo un soldo di %d Aureus per ogni giorno in cui ho fatto il mio turno, che cresce con il grado, un letto in caserma e le chiavi del mio grado. Le chiavi sono del Balivo: le rendo il giorno che lascio."),
+		Vista.Righe.Add(FString::Printf(TEXT("Ricevo dal Balivo un soldo di %d Lucio per ogni giorno in cui ho fatto il mio turno, che cresce con il grado, un letto in caserma e le chiavi del mio grado. Le chiavi sono del Balivo: le rendo il giorno che lascio."),
 			SoldoAlGiorno(Recluta)));
 		Vista.Righe.Add(TEXT("Chi porta questa divisa e alza le mani sulla gente, ruba o tradisce, e' cacciato lo stesso giorno, e questo contratto resta scritto come rotto."));
 		Vista.Righe.Add(TEXT("Questo foglio e' conservato fra i documenti del Balivo."));
@@ -793,9 +818,9 @@ namespace ValdorsoMilizia
 				return true;
 			});
 			MiliziaAvvisa(Chi, Giorni == 1
-				? FText::Format(LOCTEXT("SoldoUno", "Il soldo di un giorno: {0} Aureus."), FText::AsNumber(Soldo))
-				: FText::Format(LOCTEXT("Soldo", "Il soldo di {0} giorni: {1} Aureus."), FText::AsNumber(Giorni), FText::AsNumber(Soldo)));
-			MiliziaAnnota(Chi, Png, FString::Printf(TEXT("soldo: %d giorni, %d Aureus"), Giorni, Soldo));
+				? FText::Format(LOCTEXT("SoldoUnoMonete", "Il soldo di un giorno: {0}."), ValdorsoMonete::Scritto(Soldo))
+				: FText::Format(LOCTEXT("SoldoMonete", "Il soldo di {0} giorni: {1}."), FText::AsNumber(Giorni), ValdorsoMonete::Scritto(Soldo)));
+			MiliziaAnnota(Chi, Png, FString::Printf(TEXT("soldo: %d giorni, %d Lucio"), Giorni, Soldo));
 			InOutProssimo = FName(TEXT("milizia_paga"));
 			return true;
 		}
@@ -867,6 +892,28 @@ namespace ValdorsoMilizia
 			}
 			else
 			{
+				// (20/11, v0.2.7.1) un giorno si' e uno no, se la caserma c'e' (fase 3), la guardia e' nella sua garitta
+				const AValdorsoCampanella* Caserma = nullptr;
+				for (TActorIterator<AValdorsoCampanella> It(Chi->GetWorld()); It; ++It)
+				{
+					if (*It && !It->IsHidden() && !It->Garitta.IsZero())
+					{
+						Caserma = *It;
+						break;
+					}
+				}
+				if (Caserma && (MiliziaGiornoDiOggi() % 2) == 1)
+				{
+					Preso.Tipo = TurnoGaritta;
+					Preso.Posto = Caserma->Garitta;
+					MiliziaAvvisa(Chi, FText::Format(LOCTEXT("GarittaParte", "Guardia in garitta: {0} minuti nella garitta della caserma, accanto al portale. Poi torna dalla capitana."),
+						FText::AsNumber(FMath::RoundToInt32(SecondiDiGuardia / 60.f))));
+					MiliziaTurni.Add(Preso);
+					MiliziaAvviaGiro();
+					MiliziaAnnota(Chi, Png, TEXT("turno: comincia la guardia in garitta"));
+					InOutProssimo = FName(TEXT("milizia_garitta"));
+					return true;
+				}
 				MiliziaAvvisa(Chi, FText::Format(LOCTEXT("GuardiaParte", "Guardia al passo: {0} minuti al portale, accanto a Tebaldo. Poi torna dalla capitana."),
 					FText::AsNumber(FMath::RoundToInt32(SecondiDiGuardia / 60.f))));
 			}
@@ -900,7 +947,7 @@ namespace ValdorsoMilizia
 			{
 				MiliziaAvvisa(Chi, FText::Format(LOCTEXT("TurnoSegnato", "Turno segnato: ne hai fatti {0}. Il soldo di oggi ti aspetta dalla capitana."),
 					FText::AsNumber(Zaino->Contenuto().TurniMilizia)));
-				MiliziaAnnota(Chi, Png, bRondaFatta ? TEXT("turno fatto: ronda") : TEXT("turno fatto: guardia al passo"));
+				MiliziaAnnota(Chi, Png, bRondaFatta ? TEXT("turno fatto: ronda") : TEXT("turno fatto: guardia"));
 			}
 		}
 		// chiede (o rivuole le chiavi): se i turni bastano sale di grado, e in ogni caso riceve le chiavi che gli spettano

@@ -1,6 +1,7 @@
 // Valdorso - La schermata della Gilda (vedi SValdorsoGilda.h). Scritto da Claude il 10/11/2026.
 
 #include "SValdorsoGilda.h"
+#include "ValdorsoMonete.h"
 #include "SValdorsoZaino.h"
 #include "ValdorsoGilda.h"
 #include "ValdorsoPlayerController.h"
@@ -310,7 +311,7 @@ TSharedRef<SWidget> SValdorsoGilda::Foglio(const FValdorsoIncarico& I, int64 Ade
 				.VAlign(VAlign_Bottom)
 				[
 					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("PagaBreve", "{0} Aureus · {1} su {2} · {3}"), FText::AsNumber(I.Monete), FText::AsNumber(I.Presi),
+					.Text(FText::Format(LOCTEXT("PagaBreveMonete", "{0} · {1} su {2} · {3}"), ValdorsoMonete::Scritto(I.Monete), FText::AsNumber(I.Presi),
 						FText::AsNumber(I.Posti), ValdorsoGilda::TestoScadenza(I.Scadenza, Adesso)))
 					.Font(Caratteri->Testo(12.f, TEXT("Bold")))
 					.ColorAndOpacity(bGiallo ? ValdorsoTema::Rubrica() : ValdorsoTema::OroScuro())
@@ -335,12 +336,12 @@ TSharedRef<SWidget> SValdorsoGilda::Dettaglio(int64 Adesso)
 	}
 	const int32 Cauzione = ValdorsoGilda::Cauzione(*I);
 	TArray<FString> Righe;
-	Righe.Add(FString::Printf(TEXT("Paga: %d Aureus e %d punti della Gilda."), I->Monete, I->Punti));
+	Righe.Add(FString::Printf(TEXT("Paga: %s, e %d punti della Gilda."), *ValdorsoMonete::Testo(I->Monete), I->Punti));
 	Righe.Add(FString::Printf(TEXT("Posti: %d presi su %d. Scade %s."), I->Presi, I->Posti, *ValdorsoGilda::TestoScadenza(I->Scadenza, Adesso).ToString()));
 	Righe.Add(FString::Printf(TEXT("Grado: %s."), *ValdorsoGilda::NomeGrado(I->Grado).ToString()));
 	if (Cauzione > 0)
 	{
-		Righe.Add(FString::Printf(TEXT("Lucia vuole una cauzione di %d Aureus (torna alla fine)."), Cauzione));
+		Righe.Add(FString::Printf(TEXT("Lucia vuole una cauzione di %s (torna alla fine)."), *ValdorsoMonete::Testo(Cauzione)));
 	}
 	const int32 Numero = I->Numero;
 	TWeakObjectPtr<UValdorsoGildaComponent> DeboleGilda = Gilda;
@@ -537,8 +538,8 @@ TSharedRef<SWidget> SValdorsoGilda::RigaPreso(const FValdorsoIncaricoPreso& P, i
 				.AutoHeight()
 				[
 					SNew(STextBlock)
-					.Text(FText::Format(LOCTEXT("PagaRiga", "{0} · {1} Aureus e {2} punti"), FText::FromString(P.Foglio.Committente),
-						FText::AsNumber(P.Foglio.Monete), FText::AsNumber(P.Foglio.Punti)))
+					.Text(FText::Format(LOCTEXT("PagaRigaMonete", "{0} · {1}, e {2} punti"), FText::FromString(P.Foglio.Committente),
+						ValdorsoMonete::Scritto(P.Foglio.Monete), FText::AsNumber(P.Foglio.Punti)))
 					.Font(Caratteri->Testo(13.f, TEXT("Italic")))
 					.ColorAndOpacity(ValdorsoTema::InchiostroTenue())
 				]

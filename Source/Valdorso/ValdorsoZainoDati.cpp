@@ -81,7 +81,9 @@ namespace ValdorsoZaino
 		// (17/11, v0.2.7) e le chiavi della milizia: Livia le ritira dallo zaino a chi esce, nel baule le perderebbe di vista
 		const FName Id = Zaino.Posti.IsValidIndex(Posto) ? Zaino.Posti[Posto].Id : NAME_None;
 		if (Id == FName(TEXT("Chiave_Caserma")) || Id == FName(TEXT("Chiave_Torri")) || Id == FName(TEXT("Chiave_Prigione")) || Id == FName(TEXT("Chiave_Passo"))
-			|| Id == FName(TEXT("Chiave_Porta")))
+			|| Id == FName(TEXT("Chiave_Porta"))
+			// (20/11, v0.2.7.1) e la chiave della camera della locanda: Bruno se la riprende dallo zaino
+			|| Id.ToString().StartsWith(TEXT("Chiave_Camera_")))
 		{
 			return false;
 		}

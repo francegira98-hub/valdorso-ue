@@ -1,6 +1,7 @@
 // Valdorso - La Gilda e il Balivo: i dati e le regole (vedi il .h). Scritto da Claude il 10/11/2026.
 
 #include "ValdorsoGildaDati.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoLupi.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoTaccuinoDati.h"
@@ -377,7 +378,7 @@ namespace ValdorsoGilda
 		const int32 Serve = Cauzione(P->Foglio);
 		if (Monete < Serve)
 		{
-			return FText::Format(LOCTEXT("Cauzione", "Per questo incarico Lucia vuole una cauzione di {0} Aureus (torna alla fine)."), FText::AsNumber(Serve));
+			return FText::Format(LOCTEXT("CauzioneMonete", "Per questo incarico Lucia vuole una cauzione di {0} (torna alla fine)."), ValdorsoMonete::Scritto(Serve));
 		}
 		return FText::GetEmpty();
 	}

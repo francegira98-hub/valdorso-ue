@@ -560,7 +560,7 @@ namespace ValdorsoRegistro
 			{ TEXT("fuga"), TEXT("La fama, buona o cattiva, cresce più piano. Ma qualcuno ti cerca.") },
 			{ TEXT("scomparso"), TEXT("Una storia nascosta: la persona che cerchi.") },
 			{ TEXT("sogno"), TEXT("Sogni che anticipano fatti veri della valle, legati all'Orso.") },
-			{ TEXT("debito"), TEXT("Più Aureus all'inizio, ma un creditore verrà a riscuotere.") },
+			{ TEXT("debito"), TEXT("Più monete all'inizio, ma un creditore verrà a riscuotere.") },
 			{ TEXT("fede"), TEXT("Un po' di favore della tua divinità.") },
 			{ TEXT("avventura"), TEXT("Scoprire luoghi nuovi ti dà di più.") },
 		};

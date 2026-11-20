@@ -2,6 +2,7 @@
 // (14/11, v0.2.4) La colpa e le guardie (ValdorsoFiducia.h).
 
 #include "ValdorsoStatoColono.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoFiducia.h"
 #include "ValdorsoMilizia.h"
 #include "ValdorsoMura.h"
@@ -492,9 +493,9 @@ void AValdorsoPlayerState::Arresta()
 		if (bPagato)
 		{
 			ValdorsoRegistroEventi::Annota(TEXT("Multa"), Colono, nullptr, Colono->GetActorLocation(),
-				FString::Printf(TEXT("%d Aureus al Balivo (senza guardie)"), ValdorsoFiducia::Multa));
-			Giocatore->ClientAvviso(FText::Format(LOCTEXT("MultaSola", "Il Balivo ti ha mandato il conto: {0} Aureus di multa."),
-				FText::AsNumber(ValdorsoFiducia::Multa)), 4.f, 0.f);
+				FString::Printf(TEXT("%s al Balivo (senza guardie)"), *ValdorsoMonete::Testo(ValdorsoFiducia::Multa)));
+			Giocatore->ClientAvviso(FText::Format(LOCTEXT("MultaSolaMonete", "Il Balivo ti ha mandato il conto: {0} di multa."),
+				ValdorsoMonete::Scritto(ValdorsoFiducia::Multa)), 4.f, 0.f);
 			Assolvi();
 		}
 		else

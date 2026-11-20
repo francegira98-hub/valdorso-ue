@@ -1,6 +1,7 @@
 // Valdorso - La schermata di una bottega (v0.1.4, 10/11/2026). Scritto da Claude. Vedi SValdorsoBottega.h.
 
 #include "SValdorsoBottega.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoQualita.h"
 #include "SValdorsoZaino.h"
 #include "ValdorsoBotteghe.h"
@@ -256,7 +257,7 @@ FText SValdorsoBottega::MancaDi(const FValdorsoRicetta* Ricetta) const
 FText SValdorsoBottega::TestoMonete() const
 {
 	const UValdorsoZainoComponent* Il = Zaino.Get();
-	return FText::Format(LOCTEXT("Monete", "{0} Aureus"), FText::AsNumber(Il ? Il->Contenuto().Monete : 0));
+	return FText::Format(LOCTEXT("MoneteScritte", "{0}"), ValdorsoMonete::Scritto(Il ? Il->Contenuto().Monete : 0));
 }
 
 FReply SValdorsoBottega::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)

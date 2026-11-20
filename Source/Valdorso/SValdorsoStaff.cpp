@@ -301,7 +301,7 @@ TSharedRef<SWidget> SValdorsoStaff::Coloni()
 			&& (bStaffGilda || (V.bCapo && C.bPronto && Dopo <= ValdorsoGilda::MassimoDelCapo && Nome != V.Io));
 		const FString Su = FString::FromInt(static_cast<int32>(Dopo));
 		const FString Giu = FString::FromInt(FMath::Max(0, static_cast<int32>(C.Grado) - 1));
-		const FString Testo = FString::Printf(TEXT("%s · %s%s · %d punti%s · %d incarichi · %d Aureus · salute %d%s%s"), *C.Nome,
+		const FString Testo = FString::Printf(TEXT("%s · %s%s · %d punti%s · %d incarichi · %d Lucio · salute %d%s%s"), *C.Nome,
 			*ValdorsoGilda::NomeGrado(C.Grado).ToString(), C.bCapo ? TEXT(" (capo gilda)") : TEXT(""), C.Punti,
 			C.bPronto ? *FString::Printf(TEXT(" · PRONTO per il %s"), *ValdorsoGilda::NomeGrado(Dopo).ToString()) : TEXT(""),
 			C.Incarichi, C.Monete, C.Salute, C.Luogo.IsEmpty() ? TEXT("") : TEXT(" · "), *C.Luogo);
@@ -407,8 +407,8 @@ TSharedRef<SWidget> SValdorsoStaff::Prove()
 			SNew(SWrapBox).UseAllottedSize(true)
 			+ SWrapBox::Slot()[Casella(TestoOggetto, LOCTEXT("OggettoHint", "Id quanti (es. Pane_Nero 3)"), 260.f)]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Dai", "Dai"), TEXT("dai"), ChiScelto, [Oggetto]() { return *Oggetto; })]
-			+ SWrapBox::Slot()[Casella(TestoMonete, LOCTEXT("MoneteHint", "Aureus"), 120.f)]
-			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Monete", "Imposta gli Aureus"), TEXT("monete"), ChiScelto, [Monete]() { return *Monete; })]
+			+ SWrapBox::Slot()[Casella(TestoMonete, LOCTEXT("MoneteHint", "Lucio"), 120.f)]
+			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Monete", "Imposta i Lucio"), TEXT("monete"), ChiScelto, [Monete]() { return *Monete; })]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Cura", "Cura"), TEXT("cura"), ChiScelto, nullptr)]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Armeria", "Armeria"), TEXT("armeria"), ChiScelto, nullptr)]
 			+ SWrapBox::Slot()[Pulsante(LOCTEXT("Fatto", "Incarichi fatti"), TEXT("fatto"), ChiScelto, nullptr)]
@@ -437,7 +437,7 @@ TSharedRef<SWidget> SValdorsoStaff::Bacheche()
 	const FValdorsoStaffVista& V = S->Vista();
 	const int64 Adesso = FDateTime::UtcNow().ToUnixTimestamp();
 	TSharedRef<SVerticalBox> Sinistra = SNew(SVerticalBox);
-	Sinistra->AddSlot().AutoHeight()[Titoletto(FText::Format(LOCTEXT("Incarichi", "Incarichi ({0}) · cassa del villaggio {1} Aureus"),
+	Sinistra->AddSlot().AutoHeight()[Titoletto(FText::Format(LOCTEXT("Incarichi", "Incarichi ({0}) · cassa del villaggio {1} Lucio"),
 		FText::AsNumber(V.Incarichi.Num()), FText::AsNumber(V.Cassa)))];
 	for (const FValdorsoIncarico& I : V.Incarichi)
 	{
@@ -447,7 +447,7 @@ TSharedRef<SWidget> SValdorsoStaff::Bacheche()
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
 			[
-				Riga(FString::Printf(TEXT("n. %d %s · %s · %s · %d Aureus · presi %d su %d, compiuti %d · %s%s"), I.Numero, *I.Titolo,
+				Riga(FString::Printf(TEXT("n. %d %s · %s · %s · %d Lucio · presi %d su %d, compiuti %d · %s%s"), I.Numero, *I.Titolo,
 					*ValdorsoGilda::TestoLavoro(I).ToString(), *ValdorsoGilda::NomeGrado(I.Grado).ToString(), I.Monete, I.Presi, I.Posti, I.Compiuti,
 					*ValdorsoGilda::TestoScadenza(I.Scadenza, Adesso).ToString(), I.bAbitanti ? TEXT(" (abitanti)") : *FString::Printf(TEXT(" (di %s)"), *I.Autore)),
 					ValdorsoTema::Pergamena())
@@ -510,7 +510,7 @@ TSharedRef<SWidget> SValdorsoStaff::Bacheche()
 		+ SVerticalBox::Slot().AutoHeight()
 		[
 			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot().AutoWidth()[Casella(TestoCassa, LOCTEXT("CassaHint", "Aureus"), 120.f)]
+			+ SHorizontalBox::Slot().AutoWidth()[Casella(TestoCassa, LOCTEXT("CassaHint", "Lucio"), 120.f)]
 			+ SHorizontalBox::Slot().AutoWidth()[Pulsante(LOCTEXT("ImpostaCassa", "Imposta la cassa"), TEXT("cassa"), nullptr, [Cassa]() { return *Cassa; })]
 		];
 	return SNew(SHorizontalBox)

@@ -765,7 +765,7 @@ namespace
 			TEXT("(Bruno sbatte sul bancone una scodella fumante di zuppa di cipolle e un pezzo di pane nero.)"),
 			TEXT("Mangia. No, metti via quella mano, che non voglio vedere monete. La prima la offre la casa: è la regola di Bruno, ed è più vecchia della locanda."),
 			TEXT("(Il pane nero te lo fa mettere nella bisaccia: per la strada, dice, che la valle è lunga.)"),
-			TEXT("La seconda la paghi. Con gli Aureus della Corona, quando ne avrai da spendere: per adesso qui si paga in legna, in pesce e in storie belle."),
+			TEXT("La seconda la paghi. Con le monete della Corona, quando ne avrai da spendere: per adesso qui si paga in legna, in pesce e in storie belle."),
 			})
 			.Scelta(TEXT("Grazie, Bruno. È buonissima."), TEXT("ancora"))
 			.Scelta(TEXT("Allora pago con una domanda: che si dice in giro?"), TEXT("voci"));
@@ -780,14 +780,70 @@ namespace
 			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
 			.Scelta(TEXT("Ti lascio ai tuoi boccali."), TEXT("congedo"));
 
+		// (20/11, v0.2.7.1) la camerata resta di tutti; le cinque camere hanno la chiave (ValdorsoLocanda.h)
 		D.Nodo(TEXT("dormire"), {
-			TEXT("Un letto? Di sopra ce ne sono quattro. Le lenzuola le lava Agnese del mulino: sanno un po' di farina, ma sono pulite."),
-			TEXT("Quanto costa? Niente, finché la Corona non decide quanto devono costare le cose da queste parti. Si dorme, si russa piano e si lascia il letto come lo si è trovato."),
+			TEXT("Un letto? Di sopra c'è la camerata, sotto il tetto: otto letti, e non si paga. Le lenzuola le lava Agnese del mulino: sanno un po' di farina, ma sono pulite."),
+			TEXT("Poi ci sono le camere: cinque, con la porta e la chiave. Quelle si pagano, adesso che la Corona ha deciso quanto costano le cose da queste parti."),
 			TEXT("Le scale sono in fondo. Il terzo gradino scricchiola: saltalo, se torni tardi."),
 			})
-			.Scelta(TEXT("Vado su, allora. Buonanotte, Bruno."), TEXT("buonanotte"))
+			.Scelta(TEXT("Vado su in camerata. Buonanotte, Bruno."), TEXT("buonanotte"))
+			.Scelta(TEXT("Parlami delle camere."), TEXT("camera"))
 			.Scelta(TEXT("E le mie cose? Non posso portarmi dietro tutto."), TEXT("baule"))
 			.Scelta(TEXT("Grazie. Prima però ho qualche domanda."), TEXT("ancora"));
+
+		D.Nodo(TEXT("camera"), {
+			TEXT("(Bruno stacca dal chiodo dietro il bancone un mazzo di chiavi, ognuna con la sua targhetta di legno.)"),
+			TEXT("Due Lucio a notte, d'argento. La porta si chiude, il letto è uno solo ed è tuo, e nessuno ti russa nell'orecchio. La chiave la tieni fino a domani a quest'ora: poi torna al suo chiodo, che tu me la porti o no."),
+			TEXT("Se vuoi restare di più, paghi un'altra notte prima che scada. E non lasciarci dentro niente che ti serve: per quello c'è il baule."),
+			})
+			.Scelta(TEXT("Prendo una camera. (2 Lucio)"), TEXT("camera_presa"), TEXT("LocandaCamera"))
+			.Scelta(TEXT("Ti rendo la chiave."), TEXT("camera_resa"), TEXT("LocandaRendi"))
+			.Scelta(TEXT("Ci ripenso."), TEXT("ancora"))
+			.Scelta(TEXT("(la locanda: non hai le monete)"), TEXT("camera_soldi")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		D.Nodo(TEXT("camera_presa"), {
+			TEXT("(Bruno sfila una chiave dal mazzo e te la fa scivolare sul bancone.)"),
+			TEXT("Di sopra, il numero è sulla targhetta e sulla porta. Fino a domani a quest'ora è casa tua. Si dorme, si russa piano e si lascia il letto come lo si è trovato."),
+			})
+			.Scelta(TEXT("Grazie, Bruno. Buonanotte."), TEXT("congedo"))
+			.Scelta(TEXT("Grazie. Ho altre domande."), TEXT("ancora"))
+			.Scelta(TEXT("(la locanda: tutto pieno)"), TEXT("camera_piena")).SceltaVisibileSe(TEXT("MiliziaMai"))
+			.Scelta(TEXT("(la locanda: un'altra notte)"), TEXT("camera_ancora")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		D.Nodo(TEXT("camera_ancora"), {
+			TEXT("(Bruno conta le monete due volte, per abitudine.)"),
+			TEXT("Un'altra notte, stessa camera, stessa chiave. Ti trovi bene, eh? Lo dico sempre: l'unica locanda della valle, quindi la migliore."),
+			})
+			.Scelta(TEXT("Grazie, Bruno."), TEXT("congedo"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
+
+		D.Nodo(TEXT("camera_soldi"), {
+			TEXT("(Bruno guarda la tua mano, poi te.)"),
+			TEXT("Due Lucio, ho detto, e lì non li vedo. Non ti preoccupare: la camerata sotto il tetto è di tutti, e ci si dorme bene lo stesso. Torna quando hai lavorato."),
+			})
+			.Scelta(TEXT("Vado in camerata, allora."), TEXT("buonanotte"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
+
+		D.Nodo(TEXT("camera_piena"), {
+			TEXT("(Bruno alza il mazzo: i chiodi sono tutti vuoti.)"),
+			TEXT("Tutto pieno. Cinque camere, cinque chiavi in giro per la valle: non mi era mai successo. Stanotte la camerata; domani qualcuno me la riporta."),
+			})
+			.Scelta(TEXT("Vado in camerata, allora."), TEXT("buonanotte"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
+
+		D.Nodo(TEXT("camera_resa"), {
+			TEXT("(Bruno riappende la chiave al suo chiodo e la raddrizza con un dito.)"),
+			TEXT("A posto. Il resto della notte non te lo rendo, eh: una notte è una notte, anche se dura un'ora."),
+			})
+			.Scelta(TEXT("Giusto. Ciao, Bruno."), TEXT("congedo"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"))
+			.Scelta(TEXT("(la locanda: non hai una camera)"), TEXT("camera_nessuna")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		D.Nodo(TEXT("camera_nessuna"), {
+			TEXT("Quale chiave? Le mie sono tutte al loro chiodo, o in tasca a chi le ha pagate. Tu non ne hai."),
+			})
+			.Scelta(TEXT("Allora ne prendo una. (2 Lucio)"), TEXT("camera_presa"), TEXT("LocandaCamera"))
+			.Scelta(TEXT("Ho altre domande."), TEXT("ancora"));
 
 		// (12/11, v0.2.0) Il baule del colono (ValdorsoBaule.h): in un angolo della sala
 		D.Nodo(TEXT("baule"), {
@@ -1529,10 +1585,10 @@ namespace
 		D.Nodo(TEXT("milizia_turni"), {
 			TEXT("(Apre il ruolo dei turni e scorre le righe con il dito.)"),
 			TEXT("Due posti scoperti. La ronda: un giro del villaggio, e firmi i registri alla locanda, alla forgia, al tempio e al mulino. Dove il registro non c'e' ancora, ti fai vedere da chi ci lavora. Chi vede passare la guardia dorme meglio, e chi ha cattivi pensieri ne ha di meno."),
-			TEXT("Oppure la guardia qui al passo: cinque minuti fermo al portale, accanto a Tebaldo, a guardare la strada. Scegli. Un turno al giorno, e a turno finito torni da me: se non lo segno io, non e' mai successo."),
+			TEXT("Oppure la guardia: cinque minuti fermo al tuo posto, a guardare la strada. Qui al portale accanto a Tebaldo, o giu' nella garitta della caserma: dove serve quel giorno lo decido io. Scegli. Un turno al giorno, e a turno finito torni da me: se non lo segno io, non e' mai successo."),
 			})
 			.Scelta(TEXT("Prendo la ronda."), TEXT("milizia_ronda"), TEXT("MiliziaRonda"))
-			.Scelta(TEXT("Prendo la guardia al passo."), TEXT("milizia_guardia"), TEXT("MiliziaGuardia"))
+			.Scelta(TEXT("Prendo la guardia."), TEXT("milizia_guardia"), TEXT("MiliziaGuardia"))
 			.Scelta(TEXT("Ci ripenso."), TEXT("congedo"))
 			.Scelta(TEXT("(la milizia: hai gia' un turno)"), TEXT("milizia_turno_gia")).SceltaVisibileSe(TEXT("MiliziaMai"));
 
@@ -1549,7 +1605,16 @@ namespace
 			TEXT("Mettiti accanto a Tebaldo e non ti muovere di li'. Lui e' Guardia Reale e tu no: guardi, impari e stai zitto. Se ti allontani, il tempo non conta."),
 			})
 			.Scelta(TEXT("Agli ordini, capitana."), TEXT("congedo"))
-			.Scelta(TEXT("(la milizia: di notte niente ronda)"), TEXT("milizia_turno_notte")).SceltaVisibileSe(TEXT("MiliziaMai"));
+			.Scelta(TEXT("(la milizia: di notte niente ronda)"), TEXT("milizia_turno_notte")).SceltaVisibileSe(TEXT("MiliziaMai"))
+			.Scelta(TEXT("(la milizia: oggi la garitta)"), TEXT("milizia_garitta")).SceltaVisibileSe(TEXT("MiliziaMai"));
+
+		// (20/11, v0.2.7.1) un giorno si' e uno no la guardia si fa nella garitta della caserma (quando la caserma c'e')
+		D.Nodo(TEXT("milizia_garitta"), {
+			TEXT("(Segna il tuo nome sul ruolo e scuote la testa.)"),
+			TEXT("Oggi al passo siamo gia' in troppi. Vai alla caserma, giu' al villaggio: la garitta accanto al portale e' vuota, e una garitta vuota e' un invito. Ci entri, guardi la strada e ci resti. Se esci, il tempo non conta."),
+			TEXT("E se vedi qualcosa che non ti piace, la campanella e' li' apposta: tira la corda e arriviamo."),
+			})
+			.Scelta(TEXT("Agli ordini, capitana."), TEXT("congedo"));
 
 		D.Nodo(TEXT("milizia_turno_notte"), {
 			TEXT("(Guarda il cielo sopra il passo, poi te.)"),
@@ -2148,7 +2213,7 @@ namespace
 		D.Nodo(TEXT("arresto"), {
 			TEXT("(Una mano pesante ti stringe la spalla.)"),
 			TEXT("Nel nome della Corona. Hai alzato le mani su un abitante di Val d'Orso: il Balivo lo scrive nel suo registro, e io devo chiederti come vuoi pagare."),
-			TEXT("La legge e' semplice: venti Aureus di multa, o una notte in cella. Scegli."),
+			TEXT("La legge e' semplice: un Aureus di multa, venti Lucio se li hai spicci, o una notte in cella. Scegli."),
 			})
 			.Scelta(TEXT("Pago la multa."), TEXT("multa"), TEXT("Multa"))
 			.Scelta(TEXT("Passo la notte in cella."), TEXT("cella"), TEXT("Cella"))
@@ -2156,7 +2221,7 @@ namespace
 
 		D.Nodo(TEXT("di_nuovo"), {
 			TEXT("(La stessa mano, la stessa spalla.) Ancora tu."),
-			TEXT("Il Balivo ha gia' una pagina col tuo nome, e adesso ne scrive un'altra. Venti Aureus o la cella: la legge non e' cambiata da ieri."),
+			TEXT("Il Balivo ha gia' una pagina col tuo nome, e adesso ne scrive un'altra. Un Aureus o la cella: la legge non e' cambiata da ieri."),
 			})
 			.Scelta(TEXT("Pago la multa."), TEXT("multa"), TEXT("Multa"))
 			.Scelta(TEXT("Passo la notte in cella."), TEXT("cella"), TEXT("Cella"))

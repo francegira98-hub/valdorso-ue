@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-19",
+ "aggiornato": "2026-11-20",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
  "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0: sei alpha, quattro beta e il regno. Ogni tappa è una versione che si può giocare.",
  "tappe": [
@@ -410,13 +410,16 @@
     "Il campanile e il sagrato sulla piazza",
     "Le Guardie di Valdorso, il primo lavoro della valle: ci si arruola da Livia firmando un contratto su pergamena",
     "Cinque gradi, da recluta a comandante; le chiavi arrivano con il grado",
-    "I turni: la ronda con i quattro registri da firmare, la guardia al portale del passo; il soldo per ogni giorno di turno",
+    "I turni: la ronda con i quattro registri da firmare, la guardia al passo o in garitta; il soldo per ogni giorno di turno",
     "Il posto di guardia della Guardia Reale al passo: portale, grata, torretta, quartiere",
     "La locanda nuova di Bruno",
     "Scale di legno al mulino, gradini davanti alle case: ogni porta della valle si passa",
     "Ponti veri di pietra sul fiume",
     "Il collaudo dei passaggi: porte, scale e soglie provate una per una in tutte e tre le fasi",
-    "La telecamera che si avvicina e si allontana con la rotella del mouse"
+    "La telecamera che si avvicina e si allontana con la rotella del mouse",
+    "Le camere della locanda con la chiave, a 2 Lucio a notte",
+    "La garitta e la campanella della caserma",
+    "Le tre monete di Aurelia: Aureus, Lucio e ghianda"
    ],
    "nome_en": "The temple",
    "voci_en": [
@@ -424,15 +427,18 @@
     "The bell tower and the churchyard on the square",
     "The Guards of Valdorso, the valley's first job: you enlist with Livia by signing a contract on parchment",
     "Five ranks, from recruit to commander; the keys come with the rank",
-    "Shifts: the patrol with its four registers to sign, the watch at the pass gate; pay for every day on duty",
+    "Shifts: the patrol with its four registers to sign, the watch at the pass or in the watchbox; pay for every day on duty",
     "The Royal Guard's post at the pass: gate, portcullis, watchtower, quarters",
     "Bruno's new inn",
     "Wooden stairs at the mill, steps in front of the houses: every door in the valley can be walked through",
     "Real stone bridges over the river",
     "The passage test: doors, stairs and thresholds tried one by one in all three phases",
-    "The camera zooms in and out with the mouse wheel"
+    "The camera zooms in and out with the mouse wheel",
+    "Rooms with a key at the inn, 2 Lucio a night",
+    "The watchbox and the bell of the barracks",
+    "The three coins of Aurelia: Aureus, Lucio and acorn"
    ],
-   "data": "2026-11-19"
+   "data": "2026-11-20"
   },
   {
    "versione": "0.2.7.1",
@@ -442,16 +448,16 @@
     "Le prove in gioco della 0.2.7, una per una, e le correzioni",
     "L'osteria di posta fuori dalle mura",
     "Texture vere per gli interni e pietra da castello sulle mura",
-    "I doveri della guardia che mancano: il turno in garitta, la campanella della caserma",
-    "Le chiavi delle camere della locanda"
+    "Le ghiande in tasca e i prezzi piccoli: un boccale, un pasto caldo",
+    "Il registro delle camere, perché due coloni non abbiano mai la stessa"
    ],
    "nome_en": "Finishing touches",
    "voci_en": [
     "In-game testing of 0.2.7, item by item, and the fixes",
     "The coaching inn outside the walls",
     "Real textures for the interiors and castle stone on the walls",
-    "The guard duties still missing: the shift in the watchbox, the barracks bell",
-    "Keys for the rooms of the inn"
+    "Acorns in your purse and small prices: a mug, a hot meal",
+    "A register of the rooms, so that no two settlers ever share one"
    ]
   },
   {

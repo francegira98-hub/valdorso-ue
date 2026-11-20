@@ -1097,6 +1097,7 @@ def fai_caserma():
     (V:/Texture/valdorso/mura/Valdorso_caserma.json: posizioni gia' nel mondo, cm della Pianta, Z del mondo).
     La grata e' una AValdorsoGrata (si chiude la sera e si apre la mattina), la leva una AValdorsoLeva senza lucchetto
     dentro il corpo di guardia, che ha la porta chiusa con la Chiave_Caserma. Si puo' rilanciare: toglie e rimette."""
+    global CARTELLA
     dati = leggi(CASERMA_DATI)
     if not dati:
         avviso("manca %s/%s" % (CARTELLA, CASERMA_DATI))
@@ -1115,11 +1116,17 @@ def fai_caserma():
     LANTERNE_DATI.update(leggi(LANTERNE, {}) or {})
     luce = (LANTERNE_DATI.get("SM_Lanterna_Muro", {}) or {}).get("luce_cm", [0.0, 42.0, -24.0])
     posizioni = dati["posizioni"]
+    classe_campanella_presto = getattr(unreal, "ValdorsoCampanella", None)
     pezzi = importa(sorted(set(p["pezzo"] for p in posizioni)), materiali())
     sy = numero_specchio() or 1.0
     via = 0
+    # (20/11, deciso da Fra con la foto) la campanella sta dove l'ha spostata lui a mano (a destra della porta del corpo
+    # di guardia: dov'era nei dati, la corda pendeva davanti alla porta). Se nel livello c'e' gia', il suo posto si tiene.
+    campanella_tenuta = None
     for a in attori.get_all_level_actors():
         if a and a.actor_has_tag(CASERMA):
+            if classe_campanella_presto is not None and isinstance(a, classe_campanella_presto):
+                campanella_tenuta = (a.get_actor_location(), a.get_actor_rotation())
             attori.destroy_actor(a)
             via += 1
     if via:
@@ -1131,17 +1138,68 @@ def fai_caserma():
         a.set_editor_property("tags", [unreal.Name(CASERMA), unreal.Name(FASE_MURA)])
         return a
 
+    # (20/11, v0.2.7.1) la campanella nuova della chat 3D (V:/Texture/valdorso/campanella: bronzo, con il battaglio e la
+    # corda) al posto di quella di ferro: e' un attore del C++ (AValdorsoCampanella), le guardie la suonano con E. Porta
+    # con se' il posto della guardia nella garitta (voce "garitta", guardia_in_piedi): li' si fa il turno in garitta.
+    classe_campanella = getattr(unreal, "ValdorsoCampanella", None)
+    pezzi_campanella = {}
+    if classe_campanella is not None and os.path.exists(CAMPANELLA + "/glb/SM_Campanella_Caserma.glb"):
+        vecchia_cartella = CARTELLA
+        CARTELLA = CAMPANELLA
+        try:
+            pezzi_campanella = importa(["SM_Campanella_Caserma", "SM_Campanella_Battaglio"], materiali())
+        finally:
+            CARTELLA = vecchia_cartella
+    elif classe_campanella is None:
+        avviso("caserma: manca la classe del C++ ValdorsoCampanella (compila): resta la campanella di prima, che non suona")
+    garitta_guardia = None
+    for p in posizioni:
+        gi = p.get("guardia_in_piedi") if p.get("pezzo") == "SM_Garitta" else None
+        if gi and gi.get("mondo_cm"):
+            garitta_guardia = unreal.Vector(gi["mondo_cm"][0] + angolo.x, gi["mondo_cm"][1] + angolo.y, float(gi["mondo_cm"][2]))
+
     conti = {}
     grata = None
     da_fare_dopo = []
     for p in posizioni:
         m = pezzi.get(p["pezzo"])
-        if m is None:
+        # (secondo controllo) la campanella nuova non ha bisogno del modello di quella vecchia
+        if m is None and not (p["pezzo"] == "SM_Campanella" and pezzi_campanella.get("SM_Campanella_Caserma") is not None):
             continue
         gp = p["posizione_cm"]
         dove = unreal.Vector(gp[0] + angolo.x, gp[1] + angolo.y, float(gp[2]))
         yaw = float(p["yaw"])
         nome, pezzo = p["nome"], p["pezzo"]
+        if pezzo == "SM_Campanella" and pezzi_campanella.get("SM_Campanella_Caserma") is not None:
+            # stessa posizione e quota, girata di 180 (la vecchia sporgeva verso +Y, la nuova verso -Y)
+            dove_c, gira_c = dove, unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw + 180.0)
+            if campanella_tenuta is not None:
+                dove_c, gira_c = campanella_tenuta
+                scrivi("campanella: tengo il posto di adesso (%.1f, %.1f, %.1f), yaw %.1f (nei dati era %.1f, %.1f, %.1f)"
+                       % (dove_c.x, dove_c.y, dove_c.z, gira_c.yaw, dove.x, dove.y, dove.z))
+            ca = attori.spawn_actor_from_class(classe_campanella, dove_c, gira_c)
+            if ca:
+                # (il modello e' la radice dell'attore: solo il modello e la scala, senza toccarne il posto)
+                cm = ca.get_editor_property("modello")
+                cm.set_editor_property("static_mesh", pezzi_campanella["SM_Campanella_Caserma"])
+                ca.set_actor_scale3d(unreal.Vector(1.0, sy, 1.0))
+                bt = ca.get_editor_property("battaglio")
+                if pezzi_campanella.get("SM_Campanella_Battaglio") is not None:
+                    mesh_su(bt, pezzi_campanella["SM_Campanella_Battaglio"], 1.0)
+                    # (la radice ha la scala Y = sy: il posto del battaglio va scritto nello stesso verso)
+                    bt.set_relative_location(unreal.Vector(0.0, -45.0 * sy, -7.0), False, False)
+                if garitta_guardia is not None:
+                    ca.set_editor_property("garitta", garitta_guardia)
+                    scrivi("campanella nuova messa; la guardia in garitta sta in (%.0f, %.0f, %.0f)"
+                           % (garitta_guardia.x, garitta_guardia.y, garitta_guardia.z))
+                else:
+                    avviso("caserma: nei dati manca guardia_in_piedi della garitta: niente turno in garitta")
+                mio(ca, "campanella")
+                conti["SM_Campanella_Caserma"] = 1
+                continue
+            avviso("caserma: la campanella nuova non si e' messa: resta quella di prima, se c'e'")
+            if m is None:
+                continue
         if pezzo == "SM_Recinto_Grata":
             # come nelle mura: la grata del C++ sta nel piano Y-Z, quindi l'attore e' girato di 90 gradi e il modello di -90
             grata = attori.spawn_actor_from_class(classe_grata, dove, unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw + 90.0))
@@ -2499,7 +2557,21 @@ def fai_locanda():
                     continue
                 num = re.search(r"da\s*([+-]?\d+(?:\.\d+)?)\s*a\s*([+-]?\d+(?:\.\d+)?)", str(ar.get("apre", "")))
                 verso = 1 if not num or float(num.group(2)) > float(num.group(1)) else -1
-                a = porta_vera(classe_porta, mp, dove, yaw, verso, None, nome, sy)
+                # (20/11, v0.2.7.1) le cinque camere hanno la chiave (ValdorsoLocanda.h: Bruno la da' per una notte)
+                cam = re.match(r"porta_camera_(\d+)$", str(ar["nome"]))
+                chiave_camera = "Chiave_Camera_%d" % int(cam.group(1)) if cam and 1 <= int(cam.group(1)) <= 5 else None
+                a = porta_vera(classe_porta, mp, dove, yaw, verso, chiave_camera, nome, sy)
+                if chiave_camera and a is not None:
+                    conti["porte a chiave"] = conti.get("porte a chiave", 0) + 1
+                    # da dentro si esce sempre: il punto della stanza e' il suo letto (dai dati)
+                    letto_c = next((x for x in e["arredi"] if x.get("nome") == "letto_camera_%d" % int(cam.group(1))), None)
+                    if letto_c is not None:
+                        try:
+                            a.set_editor_property("punto_dentro", al_mondo(o, yaw0, letto_c["posizione_cm"]))
+                        except Exception:  # noqa: BLE001
+                            avviso("%s: manca PuntoDentro nel C++ (compila e rilancia): da dentro servirebbe la chiave" % nome)
+                    else:
+                        avviso("%s: non trovo il suo letto nei dati: da dentro servirebbe la chiave" % nome)
             elif ruolo == "letto":
                 if classe_letto is None:
                     avviso("manca /Game/Fab/Letto/BP_Letto: niente letti")
@@ -3165,6 +3237,7 @@ def fai_passo():
 # (AValdorsoRegistroRonda): la guardia di ronda li firma con E. Si puo' rilanciare: toglie quelli di prima.
 # Chi firma sta a -Y del pezzo (75 cm), quindi il pezzo si gira con la sua -Y verso fuori.
 RONDA = "V:/Texture/valdorso/ronda"
+CAMPANELLA = "V:/Texture/valdorso/campanella"
 RONDA_ETICHETTA = "ValdorsoRegistroRonda"
 RONDA_CARTELLA = "Valle/Villaggio/Ronda"
 # (tappa, come si chiama negli avvisi, edificio, porta, di lato preferito: +1 a destra di chi esce, -1 a sinistra)

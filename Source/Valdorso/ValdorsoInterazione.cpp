@@ -239,8 +239,28 @@ FText AValdorsoPorta::TestoInterazione(const APawn* Chi) const
 	{
 		return TestoApri();
 	}
+	// (20/11) da dentro la stanza si esce sempre
+	if (DaDentro(Chi))
+	{
+		return TestoApri();
+	}
 	// (16/11) chi ha la chiave giusta nello zaino lo legge subito
 	return ValdorsoChiavi::Ha(Chi, Chiave) ? TestoConChiave() : TestoAChiave();
+}
+
+bool AValdorsoPorta::DaDentro(const APawn* Chi) const
+{
+	if (!Chi || PuntoDentro.IsZero())
+	{
+		return false;
+	}
+	// stesso piano, non lontano, e dalla stessa parte del muro della porta in cui sta il punto della stanza (il muro
+	// passa per il cardine, e l'asse X della porta lo attraversa: e' lo stesso conto di "chi spinge" qui sotto)
+	const FVector Lui = Chi->GetActorLocation();
+	const double LatoLui = FVector::DotProduct(Lui - GetActorLocation(), GetActorForwardVector());
+	const double LatoStanza = FVector::DotProduct(PuntoDentro - GetActorLocation(), GetActorForwardVector());
+	return FMath::Abs(Lui.Z - PuntoDentro.Z) < 250.f && FVector::Dist2D(Lui, PuntoDentro) < 700.f
+		&& FMath::Abs(LatoLui) > 5.0 && FMath::Abs(LatoStanza) > 20.0 && (LatoLui > 0.0) == (LatoStanza > 0.0);
 }
 
 FVector AValdorsoPorta::PuntoInterazione() const
@@ -258,7 +278,7 @@ void AValdorsoPorta::Interagisci(APawn* Chi)
 	if (Verso == 0 && bChiusaAChiave)
 	{
 		// (16/11, v0.2.6) con la chiave giusta (o per lo staff) si apre: la serratura scatta e poi la porta gira
-		if (!ValdorsoChiavi::PuoAprire(Chi, Chiave))
+		if (!ValdorsoChiavi::PuoAprire(Chi, Chiave) && !DaDentro(Chi))
 		{
 			ValdorsoRegistroEventi::Annota(TEXT("PortaChiusa"), Chi, this, GetActorLocation(), TEXT("ha provato ad aprire"));
 			MulticastAChiave();

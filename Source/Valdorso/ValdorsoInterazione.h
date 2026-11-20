@@ -103,6 +103,14 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Porta")
 	FName Chiave;
 
+	/** (20/11, v0.2.7.1) Un punto dentro la stanza che questa porta chiude (nel mondo; zero = non si sa). Chi e' dalla
+	 *  parte di quel punto apre anche senza la chiave: da una camera della locanda si esce sempre. Lo mette lo script. */
+	UPROPERTY(EditAnywhere, Category = "Porta")
+	FVector PuntoDentro = FVector::ZeroVector;
+
+	/** Vero se quel colono e' dentro la stanza (dalla stessa parte della porta in cui sta PuntoDentro). */
+	bool DaDentro(const APawn* Chi) const;
+
 	/** 0 = si apre dalla parte opposta a chi spinge; 1 o -1 = sempre dalla stessa parte (le imposte, verso fuori). */
 	UPROPERTY(EditAnywhere, Category = "Porta", meta = (ClampMin = "-1", ClampMax = "1"))
 	int32 VersoFisso = 0;

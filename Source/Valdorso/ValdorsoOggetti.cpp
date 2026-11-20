@@ -291,6 +291,25 @@ namespace
 			TEXT("D'acciaio brunito, con la quercia coronata sull'anello. Toglie il lucchetto alla leva della grata del passo. E' della Guardia Reale."), 0.3f),
 			TEXT("La chiave del passo: la grata della Guardia Reale risponde alla tua mano.")));
 
+		// (20/11, v0.2.7.1) le camere della Locanda di Bruno (ValdorsoLocanda.h): una chiave per camera, la da' Bruno per
+		// una notte e se la riprende
+		// (i testi sono const TCHAR*: letterali, uno per uno)
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Camera_1"), TEXT("Chiave della camera 1"),
+			TEXT("Di ferro, con una targhetta di legno: il numero 1 inciso a fuoco. Apre la camera 1 della Locanda di Bruno, finche' la notte e' pagata."), 0.2f),
+			TEXT("La chiave della camera 1: la porta, di sopra alla locanda, si apre per te.")));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Camera_2"), TEXT("Chiave della camera 2"),
+			TEXT("Di ferro, con una targhetta di legno: il numero 2 inciso a fuoco. Apre la camera 2 della Locanda di Bruno, finche' la notte e' pagata."), 0.2f),
+			TEXT("La chiave della camera 2: la porta, di sopra alla locanda, si apre per te.")));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Camera_3"), TEXT("Chiave della camera 3"),
+			TEXT("Di ferro, con una targhetta di legno: il numero 3 inciso a fuoco. Apre la camera 3 della Locanda di Bruno, finche' la notte e' pagata."), 0.2f),
+			TEXT("La chiave della camera 3: la porta, di sopra alla locanda, si apre per te.")));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Camera_4"), TEXT("Chiave della camera 4"),
+			TEXT("Di ferro, con una targhetta di legno: il numero 4 inciso a fuoco. Apre la camera 4 della Locanda di Bruno, finche' la notte e' pagata."), 0.2f),
+			TEXT("La chiave della camera 4: la porta, di sopra alla locanda, si apre per te.")));
+		C.Add(OggDaLeggere(OggRicordo(TEXT("Chiave_Camera_5"), TEXT("Chiave della camera 5"),
+			TEXT("Di ferro, con una targhetta di legno: il numero 5 inciso a fuoco. Apre la camera 5 della Locanda di Bruno, finche' la notte e' pagata."), 0.2f),
+			TEXT("La chiave della camera 5: la porta, di sopra alla locanda, si apre per te.")));
+
 		// (11/11, v0.1.7) la grotta del nord: il piccone per la frana, le monete e il pugnale dei nani, la storia di Lucia
 		C.Add(OggSemplice(TEXT("Piccone"), TEXT("Piccone"),
 			TEXT("Ferro di Marta su un manico di frassino. Per la roccia, per la frana del nord e, se serve, per chi ti viene addosso."), 3.f));
@@ -962,7 +981,7 @@ namespace
 		}
 		// (16/11, v0.2.6) le chiavi: l'anello, il fusto e i denti (quella della porta grande con la corona)
 		else if (N == TEXT("Chiave_Torri") || N == TEXT("Chiave_Porta") || N == TEXT("Chiave_Caserma")
-			|| N == TEXT("Chiave_Prigione") || N == TEXT("Chiave_Passo"))
+			|| N == TEXT("Chiave_Prigione") || N == TEXT("Chiave_Passo") || N.StartsWith(TEXT("Chiave_Camera_")))
 		{
 			L.Add(OggCerchio(-0.5f, 0.f, 0.28f, 14));
 			L.Add(OggLinea({ { -0.22f, 0.f }, { 0.8f, 0.f } }));

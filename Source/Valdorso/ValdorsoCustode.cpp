@@ -270,7 +270,7 @@ void UValdorsoCustode::Giro()
 		const int32 Guadagno = ValdorsoCustode::Salite(Suo.MoneteSalite, Adesso, 3600.0);
 		if (Guadagno > ValdorsoCustode::SogliaMonete)
 		{
-			Avvisa(Chi, Suo, TEXT("monete"), FString::Printf(TEXT("ha guadagnato %d Aureus nell'ultima ora (ne ha %d)"), Guadagno, Dati.Monete));
+			Avvisa(Chi, Suo, TEXT("monete"), FString::Printf(TEXT("ha guadagnato %d Lucio nell'ultima ora (ne ha %d)"), Guadagno, Dati.Monete));
 		}
 		const int32 Rari = CustodeRari(Dati);
 		if (Suo.UltimiRari >= 0 && Rari > Suo.UltimiRari)
@@ -306,14 +306,14 @@ void UValdorsoCustode::Giro()
 		if (const AActor* StatoGioco = Mondo->GetGameState(); StatoGioco && Coloni > 0)
 		{
 			ValdorsoRegistroEventi::Annota(TEXT("Custode"), StatoGioco, nullptr, FVector::ZeroVector,
-				FString::Printf(TEXT("economia: %lld Aureus tra %d coloni collegati (in media %lld)"), MoneteValle, Coloni, MoneteValle / Coloni));
+				FString::Printf(TEXT("economia: %lld Lucio tra %d coloni collegati (in media %lld)"), MoneteValle, Coloni, MoneteValle / Coloni));
 		}
 	}
 }
 
 FString UValdorsoCustode::Stato() const
 {
-	return FString::Printf(TEXT("Custode del Battito: guarda %d coloni, %d avvisi dall'avvio. Soglie: %d Aureus/ora, %d Rari/ora, %.0f m/s, %d colpi in %.0f s, %d colpe in mezz'ora."),
+	return FString::Printf(TEXT("Custode del Battito: guarda %d coloni, %d avvisi dall'avvio. Soglie: %d Lucio/ora, %d Rari/ora, %.0f m/s, %d colpi in %.0f s, %d colpe in mezz'ora."),
 		Guardati.Num(), Avvisi, ValdorsoCustode::SogliaMonete, ValdorsoCustode::SogliaRari, ValdorsoCustode::VelocitaMassima / 100.f,
 		ValdorsoCustode::SogliaColpi, ValdorsoCustode::SecondiColpi, ValdorsoCustode::SogliaColpe);
 }

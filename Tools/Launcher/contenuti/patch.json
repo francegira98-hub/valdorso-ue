@@ -1,13 +1,13 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-19",
+ "aggiornato": "2026-11-20",
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
   {
    "versione": "0.2.7",
    "nome": "Il tempio",
    "data": "",
-   "sommario": "Il Tempio del Cuore ha finalmente il suo interno: i banchi, l'altare, il sagrato. Al passo, la palizzata di legno lascia il posto al presidio di pietra della Guardia Reale, con la grata, la torretta e gli stendardi della Corona. E in valle arriva il primo lavoro vero: le Guardie di Valdorso, con un contratto da firmare, i turni e il soldo.",
+   "sommario": "Il Tempio del Cuore ha finalmente il suo interno: i banchi, l'altare, il sagrato. Al passo, la palizzata di legno lascia il posto al presidio di pietra della Guardia Reale, con la grata, la torretta e gli stendardi della Corona. E in valle arriva il primo lavoro vero: le Guardie di Valdorso, con un contratto da firmare, i turni e il soldo. La locanda ha le camere con la chiave, e le monete della Corona diventano tre: Aureus, Lucio e ghianda.",
    "gruppi": [
     {
      "titolo": "Novità: le Guardie di Valdorso, il primo lavoro",
@@ -15,12 +15,13 @@
       "Ci si arruola dalla capitana Livia, al passo: serve che si fidi di te e che tu non abbia colpe aperte.",
       "Si firma un contratto vero, su pergamena, con la propria firma. Il contratto lega: trenta giorni di ferma prima di poter lasciare, e resta fra i documenti del Balivo.",
       "Cinque gradi: recluta, guardia, sergente, vice comandante, comandante. Fino a sergente si sale con i turni fatti.",
-      "I turni, uno al giorno: la ronda (un giro del villaggio a firmare i quattro registri: locanda, forgia, tempio, mulino) oppure la guardia al portale del passo. A turno finito si torna dalla capitana, che lo segna.",
+      "I turni, uno al giorno: la ronda (un giro del villaggio a firmare i quattro registri: locanda, forgia, tempio, mulino) oppure la guardia, al portale del passo o nella garitta della caserma, dove decide la capitana. A turno finito si torna da lei, che lo segna.",
       "I registri della ronda si possono leggere: su ogni foglio restano le firme di chi è passato, con il nome, il giorno e l'ora. Li può leggere chiunque; firmare, solo la guardia di ronda.",
-      "Il soldo: per ogni giorno di turno, secondo il grado. Si ritira dalla capitana.",
+      "Il soldo: per ogni giorno di turno, secondo il grado, da 3 Lucio della recluta a 16 del comandante. Si ritira dalla capitana.",
       "Le chiavi arrivano con il grado: la caserma alla recluta, la prigione alla guardia. Le torri delle mura e le porte le tiene solo chi comanda.",
       "Chi porta la divisa e commette una colpa è cacciato lo stesso giorno, e il suo contratto resta scritto come rotto.",
-      "La tessera del colono mostra la qualifica (per esempio «Recluta delle Guardie di Valdorso») e il rango."
+      "La tessera del colono mostra la qualifica (per esempio «Recluta delle Guardie di Valdorso») e il rango.",
+      "La campanella della caserma: le guardie la suonano tirando la corda."
      ]
     },
     {
@@ -39,8 +40,17 @@
       "Il Tempio del Cuore ha l'interno nella chiesa (fase 2) e nella pieve (fase 3): banchi, altare, candelieri, e il sagrato davanti all'ingresso. La pietra di Val d'Orso sta sull'altare in ogni fase.",
       "Padre Anselmo, Tobia e Maestro Elric hanno il loro posto in ogni fase del tempio: davanti all'altare, a spazzare dietro l'ultimo banco, seduto sulla panca contro il muro.",
       "La locanda di Bruno è nuova: la sala con il bancone e il camino grande, la cucina, cinque camere, la stanza grande con la vasca e lo scrittoio, la camerata sotto il tetto.",
+      "Le camere della locanda hanno la chiave: la camerata sotto il tetto resta di tutti e non costa niente; una camera tua costa 2 Lucio a notte. Bruno ti dà la chiave e se la riprende quando la notte è finita. Da dentro si esce sempre.",
       "Due ponti veri di pietra sul fiume, al mulino e a nord.",
       "Scale di legno fuori dal mulino, e gradini davanti alle porte che ne avevano bisogno."
+     ]
+    },
+    {
+     "titolo": "Novità: le tre monete di Aurelia",
+     "voci": [
+      "Le monete adesso sono tre: l'Aureus d'oro, il Lucio d'argento e la ghianda di rame. Un Aureus vale venti Lucio, un Lucio dieci ghiande.",
+      "Quello che avevi in tasca non cambia: le monete di tutti i giorni si chiamano Lucio, e i prezzi sono gli stessi numeri di prima. L'Aureus è la moneta grossa: venti Lucio insieme si leggono «1 Aureus».",
+      "Le ghiande arriveranno con i prezzi piccoli: per ora nessuno le ha in tasca."
      ]
     },
     {

@@ -125,6 +125,14 @@ struct FValdorsoZaino
 	UPROPERTY()
 	int64 MiliziaPagatoUtc = 0;
 
+	/** (20/11, v0.2.7.1) La camera che ha alla Locanda di Bruno (1..5; 0 = nessuna) e fino a quando e' sua (secondi
+	 *  Unix, UTC). ValdorsoLocanda.h. */
+	UPROPERTY()
+	uint8 CameraLocanda = 0;
+
+	UPROPERTY()
+	int64 CameraFinoUtc = 0;
+
 	/** (19/11, v0.2.7) I giorni con il turno fatto e il soldo non ancora ritirato (al massimo
 	 *  ValdorsoMilizia::GiorniArretrati). */
 	UPROPERTY()

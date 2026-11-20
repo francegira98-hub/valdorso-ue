@@ -1,6 +1,7 @@
 // Valdorso - Le botteghe (v0.1.4, 10/11/2026). Scritto da Claude. Vedi ValdorsoBotteghe.h.
 
 #include "ValdorsoBotteghe.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoPNG.h"
 #include "Valdorso.h"
 #include "ValdorsoFalo.h"
@@ -286,7 +287,7 @@ namespace ValdorsoBotteghe
 			}
 			if (Zaino.Monete < Ricetta.Costo)
 			{
-				return FText::Format(LOCTEXT("ServeMoneteRipara", "Ti servono {0} Aureus"), FText::AsNumber(Ricetta.Costo));
+				return FText::Format(LOCTEXT("ServonoMoneteRipara", "Ti servono {0}"), ValdorsoMonete::Scritto(Ricetta.Costo));
 			}
 			return FText::GetEmpty();
 		}
@@ -299,7 +300,7 @@ namespace ValdorsoBotteghe
 		}
 		if (Zaino.Monete < Ricetta.Costo)
 		{
-			return FText::Format(LOCTEXT("ServeMonete", "Ti servono {0} Aureus"), FText::AsNumber(Ricetta.Costo));
+			return FText::Format(LOCTEXT("ServonoMonete", "Ti servono {0}"), ValdorsoMonete::Scritto(Ricetta.Costo));
 		}
 		if (Ricetta.Risultato)
 		{
@@ -397,7 +398,7 @@ namespace ValdorsoBotteghe
 		}
 		if (Ricetta.Costo > 0)
 		{
-			Parti.Add(FString::Printf(TEXT("%d Aureus"), Ricetta.Costo));
+			Parti.Add(ValdorsoMonete::Testo(Ricetta.Costo));
 		}
 		return FText::FromString(FString::Join(Parti, TEXT(", ")));
 	}
@@ -418,7 +419,7 @@ namespace ValdorsoBotteghe
 		// (11/11, v0.2) Aureus e qualcosa indietro (l'acqua venduta: torna il secchio vuoto)
 		if (Ricetta.Risultato && Ricetta.Guadagno > 0)
 		{
-			return FText::FromString(FString::Printf(TEXT("%d Aureus e %s"), Ricetta.Guadagno, *BottegaNome(Ricetta.Risultato).ToString().ToLower()));
+			return FText::FromString(FString::Printf(TEXT("%s e %s"), *ValdorsoMonete::Testo(Ricetta.Guadagno), *BottegaNome(Ricetta.Risultato).ToString().ToLower()));
 		}
 		if (Ricetta.Risultato)
 		{
@@ -426,7 +427,7 @@ namespace ValdorsoBotteghe
 				? FText::FromString(FString::Printf(TEXT("%d × %s"), Ricetta.QuantiRisultato, *BottegaNome(Ricetta.Risultato).ToString()))
 				: BottegaNome(Ricetta.Risultato);
 		}
-		return FText::FromString(FString::Printf(TEXT("%d Aureus"), Ricetta.Guadagno));
+		return ValdorsoMonete::Scritto(Ricetta.Guadagno);
 	}
 
 	bool BancoVicino(const APawn* Chi, EValdorsoTipoBanco Banco)
