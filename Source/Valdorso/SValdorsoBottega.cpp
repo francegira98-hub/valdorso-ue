@@ -153,9 +153,9 @@ TSharedRef<SWidget> SValdorsoBottega::Riga(const FValdorsoRicetta* Ricetta)
 	TWeakObjectPtr<UValdorsoZainoComponent> Debole = Zaino;
 	// (la tabella delle ricette e' fissa: il puntatore resta buono)
 	auto Manca = [this, Ricetta]() -> FText { return MancaDi(Ricetta); };
-	const FText Bottone = Ricetta->Costo > 0 && FCString::Strcmp(Ricetta->Verbo, TEXT("Compra")) == 0
-		? FText::Format(LOCTEXT("CompraPrezzo", "Compra · {0}"), FText::AsNumber(Ricetta->Costo))
-		: (Ricetta->Guadagno > 0 ? FText::Format(LOCTEXT("VendiPrezzo", "Vendi · {0}"), FText::AsNumber(Ricetta->Guadagno))
+	const FText Bottone = (Ricetta->Costo > 0 || Ricetta->CostoGhiande > 0) && FCString::Strcmp(Ricetta->Verbo, TEXT("Compra")) == 0
+		? FText::Format(LOCTEXT("CompraPrezzo", "Compra · {0}"), ValdorsoMonete::Scritto(Ricetta->Costo, Ricetta->CostoGhiande))
+		: (Ricetta->Guadagno > 0 ? FText::Format(LOCTEXT("VendiPrezzo", "Vendi · {0}"), ValdorsoMonete::Scritto(Ricetta->Guadagno))
 			: FText::FromString(Ricetta->Verbo));
 	const bool bVendita = Ricetta->Guadagno > 0;
 
@@ -257,7 +257,7 @@ FText SValdorsoBottega::MancaDi(const FValdorsoRicetta* Ricetta) const
 FText SValdorsoBottega::TestoMonete() const
 {
 	const UValdorsoZainoComponent* Il = Zaino.Get();
-	return FText::Format(LOCTEXT("MoneteScritte", "{0}"), ValdorsoMonete::Scritto(Il ? Il->Contenuto().Monete : 0));
+	return FText::Format(LOCTEXT("MoneteScritte", "{0}"), ValdorsoMonete::Scritto(Il ? Il->Contenuto().Monete : 0, Il ? Il->Contenuto().Ghiande : 0));
 }
 
 FReply SValdorsoBottega::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)

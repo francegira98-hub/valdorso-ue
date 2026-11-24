@@ -71,9 +71,13 @@ struct FValdorsoZaino
 	UPROPERTY()
 	TArray<FValdorsoPostoZaino> Posti;
 
-	/** Gli Aureus. */
+	/** Le monete d'argento, i Lucio (fino alla v0.2.7 si chiamavano Aureus: i numeri sono gli stessi). ValdorsoMonete.h. */
 	UPROPERTY()
 	int32 Monete = 0;
+
+	/** (20/11, v0.2.7.1) Le monete di rame, le ghiande: sempre da 0 a 9 (dieci diventano un Lucio in Sistema). */
+	UPROPERTY()
+	int32 Ghiande = 0;
 
 	/** La barra delle azioni: l'oggetto di ogni tasto da 1 a 8 (NAME_None = vuoto). */
 	UPROPERTY()

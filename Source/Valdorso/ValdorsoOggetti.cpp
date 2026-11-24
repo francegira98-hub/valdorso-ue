@@ -227,6 +227,9 @@ namespace
 			TEXT("Infilzati su un ramo e girati sul fuoco. Sanno di bosco e di fumo."), 0.1f, 10, 8.f, 15.f));
 		C.Add(OggCibo(TEXT("Stufato"), TEXT("Stufato di carne e funghi"),
 			TEXT("In una ciotola di legno, ancora caldo. Bruno dice che è la ricetta di sua madre."), 0.6f, 5, 30.f, 50.f));
+		// (20/11, v0.2.7.1) il boccale della locanda: costa ghiande (ValdorsoMonete.h)
+		C.Add(OggCibo(TEXT("Sidro"), TEXT("Boccale di sidro"),
+			TEXT("Sidro di mele degli orti, torbido e fresco di cantina. Bruno giura che non dà alla testa."), 0.4f, 5, 3.f, 25.f));
 		C.Add(OggCibo(TEXT("Zuppa_Bruno"), TEXT("Zuppa calda di Bruno"),
 			TEXT("Orzo, cipolle e lardo. Una scodella di questa e anche la notte più fredda sembra meno lunga."), 0.5f, 5, 20.f, 40.f));
 		C.Add(OggSemplice(TEXT("Cuoio"), TEXT("Cuoio conciato"),
@@ -915,7 +918,7 @@ namespace
 			L.Add(OggArco(-0.25f, -0.15f, 0.3f, 0.22f, 0.f, 180.f, 10));
 			L.Add(OggArco(0.3f, 0.4f, 0.3f, 0.22f, 0.f, 180.f, 10));
 		}
-		else if (N == TEXT("Stufato") || N == TEXT("Zuppa_Bruno"))
+		else if (N == TEXT("Stufato") || N == TEXT("Zuppa_Bruno") || N == TEXT("Sidro"))
 		{
 			L.Add(OggArco(0.f, 0.f, 0.8f, 0.7f, 180.f, 360.f, 16));
 			L.Add(OggLinea({ { -0.8f, 0.f }, { 0.8f, 0.f } }));

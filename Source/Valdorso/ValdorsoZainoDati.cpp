@@ -1,6 +1,7 @@
 // Valdorso - Lo zaino: i dati e le regole (vedi il .h). Scritto da Claude il 08/11/2026.
 
 #include "ValdorsoZainoDati.h"
+#include "ValdorsoMonete.h"
 #include "ValdorsoOggetti.h"
 #include "ValdorsoRegistro.h"
 #include "ValdorsoScherma.h"
@@ -154,6 +155,13 @@ namespace ValdorsoZaino
 			Posto.Numero = Tipo->Pila == 1 ? FMath::Max(0, Posto.Numero) : 0;
 			Posto.Qualita = FMath::Min<uint8>(Posto.Qualita, ValdorsoQualita::Massima);
 			Posto.Usura = FMath::Clamp(Posto.Usura, 0, FMath::Max(0, ValdorsoQualita::DurataMassima(Posto.Id, Posto.Qualita)));
+		}
+		// (20/11) le ghiande restano da 0 a 9: dieci fanno un Lucio
+		Zaino.Ghiande = FMath::Max(0, Zaino.Ghiande);
+		if (Zaino.Ghiande >= ValdorsoMonete::GhiandePerLucio)
+		{
+			Zaino.Monete = static_cast<int32>(FMath::Min<int64>(static_cast<int64>(Zaino.Monete) + Zaino.Ghiande / ValdorsoMonete::GhiandePerLucio, MassimoMonete));
+			Zaino.Ghiande %= ValdorsoMonete::GhiandePerLucio;
 		}
 		Zaino.Monete = FMath::Clamp(Zaino.Monete, 0, MassimoMonete);
 		Zaino.Azioni.SetNum(NumeroAzioni);
@@ -436,7 +444,7 @@ namespace ValdorsoZaino
 
 	float Peso(const FValdorsoZaino& Zaino)
 	{
-		float Totale = Zaino.Monete * ValdorsoOggetti::PesoMoneta;
+		float Totale = (Zaino.Monete + Zaino.Ghiande) * ValdorsoOggetti::PesoMoneta;
 		for (const FValdorsoPostoZaino& Posto : Zaino.Posti)
 		{
 			if (const FValdorsoTipoOggetto* Tipo = Posto.Vuoto() ? nullptr : ValdorsoOggetti::Trova(Posto.Id))

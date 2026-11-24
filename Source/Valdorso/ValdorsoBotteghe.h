@@ -52,8 +52,9 @@ struct FValdorsoRicetta
 	/** Il verbo del pulsante ("Cuoci", "Concia", "Compra", "Vendi", "Fai"). */
 	const TCHAR* Verbo = TEXT("Fai");
 	FValdorsoIngrediente Serve[3];
-	/** Gli Aureus che costa (0 = niente). */
+	/** I Lucio che costa (0 = niente), e le ghiande in piu' (20/11: i prezzi piccoli; ValdorsoMonete.h). */
 	int32 Costo = 0;
+	int32 CostoGhiande = 0;
 	/** Quello che si ottiene (nullptr = solo Aureus) e quanti; gli Aureus che si guadagnano. */
 	const TCHAR* Risultato = nullptr;
 	int32 QuantiRisultato = 1;

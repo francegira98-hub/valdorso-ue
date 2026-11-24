@@ -201,7 +201,15 @@ namespace
 		// --- la locanda di Bruno: da mangiare (e il suo fuoco); compra la carne e i funghi
 		T.Add(BottegaCompra(TEXT("Compra_Zuppa"), B::Locanda, TEXT("Zuppa_Bruno"), 3));
 		T.Add(BottegaCompra(TEXT("Compra_Pane"), B::Locanda, TEXT("Pane_Nero"), 2));
-		T.Add(BottegaCompra(TEXT("Compra_Mela"), B::Locanda, TEXT("Mela"), 1));
+		// (20/11, v0.2.7.1) i prezzi piccoli, in ghiande: la mela (prima 1 Lucio) e il boccale di sidro
+		{
+			FValdorsoRicetta Mela = BottegaCompra(TEXT("Compra_Mela"), B::Locanda, TEXT("Mela"), 0);
+			Mela.CostoGhiande = 5;
+			T.Add(Mela);
+			FValdorsoRicetta Sidro = BottegaCompra(TEXT("Compra_Sidro"), B::Locanda, TEXT("Sidro"), 0);
+			Sidro.CostoGhiande = 5;
+			T.Add(Sidro);
+		}
 		T.Add(BottegaCompra(TEXT("Compra_Formaggio"), B::Locanda, TEXT("Formaggio"), 3));
 		T.Add(BottegaServe(BottegaRicetta(TEXT("Locanda_Stufato"), B::Locanda, TEXT("Cuoci"), TEXT("Stufato")),
 			TEXT("Carne_Cruda"), 2, TEXT("Funghi"), 1));
@@ -285,9 +293,9 @@ namespace ValdorsoBotteghe
 				return Ricetta.Ripara == 2 ? LOCTEXT("NienteLegno", "Impugna l'arma di legno (o lo scudo) da riparare")
 					: LOCTEXT("NienteFerro", "Impugna l'arma di ferro (o lo scudo) da riparare");
 			}
-			if (Zaino.Monete < Ricetta.Costo)
+			if (!ValdorsoMonete::Bastano(Zaino.Monete, Zaino.Ghiande, Ricetta.Costo, Ricetta.CostoGhiande))
 			{
-				return FText::Format(LOCTEXT("ServonoMoneteRipara", "Ti servono {0}"), ValdorsoMonete::Scritto(Ricetta.Costo));
+				return FText::Format(LOCTEXT("ServonoMoneteRipara", "Ti servono {0}"), ValdorsoMonete::Scritto(Ricetta.Costo, Ricetta.CostoGhiande));
 			}
 			return FText::GetEmpty();
 		}
@@ -298,9 +306,9 @@ namespace ValdorsoBotteghe
 				return FText::Format(LOCTEXT("ServeOggetto", "Ti serve: {0} × {1}"), FText::AsNumber(Ingrediente.Quanti), BottegaNome(Ingrediente.Id));
 			}
 		}
-		if (Zaino.Monete < Ricetta.Costo)
+		if (!ValdorsoMonete::Bastano(Zaino.Monete, Zaino.Ghiande, Ricetta.Costo, Ricetta.CostoGhiande))
 		{
-			return FText::Format(LOCTEXT("ServonoMonete", "Ti servono {0}"), ValdorsoMonete::Scritto(Ricetta.Costo));
+			return FText::Format(LOCTEXT("ServonoMonete", "Ti servono {0}"), ValdorsoMonete::Scritto(Ricetta.Costo, Ricetta.CostoGhiande));
 		}
 		if (Ricetta.Risultato)
 		{
@@ -341,7 +349,7 @@ namespace ValdorsoBotteghe
 			{
 				return false;
 			}
-			Zaino.Monete = FMath::Max(0, Zaino.Monete - Ricetta.Costo);
+			ValdorsoMonete::Togli(Zaino.Monete, Zaino.Ghiande, Ricetta.Costo, Ricetta.CostoGhiande);
 			return true;
 		}
 		for (const FValdorsoIngrediente& Ingrediente : Ricetta.Serve)
@@ -351,7 +359,9 @@ namespace ValdorsoBotteghe
 				ValdorsoZaino::TogliOggetto(Zaino, Ingrediente.Id, Ingrediente.Quanti);
 			}
 		}
-		Zaino.Monete = FMath::Max(0, Zaino.Monete - Ricetta.Costo) + FMath::Max(0, Ricetta.Guadagno);
+		// (20/11) si paga in Lucio e ghiande (il resto torna in ghiande), poi si incassa
+		ValdorsoMonete::Togli(Zaino.Monete, Zaino.Ghiande, Ricetta.Costo, Ricetta.CostoGhiande);
+		ValdorsoMonete::Aggiungi(Zaino.Monete, Zaino.Ghiande, Ricetta.Guadagno, 0);
 		if (Ricetta.Risultato)
 		{
 			ValdorsoZaino::AggiungiCon(Zaino, Ricetta.Risultato, Ricetta.QuantiRisultato, Qualita, Provenienza);
@@ -396,9 +406,9 @@ namespace ValdorsoBotteghe
 					: BottegaNome(Ingrediente.Id).ToString());
 			}
 		}
-		if (Ricetta.Costo > 0)
+		if (Ricetta.Costo > 0 || Ricetta.CostoGhiande > 0)
 		{
-			Parti.Add(ValdorsoMonete::Testo(Ricetta.Costo));
+			Parti.Add(ValdorsoMonete::Testo(Ricetta.Costo, Ricetta.CostoGhiande));
 		}
 		return FText::FromString(FString::Join(Parti, TEXT(", ")));
 	}

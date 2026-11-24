@@ -457,6 +457,7 @@ void UValdorsoZainoComponent::ImpostaMonete(int32 Monete)
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
 		Zaino.Monete = FMath::Clamp(Monete, 0, ValdorsoZaino::MassimoMonete);
+		Zaino.Ghiande = 0;
 		Cambiato();
 	}
 }
