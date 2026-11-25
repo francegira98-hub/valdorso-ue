@@ -524,6 +524,7 @@ MATERIALI_VILLAGGIO = "/Game/Valle/Villaggio/Materiali"
 SLOT_PONTE = (("pavimento_legno", ("MI_Interno_PavimentoLegno", "MI_Villaggio_Assi")),
               ("pavimento_pietra", ("MI_Interno_PavimentoPietra", "MI_Villaggio_Selciato", "MI_Villaggio_Pietra")),
               ("paglia", ("MI_Villaggio_Paglia",)),
+              ("intonaco_dentro", ("MI_Interno_Intonaco", "MI_Villaggio_Intonaco")),
               ("intonaco", ("MI_Villaggio_Intonaco",)),
               ("pietra", ("MI_Mura_PietraCastello", "MI_Villaggio_Pietra")),
               ("legno", ("MI_Villaggio_Trave",)), ("ferro", ("MI_Villaggio_Ferro",)), ("coppi", ("MI_Villaggio_Coppi",)))
@@ -617,7 +618,7 @@ def vesti_modello(mesh):
                     fatto = True
                     break
             break
-        if not fatto and not any(c in nome for c in ("azzurro", "oro", "bronzo", "corda", "vetro", "terra")):
+        if not fatto and not any(c in nome for c in ("azzurro", "oro", "bronzo", "corda", "vetro", "terra", "luce")):
             avviso("%s: lo slot «%s» resta con il suo colore" % (mesh.get_name(), nome))
     try:
         bs = mesh.get_editor_property("body_setup")
@@ -627,6 +628,30 @@ def vesti_modello(mesh):
     except Exception as e:  # noqa: BLE001
         avviso("%s: collisione non impostata (%s)" % (mesh.get_name(), e))
     libreria.save_loaded_asset(mesh)
+
+
+LUCE_COLORE = (1.0, 0.62, 0.32)       # come le lanterne di Valdorso
+
+
+def luce_calda(dove, nome, cartella, etichetta, intensita=3.0, raggio=450.0):
+    """(26/11) Una luce calda senza ombre (costa poco), per bracieri, candele e lanterne dei pezzi della chat 3D."""
+    l = attori.spawn_actor_from_class(unreal.PointLight, dove, unreal.Rotator(roll=0.0, pitch=0.0, yaw=0.0))
+    if l is None:
+        return None
+    lc = l.get_component_by_class(unreal.PointLightComponent)
+    lc.set_mobility(unreal.ComponentMobility.MOVABLE)
+    try:
+        lc.set_editor_property("intensity_units", unreal.LightUnits.CANDELAS)
+    except Exception:  # noqa: BLE001
+        pass
+    lc.set_intensity(intensita)
+    lc.set_attenuation_radius(raggio)
+    lc.set_light_color(unreal.LinearColor(LUCE_COLORE[0], LUCE_COLORE[1], LUCE_COLORE[2], 1.0))
+    lc.set_cast_shadows(False)
+    l.set_actor_label(nome)
+    l.set_folder_path(cartella)
+    l.tags = [unreal.Name(etichetta)]
+    return l
 
 
 def ponte():
@@ -804,6 +829,17 @@ def rocca():
     if "rocca" not in luoghi:
         avviso("Luoghi_%d.json e' quello vecchio (senza il posto della rocca): serve il terreno nuovo, reimportato" % LATO)
         return
+    # (26/11) gli interni: gli alloggi delle guardie e l'appartamento del duca nel mastio (Montalto_rocca_interni.json,
+    # stesso sistema della rocca). Si aggiungono al montaggio solo se il json e tutti i suoi modelli ci sono.
+    interni = leggi_json(CARTELLA + "/Montalto_rocca_interni.json") if os.path.exists(CARTELLA + "/Montalto_rocca_interni.json") else None
+    montaggio_interni = []
+    if interni is not None:
+        montaggio_interni = list(interni.get("montaggio_cm", []))
+        if any(not os.path.exists("%s/glb/%s.glb" % (CARTELLA, v["pezzo"])) for v in montaggio_interni):
+            avviso("interni della rocca: manca qualche modello in glb/, li salto")
+            montaggio_interni = []
+    luci_dei_pezzi = dict((n, (d_ or {}).get("luci_cm", [])) for n, d_ in ((interni or {}).get("pezzi", {})).items())
+    dati["montaggio_cm"] = list(dati["montaggio_cm"]) + montaggio_interni
     nostri = sorted(set(v["pezzo"] for v in dati["montaggio_cm"] if v["pezzo"].startswith("SM_Montalto_")))
     compiti = []
     for n in nostri:
@@ -870,6 +906,7 @@ def rocca():
         if ETICHETTA_ROCCA in [str(t) for t in a.tags]:
             attori.destroy_actor(a)
     messi = 0
+    luci_messe = 0
     for i, v in enumerate(dati["montaggio_cm"]):
         if v["pezzo"] not in pezzi:
             continue
@@ -881,16 +918,30 @@ def rocca():
                 continue
             if sy < 0:
                 a.set_actor_scale3d(unreal.Vector(1.0, -1.0, 1.0))
-            a.set_actor_label("Rocca %02d - %s" % (i + 1, v["cosa"]))
+            a.set_actor_label(("Rocca %02d - %s" % (i + 1, v["cosa"]))[:90])
             a.set_folder_path("Montalto/Rocca")
             a.tags = [unreal.Name(ETICHETTA_ROCCA)]
             messi += 1
+            g2 = math.radians(giro + v["yaw"])
+            base = mondo(v["pos"])
+            for j, lu in enumerate(luci_dei_pezzi.get(v["pezzo"], [])):
+                q = lu["pos"]
+                fuoco = any(w in str(lu.get("tipo", "")) for w in ("camino", "fuoco"))
+                if luce_calda(unreal.Vector(base.x + q[0] * math.cos(g2) - q[1] * math.sin(g2),
+                                            base.y + q[0] * math.sin(g2) + q[1] * math.cos(g2), base.z + q[2]),
+                              "Rocca %02d luce %d" % (i + 1, j + 1), "Montalto/Rocca/Luci", ETICHETTA_ROCCA,
+                              5.0 if fuoco else 3.0, 600.0) is not None:
+                    luci_messe += 1
         except Exception as e:  # noqa: BLE001
             avviso("%s: errore nel metterlo (%s)" % (v["cosa"], e))
     if messi < len(dati["montaggio_cm"]):
         avviso("la rocca NON e' completa: %d pezzi su %d" % (messi, len(dati["montaggio_cm"])))
     scrivi("rocca: %d pezzi su %d, centro a %.0f %.0f, cortile a quota %.0f cm, girata di %.0f gradi (la porta guarda a sud)"
            % (messi, len(dati["montaggio_cm"]), cx, cy, z0, giro))
+    if montaggio_interni:
+        scrivi("interni: gli alloggi delle guardie contro le mura a ovest del portone (armeria, cucina, refettorio, sopra "
+               "la camerata) e l'appartamento del duca nel mastio (ospiti, sala grande, camera e cappella, famiglia); "
+               "%d luci calde" % luci_messe)
     scrivi("Da guardare: le mura appoggiate sul piano tutto intorno (nessun angolo per aria o sepolto); la porta con la "
            "grata e la strada che ci arriva davanti; il mastio, il palazzo, la cappella, le scuderie e il pozzo nel "
            "cortile. La grata e' ferma (chiusa): la leva arriva con il C++.")
@@ -1091,6 +1142,7 @@ def monta_semplice(titolo, file_dati, blocco, quota, dest, etichetta, cartella, 
         if etichetta in [str(t) for t in a.tags]:
             attori.destroy_actor(a)
     messi = 0
+    luci_messe = 0
     for i, v in enumerate(montaggio):
         try:
             p = v["pos"]
@@ -1106,10 +1158,25 @@ def monta_semplice(titolo, file_dati, blocco, quota, dest, etichetta, cartella, 
             a.set_folder_path(cartella)
             a.tags = [unreal.Name(etichetta)]
             messi += 1
+            # (26/11) le luci che il json da' per quel pezzo (le candele della cappella), nel sistema del pezzo
+            g2 = math.radians(giro + v["yaw"])
+            for j, lu in enumerate((dati.get("pezzi", {}).get(v["pezzo"], {}) or {}).get("luci_cm", [])):
+                try:
+                    q = lu["pos"]
+                    debole = "candela" in str(lu.get("tipo", ""))
+                    luce_calda(unreal.Vector(dove.x + q[0] * math.cos(g2) - q[1] * math.sin(g2),
+                                             dove.y + q[0] * math.sin(g2) + q[1] * math.cos(g2), dove.z + q[2]),
+                               "%s luce %02d-%d" % (titolo, i + 1, j + 1), cartella + "/Luci", etichetta,
+                               1.2 if debole else 2.0, 250.0 if debole else 500.0)
+                    luci_messe += 1
+                except Exception as e:  # noqa: BLE001
+                    avviso("%s: una luce non messa (%s)" % (v["pezzo"], e))
         except Exception as e:  # noqa: BLE001
             avviso("%s: errore nel metterlo (%s)" % (v["pezzo"], e))
     if messi < len(montaggio):
         avviso("%s NON e' completo: %d pezzi su %d" % (titolo, messi, len(montaggio)))
+    if luci_messe:
+        scrivi("%s: %d luci calde (candele e lanterne)" % (titolo, luci_messe))
     scrivi("%s: %d pezzi su %d, centro a %.0f %.0f, suolo a quota %.0f cm, girato di %.0f gradi"
            % (titolo, messi, len(montaggio), cx, cy, z0, giro))
     try:
@@ -1235,7 +1302,12 @@ def case():
         avviso("per le case devo prima sapere come Unreal importa i modelli: lancia prima «Montalto: 3» (il ponte) "
                "o «Montalto: 6» (il granaio), poi di nuovo questa voce")
         return
-    nomi = sorted(set(v["pezzo"] for v in lista))
+    # (26/11) le sedi delle gilde nei lotti: si importano con le case, se i modelli ci sono tutti
+    sedi = [v for v in piano.get("lotti_gilde", []) if v.get("sede")]
+    if any(not os.path.exists("%s/glb/%s.glb" % (CARTELLA, v["sede"])) for v in sedi):
+        avviso("sedi delle gilde: manca qualche modello in glb/, i lotti restano vuoti")
+        sedi = []
+    nomi = sorted(set([v["pezzo"] for v in lista] + [v["sede"] for v in sedi]))
     compiti = []
     for n in nomi:
         f = "%s/glb/%s.glb" % (CARTELLA, n)
@@ -1316,17 +1388,28 @@ def case():
     # i lotti lasciati liberi per le sedi delle gilde: una nota per ognuno (si vedono solo nell'editor)
     classe_nota = getattr(unreal, "Note", None) or unreal.TargetPoint
     lotti = 0
+    sedi_messe = 0
     for v in piano.get("lotti_gilde", []):
         try:
             x, y, z = v["unreal_cm"]
             z_mondo = angolo.z + (z / QUOTA_MAX_CM * 65535.0 - 32768.0) * scala.z / 128.0
             nota = attori.spawn_actor_from_class(classe_nota, unreal.Vector(angolo.x + x, angolo.y + y, z_mondo + 300.0),
                                                  unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(v["yaw"])))
-            if nota is None:
-                continue
-            nota.set_actor_label("%s (%d x %d m, su %s)" % (v["nome"], v["fronte_m"], v["fondo_m"], v["strada"]))
-            nota.set_folder_path("Montalto/Lotti delle gilde")
-            nota.tags = [unreal.Name("MontaltoLotto")]
+            if nota is not None:
+                nota.set_actor_label("%s (%d x %d m, su %s)" % (v["nome"], v["fronte_m"], v["fondo_m"], v["strada"]))
+                nota.set_folder_path("Montalto/Lotti delle gilde")
+                nota.tags = [unreal.Name("MontaltoLotto")]
+            if v.get("sede") in pezzi and v in sedi:
+                sede = attori.spawn_actor_from_object(pezzi[v["sede"]], unreal.Vector(angolo.x + x, angolo.y + y, z_mondo),
+                                                      unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(v["yaw"])))
+                if sede is not None:
+                    if verso < 0:
+                        sede.set_actor_scale3d(unreal.Vector(1.0, -1.0, 1.0))
+                    sede.set_actor_label("Sede di gilda %d - %s (su %s)"
+                                         % (sedi_messe + 1, v["sede"].replace("SM_Montalto_Gilda_", ""), v["strada"]))
+                    sede.set_folder_path("Montalto/Lotti delle gilde")
+                    sede.tags = [unreal.Name("MontaltoLotto")]
+                    sedi_messe += 1
             try:
                 nota.set_editor_property("text", v["nome"])
             except Exception:  # noqa: BLE001
@@ -1334,7 +1417,8 @@ def case():
             lotti += 1
         except Exception as e:  # noqa: BLE001
             avviso("un lotto delle gilde non segnato (%s)" % e)
-    scrivi("lotti liberi per le gilde: %d (nell'Outliner cercali con «Lotto»)" % lotti)
+    scrivi("lotti per le gilde: %d, con %d sedi montate (nell'Outliner: cartella «Montalto/Lotti delle gilde»). Gli "
+           "stendardi non ci sono ancora: cambiano per gilda." % (lotti, sedi_messe))
     scrivi("Da guardare: le file lungo la Strada del Re, la via bassa, la via alta e la salita; le porte alla quota della "
            "strada; nessuna casa in mezzo a una strada, nell'acqua o dentro un'altra; le case d'angolo in testa alle file.")
     try:
@@ -1370,6 +1454,12 @@ def mura():
         avviso("Mura_%d.json non ha pezzi: non tocco niente" % LATO)
         return
     nostri = sorted(set(v["pezzo"] for v in lista if v["pezzo"].startswith("SM_Montalto_")))
+    ARREDO = "SM_Montalto_Mura_Torre_Arredo"      # (26/11) l'arredo da corpo di guardia: stesso posto e yaw della torre
+    con_arredo = os.path.exists("%s/glb/%s.glb" % (CARTELLA, ARREDO))
+    if con_arredo:
+        nostri.append(ARREDO)
+    luci_arredo = ((leggi_json(CARTELLA + "/Montalto_mura.json") or {}).get("pezzi", {}).get(ARREDO, {}) or {}).get("luci_cm", []) \
+        if con_arredo else []
     compiti = []
     for n in nostri:
         f = "%s/glb/%s.glb" % (CARTELLA, n)
@@ -1421,7 +1511,9 @@ def mura():
     for a in attori.get_all_level_actors():
         if ETICHETTA_MURA in [str(t) for t in a.tags]:
             attori.destroy_actor(a)
+    import math
     messi = 0
+    arredi = 0
     attesi = sum(1 for v in lista if v["pezzo"] in pezzi)
     with unreal.ScopedSlowTask(len(lista), "Montalto: le mura della citta'") as lavoro:
         lavoro.make_dialog(True)
@@ -1447,11 +1539,37 @@ def mura():
                 a.set_folder_path("Montalto/Mura/Contrafforti" if "Contrafforte" in corto else "Montalto/Mura")
                 a.tags = [unreal.Name(ETICHETTA_MURA)]
                 messi += 1
+                if con_arredo and "Torre" in corto and ARREDO in pezzi:
+                    ar = attori.spawn_actor_from_object(pezzi[ARREDO], unreal.Vector(angolo.x + x, angolo.y + y, z_mondo),
+                                                        unreal.Rotator(roll=0.0, pitch=0.0, yaw=float(v["yaw"])))
+                    if ar is not None:
+                        if verso < 0:
+                            ar.set_actor_scale3d(unreal.Vector(1.0, -1.0, 1.0))
+                        ar.set_actor_label("Mura %03d arredo delle guardie" % (i + 1))
+                        ar.set_folder_path("Montalto/Mura/Arredo")
+                        ar.tags = [unreal.Name(ETICHETTA_MURA)]
+                        arredi += 1
+                        # due luci per torre (le altre due lanterne del json no: 30 torri, meglio non esagerare):
+                        # il braciere a terra e la lanterna al piano del camminamento
+                        g2 = math.radians(float(v["yaw"]))
+                        for j, lu in enumerate(luci_arredo):
+                            tipo = str(lu.get("tipo", ""))
+                            if "braciere" not in tipo and "appesa" not in tipo:
+                                continue
+                            q = lu["pos"]
+                            luce_calda(unreal.Vector(angolo.x + x + q[0] * math.cos(g2) - q[1] * math.sin(g2),
+                                                     angolo.y + y + q[0] * math.sin(g2) + q[1] * math.cos(g2),
+                                                     z_mondo + q[2]),
+                                       "Mura %03d luce %d" % (i + 1, j + 1), "Montalto/Mura/Luci", ETICHETTA_MURA,
+                                       4.0 if "braciere" in tipo else 3.0, 500.0)
             except Exception as e:  # noqa: BLE001
                 avviso("pezzo %d: errore (%s)" % (i + 1, e))
     scrivi("mura: %d pezzi su %d (%s)" % (messi, len(lista), ", ".join(
         "%s %d" % (k.replace("SM_Montalto_", ""), n_) for k, n_ in sorted(piano.get("conti", {}).items()))))
     scrivi("varchi: " + "; ".join(piano.get("varchi", [])))
+    if con_arredo:
+        scrivi("arredo da corpo di guardia: in %d torri (rastrelliera, tavolo, braciere a terra; brande al piano del "
+               "camminamento), con due luci calde per torre" % arredi)
     if messi < attesi:
         avviso("le mura NON sono complete: %d pezzi su %d. Il livello NON e' stato salvato: rilancia questa voce."
                % (messi, attesi))

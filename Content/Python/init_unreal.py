@@ -258,6 +258,12 @@ def crea_menu_valdorso():
             "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'GRATA_MODO': '%s'})") % modo)
         valdorso.add_menu_entry("Villaggio", voce)
 
+    # (25/11) quale pezzo e', e dove sta: scrive i pezzi selezionati e fa una foto (nuovi/dimmi_selezione.py; non cambia niente)
+    voce = unreal.ToolMenuEntry(name="DimmiSelezione", type=unreal.MultiBlockType.MENU_ENTRY)
+    voce.set_label("Dimmi cosa ho selezionato (per Claude e la chat 3D)")
+    voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", COMANDO_SCRIPT % "dimmi_selezione.py")
+    valdorso.add_menu_entry("Villaggio", voce)
+
     # (16/11, v0.2.10 "Casa mia") misura la locanda di Bruno di oggi per la chat 3D (nuovi/misura_locanda.py; non cambia niente)
     voce = unreal.ToolMenuEntry(name="MisuraLocanda", type=unreal.MultiBlockType.MENU_ENTRY)
     voce.set_label("Locande: misura la locanda di oggi")

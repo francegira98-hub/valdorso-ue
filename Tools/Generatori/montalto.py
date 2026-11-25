@@ -880,13 +880,26 @@ def case_di_citta(cartella, lato, seme=2511):
         z = quota_ue(porta)
         fuori.append({"pezzo": k["pezzo"], "unreal_cm": [round(k["c"][0] * 100, 1), round(k["c"][1] * 100, 1), round(z * 100, 1)],
                       "yaw": round(k["yaw"], 2), "tinta": int(rng.integers(0, 6))})
+    # (26/11) le quattro case nuove della chat 3D (E bassa, F alta, G a sbalzo, H col timpano): stesso modulo delle
+    # A, C, D, quindi ne prendono il posto qua e la'. Un dado a parte, cosi' i posti delle case non cambiano (e nemmeno
+    # il terreno sotto): cambia solo quale modello ci va.
+    dado = np.random.default_rng(2611)
+    for k in fuori:
+        if k["pezzo"].rsplit("_", 1)[-1] in ("A", "C", "D") and dado.random() < 0.45:
+            k["pezzo"] = "SM_Montalto_Casa_" + str(dado.choice(["E", "F", "G", "H"], p=[0.30, 0.20, 0.25, 0.25]))
+    # (26/11) le sedi delle gilde nei lotti: quattro palazzetti diversi, a giro. La quota: il punto piu' alto del
+    # terreno sotto il palazzetto piu' 3 cm (lo zoccolo scende di 2,5 m e copre il resto).
+    SEDI = ("Cortile", "Loggia", "Torre", "Graticcio", "Loggia", "Cortile", "Graticcio", "Torre")
     lotti_fuori = []
     for i_, k in enumerate(lotti):
         a_ = math.radians(k["yaw"])
-        ey = np.array([-math.sin(a_), math.cos(a_)])
+        ex, ey = np.array([math.cos(a_), math.sin(a_)]), np.array([-math.sin(a_), math.cos(a_)])
+        sotto = [quota_ue(k["c"] + ex * lx + ey * ly) for lx in np.arange(-15.0, 15.1, 1.0) for ly in np.arange(-13.0, 13.1, 1.0)]
         lotti_fuori.append({"nome": "Lotto per una gilda %d" % (i_ + 1), "strada": k["strada"],
+                            "sede": "SM_Montalto_Gilda_" + SEDI[i_ % len(SEDI)],
                             "unreal_cm": [round(k["c"][0] * 100, 1), round(k["c"][1] * 100, 1),
-                                          round(quota_ue(k["c"] - ey * 12.0) * 100, 1)],
+                                          round((max(sotto) + 0.03) * 100, 1)],
+                            "dislivello_sotto_cm": round((max(sotto) - min(sotto)) * 100),
                             "yaw": round(k["yaw"], 2), "fronte_m": 30, "fondo_m": 26})
     conti = {}
     for k in fuori:
@@ -1137,6 +1150,15 @@ def sotto_gli_edifici(cartella, lato):
                 abbassa((x, y), k["yaw"], z, -4.3, 4.3, -7.2, 3.0)       # dentro la torre (9 x 9, sporge fuori: -Y)
                 quanti += 1
             # la Porta nord no: li' il terreno e' gia' fatto apposta per la soglia e la strada che sale
+    # (26/11) sotto le sedi delle gilde niente erba (il terreno non si tocca: i lotti sono gia' in piano)
+    with open(os.path.join(cartella, f"Case_{lato}.json"), encoding="utf-8") as f:
+        for k in json.load(f).get("lotti_gilde", []):
+            x, y = k["unreal_cm"][0] / 100.0, k["unreal_cm"][1] / 100.0
+            r_ = 24.0
+            k0, k1 = max(int((y - r_) / lato * ns), 0), min(int((y + r_) / lato * ns) + 2, ns)
+            l0, l1 = max(int((x - r_) / lato * ns), 0), min(int((x + r_) / lato * ns) + 2, ns)
+            sopra = rettangolo((x, y), k["yaw"], -15.0, 15.0, -13.2, 13.0, cs[k0:k1, l0:l1], rs[k0:k1, l0:l1])
+            senza[k0:k1, l0:l1, 0][sopra] = 255
     Image.fromarray(np.clip(np.round(alt), 0, 65535).astype(np.uint16)).save(percorso, optimize=True)
     Image.fromarray(senza, "RGBA").save(os.path.join(cartella, "T_MontaltoSenzaErba.png"), optimize=True)
     print("terreno abbassato e senza erba sotto %d edifici (case e torri delle mura)" % quanti)
