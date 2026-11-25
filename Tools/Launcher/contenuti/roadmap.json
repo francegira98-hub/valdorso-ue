@@ -1,6 +1,6 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-20",
+ "aggiornato": "2026-11-26",
  "_come": "Le tappe, dalla prima. stato: fatta, in_corso, prossima, futura. data (per le fatte) AAAA-MM-GG; se è vuota, prepara_aggiornamento.py ci mette il giorno in cui pubblichi quella versione.",
  "intro": "La strada di Valdorso, tappa per tappa, dalla prima pietra alla 1.0: sei alpha, quattro beta e il regno. Ogni tappa è una versione che si può giocare.",
  "tappe": [
@@ -443,27 +443,26 @@
   {
    "versione": "0.2.7.1",
    "nome": "Le rifiniture",
-   "stato": "in_corso",
+   "stato": "fatta",
    "voci": [
-    "Le prove in gioco della 0.2.7, una per una, e le correzioni",
-    "L'osteria di posta fuori dalle mura",
-    "Texture vere per gli interni e pietra da castello sulle mura",
-    "Le ghiande in tasca e i prezzi piccoli: un boccale, un pasto caldo",
-    "Il registro delle camere, perché due coloni non abbiano mai la stessa"
+    "Le ghiande in tasca e i prezzi piccoli: una mela, un boccale di sidro",
+    "Pietra da castello su mura, torri, gradini, rampe e passo",
+    "Texture vere per gli interni",
+    "La campanella della caserma, il braciere del passo e la vasca della locanda rifatti più curati"
    ],
    "nome_en": "Finishing touches",
    "voci_en": [
-    "In-game testing of 0.2.7, item by item, and the fixes",
-    "The coaching inn outside the walls",
-    "Real textures for the interiors and castle stone on the walls",
-    "Acorns in your purse and small prices: a mug, a hot meal",
-    "A register of the rooms, so that no two settlers ever share one"
-   ]
+    "Acorns in your purse and small prices: an apple, a mug of cider",
+    "Castle stone on walls, towers, steps, ramps and the pass",
+    "Real textures for the interiors",
+    "The barracks bell, the brazier at the pass and the inn's tub remade with more care"
+   ],
+   "data": ""
   },
   {
    "versione": "0.2.8",
    "nome": "Le fondamenta",
-   "stato": "prossima",
+   "stato": "in_corso",
    "voci": [
     "Il server vero della valle, sempre acceso, con le copie notturne",
     "Registrazione con l'email e recupero della password",
@@ -476,7 +475,9 @@
     "In compagnia ci si parla a portata di voce, e il bottino lo dividono i compagni",
     "Se il capo non divide la paga lo si segnala al bancone della Gilda: decide il capo della Gilda",
     "Chi esce dal gioco resta nel mondo qualche secondo: non si scappa da un pericolo chiudendo il gioco",
-    "La prima prova in due: compagnia, incarichi e bottino giocati con un amico"
+    "La prima prova in due: compagnia, incarichi e bottino giocati con un amico",
+    "L'osteria di posta fuori dalle mura",
+    "Il registro delle camere, perché due coloni non abbiano mai la stessa"
    ],
    "nome_en": "The foundations",
    "voci_en": [
@@ -491,13 +492,15 @@
     "In a company you talk within earshot, and the companions share the loot",
     "If the leader does not share the pay, you report it at the Guild counter: the head of the Guild decides",
     "Whoever leaves the game stays in the world for a few seconds: you cannot escape a danger by closing the game",
-    "The first test for two: company, jobs and loot played with a friend"
+    "The first test for two: company, jobs and loot played with a friend",
+    "The coaching inn outside the walls",
+    "A register of the rooms, so that no two settlers ever share one"
    ]
   },
   {
    "versione": "0.2.9",
    "nome": "L'armaiolo e la Loggia",
-   "stato": "futura",
+   "stato": "prossima",
    "voci": [
     "Le armature",
     "L'armaiolo",

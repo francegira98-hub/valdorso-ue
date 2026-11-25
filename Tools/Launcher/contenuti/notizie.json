@@ -1,8 +1,16 @@
 {
  "gioco": "Valdorso",
- "aggiornato": "2026-11-20",
+ "aggiornato": "2026-11-26",
  "_come": "Le notizie del launcher, dalla più nuova. data AAAA-MM-GG; etichetta (facoltativa) es. Patch; link: un indirizzo web oppure #patch #roadmap #cronache #opzioni; immagine: un file in immagini/ (jpg o png, al massimo 3 MB). voci: le frasi che girano nel riquadro 'Voci dalla locanda'.",
  "notizie": [
+  {
+   "data": "2026-11-26",
+   "etichetta": "Patch",
+   "titolo": "Le rifiniture: v0.2.7.1",
+   "immagine": "valle.jpg",
+   "link": "#patch",
+   "testo": "Le ghiande di rame si usano davvero: da Bruno una mela o un boccale di sidro costano 5 ghiande, e il resto torna giusto. Le mura, le torri e il passo hanno una pietra da castello più scura e più vera, e dentro caserma, tempio e locanda muri e pavimenti hanno la loro materia."
+  },
   {
    "data": "2026-11-20",
    "etichetta": "Patch",
