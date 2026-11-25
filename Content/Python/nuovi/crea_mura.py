@@ -174,9 +174,12 @@ CASTELLO = ("T_Mura_Pietra_Castello", 0.81)
 # blocchi sono lunghi quasi un metro. Blocchi piu' piccoli (Scala 1,6: circa 60 x 20 cm) e una tinta piu' scura e calda,
 # verso la pietra delle case. Sono due numeri: si ritoccano qui e si rilancia «Mura: 13».
 CASTELLO_SCALA = 1.6
-CASTELLO_TINTA = (0.66, 0.60, 0.52)
+CASTELLO_TINTA = (0.46, 0.42, 0.36)      # (25/11 notte, Fra: «un po' piu' scure», due volte; prima 0.66/0.60/0.52, poi 0.56/0.51/0.44)
 # su quali pezzi va la pietra da castello: le mura (alte e basse), le torri, il cammino di ronda, il recinto della caserma
-CASTELLO_SU = ("SM_Mura_", "SM_Mura2_", "SM_Torre", "SM_Cammino_", "SM_Recinto_")
+# (25/11 notte) anche gli edifici della caserma dentro il recinto: nelle foto restavano chiari, con la pietra delle case
+CASTELLO_SU = ("SM_Mura_", "SM_Mura2_", "SM_Torre", "SM_Cammino_", "SM_Recinto_", "SM_Alloggi_", "SM_Cella_Caserma",
+               "SM_Gradini_Porticina_", "SM_Gradino_Soglia_",   # (25/11 notte, Fra) i gradini davanti alle porticine: erano bianchi
+               "SM_Soglie_Porta_", "SM_Passo_")                 # (25/11 notte) le rampe delle porte grandi e il passo della Guardia Reale
 CASTELLO_MI = [None]
 
 
@@ -3571,7 +3574,29 @@ def pietra_delle_mura():
                         nel_livello += 1
                 except Exception:  # noqa: BLE001
                     pass
-    scrivi("pietra delle mura: %s su %d modelli (%d copie nel livello)" % (nuovo.get_name(), len(cambiati), nel_livello))
+    scrivi("pietra delle mura: %s su %d modelli cambiati adesso (%d copie nel livello)"
+           % (nuovo.get_name(), len(cambiati), nel_livello))
+    # (25/11 notte) il conto vero: quale pietra ha oggi ogni modello di pietra che sta nel livello (mura, torri, recinto,
+    # caserma, tempio...). «0 modelli cambiati» vuol dire solo che erano gia' a posto: qui si vede chi ha che cosa.
+    try:
+        per_materiale = {}
+        for a in attori.get_all_level_actors():
+            for comp in a.get_components_by_class(unreal.StaticMeshComponent):
+                mesh = comp.get_editor_property("static_mesh")
+                if mesh is None or not mesh.get_path_name().startswith(PEZZI + "/"):
+                    continue
+                for i, sm in enumerate(mesh.get_editor_property("static_materials")):
+                    ns = str(sm.get_editor_property("material_slot_name")).lower()
+                    if "pietra" not in ns or "dentro" in ns or "pavimento" in ns:
+                        continue
+                    usato = comp.get_material(i)
+                    per_materiale.setdefault(usato.get_name() if usato is not None else "nessuno", set()).add(mesh.get_name())
+        for nome_mat in sorted(per_materiale):
+            nomi = sorted(per_materiale[nome_mat])
+            scrivi("  pietra di fuori = %s: %d modelli (%s%s)" % (nome_mat, len(nomi), ", ".join(nomi[:14]),
+                                                              ", ..." if len(nomi) > 14 else ""))
+    except Exception as e:  # noqa: BLE001
+        avviso("conto delle pietre non fatto (%s)" % e)
     return len(cambiati)
 
 

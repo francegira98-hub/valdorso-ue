@@ -21,7 +21,7 @@ def fase_di(attore):
     return None
 
 
-def mostra(fase):
+def mostra(fase, zitto=False):
     attori = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     mostrate = nascoste = 0
     for a in attori.get_all_level_actors():
@@ -34,4 +34,8 @@ def mostra(fase):
             mostrate += 1
         else:
             nascoste += 1
-    unreal.log("[Valdorso] Villaggio nell'editor: fase %d, %d cose mostrate, %d nascoste" % (fase, mostrate, nascoste))
+    if not zitto:
+        # scelta fatta a mano dal menu: l'avvio automatico (init_unreal.py) da qui in poi non la tocca piu'
+        unreal._valdorso_fase_scelta = True
+        unreal.log("[Valdorso] Villaggio nell'editor: fase %d, %d cose mostrate, %d nascoste" % (fase, mostrate, nascoste))
+    return mostrate + nascoste

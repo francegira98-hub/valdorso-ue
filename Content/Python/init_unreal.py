@@ -400,3 +400,54 @@ def crea_menu_valdorso():
 
 
 crea_menu_valdorso()
+
+
+# (25/11/2026) All'avvio, in L_Valle, l'editor mostra UNA fase sola del villaggio (la 3), come fa la voce
+# «Villaggio: mostra la fase 3». Prima si vedevano le fasi 2 e 3 sovrapposte (la scala della fase 2 spuntava dal muro
+# della fase 3) e sembrava un difetto dei modelli. Non cambia il livello e non serve salvare: per vedere un'altra fase
+# ci sono sempre le voci del menu. Per spegnerlo: FASE_ALL_AVVIO = 0.
+FASE_ALL_AVVIO = 3
+_avvio_fase = {"maniglia": None, "da": None, "prossimo": 0.0, "riuscito": None}
+
+
+def _fase_all_avvio(_dt):
+    import time
+    try:
+        ora = time.time()
+        if _avvio_fase["da"] is None:
+            _avvio_fase["da"] = ora
+        if ora < _avvio_fase["prossimo"]:
+            return
+        _avvio_fase["prossimo"] = ora + 3.0
+        finito = ora - _avvio_fase["da"] > 240.0                     # dopo 4 minuti si smette comunque
+        mondo = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+        if getattr(unreal, "_valdorso_fase_scelta", False):
+            finito = True                                            # Fra ha gia' scelto una fase dal menu: non si tocca
+        elif mondo is not None and mondo.get_name() == "L_Valle":
+            import fasi_villaggio
+            quante = fasi_villaggio.mostra(FASE_ALL_AVVIO, zitto=True)
+            if quante and _avvio_fase["riuscito"] is None:
+                _avvio_fase["riuscito"] = ora
+                unreal.log("[Valdorso] All'avvio: il villaggio si vede nella fase %d (le altre: menu Valdorso -> "
+                           "Villaggio -> «mostra la fase...»)" % FASE_ALL_AVVIO)
+            # i pezzi del mondo arrivano un po' alla volta: si ripete per 45 secondi dopo la prima volta riuscita
+            if _avvio_fase["riuscito"] is not None and ora - _avvio_fase["riuscito"] > 45.0:
+                finito = True
+        if finito and _avvio_fase["maniglia"] is not None:
+            unreal.unregister_slate_post_tick_callback(_avvio_fase["maniglia"])
+            _avvio_fase["maniglia"] = None
+    except Exception as e:  # noqa: BLE001
+        unreal.log_warning("[Valdorso] All'avvio: la fase non impostata (%s)" % e)
+        try:
+            if _avvio_fase["maniglia"] is not None:
+                unreal.unregister_slate_post_tick_callback(_avvio_fase["maniglia"])
+                _avvio_fase["maniglia"] = None
+        except Exception:  # noqa: BLE001
+            pass
+
+
+if FASE_ALL_AVVIO:
+    try:
+        _avvio_fase["maniglia"] = unreal.register_slate_post_tick_callback(_fase_all_avvio)
+    except Exception as e:  # noqa: BLE001
+        unreal.log("[Valdorso] All'avvio: la fase non si imposta qui (%s)" % e)
