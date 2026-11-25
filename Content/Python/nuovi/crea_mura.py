@@ -160,6 +160,74 @@ INTERNI = {"intonaco_dentro": ("MI_Interno_Intonaco", "Intonaco", 1.5, (1.0, 0.9
            "pavimento_pietra": ("MI_Interno_PavimentoPietra", "Pietra", 0.5, (0.62, 0.60, 0.58))}
 
 
+# (25/11, v0.2.7.1) Le TEXTURE VERE della chat 3D (V:/Texture/valdorso/texture_interni, consegna del 17/11): quattro per gli
+# interni e la pietra da castello per le mura. Ogni texture copre 1 m x 1 m e i pezzi della chat 3D hanno 1 UV = 1 m
+# (misurato sui .glb): quindi Scala 1 e nessuna tinta. Si accendono con «Mura: 13» e si spengono con «Mura: 14»; da
+# accese, restano anche quando si rilanciano le altre voci «Mura».
+TEXTURE_VERE = "V:/Texture/valdorso/texture_interni"
+TEXTURE_VERE_DEST = "/Game/Valle/Villaggio/Texture/Vere"
+# slot del modello: (texture, ruvidezza media dal texture.json della chat 3D)
+VERE = {"intonaco_dentro": ("T_Interno_Intonaco", 0.89), "pietra_dentro": ("T_Interno_Pietra", 0.81),
+        "pavimento_legno": ("T_Interno_Pavimento_Legno", 0.70), "pavimento_pietra": ("T_Interno_Pavimento_Pietra", 0.69)}
+CASTELLO = ("T_Mura_Pietra_Castello", 0.81)
+# (25/11, dalla foto di Fra: «troppo chiare, sembrano blocchi finti») La texture da sola e' chiara e pulita, e a Scala 1 i
+# blocchi sono lunghi quasi un metro. Blocchi piu' piccoli (Scala 1,6: circa 60 x 20 cm) e una tinta piu' scura e calda,
+# verso la pietra delle case. Sono due numeri: si ritoccano qui e si rilancia «Mura: 13».
+CASTELLO_SCALA = 1.6
+CASTELLO_TINTA = (0.66, 0.60, 0.52)
+# su quali pezzi va la pietra da castello: le mura (alte e basse), le torri, il cammino di ronda, il recinto della caserma
+CASTELLO_SU = ("SM_Mura_", "SM_Mura2_", "SM_Torre", "SM_Cammino_", "SM_Recinto_")
+CASTELLO_MI = [None]
+
+
+def file_vere_spente():
+    return os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "Claude",
+                        "texture_vere_spente.txt")
+
+
+def texture_vera(nome):
+    """(colore, rilievo) della texture vera, se e' stata importata e le texture vere non sono spente; altrimenti None."""
+    if os.path.exists(file_vere_spente()):
+        return None
+    c = "%s/%s_C" % (TEXTURE_VERE_DEST, nome)
+    n = "%s/%s_N" % (TEXTURE_VERE_DEST, nome)
+    if not (libreria.does_asset_exist(c) and libreria.does_asset_exist(n)):
+        return None
+    tc, tn = unreal.load_asset(c), unreal.load_asset(n)
+    if not isinstance(tc, unreal.Texture2D) or not isinstance(tn, unreal.Texture2D):
+        return None
+    return tc, tn
+
+
+def materiale_castello():
+    """MI_Mura_PietraCastello (figlio di MI_Villaggio_Pietra, con la texture vera): lo trova veste(). None se spenta."""
+    CASTELLO_MI[0] = None
+    vera = texture_vera(CASTELLO[0])
+    g = unreal.load_asset("%s/MI_Villaggio_Pietra" % MATERIALI)
+    if vera is None or g is None:
+        return None
+    mel = unreal.MaterialEditingLibrary
+    try:
+        percorso = "%s/MI_Mura_PietraCastello" % MATERIALI
+        mi = unreal.load_asset(percorso) if libreria.does_asset_exist(percorso) else None
+        if mi is None:
+            mi = strumenti.create_asset("MI_Mura_PietraCastello", MATERIALI, unreal.MaterialInstanceConstant,
+                                        unreal.MaterialInstanceConstantFactoryNew())
+        mel.set_material_instance_parent(mi, g)
+        mel.set_material_instance_texture_parameter_value(mi, "Colore", vera[0])
+        mel.set_material_instance_texture_parameter_value(mi, "Rilievo", vera[1])
+        mel.set_material_instance_scalar_parameter_value(mi, "Scala", CASTELLO_SCALA)
+        mel.set_material_instance_scalar_parameter_value(mi, "Ruvidezza", CASTELLO[1])
+        mel.set_material_instance_vector_parameter_value(
+            mi, "Tinta", unreal.LinearColor(CASTELLO_TINTA[0], CASTELLO_TINTA[1], CASTELLO_TINTA[2], 1.0))
+        mel.update_material_instance(mi)
+        libreria.save_loaded_asset(mi)
+        CASTELLO_MI[0] = mi
+    except Exception as e:  # noqa: BLE001
+        avviso("MI_Mura_PietraCastello non fatto (%s): le mura restano con la pietra del villaggio" % e)
+    return CASTELLO_MI[0]
+
+
 def materiali_interni():
     """Crea (o aggiorna) i materiali degli interni e li segna in SLOT_ESATTI per veste()."""
     mel = unreal.MaterialEditingLibrary
@@ -175,9 +243,22 @@ def materiali_interni():
                 mi = strumenti.create_asset(nome, MATERIALI, unreal.MaterialInstanceConstant,
                                             unreal.MaterialInstanceConstantFactoryNew())
             mel.set_material_instance_parent(mi, g)
-            mel.set_material_instance_scalar_parameter_value(mi, "Scala", scala)
-            mel.set_material_instance_vector_parameter_value(mi, "Tinta",
-                                                             unreal.LinearColor(tinta[0], tinta[1], tinta[2], 1.0))
+            # (25/11) si riparte puliti: cosi' spegnendo le texture vere tornano quelle del villaggio
+            try:
+                mel.clear_all_material_instance_parameters(mi)
+            except Exception as e:  # noqa: BLE001
+                avviso("%s: non riesco a ripulire i parametri (%s): potrebbe tenere la texture di prima" % (nome, e))
+            vera = texture_vera(VERE[slot][0]) if slot in VERE else None
+            if vera is not None:
+                mel.set_material_instance_texture_parameter_value(mi, "Colore", vera[0])
+                mel.set_material_instance_texture_parameter_value(mi, "Rilievo", vera[1])
+                mel.set_material_instance_scalar_parameter_value(mi, "Scala", 1.0)
+                mel.set_material_instance_scalar_parameter_value(mi, "Ruvidezza", VERE[slot][1])
+                mel.set_material_instance_vector_parameter_value(mi, "Tinta", unreal.LinearColor(1.0, 1.0, 1.0, 1.0))
+            else:
+                mel.set_material_instance_scalar_parameter_value(mi, "Scala", scala)
+                mel.set_material_instance_vector_parameter_value(mi, "Tinta",
+                                                                 unreal.LinearColor(tinta[0], tinta[1], tinta[2], 1.0))
             mel.update_material_instance(mi)
             libreria.save_loaded_asset(mi)
             SLOT_ESATTI[slot] = mi
@@ -196,11 +277,16 @@ def veste(mesh, mat):
         if nome in SLOT_ESATTI:
             mesh.set_material(i, SLOT_ESATTI[nome])
             continue
+        slot_nudo = nome
         mi = sm.get_editor_property("material_interface")
         if mi is not None:
             nome += " " + mi.get_name().lower()
         chiave = next((v for k, v in SLOT.items() if k in nome), None)
-        if chiave and chiave in mat:
+        if chiave == "Pietra" and CASTELLO_MI[0] is not None and mesh.get_name().startswith(CASTELLO_SU) \
+                and "pietra" in slot_nudo and slot_nudo not in INTERNI and "dentro" not in slot_nudo \
+                and "pavimento" not in slot_nudo:
+            mesh.set_material(i, CASTELLO_MI[0])     # (25/11) le mura: pietra da castello
+        elif chiave and chiave in mat:
             mesh.set_material(i, mat[chiave])
         elif any(k in nome for k in SLOT_PROPRI):
             pass
@@ -264,6 +350,7 @@ def materiali():
             avviso("manca MI_Villaggio_%s (prima il villaggio)" % n)
         else:
             mat[n] = a
+    materiale_castello()
     return mat
 
 
@@ -3436,6 +3523,105 @@ def fai_ronda():
 
 
 
+def pietra_delle_mura():
+    """Sui modelli delle mura gia' importati, lo slot della pietra di fuori prende la pietra da castello (o torna quella
+    del villaggio se le texture vere sono spente). Poi i pezzi gia' nel livello che avevano una copia del materiale."""
+    g = unreal.load_asset("%s/MI_Villaggio_Pietra" % MATERIALI)
+    nuovo = CASTELLO_MI[0] or g
+    if nuovo is None:
+        avviso("manca MI_Villaggio_Pietra: non tocco le mura")
+        return 0
+    da = [m for m in (g, unreal.load_asset("%s/MI_Mura_PietraCastello" % MATERIALI)
+                      if libreria.does_asset_exist("%s/MI_Mura_PietraCastello" % MATERIALI) else None) if m is not None]
+    cambiati = {}
+    for percorso in libreria.list_assets(PEZZI, recursive=True, include_folder=False):
+        nome = percorso.split(".")[0].rsplit("/", 1)[-1]
+        if not nome.startswith(CASTELLO_SU):
+            continue
+        mesh = unreal.load_asset(percorso)
+        if not isinstance(mesh, unreal.StaticMesh):
+            continue
+        slot = []
+        for i, sm in enumerate(mesh.get_editor_property("static_materials")):
+            ns = str(sm.get_editor_property("material_slot_name")).lower()
+            if "pietra" not in ns or ns in SLOT_ESATTI or ns in INTERNI or "dentro" in ns or "pavimento" in ns:
+                continue
+            if mesh.get_material(i) != nuovo and mesh.get_material(i) in da:
+                mesh.set_material(i, nuovo)
+                slot.append(i)
+        if slot:
+            libreria.save_loaded_asset(mesh)
+            cambiati[mesh.get_path_name()] = (mesh, slot)
+    # i pezzi nel livello: se un componente ha una copia sua della pietra vecchia, prende quella nuova
+    nel_livello = 0
+    for a in attori.get_all_level_actors():
+        for comp in a.get_components_by_class(unreal.StaticMeshComponent):
+            mesh = comp.get_editor_property("static_mesh")
+            if mesh is None or not mesh.get_name().startswith(CASTELLO_SU):
+                continue
+            for i, sm in enumerate(mesh.get_editor_property("static_materials")):
+                ns = str(sm.get_editor_property("material_slot_name")).lower()
+                if "pietra" not in ns or ns in SLOT_ESATTI or ns in INTERNI or "dentro" in ns or "pavimento" in ns:
+                    continue
+                try:
+                    if comp.get_material(i) in da and comp.get_material(i) != nuovo:
+                        a.modify()
+                        comp.modify()
+                        comp.set_material(i, nuovo)
+                        nel_livello += 1
+                except Exception:  # noqa: BLE001
+                    pass
+    scrivi("pietra delle mura: %s su %d modelli (%d copie nel livello)" % (nuovo.get_name(), len(cambiati), nel_livello))
+    return len(cambiati)
+
+
+def fai_texture(accese=True):
+    """«Mura: 13» (accese) e «Mura: 14» (spente): le texture vere degli interni e la pietra da castello sulle mura."""
+    spente = file_vere_spente()
+    if accese:
+        nomi = [v[0] for v in VERE.values()] + [CASTELLO[0]]
+        compiti = []
+        for n in nomi:
+            for suff in ("_C", "_N"):
+                f = "%s/%s%s.png" % (TEXTURE_VERE, n, suff)
+                if os.path.exists(f):
+                    compiti.append(compito(f, TEXTURE_VERE_DEST))
+                else:
+                    avviso("manca il file %s" % f)
+        scrivi("importo %d texture vere..." % len(compiti))
+        strumenti.import_asset_tasks(compiti)
+        for n in nomi:
+            t = "%s/%s_N" % (TEXTURE_VERE_DEST, n)
+            tn = unreal.load_asset(t) if libreria.does_asset_exist(t) else None
+            if isinstance(tn, unreal.Texture2D):
+                try:
+                    tn.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
+                    tn.set_editor_property("srgb", False)
+                    libreria.save_loaded_asset(tn)
+                except Exception as e:  # noqa: BLE001
+                    avviso("%s_N: non riesco a segnarla come rilievo (%s)" % (n, e))
+            if not (libreria.does_asset_exist("%s/%s_C" % (TEXTURE_VERE_DEST, n)) and isinstance(tn, unreal.Texture2D)):
+                avviso("la texture %s non e' arrivata in %s: quel materiale resta com'era" % (n, TEXTURE_VERE_DEST))
+        if os.path.exists(spente):
+            os.remove(spente)
+    else:
+        os.makedirs(os.path.dirname(spente), exist_ok=True)
+        with open(spente, "w", encoding="utf-8") as f:
+            f.write("le texture vere sono spente («Mura: 14»); «Mura: 13» le riaccende\n")
+    mat = materiali()
+    if not mat:
+        return
+    materiali_interni()
+    vere = [s_ for s_ in VERE if texture_vera(VERE[s_][0]) is not None]
+    scrivi("interni con la texture vera: %s" % (", ".join(sorted(vere)) or "nessuno (texture del villaggio)"))
+    pietra_delle_mura()
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+    scrivi("FATTO e salvato. Le texture vere sono %s. Da guardare: una torre da fuori e da dentro, la caserma dentro "
+           "(camerata, ufficio, prigione), il tempio dentro. Se non piacciono: «Mura: %s»."
+           % (("ACCESE", "14. texture vere: torna a quelle di prima") if accese
+              else ("SPENTE", "13. texture vere degli interni e pietra da castello")))
+
+
 try:
     if MODO == "assi":
         fai_assi()
@@ -3463,6 +3649,10 @@ try:
         fai_passo()
     elif MODO == "ronda":
         fai_ronda()
+    elif MODO == "texture":
+        fai_texture(True)
+    elif MODO == "texture_via":
+        fai_texture(False)
     else:
         avviso("modo sconosciuto: %s" % MODO)
 except Exception as e:  # noqa: BLE001

@@ -4,6 +4,30 @@
  "_come": "Le note delle patch, dalla versione più nuova. data AAAA-MM-GG (se è vuota, prepara_aggiornamento.py ci mette la data del giorno in cui pubblichi quella versione). gruppi: titolo e voci; i gruppi che cominciano con 'Sistem' sono d'oro, gli altri di brace.",
  "versioni": [
   {
+   "versione": "0.2.7.1",
+   "nome": "Le rifiniture",
+   "data": "",
+   "sommario": "Le ghiande di rame entrano in tasca: da Bruno una mela o un boccale di sidro costano pochi spiccioli, e il resto torna giusto. La campanella della caserma ha una forma più bella.",
+   "gruppi": [
+    {
+     "titolo": "Novità: le ghiande e i prezzi piccoli",
+     "voci": [
+      "Le ghiande di rame adesso si usano davvero. Dieci ghiande fanno un Lucio.",
+      "Da Bruno, alla locanda, una mela costa 5 ghiande, e c'è una cosa nuova da bere: il boccale di sidro, 5 ghiande anche lui.",
+      "Se in tasca hai solo Lucio, Bruno cambia da sé: paghi con un Lucio e il resto ti torna in ghiande.",
+      "Lo zaino e le botteghe mostrano le monete per intero, per esempio «2 Aureus, 7 Lucio e 5 ghiande»."
+     ]
+    },
+    {
+     "titolo": "Sistemato",
+     "voci": [
+      "La campanella della caserma, il braciere del passo e la vasca della locanda sono stati rifatti più tondi e più curati.",
+      "La campanella sta a destra della porta del corpo di guardia: la corda non pende più davanti all'ingresso."
+     ]
+    }
+   ]
+  },
+  {
    "versione": "0.2.7",
    "nome": "Il tempio",
    "data": "",

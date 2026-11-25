@@ -199,6 +199,8 @@ def crea_menu_valdorso():
                                   ("MuraLocanda", "Mura: 10. la locanda nuova di Bruno", "locanda"),
                                   ("MuraPasso", "Mura: 11. il posto di guardia reale del passo", "passo"),
                                   ("MuraRonda", "Mura: 12. i registri della ronda", "ronda"),
+                                  ("MuraTexture", "Mura: 13. texture vere degli interni e pietra da castello", "texture"),
+                                  ("MuraTextureVia", "Mura: 14. texture vere: torna a quelle di prima", "texture_via"),
                                   ("MuraIndietro", "Mura: torna come prima", "indietro")):
         voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
         voce.set_label(etichetta)
@@ -206,6 +208,25 @@ def crea_menu_valdorso():
             "import os, unreal; "
             "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_mura.py'); "
             "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'MURA_MODO': '%s'})") % modo)
+        valdorso.add_menu_entry("Villaggio", voce)
+
+    # (24/11) PROVA: le Terre di Montalto, la mappa oltre il passo, in un livello a parte (nuovi/crea_montalto.py).
+    # Non tocca L_Valle e non toglie il sigillo.
+    for nome, etichetta, modo in (("MontaltoLivello", "Montalto (prova): 1. crea il livello", "livello"),
+                                  ("MontaltoVesti", "Montalto (prova): 2. vesti il terreno (materiale e fiumi)", "vesti"),
+                                  ("MontaltoPonte", "Montalto (prova): 3. il ponte sull'Aure", "ponte"),
+                                  ("MontaltoRocca", "Montalto (prova): 4. la rocca del duca", "rocca"),
+                                  ("MontaltoPorto", "Montalto (prova): 5. il porto e i magazzini della lana", "porto"),
+                                  ("MontaltoGranaio", "Montalto (prova): 6. il Granaio della Corona", "granaio"),
+                                  ("MontaltoCase", "Montalto (prova): 7. le case di citta'", "case"),
+                                  ("MontaltoMura", "Montalto (prova): 8. le mura e la porta nord", "mura"),
+                                  ("MontaltoCimitero", "Montalto (prova): 9. il cimitero vecchio", "cimitero")):
+        voce = unreal.ToolMenuEntry(name=nome, type=unreal.MultiBlockType.MENU_ENTRY)
+        voce.set_label(etichetta)
+        voce.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", (
+            "import os, unreal; "
+            "p = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()), 'Python', 'nuovi', 'crea_montalto.py'); "
+            "exec(compile(open(p, encoding='utf-8').read(), p, 'exec'), {'__name__': '__main__', 'MONTALTO_MODO': '%s'})") % modo)
         valdorso.add_menu_entry("Villaggio", voce)
 
     # (17/11, v0.2.7) i dati per il sagrato e per i ponti, per la chat 3D (nuovi/esporta_tempio_ponti.py; non cambia niente)
