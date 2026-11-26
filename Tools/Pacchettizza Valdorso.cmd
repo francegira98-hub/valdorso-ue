@@ -24,10 +24,14 @@ echo.
 rem (12/11, v0.2.1) via le scatole del pacchetto di prima: Unreal nell'archivio non cancella niente, e i file
 rem vecchi (come lo scatolone Valdorso-Windows.pak) finirebbero nel gioco insieme a quelli nuovi
 if exist "%PAKS%" rd /s /q "%PAKS%"
+rem (26/11, v0.2.8) via il registro del pacchetto di prima (diceva gia' "ExitCode=0": la finestra dell'avanzamento
+rem lo avrebbe letto come pacchetto finito) e poi la finestra dell'avanzamento si apre da sola, anche da "Ripara e pacchettizza"
+if exist "%REGISTRO%" del /q "%REGISTRO%"
+start "Valdorso - avanzamento del pacchetto" "%~dp0Avanzamento del pacchetto.cmd"
 call "%UE%\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="%PROGETTO%" -noP4 -platform=Win64 -clientconfig=Development -build -cook -map=/Game/Menu/Lvl_Menu+/Game/Prove/L_Valle -stage -pak -iostore -compressed -prereqs -archive -archivedirectory="%USCITA%" -utf8output -unattended -nocompileeditor > "%REGISTRO%" 2>&1
 set CODICE=%ERRORLEVEL%
 if "%CODICE%"=="0" (
-  echo FATTO %date% %time% codice 0>> "%ESITO%"
+  >> "%ESITO%" echo FATTO %date% %time% codice 0
   title Valdorso - pacchetto FATTO
   echo  PACCHETTO FATTO: %USCITA%\Windows
   rem (12/11, v0.2.1) le scatole del gioco e quanto pesano, per Claude
@@ -36,7 +40,7 @@ if "%CODICE%"=="0" (
   echo Impronte delle scatole %date% %time%> "%IMPRONTE%"
   for %%f in ("%PAKS%\*") do certutil -hashfile "%%f" SHA256 >> "%IMPRONTE%"
 ) else (
-  echo ERRORE %date% %time% codice %CODICE%>> "%ESITO%"
+  >> "%ESITO%" echo ERRORE %date% %time% codice %CODICE%
   title Valdorso - pacchetto con ERRORE
   echo  ERRORE %CODICE%: guarda %REGISTRO%
 )

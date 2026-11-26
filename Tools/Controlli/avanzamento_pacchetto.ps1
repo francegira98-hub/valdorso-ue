@@ -11,7 +11,38 @@ $fasi = @(
     @('PACKAGE COMMAND STARTED', '4 di 4   Chiudo il pacchetto'),
     @('ARCHIVE COMMAND STARTED', '4 di 4   Copio il gioco in V:\Pacchetti')
 )
+$tempiFile = 'V:\Valdorso\Saved\Claude\pacchetto_fasi.txt'
+# (26/11, v0.2.8) i minuti di ogni fase: la finestra segna l'ora in cui vede comparire ogni fase nel registro.
+# Le fasi gia' passate quando la finestra si apre non hanno l'ora (si apre da sola all'inizio del pacchetto).
+$inizioFase = @{}
+$script:fineVista = $null
+$primoGiro = $true
 try { $host.UI.RawUI.WindowTitle = 'Valdorso - avanzamento del pacchetto' } catch { }
+
+function Minuti([TimeSpan]$t) {
+    if ($t.TotalMinutes -lt 1) { return 'meno di 1 min' }
+    return ('{0} min' -f [int][math]::Floor($t.TotalMinutes))
+}
+
+function TempiDelleFasi([bool]$finito) {
+    # una riga per fase vista: quanto e' durata (o da quanto e' in corso)
+    $out = @()
+    $chiavi = @($fasi | ForEach-Object { $_[0] } | Where-Object { $inizioFase.ContainsKey($_) })
+    for ($i = 0; $i -lt $chiavi.Count; $i++) {
+        $k = $chiavi[$i]
+        $nome = $k
+        foreach ($f in $fasi) { if ($f[0] -eq $k) { $nome = $f[1]; break } }
+        $da = $inizioFase[$k]
+        $a = $null
+        if ($i + 1 -lt $chiavi.Count) { $a = $inizioFase[$chiavi[$i + 1]] } elseif ($finito) { $a = $script:fineVista } else { $a = Get-Date }
+        if ($null -eq $da) { $t = 'gia'' passata quando si e'' aperta la finestra' }
+        elseif ($null -eq $a) { $t = '?' }
+        elseif ($i + 1 -lt $chiavi.Count -or $finito) { $t = Minuti ($a - $da) }
+        else { $t = 'da ' + (Minuti ($a - $da)) }
+        $out += ('{0,-44} {1}' -f $nome, $t)
+    }
+    return $out
+}
 
 function Barra([double]$parte) {
     if ($parte -lt 0) { $parte = 0 }
@@ -36,9 +67,15 @@ while ($true) {
     $errori = 0
     $ultima = ''
     $uscita = -1
+    # al primo giro le fasi gia' nel registro sono passate prima che la finestra si aprisse, tranne quando il registro
+    # e' appena cominciato (la finestra aperta da sola dal pacchetto)
+    $vivo = (-not $primoGiro) -or ($righe.Count -lt 60)
     foreach ($r in $righe) {
         foreach ($f in $fasi) {
-            if ($r.Contains($f[0])) { $fase = $f[1]; $fatti = -1; $daFare = -1 }
+            if ($r.Contains($f[0])) {
+                $fase = $f[1]; $fatti = -1; $daFare = -1
+                if (-not $inizioFase.ContainsKey($f[0])) { if ($vivo) { $inizioFase[$f[0]] = Get-Date } else { $inizioFase[$f[0]] = $null } }
+            }
         }
         if ($r -match 'Cooked packages (\d+) Packages Remain (\d+) Total (\d+)') {
             $cotti = [int]$Matches[1]; $restano = [int]$Matches[2]; $totale = [int]$Matches[3]
@@ -50,6 +87,7 @@ while ($true) {
         if ($r -match 'AutomationTool exiting with ExitCode=(-?\d+)') { $uscita = [int]$Matches[1] }
         if ($r.Trim().Length -gt 0) { $ultima = $r.Trim() }
     }
+    $primoGiro = $false
     if ($ultima.Length -gt 110) { $ultima = $ultima.Substring(0, 110) + '...' }
 
     $passato = ''
@@ -99,7 +137,19 @@ while ($true) {
         Write-Host ''
         Write-Host '  Si aggiorna da solo ogni 5 secondi. Puoi chiudere questa finestra: il pacchetto va avanti.'
     }
-    if ($finito) { break }
+    if ($finito -and $null -eq $script:fineVista) { $script:fineVista = Get-Date }
+    $tempi = @(TempiDelleFasi $finito)
+    if ($tempi.Count -gt 0) {
+        Write-Host ''
+        Write-Host '  Minuti delle fasi:'
+        foreach ($t in $tempi) { Write-Host ('  ' + $t) }
+    }
+    if ($finito) {
+        # si scrive solo se la finestra ha visto davvero almeno una fase (aperta dopo la fine non sa i tempi)
+        $visteDavvero = @($inizioFase.Values | Where-Object { $null -ne $_ }).Count
+        if ($visteDavvero -gt 0) { try { @(('Minuti delle fasi del pacchetto, ' + (Get-Date -Format 'dd/MM/yyyy HH:mm'))) + $tempi | Set-Content -LiteralPath $tempiFile -Encoding UTF8 } catch { } }
+        break
+    }
     Start-Sleep -Seconds 5
 }
 Write-Host ''
